@@ -3,23 +3,25 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from 'vite-plugin-pwa';
 import pkg from './package.json';
 
-// Arabic translations are loaded on demand (src/i18n.js), which means the
-// request would normally start only after the app code has run. For someone
-// whose saved or browser language is Arabic, this starts it straight away,
-// alongside the app, so Arabic users do not wait an extra round trip.
-const preloadArabicLocale = () => {
+// Translations are loaded on demand, one language per visitor (src/i18n.js).
+// A dynamic import only starts once the app code has run, so this puts a small
+// script in index.html that starts the right language file straight away,
+// alongside the app: Arabic when the saved or browser language is Arabic,
+// English otherwise (the same rule i18next's detector follows).
+const preloadLocale = () => {
   let base = '/';
   return {
-    name: 'preload-arabic-locale',
+    name: 'preload-locale',
     apply: 'build',
     configResolved(config) { base = config.base || '/'; }, // './' for the desktop build
     transformIndexHtml: {
       order: 'post',
       handler(html, ctx) {
-        const chunk = Object.values(ctx.bundle || {}).find((c) => c.type === 'chunk' && c.name === 'locale-ar');
-        if (!chunk) return html;
-        const href = base + chunk.fileName;
-        const script = `<script>(function(){try{var l=localStorage.getItem('i18nextLng')||(navigator.languages||[navigator.language]).join(',');if(/^ar/i.test(l||'')){var k=document.createElement('link');k.rel='modulepreload';k.crossOrigin='';k.href=${JSON.stringify(href)};document.head.appendChild(k);}}catch(e){}})();</script>`;
+        const file = (name) => Object.values(ctx.bundle || {}).find((c) => c.type === 'chunk' && c.name === name)?.fileName;
+        const ar = file('locale-ar');
+        const en = file('locale-en');
+        if (!ar || !en) return html;
+        const script = `<script>(function(){var h=${JSON.stringify(base + en)};try{var l=localStorage.getItem('i18nextLng')||(navigator.languages||[navigator.language]).join(',');if(/^ar/i.test(l||''))h=${JSON.stringify(base + ar)};}catch(e){}var k=document.createElement('link');k.rel='modulepreload';k.crossOrigin='';k.href=h;document.head.appendChild(k);})();</script>`;
         return html.replace('</head>', `    ${script}\n  </head>`);
       },
     },
@@ -29,7 +31,7 @@ const preloadArabicLocale = () => {
 export default defineConfig({
   plugins: [
     react(),
-    preloadArabicLocale(),
+    preloadLocale(),
     VitePWA({
       // CHANGED from 'autoUpdate'. With 'autoUpdate' the plugin reloads the page
       // by itself as soon as a new service worker is ready, so the
@@ -96,9 +98,8 @@ export default defineConfig({
           'manifest.webmanifest',
           'assets/app-*.js',
           'assets/firebase-*.js',
-          // Translations: needed to boot offline (i18n.js). English is always
-          // loaded; Arabic is precached too so an Arabic user's first offline
-          // start after an update is not in English.
+          // Translations: one of them is needed to boot (i18n.js). Both are
+          // precached so either language starts offline after an update.
           'assets/locale-*.js',
           'assets/*.css',
           'icon-*.png',

@@ -6,29 +6,31 @@
 // They used to be one ~1 MB object in this file, so every visitor downloaded
 // and parsed both languages (about 55% of the start-up JavaScript) before the
 // first screen could appear; PageSpeed measured 9.8 s to the main content on a
-// phone. Now:
-//   - English is its own file (the `locale-en` chunk, see vite.config.js). It is
-//     always loaded, because it is the fallback for any key Arabic lacks, and the
-//     page preloads it alongside the app.
-//   - Arabic loads only for people using Arabic, before the first render
-//     (main.jsx waits for `i18nReady`), so there is no flash of English.
+// phone. Now each language is its own file (`locale-en` / `locale-ar` chunks,
+// see vite.config.js) and a visitor downloads only theirs:
+//   - index.html starts downloading the right one alongside the app code
+//     (vite.config.js, preloadLocale), so it costs no extra round trip;
+//   - main.jsx waits for it before the first render, so nobody sees the other
+//     language flash first;
+//   - Arabic has no fallback to English (it has every key English has, and for
+//     plurals its own base key wins, as it did before), so Arabic users do not
+//     also download the English file.
 //   - JSON is parsed much faster than the same data written as a JS object.
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
-import en from './locales/en.json';
 
-const LAZY_LOCALES = {
+const LOCALES = {
+  en: () => import('./locales/en.json'),
   ar: () => import('./locales/ar.json'),
 };
 
-// A minimal i18next backend: English is bundled (see `resources` below), so
-// i18next only asks this for the other languages.
+// A minimal i18next backend that loads one language file on demand.
 const lazyLocales = {
   type: 'backend',
   init() {},
   read(lng, _ns, callback) {
-    const load = LAZY_LOCALES[lng];
+    const load = LOCALES[lng];
     if (!load) return callback(null, {});
     load().then(
       (mod) => callback(null, mod.default || mod),
@@ -42,9 +44,7 @@ const initDone = i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    resources: { en: { translation: en } },
-    partialBundledLanguages: true,
-    fallbackLng: 'en',
+    fallbackLng: (code) => (String(code || '').startsWith('ar') ? [] : ['en']),
     // 'ar-SD' and 'en-US' use the 'ar' and 'en' files, as before, without a
     // request for a regional file that does not exist.
     load: 'languageOnly',
@@ -54,8 +54,9 @@ const initDone = i18n
   });
 
 // Resolves once the language in use is ready. Never rejects and never waits
-// more than a few seconds: if Arabic cannot be fetched (offline on a device
-// that never cached it), the app still starts, in English.
+// more than a few seconds: if the file cannot be fetched (offline on a device
+// that never cached it), the app still starts, with the English text written
+// next to each t() call.
 export const i18nReady = Promise.race([
   Promise.resolve(initDone).catch((e) => console.warn('Translations failed to load:', e)),
   new Promise((resolve) => setTimeout(resolve, 6000)),
