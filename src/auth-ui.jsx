@@ -16,12 +16,38 @@ import {
   EmailAuthProvider,
   updateProfile,
   signInWithRedirect,
-  getRedirectResult 
+  getRedirectResult,
+  browserPopupRedirectResolver,
 } from 'firebase/auth';
 
 import { auth } from './firebase.js';
 import { useTranslation } from 'react-i18next';
 import { authErrorCode, authErrorKey } from './utils/authMessages';
+
+// Google's sign-in helper is no longer loaded at start-up (firebase.js), so
+// every popup/redirect call passes it explicitly. Coming back from a redirect
+// sign-in is detected with this flag, so the helper is loaded on page load
+// only for someone actually returning from Google.
+const REDIRECT_PENDING = 'auth_redirect_pending';
+const markRedirect = () => { try { sessionStorage.setItem(REDIRECT_PENDING, '1'); } catch { /* private mode */ } };
+const takeRedirectMark = () => {
+  try {
+    const pending = sessionStorage.getItem(REDIRECT_PENDING) === '1';
+    sessionStorage.removeItem(REDIRECT_PENDING);
+    return pending;
+  } catch { return true; } // storage blocked: check, as before
+};
+// Loads the helper ahead of the click when the pointer reaches the Google
+// button (or it gets keyboard focus), so the popup still opens straight from
+// the click and is not caught by popup blockers. getRedirectResult with no
+// redirect in progress only loads the helper and returns null.
+let googleHelperWarm = false;
+const warmGoogleHelper = () => {
+  if (googleHelperWarm || Capacitor.isNativePlatform()) return;
+  googleHelperWarm = true;
+  getRedirectResult(auth, browserPopupRedirectResolver).catch(() => {});
+};
+const googleRedirect = (provider) => { markRedirect(); return signInWithRedirect(auth, provider, browserPopupRedirectResolver); };
 
 // --- NATIVE PLUGIN INITIALIZATION ---
 let socialLoginInitialized = false;
@@ -89,7 +115,8 @@ export function SignInBox() {
   useEffect(() => {
     const handleRedirectReturn = async () => {
       try {
-        const result = await getRedirectResult(auth);
+        if (Capacitor.isNativePlatform() || !takeRedirectMark()) return;
+        const result = await getRedirectResult(auth, browserPopupRedirectResolver);
         if (result && result.user) {
           setIsLoading(true);
           checkAndPromptForName(result.user);
@@ -322,17 +349,17 @@ export function SignInBox() {
         // picked up by getRedirectResult when the page comes back.
         if (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) {
             setMessage(t('auth.redirecting_google', "Redirecting to secure Google sign-in..."));
-            await signInWithRedirect(auth, provider);
+            await googleRedirect(provider);
             return;
         }
         try {
-            const result = await signInWithPopup(auth, provider); 
+            const result = await signInWithPopup(auth, provider, browserPopupRedirectResolver);
             user = result.user;
         } catch (popupError) {
             // Fallback to redirect if browser blocks the popup[cite: 2]
             if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/operation-not-supported-in-this-environment') {
                 setMessage(t('auth.redirecting_google', "Redirecting to secure Google sign-in..."));
-                await signInWithRedirect(auth, provider);
+                await googleRedirect(provider);
                 return; // Stop execution, the page will redirect
             } else {
                 throw popupError; 
@@ -517,6 +544,8 @@ export function SignInBox() {
         
         <button 
           type="button"
+          onPointerEnter={warmGoogleHelper}
+          onFocus={warmGoogleHelper}
           onClick={(e) => {
             e.preventDefault();
             signInWithGoogle();
