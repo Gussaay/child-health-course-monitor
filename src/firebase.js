@@ -22,7 +22,6 @@ import {
   getDocsFromCache,
   getDocsFromServer,
 } from 'firebase/firestore';
-import { getAnalytics } from 'firebase/analytics';
 import { getStorage } from 'firebase/storage';
 import { Capacitor } from '@capacitor/core';
 
@@ -117,18 +116,29 @@ export const storage = getStorage(firebaseApp);
 // So it is skipped under the test runner entirely. Analytics measures how the
 // app is used; there is nothing to measure in a test, and the only thing it can
 // do there is fail the run.
-export const analytics = (() => {
+// Analytics is started only after the page has loaded and gone idle. Started
+// here at import time, it downloaded its own code plus Google Tag Manager and
+// made the Installations calls while the first screen was still loading,
+// which is what PageSpeed counted against start-up. Nothing in the app reads
+// the instance, so it no longer needs to exist before the first render.
+function startAnalyticsWhenIdle() {
   // import.meta.env, not process.env: this file runs in a browser, where
   // `process` does not exist at all — and the lint rules say so.
   const underTest = import.meta.env?.MODE === 'test';
-  if (underTest || typeof window === 'undefined' || typeof document === 'undefined') return null;
-  try {
-    return getAnalytics(firebaseApp);
-  } catch (e) {
-    console.warn('Analytics disabled in this environment:', e?.message);
-    return null;
-  }
-})();
+  if (underTest || typeof window === 'undefined' || typeof document === 'undefined') return;
+  const start = () => {
+    import('firebase/analytics')
+      .then(({ getAnalytics }) => getAnalytics(firebaseApp))
+      .catch((e) => console.warn('Analytics disabled in this environment:', e?.message));
+  };
+  const whenIdle = () =>
+    'requestIdleCallback' in window
+      ? window.requestIdleCallback(start, { timeout: 10000 })
+      : setTimeout(start, 3000);
+  if (document.readyState === 'complete') whenIdle();
+  else window.addEventListener('load', whenIdle, { once: true });
+}
+startAnalyticsWhenIdle();
 
 // =========================================================================
 // REAL CONNECTION DETECTION

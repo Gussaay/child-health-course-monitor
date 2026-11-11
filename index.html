@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/child.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     
     <!-- maximum-scale/user-scalable were removed: blocking pinch-zoom fails WCAG
          1.4.4 and hurts exactly the people who need it most — anyone reading
@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="description" content="National Child Health Program - Monitoring System" />
-    <link rel="apple-touch-icon" href="/child.png" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     
     <script>
       (function () {
@@ -28,7 +28,21 @@
     <title>Child Health Program Monitoring System</title>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Shown the moment the HTML arrives, before any JavaScript has loaded.
+         Without it the screen stayed blank until the whole app had downloaded
+         and run, which on a slow phone is several seconds. React replaces it
+         with the real loading screen (App.jsx SplashScreen), which has the logo
+         in the same place. Plain inline styles: the stylesheet may not be here
+         yet. No text, so it is right for every language and both sites. -->
+    <div id="root"><div id="boot-splash" aria-hidden="true">
+      <div class="boot-logo"><img src="/icon-192.png" alt="" width="80" height="80" /></div>
+    </div></div>
+    <style>
+      #boot-splash { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #f8fafc; }
+      html.dark #boot-splash { background: #0a101c; }
+      #boot-splash .boot-logo { width: 96px; height: 96px; border-radius: 9999px; background: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,.1), 0 8px 10px -6px rgba(0,0,0,.1); margin-top: -120px; }
+      #boot-splash img { width: 80px; height: 80px; object-fit: contain; }
+    </style>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

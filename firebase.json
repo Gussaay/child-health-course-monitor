@@ -160,6 +160,15 @@
           ]
         },
         {
+          "source": "**/*.@(png|jpg|jpeg|webp|svg|ico|woff2|ttf)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=2592000, stale-while-revalidate=86400"
+            }
+          ]
+        },
+        {
           "source": "/assets/**",
           "headers": [
             {
@@ -329,6 +338,15 @@
           ]
         },
         {
+          "source": "**/*.@(png|jpg|jpeg|webp|svg|ico|woff2|ttf)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=2592000, stale-while-revalidate=86400"
+            }
+          ]
+        },
+        {
           "source": "/assets/**",
           "headers": [
             {
@@ -466,6 +484,15 @@
             {
               "key": "Access-Control-Allow-Origin",
               "value": "*"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(png|jpg|jpeg|webp|svg|ico|woff2|ttf)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=2592000, stale-while-revalidate=86400"
             }
           ]
         },

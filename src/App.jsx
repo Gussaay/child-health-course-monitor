@@ -1,5 +1,10 @@
 // App.jsx
 import ThemeToggle from './components/ThemeToggle';
+// The logo is shown at 36 to 80 px. public/child.png is the 2362 px, 479 KB
+// source artwork (still used for the native and desktop app icons); this is a
+// 160 px copy, about 10 KB. Imported, so it gets a hashed name under /assets/
+// and the long cache lifetime that folder has.
+import logoUrl from './assets/logo-160.webp';
 import { useTheme } from './utils/theme';
 import './i18n'; 
 import React, { useEffect, useMemo, useState, useRef, lazy, Suspense, useCallback } from "react";
@@ -61,7 +66,9 @@ const IMNCIRecordingForm = lazy(() => import('./components/imnci').then(m => ({ 
 const CertificateVerificationView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.CertificateVerificationView })));
 const PublicCertificateDownloadView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCertificateDownloadView })));
 const PublicCourseCertificatesView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCourseCertificatesView }))); 
-const CertificateDownloadBanner = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.CertificateDownloadBanner })));
+// Not lazy: it is small, and kept apart from CertificateGenerator so that
+// mounting it on every page no longer downloads jsPDF and html2canvas.
+import { CertificateDownloadBanner } from './components/CertificateDownloadBanner';
 
 const PublicDailyEvaluationView = lazy(() => import('./components/DailyEvaluation.jsx').then(module => ({ default: module.PublicDailyEvaluationView })));
 const PublicAttendanceView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicAttendanceView })));
@@ -585,7 +592,7 @@ function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, current
                         <X size={20} />
                     </button>
                     <div className="h-14 w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md mt-1">
-                        <img src="/child.png" alt="" className="h-12 w-12 object-contain" />
+                        <img src={logoUrl} alt="" width="48" height="48" className="h-12 w-12 object-contain" />
                     </div>
                     <p className="text-lg font-bold mt-3 truncate">{user?.displayName || user?.email}</p>
                     {user?.displayName && <p className="text-xs text-white/80 truncate">{user?.email}</p>}
@@ -641,7 +648,7 @@ function SplashScreen() {
     const { t } = useTranslation();
     return (
         <div className="fixed inset-0 bg-surface flex flex-col items-center justify-center gap-6 text-center p-4 z-[9999]">
-            <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src="/child.png" alt={t('app_extra.header.logo_alt', 'NCHP Logo')} className="h-20 w-20 object-contain" /></div>
+            <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src={logoUrl} alt={t('app_extra.header.logo_alt', 'NCHP Logo')} width="80" height="80" className="h-20 w-20 object-contain" /></div>
             <div>
                 <h1 className="text-3xl font-bold text-slate-800">{IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program')}</h1>
                 <p className="text-lg text-slate-500 mt-1">{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : t('app.subtitle', 'Program & Course Monitoring System')}</p>
@@ -2547,7 +2554,8 @@ case 'meetings':
 
     let mainContent;
 
-    if ((authLoading || permissionsLoading) && !isMinimalUILayout) {
+    const showSplash = (authLoading || permissionsLoading) && !isMinimalUILayout;
+    if (showSplash) {
         mainContent = <SplashScreen />;
     }
     // Approving the claude.ai connector. Deliberately NOT a minimal-UI public
@@ -2911,6 +2919,14 @@ case 'meetings':
         </>
     );
 
+    // The loading screen is drawn ALONE, not inside the header/main/footer.
+    // It covers the whole window anyway, but the page underneath it still had
+    // a footer pinned to the bottom of an empty <main>; when sign-in finished
+    // and the real screen filled <main>, that footer jumped down, which is the
+    // layout shift PageSpeed scored on desktop (CLS 0.128). With nothing laid
+    // out underneath, the first real screen only adds elements, never moves them.
+    if (showSplash) return <SplashScreen />;
+
     return (
         <div className="min-h-screen bg-surface flex flex-col pt-0 relative">
             
@@ -2933,7 +2949,7 @@ case 'meetings':
                 it, so it has to live somewhere that navigation does not unmount.
                 Lazy, because nothing on the sign-in screen needs the certificate
                 code and it pulls in jsPDF and html2canvas. */}
-            <Suspense fallback={null}><CertificateDownloadBanner /></Suspense>
+            <CertificateDownloadBanner />
 
             {/* Offline is a small floating pill, not a bar: it takes no space
                 and blocks no taps, so open forms and quizzes carry on. */}
@@ -2970,7 +2986,7 @@ case 'meetings':
                         )}
                         <div className="flex items-center gap-3 sm:gap-4 cursor-pointer min-w-0" onClick={() => !isSharedView && navigate('landing')}>
                             <div className="h-11 w-11 sm:h-14 sm:w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md shrink-0">
-                                <img src="/child.png" alt={t('app_extra.header.logo_alt', 'NCHP Logo')} className="h-9 w-9 sm:h-12 sm:w-12 object-contain" />
+                                <img src={logoUrl} alt={t('app_extra.header.logo_alt', 'NCHP Logo')} width="48" height="48" className="h-9 w-9 sm:h-12 sm:w-12 object-contain" />
                             </div>
                             <div className="min-w-0">
                                 <h1 className="text-lg sm:text-2xl font-bold text-white leading-tight">{IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program')}</h1>

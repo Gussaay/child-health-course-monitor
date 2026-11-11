@@ -3,9 +3,35 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from 'vite-plugin-pwa';
 import pkg from './package.json';
 
+// Translations are loaded on demand, one language per visitor (src/i18n.js).
+// A dynamic import only starts once the app code has run, so this puts a small
+// script in index.html that starts the right language file straight away,
+// alongside the app: Arabic when the saved or browser language is Arabic,
+// English otherwise (the same rule i18next's detector follows).
+const preloadLocale = () => {
+  let base = '/';
+  return {
+    name: 'preload-locale',
+    apply: 'build',
+    configResolved(config) { base = config.base || '/'; }, // './' for the desktop build
+    transformIndexHtml: {
+      order: 'post',
+      handler(html, ctx) {
+        const file = (name) => Object.values(ctx.bundle || {}).find((c) => c.type === 'chunk' && c.name === name)?.fileName;
+        const ar = file('locale-ar');
+        const en = file('locale-en');
+        if (!ar || !en) return html;
+        const script = `<script>(function(){var h=${JSON.stringify(base + en)};try{var l=localStorage.getItem('i18nextLng')||(navigator.languages||[navigator.language]).join(',');if(/^ar/i.test(l||''))h=${JSON.stringify(base + ar)};}catch(e){}var k=document.createElement('link');k.rel='modulepreload';k.crossOrigin='';k.href=h;document.head.appendChild(k);})();</script>`;
+        return html.replace('</head>', `    ${script}\n  </head>`);
+      },
+    },
+  };
+};
+
 export default defineConfig({
   plugins: [
     react(),
+    preloadLocale(),
     VitePWA({
       // CHANGED from 'autoUpdate'. With 'autoUpdate' the plugin reloads the page
       // by itself as soon as a new service worker is ready, so the
@@ -72,6 +98,9 @@ export default defineConfig({
           'manifest.webmanifest',
           'assets/app-*.js',
           'assets/firebase-*.js',
+          // Translations: one of them is needed to boot (i18n.js). Both are
+          // precached so either language starts offline after an update.
+          'assets/locale-*.js',
           'assets/*.css',
           'icon-*.png',
           'favicon.ico',
@@ -192,6 +221,14 @@ export default defineConfig({
         // silently precached those route chunks too.
         entryFileNames: 'assets/app-[hash].js',
         manualChunks(id) {
+          // Analytics is loaded after the page is idle (firebase.js), so it is
+          // left out of the start-up Firebase chunk and gets one of its own.
+          if (/node_modules\/(@firebase\/analytics|firebase\/analytics)\//.test(id)) return undefined;
+          // Translations (i18n.js): each language is its own long-cached file,
+          // so a text change no longer invalidates the app code, and the
+          // service worker can precache them by name.
+          const locale = id.match(/\/src\/locales\/(\w+)\.json$/);
+          if (locale) return `locale-${locale[1]}`;
           if (id.includes('node_modules/firebase') || id.includes('node_modules/@firebase')) {
             return 'firebase';
           }

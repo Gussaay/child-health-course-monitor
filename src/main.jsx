@@ -16,6 +16,7 @@ import { isOnline } from './firebase';
 import { IS_EMONC_SITE, EMONC_SITE_TITLE } from './siteMode';
 import { isChunkLoadError, recoverFromStaleBuild } from './utils/staleBuild';
 import { installErrorCapture } from './utils/errorCapture';
+import { i18nReady } from './i18n';
 import './index.css';
 import { applyTheme } from './utils/theme';
 applyTheme();
@@ -162,18 +163,23 @@ if (IS_NATIVE) {
 // =========================================================================
 // RENDER
 // =========================================================================
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <AuthProvider>
-    <DataProvider>
-      <App />
-    </DataProvider>
-  </AuthProvider>
-);
+// Waits for the translations of the language in use (i18n.js): English is
+// already here, Arabic is one small extra request. Rendering before that would
+// flash English to Arabic users. i18nReady never rejects.
+i18nReady.then(() => {
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <AuthProvider>
+      <DataProvider>
+        <App />
+      </DataProvider>
+    </AuthProvider>
+  );
 
-// Nothing above can reload the page any more, so this call is never cut off.
-// If Capgo does not receive it within appReadyTimeout, it rolls the update back.
-if (IS_NATIVE) {
-  CapacitorUpdater.notifyAppReady()
-    .then(() => console.log('✅ Capgo: app booted successfully.'))
-    .catch((err) => console.error('❌ Capgo: notifyAppReady failed:', err));
-}
+  // Nothing above can reload the page any more, so this call is never cut off.
+  // If Capgo does not receive it within appReadyTimeout, it rolls the update back.
+  if (IS_NATIVE) {
+    CapacitorUpdater.notifyAppReady()
+      .then(() => console.log('✅ Capgo: app booted successfully.'))
+      .catch((err) => console.error('❌ Capgo: notifyAppReady failed:', err));
+  }
+});
