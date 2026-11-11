@@ -259,4 +259,6 @@ html, body, #root {
 /* Full-page forms (useFullPageForm): hide the app chrome so the form has the
    whole screen; the form shows its own back button and step bar. */
 html.form-focus [data-app-chrome] { display: none !important; }
+/* No bottom navigation bar any more: pinned bars sit on the screen edge. */
+html { --bottom-nav: 0px; }
 html.form-focus { --bottom-nav: 0px; }

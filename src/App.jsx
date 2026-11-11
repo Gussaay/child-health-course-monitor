@@ -543,55 +543,6 @@ function AppCredit({ className = '' }) {
     );
 }
 
-// `onHome`: the main menu already shows every module as a tile, so the bar
-// there holds only the credit line.
-const BottomNav = React.memo(function BottomNav({ navItems, navigate, onHome = false }) {
-    const icons = { 
-        'landing': Home, 'dashboard': Home, 'courses': Book, 'humanResources': Users, 'childHealthServices': Hospital, 
-        'skillsMentorship': ClipboardCheck, 'downloads': HardDrive
-    };
-    
-    // Publishes the bar's height as --bottom-nav so pinned Save rows sit above it.
-    const navRef = useRef(null);
-    useEffect(() => {
-        const el = navRef.current;
-        if (!el) return undefined;
-        const root = document.documentElement.style;
-        const set = () => root.setProperty('--bottom-nav', `${el.offsetHeight}px`);
-        set();
-        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(set) : null;
-        ro?.observe(el);
-        return () => { ro?.disconnect(); root.removeProperty('--bottom-nav'); };
-    }, []);
-
-    return (
-        <nav data-app-chrome="bottom-nav" ref={navRef} className="md:hidden fixed bottom-0 inset-x-0 bg-slate-800 border-t border-slate-700 flex flex-col z-[60] shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
-            {!onHome && <div className="flex justify-between items-center px-2 w-full">
-                {navItems.map(item => {
-                    const Icon = icons[item.view] || Activity;
-                    return (
-                        <button 
-                            key={item.view} 
-                            onClick={() => navigate(item.view)} 
-                            className={`flex flex-col items-center justify-center p-1 w-full h-16 flex-1 min-w-0 transition-colors ${item.active ? 'text-sky-400' : 'text-slate-400 hover:text-white'}`}
-                            title={item.label} 
-                        >
-                            {Icon && <Icon className="w-6 h-6 mb-1 shrink-0" />}
-                            <span className="w-full text-center text-xs leading-tight truncate px-0.5 block">
-                                {item.label}
-                            </span>
-                        </button>
-                    )
-                })}
-            </div>}
-            
-            <div className="bg-slate-900 text-slate-300 text-xs py-1.5 px-2 w-full border-t border-slate-700 pb-[max(0.375rem,env(safe-area-inset-bottom))]">
-                <AppCredit />
-            </div>
-        </nav>
-    );
-});
-
 // Slide-out side menu (☰): who you are, every module you can open, and the
 // app's settings in one place. The header keeps its own buttons as well.
 function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, currentView, onNavigate, onProfile, onSync, onLanguage, onUpdate, onLogout, appVersion, isOffline, languageLabel }) {
@@ -3150,8 +3101,8 @@ case 'meetings':
                 </ErrorBoundary>
             </main>
 
-            {/* On phones the credit sits in the bottom bar; everywhere else it is the page footer. */}
-            <footer data-app-chrome="footer" className={`${user && !isMinimalUILayout ? 'hidden md:block' : 'block'} bg-slate-800 text-slate-300 text-xs py-3 px-4 border-t border-slate-700`}>
+            {/* The credit is the page footer on every screen. */}
+            <footer data-app-chrome="footer" className={`block bg-slate-800 text-slate-300 text-xs py-3 px-4 border-t border-slate-700`}>
                 <AppCredit />
             </footer>
 
@@ -3176,7 +3127,7 @@ case 'meetings':
                 />
             )}
 
-            { user && !isMinimalUILayout && <BottomNav navItems={visibleNavItems} navigate={guardedNavigate} onHome={view === 'landing'} /> }
+            {/* No bottom navigation bar: modules open from the main menu and the ☰ side menu. */}
 
             <Suspense fallback={null}>
                 {isShareModalOpen && user && (
