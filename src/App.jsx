@@ -147,6 +147,7 @@ import {
     getPendingSyncQueue,
     clearPendingSyncQueue,
     getCachedCourse, getCachedParticipants,
+    recordHandledError,
 } from './data.js';
 import { setUsageView } from './utils/usageLedger';
 import { STATE_LOCALITIES } from './components/constants.js';
@@ -1502,6 +1503,12 @@ export default function App() {
         // profile; nothing slower may then clear the role it set.
         let lastAppliedProfile = null;
 
+        // Sends one line to Admin > Problems; never throws, never blocks.
+        const noteRoleEvent = (what) => {
+            console.warn('[profile]', what);
+            recordHandledError({ kind: 'permission', what: what.slice(0, 300), context: 'role-sync', source: 'App.jsx role sync' }).catch(() => {});
+        };
+
         // A profile is only believable when it names a role. The FCM token
         // save is a setDoc(users/{uid}, { fcmToken }, { merge: true }); when
         // this device has no copy of the profile cached (a fresh sign-in, a
@@ -1511,9 +1518,16 @@ export default function App() {
         const hasRole = (data) => !!(data && (data.role || data.Role || (Array.isArray(data.roles) && data.roles.length > 0)));
 
         // Applies a profile document to state and refreshes the local backup.
-        const applyProfile = (data, fromCache) => {
+        const applyProfile = (data, fromCache, source = 'server read') => {
             const rawRole = data.role || data.Role || (data.roles && data.roles[0]) || 'user';
             const newRole = typeof rawRole === 'string' ? rawRole.toLowerCase() : 'user';
+            // Diagnostic: a role that differs from the one this device saved is
+            // logged to Admin > Problems, with where it came from, so a
+            // reported "my modules disappeared" can be traced.
+            const savedRole = (() => { try { return localStorage.getItem(`backup_role_${user.uid}`); } catch { return null; } })();
+            if (savedRole && savedRole !== newRole) {
+                noteRoleEvent(`Role changed on this device from ${savedRole} to ${newRole} (${source}${fromCache ? ', cached copy' : ''})`);
+            }
             const newRoles = data.roles && Array.isArray(data.roles) && data.roles.length > 0 ? data.roles : [newRole];
 
             const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
@@ -1677,7 +1691,14 @@ export default function App() {
                     if (!isMounted) return;
 
                     if (profile) {
-                        applyProfile(profile);
+                        applyProfile(profile, false, 'profile created after sign-in');
+                    } else if (backupRole) {
+                        // This device has a role the server confirmed before. A read
+                        // that finds no profile is far likelier to be a glitch (a
+                        // token or connection hiccup) than a deleted account, and
+                        // clearing the role here silently emptied the main menu for
+                        // a super user. Keep it; the live listener corrects it.
+                        noteRoleEvent(`Profile read found no document; kept the saved role ${backupRole}`);
                     } else if (!lastAppliedProfile) {
                         console.warn("Profile has not appeared yet. Not assuming a role.");
                         setUserRole(null); setUserRoles([]); setUserPermissions({});
@@ -1720,7 +1741,7 @@ export default function App() {
             const key = JSON.stringify([data.role, data.Role, data.roles, data.permissions, data.assignedState, data.assignedLocality]);
             if (key === lastAppliedProfile) return;
             lastAppliedProfile = key;
-            applyProfile(data, false);
+            applyProfile(data, false, 'live listener');
             setPermissionsError(false);
             setPermissionsLoading(false);
         }, (err) => console.warn('[profile] live listener stopped:', err?.message)) : null;
@@ -2407,6 +2428,8 @@ export default function App() {
                     localStorage.removeItem(`backup_localities_${user.uid}`);
                 }
                 clearRememberedFilters();
+                // Marks this as a real log-out, so it is not reported as a lost session.
+                try { sessionStorage.setItem('intentional_signout', '1'); localStorage.removeItem('last_uid'); } catch { /* storage blocked */ }
                 await signOut(auth); 
             } catch (error) { 
                 console.error("Error signing out:", error); 
@@ -3128,6 +3151,13 @@ case 'meetings':
             <DialogHost />
 
             <main className="max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 w-full flex-grow pb-32 md:pb-8 overflow-x-clip">
+                {/* The role could not be loaded: say so, rather than showing an empty menu as if it were the person's real access. */}
+                {user && permissionsError && !userRole && (
+                    <div role="alert" className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                        <span className="flex-1 min-w-[12rem]">{t('app_extra.role_not_loaded', "Your access could not be loaded, so some modules are hidden. Check your connection and try again.")}</span>
+                        <Button size="sm" onClick={() => window.location.reload()}>{t('app_extra.retry', 'Try again')}</Button>
+                    </div>
+                )}
                 {/* keyed on `view` so navigating away from a crashed screen clears the error */}
                 <ErrorBoundary key={view} screen={view} onGoHome={() => navigate('landing')}>
                     <Suspense fallback={<PageSkeleton />}>
