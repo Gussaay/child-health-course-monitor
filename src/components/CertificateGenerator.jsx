@@ -5657,13 +5657,6 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
         };
     }), [courses, managerName, isFederalProgramManager, effective, templateDocs]);
 
-    const StatusPill = ({ approved }) => (
-        <span className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-            approved ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-            {approved ? t('certificates.approvals.approved', 'Approved') : t('certificates.approvals.pending', 'Pending')}
-        </span>
-    );
-
     const TemplateBadges = ({ row }) => (
         <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
             {row.hasCustomTemplate && <span className="text-[9px] font-bold uppercase tracking-wider text-sky-600">{t('certificates.approvals.badge_course', 'Course changes')}</span>}
@@ -5952,28 +5945,39 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
                 {/* One line per course: place, date and status. Tapping a line
                     opens its actions underneath, like the main courses list. */}
                 {rows.length > 0 && (
-                    <div className="rounded-xl border border-slate-200 bg-white shadow-sm divide-y divide-slate-100 overflow-hidden">
+                    <div className="flex flex-col gap-2">
                         {rows.map(r => {
                             const open = openId === r.c.id;
                             const place = [r.c.state, r.c.locality].filter(Boolean).join(' - ');
+                            const start = r.c.start_date ? new Date(r.c.start_date) : null;
+                            const dateText = start && !Number.isNaN(start.getTime())
+                                ? start.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+                                : (r.c.start_date || '');
                             return (
-                                <div key={r.c.id} className={open ? 'bg-slate-50/70' : ''}>
+                                <div key={r.c.id} className={`rounded-xl border bg-white shadow-sm overflow-hidden ${open ? 'border-sky-300 ring-2 ring-sky-50' : 'border-slate-200'}`}>
                                     <button
                                         type="button"
                                         onClick={() => setOpenId(open ? null : r.c.id)}
                                         aria-expanded={open}
-                                        className="w-full flex items-center gap-2 px-3 py-2.5 text-start hover:bg-slate-50 active:bg-slate-100"
+                                        className="w-full flex items-center gap-2 p-3.5 text-start hover:bg-slate-50 active:bg-slate-100"
                                     >
-                                        <ChevronDown size={16} className={`shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
-                                        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800" title={place}>
-                                            {!courseType && <span className="text-sky-700">{r.c.course_type} · </span>}
-                                            {place || '—'}
+                                        <div className="min-w-0 flex-1">
+                                            <div className="truncate text-base font-bold text-slate-900" title={place}>
+                                                {!courseType && <span className="text-sky-700">{r.c.course_type} · </span>}
+                                                {place || '—'}
+                                            </div>
+                                            <div className="mt-1 flex items-center gap-3 text-sm text-slate-500 whitespace-nowrap overflow-hidden">
+                                                {dateText && <span className="shrink-0">📅 {dateText}</span>}
+                                                {r.c.participants_count > 0 && <span className="shrink-0">👥 {r.c.participants_count}</span>}
+                                            </div>
+                                        </div>
+                                        <span className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-bold ${r.isApproved ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                                            {r.isApproved ? t('certificates.approvals.approved', 'Approved') : t('certificates.approvals.pending', 'Pending')}
                                         </span>
-                                        <span className="shrink-0 text-xs text-slate-500 tabular-nums">{r.c.start_date}</span>
-                                        <StatusPill approved={r.isApproved} />
+                                        <ChevronDown size={18} className={`shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
                                     </button>
                                     {open && (
-                                        <div className="px-3 pb-3">
+                                        <div className="border-t border-slate-100 bg-slate-50/60 p-3">
                                             <div className="text-xs text-slate-600 break-words">{place}</div>
                                             <TemplateBadges row={r} />
                                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mt-2">

@@ -4,7 +4,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { 
     Button, Card, EmptyState, FormGroup, Input, PageHeader, 
     Select, Spinner, PageSkeleton, SkeletonTable, PhoneCards, Table, Modal, CardBody, CardFooter, Toast, FinalReportStatusBadges,
-    PageTabs, FilterPanel, IS_NATIVE, PullToRefresh, PageActions, FormActions, MenuTile, MenuGrid, MENU_ICON_CLASS
+    PageTabs, FilterPanel, IS_NATIVE, PullToRefresh, FormActions, MenuTile, MenuGrid, MENU_ICON_CLASS
 } from './CommonComponents';
 
 // --- Firebase Imports ---
@@ -46,7 +46,7 @@ import {
     FileText, Edit, Trash2, ExternalLink, Link as LinkIcon, Eye, BarChart2,
     AlertTriangle, Shield, Check, X, RefreshCw, Archive, ClipboardList,
     Award, FileSignature, Stamp, Upload, Lock, XCircle, QrCode, Send, Copy, Download,
-    Activity, Siren, HeartPulse, Baby, MoreHorizontal, CalendarDays
+    Activity, Siren, HeartPulse, Baby, MoreHorizontal, CalendarDays, ChevronDown, Search, Plus
 } from 'lucide-react'; 
 import { useDataCache } from '../DataContext'; 
 import { useAuth } from '../hooks/useAuth'; 
@@ -890,6 +890,62 @@ function QRShareModal({ isOpen, onClose, url, title }) {
     );
 }
 
+/** The "⋯" button beside the course search: less-used page actions in one menu. */
+function CoursePageMoreMenu({ items, disabled }) {
+    const { t } = useTranslation();
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+    useEffect(() => {
+        if (!open) return undefined;
+        const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('pointerdown', close);
+        return () => document.removeEventListener('pointerdown', close);
+    }, [open]);
+    return (
+        <div ref={ref} className="relative shrink-0">
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                disabled={disabled}
+                aria-expanded={open}
+                aria-label={t('ui.more_actions', 'More actions')}
+                title={t('ui.more_actions', 'More actions')}
+                className={`h-full min-h-[40px] rounded-lg border px-3 flex items-center justify-center ${open ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}`}
+            >
+                <MoreHorizontal size={20} />
+            </button>
+            {open && (
+                <div className="absolute end-0 top-full mt-1 z-50 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                    {items.map((it) => {
+                        const Icon = it.icon;
+                        return (
+                            <button
+                                key={it.label}
+                                type="button"
+                                disabled={it.disabled}
+                                onClick={() => { setOpen(false); it.onClick(); }}
+                                className={`w-full flex items-center gap-2 px-4 py-3 text-start text-sm border-b border-slate-100 last:border-0 hover:bg-slate-50 disabled:opacity-50 ${it.danger ? 'text-red-600 font-semibold' : 'text-slate-800'}`}
+                            >
+                                {Icon && <Icon size={16} className="shrink-0" />} {it.label}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
+/** "9–14 Nov 2026", "28 Oct – 2 Nov 2026" or "9 Nov 2026": short enough for one phone line. */
+const formatDateRange = (start, end) => {
+    const mon = (d) => d.toLocaleDateString(undefined, { month: 'short' });
+    const full = (d) => `${d.getDate()} ${mon(d)} ${d.getFullYear()}`;
+    if (!end || end <= start) return full(start);
+    if (start.getFullYear() !== end.getFullYear()) return `${full(start)} – ${full(end)}`;
+    if (start.getMonth() === end.getMonth()) return `${start.getDate()}–${full(end)}`;
+    return `${start.getDate()} ${mon(start)} – ${full(end)}`;
+};
+
 const formatLocation = (locationStr) => {
     if (!locationStr) return 'N/A';
     const parts = String(locationStr).split(',').map(s => s.trim()).filter(Boolean);
@@ -903,7 +959,9 @@ export function CoursesTable({
     canManageFinalReportDocument,
     // { [courseId]: finalReport } for the status labels; null hides them.
     finalReportsByCourse,
-    onOpenAttendanceManager, isProcessing 
+    onOpenAttendanceManager, isProcessing,
+    // Extra controls shown beside the search box (the page's "More" menu).
+    toolbarExtra = null
 }) {
     const { t } = useTranslation();
     const [shareModalCourse, setShareModalCourse] = useState(null);
@@ -913,8 +971,12 @@ export function CoursesTable({
      
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
     const [expandedId, setExpandedId] = useState(null);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(5);
+    const PAGE_SIZE = 20;
+    const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [yearFilter, setYearFilter] = useState('All');
+    const [sortBy, setSortBy] = useState('newest');
 
     const getBaseUrl = () => publicBaseUrl();
 
@@ -930,7 +992,7 @@ export function CoursesTable({
         });
     };
 
-    useEffect(() => { setCurrentPage(1); }, [courses, itemsPerPage]);
+    useEffect(() => { setVisibleCount(PAGE_SIZE); }, [courses, search, statusFilter, yearFilter, sortBy]);
 
     const isCourseActive = (course) => {
         if (course.approvalStatus === 'pending') return false; 
@@ -952,35 +1014,115 @@ export function CoursesTable({
         return filtered;
     }, [courses, userStates, userLocalities]);
 
+    const statusOf = (c) => (c.approvalStatus === 'pending' ? 'pending'
+        : c.approvalStatus === 'rejected' ? 'rejected'
+        : isCourseActive(c) ? 'active' : 'inactive');
+
+    const years = useMemo(() => {
+        const ys = new Set(filteredCourses.map(c => String(c.start_date || '').slice(0, 4)).filter(y => /^\d{4}$/.test(y)));
+        return ['All', ...[...ys].sort().reverse()];
+    }, [filteredCourses]);
+
+    // Year and search narrow the list first, so the chip counts match it.
+    const searchedCourses = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return filteredCourses.filter(c => {
+            if (yearFilter !== 'All' && String(c.start_date || '').slice(0, 4) !== yearFilter) return false;
+            if (!q) return true;
+            return [c.state, c.locality, c.director, c.coordinator, c.hall, c.course_project, c.funded_by]
+                .some(v => String(v || '').toLowerCase().includes(q));
+        });
+    }, [filteredCourses, search, yearFilter]);
+
+    const statusCounts = useMemo(() => {
+        const n = { all: searchedCourses.length, active: 0, pending: 0, inactive: 0, rejected: 0 };
+        searchedCourses.forEach(c => { n[statusOf(c)] += 1; });
+        return n;
+    }, [searchedCourses]);
+
     const sortedCourses = useMemo(() => {
-        return [...filteredCourses].sort((a, b) => {
+        const list = statusFilter === 'all' ? searchedCourses : searchedCourses.filter(c => statusOf(c) === statusFilter);
+        const time = (c) => (c.start_date ? new Date(c.start_date).getTime() || 0 : 0);
+        return [...list].sort((a, b) => {
+            if (sortBy === 'oldest') return time(a) - time(b);
+            if (sortBy === 'state') return String(a.state || '').localeCompare(String(b.state || '')) || time(b) - time(a);
             const aActive = isCourseActive(a);
             const bActive = isCourseActive(b);
             if (aActive && !bActive) return -1;
             if (!aActive && bActive) return 1;
-            
-            const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
-            const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
-            return dateB - dateA;
+            return time(b) - time(a);
         });
-    }, [filteredCourses]);
+    }, [searchedCourses, statusFilter, sortBy]);
 
     const totalItems = sortedCourses.length;
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedCourses = sortedCourses.slice(startIndex, startIndex + itemsPerPage);
+    const paginatedCourses = sortedCourses.slice(0, visibleCount);
 
     const toggleExpand = (id) => {
         setExpandedId(prev => (prev === id ? null : id));
     };
 
-    if (sortedCourses.length === 0) return <div className="text-center p-8 text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">{t('course_page.table.no_courses', 'No courses found matching the selected filters.')}</div>;
+    if (filteredCourses.length === 0) return <div className="text-center p-8 text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">{t('course_page.table.no_courses', 'No courses found matching the selected filters.')}</div>;
 
-    const courseType = sortedCourses.length > 0 ? sortedCourses[0].course_type : 'Courses';
+    const chip = (id, label, count, dot) => (
+        <button
+            key={id}
+            type="button"
+            onClick={() => setStatusFilter(id)}
+            aria-pressed={statusFilter === id}
+            className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${statusFilter === id ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+        >
+            {dot && <span className={`h-2 w-2 rounded-full ${dot}`} />}
+            {label} <span className="tabular-nums opacity-80">{count}</span>
+        </button>
+    );
+
+    const CertBadge = ({ c }) => {
+        if (c.approvalStatus === 'pending' || c.approvalStatus === 'rejected') return null;
+        return c.isCertificateApproved
+            ? <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold border whitespace-nowrap bg-violet-50 text-violet-700 border-violet-200"><Check size={12} />{t('course_page.table.cert_approved', 'Cert approved')}</span>
+            : <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold border whitespace-nowrap bg-amber-50 text-amber-700 border-amber-200">{t('course_page.table.cert_pending', 'Cert pending')}</span>;
+    };
 
     return (
         <div>
-            <h3 className="text-xl font-bold mb-4">{t('course_page.table.type_courses', '{{type}} Courses', { type: courseType })}</h3>
+            {/* Search, quick status chips, year and sort. The tab bar already
+                names the package, so there is no heading here. */}
+            <div className="mb-3 space-y-2">
+                <div className="flex items-stretch gap-2">
+                    <div className="relative flex-1 min-w-0">
+                        <Search size={16} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Input
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder={t('course_page.table.search_placeholder', 'Search state, locality, director…')}
+                            className="ps-9"
+                            type="search"
+                        />
+                    </div>
+                    {toolbarExtra}
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                    {chip('all', t('course_page.table.chip_all', 'All'), statusCounts.all)}
+                    {chip('active', t('course_page.status.active', 'Active'), statusCounts.active, 'bg-emerald-500')}
+                    {chip('pending', t('course_page.status.pending', 'Pending'), statusCounts.pending, 'bg-amber-500')}
+                    {chip('inactive', t('course_page.status.inactive', 'Inactive'), statusCounts.inactive, 'bg-slate-400')}
+                    {statusCounts.rejected > 0 && chip('rejected', t('course_page.status.rejected', 'Rejected'), statusCounts.rejected, 'bg-red-500')}
+                </div>
+                <div className="grid grid-cols-2 gap-2 md:max-w-md">
+                    <Select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)} aria-label={t('course_page.table.year', 'Year')}>
+                        {years.map(y => <option key={y} value={y}>{y === 'All' ? t('course_page.table.all_years', 'All years') : y}</option>)}
+                    </Select>
+                    <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label={t('course_page.table.sort', 'Sort')}>
+                        <option value="newest">{t('course_page.table.sort_newest', 'Newest first')}</option>
+                        <option value="oldest">{t('course_page.table.sort_oldest', 'Oldest first')}</option>
+                        <option value="state">{t('course_page.table.sort_state', 'By state')}</option>
+                    </Select>
+                </div>
+            </div>
+
+            {totalItems === 0 && (
+                <EmptyState message={t('course_page.table.no_courses', 'No courses found matching the selected filters.')} filtered />
+            )}
             
             {/* Desktop View (Standard Table) */}
             <div className="hidden md:block overflow-hidden bg-white border border-slate-300 rounded-xl shadow-sm">
@@ -1021,7 +1163,10 @@ export function CoursesTable({
                                             <span className="text-xs font-medium text-slate-500 truncate max-w-[250px]" title={subcourses}>
                                                 {subcourses}
                                             </span>
-                                            {finalReportsByCourse && <FinalReportStatusBadges report={finalReportsByCourse[c.id]} className="mt-1" />}
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                <CertBadge c={c} />
+                                                {finalReportsByCourse && <FinalReportStatusBadges report={finalReportsByCourse[c.id]} />}
+                                            </div>
                                         </div>
                                     </td>
 
@@ -1075,83 +1220,67 @@ export function CoursesTable({
                 </table>
             </div>
 
-            {/* Mobile View (Collapsible Accordion Cards) */}
-            <div className="grid gap-3 md:hidden">
+            {/* Phone view: two-line rows. Tap a row to open its buttons. */}
+            <div className="flex flex-col gap-2 md:hidden">
                 {paginatedCourses.map((c) => {
                     const isPendingDeletion = c.deletionRequested === true;
                     const active = isCourseActive(c);
                     const canEdit = active ? canEditDeleteActiveCourse : canEditDeleteInactiveCourse;
                     const canDelete = active ? canEditDeleteActiveCourse : canEditDeleteInactiveCourse;
                     const isExpanded = expandedId === c.id;
-                    
+                    const status = statusOf(c);
+
                     const subcourses = c.facilitatorAssignments && c.facilitatorAssignments.length > 0
-                        ? [...new Set(c.facilitatorAssignments.map(a => a.imci_sub_type))].join(', ') : t('course_page.na', 'N/A');
+                        ? [...new Set(c.facilitatorAssignments.map(a => a.imci_sub_type).filter(Boolean))].join(', ') : '';
 
                     const startDate = c.start_date ? new Date(c.start_date) : null;
                     const hasDates = startDate && !Number.isNaN(startDate.getTime());
                     const endDate = hasDates && c.course_duration > 0 ? new Date(startDate.getTime() + (c.course_duration - 1) * 86400000) : null;
-                    const fmt = (d) => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+                    const pill = {
+                        pending: ['bg-amber-100 text-amber-800', t('course_page.status.pending', 'Pending')],
+                        rejected: ['bg-red-100 text-red-800', t('course_page.status.rejected', 'Rejected')],
+                        active: ['bg-emerald-100 text-emerald-800', t('course_page.status.active', 'Active')],
+                        inactive: ['bg-slate-100 text-slate-700', t('course_page.status.inactive', 'Inactive')],
+                    }[status];
 
-                    // The card shows what you need to pick a course (place,
-                    // type, status, dates, size) and its two most used
-                    // buttons; the rest open under "More".
                     return (
-                        <div key={c.id} className={`rounded-lg border bg-white p-3 shadow-sm ${isPendingDeletion ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}>
-                            <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                    <h4 className="font-bold text-base text-slate-900 leading-snug">
+                        <div key={c.id} className={`rounded-xl border bg-white shadow-sm overflow-hidden ${isPendingDeletion ? 'border-red-300 bg-red-50' : isExpanded ? 'border-sky-300 ring-2 ring-sky-50' : 'border-slate-200'}`}>
+                            <button
+                                type="button"
+                                onClick={() => toggleExpand(c.id)}
+                                aria-expanded={isExpanded}
+                                className="w-full flex items-center gap-2 p-3.5 text-start active:bg-slate-50"
+                            >
+                                <div className="min-w-0 flex-1">
+                                    <div className="truncate text-base font-bold text-slate-900">
                                         {formatLocation(c.state)} - {formatLocation(c.locality)}
-                                    </h4>
-                                    <p className="mt-0.5 text-sm text-slate-500 line-clamp-2">{subcourses}</p>
+                                    </div>
+                                    <div className="mt-1 flex items-center gap-3 text-sm text-slate-500 whitespace-nowrap overflow-hidden">
+                                        {hasDates && <span className="flex items-center gap-1 shrink-0"><CalendarDays size={14} className="text-slate-400" />{formatDateRange(startDate, endDate)}</span>}
+                                        {c.participants_count > 0 && <span className="flex items-center gap-1 shrink-0"><Users size={14} className="text-slate-400" />{c.participants_count}</span>}
+                                        {subcourses && <span className="truncate">{subcourses}</span>}
+                                    </div>
+                                    <div className="mt-1.5 flex flex-wrap gap-1">
+                                        <CertBadge c={c} />
+                                        {finalReportsByCourse && <FinalReportStatusBadges report={finalReportsByCourse[c.id]} />}
+                                        {isPendingDeletion && <span className="text-xs text-red-600 font-bold">{t('course_page.table.deletion_pending', '(Deletion Pending)')}</span>}
+                                    </div>
                                 </div>
-                                {c.approvalStatus === 'pending' ? (
-                                    <span className="shrink-0 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{t('course_page.status.pending', 'Pending')}</span>
-                                ) : c.approvalStatus === 'rejected' ? (
-                                    <span className="shrink-0 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">{t('course_page.status.rejected', 'Rejected')}</span>
-                                ) : active ? (
-                                    <span className="shrink-0 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{t('course_page.status.active', 'Active')}</span>
-                                ) : (
-                                    <span className="shrink-0 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{t('course_page.status.inactive', 'Inactive')}</span>
-                                )}
-                            </div>
-
-                            {(hasDates || c.participants_count > 0 || isPendingDeletion) && (
-                                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
-                                    {hasDates && (
-                                        <span className="flex items-center gap-1"><CalendarDays size={14} className="text-slate-400" />{fmt(startDate)}{endDate && endDate > startDate ? ` – ${fmt(endDate)}` : ''}</span>
-                                    )}
-                                    {c.participants_count > 0 && (
-                                        <span className="flex items-center gap-1"><Users size={14} className="text-slate-400" />{t('course_page.table.n_participants', '{{count}} participants', { count: c.participants_count })}</span>
-                                    )}
-                                    {isPendingDeletion && <span className="text-red-600 font-bold">{t('course_page.table.deletion_pending', '(Deletion Pending)')}</span>}
-                                </div>
-                            )}
-                            {finalReportsByCourse && <FinalReportStatusBadges report={finalReportsByCourse[c.id]} className="mt-2" />}
-
-                            <div className="mt-3 flex items-stretch gap-2">
-                                <Button variant="primary" className="flex-1 px-2" onClick={() => onOpen(c.id)} disabled={isProcessing}>
-                                    <ExternalLink size={16} /> {t('course_page.buttons.open', 'Open')}
-                                </Button>
-                                <Button variant="ghost" className="flex-1 px-2 bg-white" onClick={() => setReportModalCourse(c)} disabled={isProcessing}>
-                                    <FileText size={16} /> {t('course_page.buttons.reports', 'Reports')}
-                                </Button>
-                                <Button variant="ghost" className="px-3 bg-white" onClick={() => setShareModalCourse(c)} disabled={isProcessing}>
-                                    <Share2 size={16} /><span className="sr-only">{t('course_page.buttons.share', 'Share')}</span>
-                                </Button>
-                                <button
-                                    type="button"
-                                    onClick={() => toggleExpand(c.id)}
-                                    aria-expanded={isExpanded}
-                                    title={t('ui.more_actions', 'More actions')}
-                                    aria-label={t('ui.more_actions', 'More actions')}
-                                    className={`flex items-center justify-center rounded-md border px-3 ${isExpanded ? 'border-slate-700 bg-slate-700 text-white' : 'border-slate-300 bg-white text-slate-700'}`}
-                                >
-                                    <MoreHorizontal size={18} />
-                                </button>
-                            </div>
+                                <span className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-bold ${pill[0]}`}>{pill[1]}</span>
+                                <ChevronDown size={18} className={`shrink-0 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                            </button>
 
                             {isExpanded && (
-                                <div className="mt-2 grid grid-cols-2 gap-2 border-t border-slate-100 pt-2">
+                                <div className="grid grid-cols-2 gap-2 border-t border-slate-100 bg-slate-50/60 p-3">
+                                    <Button variant="primary" className="w-full px-2" onClick={() => onOpen(c.id)} disabled={isProcessing}>
+                                        <ExternalLink size={16} /> {t('course_page.buttons.open', 'Open')}
+                                    </Button>
+                                    <Button variant="secondary" className="w-full px-2" onClick={() => setReportModalCourse(c)} disabled={isProcessing}>
+                                        <FileText size={16} /> {t('course_page.buttons.reports', 'Reports')}
+                                    </Button>
+                                    <Button variant="secondary" className="w-full px-2" onClick={() => setShareModalCourse(c)} disabled={isProcessing}>
+                                        <Share2 size={16} /> {t('course_page.buttons.share', 'Share')}
+                                    </Button>
                                     <Button variant="secondary" className="w-full px-2" onClick={() => onEdit(c)} disabled={!canEdit || isPendingDeletion || isProcessing}>
                                         <Edit size={16} /> {t('course_page.buttons.edit', 'Edit')}
                                     </Button>
@@ -1170,44 +1299,17 @@ export function CoursesTable({
                 })}
             </div>
 
-            {totalItems > 0 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between mt-4 p-4 bg-white border rounded-lg text-sm text-gray-700 shadow-sm">
-                    <div className="flex items-center gap-4 mb-4 sm:mb-0">
-                        <span>{t('course_page.pagination.page_of', 'Page {{page}} of {{total}}', { page: currentPage, total: totalPages || 1 })} <span className="text-gray-500">{t('course_page.pagination.total_courses', '(Total: {{count}} courses)', { count: totalItems })}</span></span>
-                        <div className="flex items-center gap-2">
-                            <span className="font-medium">{t('course_page.pagination.per_page', 'Per Page:')}</span>
-                            <Select 
-                                disabled={isProcessing}
-                                value={itemsPerPage} 
-                                onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                                className="py-1 px-2 text-sm w-20 border-gray-300 rounded"
-                            >
-                                <option value={5}>5</option>
-                                <option value={10}>10</option>
-                                <option value={25}>25</option>
-                                <option value={50}>50</option>
-                            </Select>
-                        </div>
-                    </div>
-                    <div className="flex gap-2">
-                        <Button 
-                            variant="secondary" 
-                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                            disabled={currentPage === 1 || isProcessing}
-                            className="px-3 py-1"
-                        >
-                            &larr; {t('course_page.pagination.previous', 'Previous')}
-                        </Button>
-                        <Button 
-                            variant="secondary" 
-                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                            disabled={currentPage >= totalPages || totalPages === 0 || isProcessing}
-                            className="px-3 py-1"
-                        >
-                            {t('course_page.pagination.next', 'Next')} &rarr;
-                        </Button>
-                    </div>
-                </div>
+            {totalItems > visibleCount && (
+                <button
+                    type="button"
+                    onClick={() => setVisibleCount(n => n + PAGE_SIZE)}
+                    className="mt-3 w-full rounded-xl border border-dashed border-slate-400 bg-white p-3 text-sm font-bold text-sky-700 hover:bg-sky-50"
+                >
+                    {t('course_page.table.show_more', 'Show {{count}} more ({{shown}} of {{total}})', { count: Math.min(PAGE_SIZE, totalItems - visibleCount), shown: visibleCount, total: totalItems })}
+                </button>
+            )}
+            {totalItems > 0 && totalItems <= visibleCount && totalItems > PAGE_SIZE && (
+                <p className="mt-3 text-center text-xs text-slate-500">{t('course_page.table.all_shown', 'All {{count}} courses shown', { count: totalItems })}</p>
             )}
 
             {shareModalCourse && (
@@ -2262,22 +2364,21 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                         ) : (
                             <div>
                                 <PullToRefresh onRefresh={handleRefresh} disabled={isRefreshing || isProcessing} />
-                                <PageActions className="mb-4">
-                                        {canAddCourse && <Button disabled={isProcessing} onClick={handleOpenAddForm} className="bg-sky-600 text-white hover:bg-sky-700">{t('course_page.buttons.add_course', 'Add New Course')}</Button>}
-                                        <Button variant="secondary" onClick={handleRefresh} disabled={isRefreshing || isProcessing}>{isRefreshing ? <Spinner size="sm" /> : <><RefreshCw size={14} className="me-1"/> {t('course_page.buttons.refresh', 'Refresh Data')}</>}</Button>
-                                        
-                                        {/* TRIGGER BUTTON FOR MIGRATION MODAL */}
-                                        {canUseSuperUserAdvancedFeatures && (
-                                            <Button variant="danger" onClick={() => setShowMigrationModal(true)}>
-                                                {t('course_page.buttons.total_sync', 'Total Sync Tool')}
-                                            </Button>
-                                        )}
-                                        <Button disabled={isProcessing} onClick={() => setShowTypeReport(true)} className="md:ms-auto"><ClipboardList size={14} className="me-1"/> {t('course_page.buttons.comprehensive_report', 'Comprehensive {{type}} Report', { type: activeCourseType })}</Button>
-                                        <Button disabled={isProcessing} variant="secondary" onClick={() => setActiveCourseType(null)}>{t('course_page.buttons.change_package', 'Change Course Package')}</Button>
-                                </PageActions>
+                                {/* Adding a course: a round + button on phones, a normal button on wider screens. */}
+                                {canAddCourse && (
+                                    <button
+                                        type="button"
+                                        onClick={handleOpenAddForm}
+                                        disabled={isProcessing}
+                                        aria-label={t('course_page.buttons.add_course', 'Add New Course')}
+                                        className="md:hidden fixed left-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-sky-600 text-white shadow-lg shadow-sky-600/30 active:scale-95"
+                                        style={{ bottom: 'calc(var(--bottom-nav, 0px) + 16px)' }}
+                                    >
+                                        <Plus size={28} />
+                                    </button>
+                                )}
                                 
                                 <FilterPanel className="mb-4" activeCount={[filterState, filterLocality, filterSubCourse, filterProject].filter(v => v && v !== 'All').length}>
-                                    <h4 className="hidden md:block text-lg font-semibold mb-3">{t('course_page.filters.title', 'Filter Courses')}</h4>
                                     <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                                         <FormGroup label={t('course_page.filters.by_state', 'Filter by State')}><Select disabled={isProcessing} value={filterState} onChange={(e) => setFilterState(e.target.value)}>{filterStateOptions.map(s => <option key={s} value={s}>{s === 'All' ? t('course_page.filters.all', 'All') : s}</option>)}</Select></FormGroup>
                                         <FormGroup label={t('course_page.filters.by_locality', 'Filter by Locality')}><Select disabled={isProcessing || filterLocalityOptions.length <= 1} value={filterLocality} onChange={(e) => setFilterLocality(e.target.value)}>{filterLocalityOptions.map(l => <option key={l} value={l}>{l === 'All' ? t('course_page.filters.all', 'All') : l}</option>)}</Select></FormGroup>
@@ -2287,6 +2388,20 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                                 </FilterPanel>
                                 
                                 {coursesLoading ? <SkeletonTable /> : <CoursesTable
+                                    toolbarExtra={
+                                        <>
+                                            {canAddCourse && <Button disabled={isProcessing} onClick={handleOpenAddForm} className="hidden md:inline-flex bg-sky-600 text-white hover:bg-sky-700"><Plus size={16} /> {t('course_page.buttons.add_course', 'Add New Course')}</Button>}
+                                            <CoursePageMoreMenu
+                                                disabled={isProcessing}
+                                                items={[
+                                                    { label: t('course_page.buttons.comprehensive_report', 'Comprehensive {{type}} Report', { type: activeCourseType }), icon: ClipboardList, onClick: () => setShowTypeReport(true) },
+                                                    { label: t('course_page.buttons.change_package', 'Change Course Package'), icon: Archive, onClick: () => setActiveCourseType(null) },
+                                                    { label: isRefreshing ? t('course_page.buttons.refreshing', 'Refreshing…') : t('course_page.buttons.refresh', 'Refresh Data'), icon: RefreshCw, onClick: handleRefresh, disabled: isRefreshing },
+                                                    canUseSuperUserAdvancedFeatures && { label: t('course_page.buttons.total_sync', 'Total Sync Tool'), icon: AlertTriangle, onClick: () => setShowMigrationModal(true), danger: true },
+                                                ].filter(Boolean)}
+                                            />
+                                        </>
+                                    }
                                     courses={courses} onOpen={handleOpenCourse} onEdit={handleOpenEditForm} onDelete={handleCourseDeleteAction} 
                                     onOpenReport={onOpenReport} onOpenTestForm={handleOpenTestForm} onOpenAttendanceManager={onOpenAttendanceManager} 
                                     canEditDeleteActiveCourse={canEditDeleteActiveCourse} canEditDeleteInactiveCourse={canEditDeleteInactiveCourse}
