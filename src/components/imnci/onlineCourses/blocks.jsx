@@ -4,7 +4,7 @@
 // book pages, videos, questions and links to practice cases.
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BookOpenText, MonitorPlay, Stethoscope, CheckCircle2, GraduationCap, X } from 'lucide-react';
+import { BookOpenText, MonitorPlay, Stethoscope, CheckCircle2, XCircle, GraduationCap, X, Lightbulb, ClipboardCheck } from 'lucide-react';
 import { severityById } from '../../constants';
 import { videoSource, blockHtml } from '../book';
 import { RichText, useImnci } from '../shared';
@@ -109,41 +109,64 @@ function ImageViewer({ url, alt, onClose }) {
 // learner picks, sees straight away whether they were right, and reads why.
 // Nothing is scored or stored — this is self-assessment, and a health worker
 // checking themselves should not feel they are being marked.
-export function QuestionBlock({ block }) {
+export function QuestionBlock({ block, number, total }) {
     const { t } = useTranslation();
     const [picked, setPicked] = useState(null);
     const options = block.options || [];
+    const answer = block.answer ?? 0;
+    const show = picked !== null;
+    const right = picked === answer;
     return (
-        <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 not-prose">
-            <div className="font-semibold text-slate-800 mb-3">{block.text}</div>
+        <div className="not-prose rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm my-4">
+            <div className="flex items-center gap-2 mb-3">
+                <span className="px-2 py-0.5 rounded bg-sky-700 text-white text-[11px] font-bold uppercase tracking-wider">
+                    {t('imnci_ui.courses.look.checkpoint', 'Checkpoint')}
+                </span>
+                {total > 1 && (
+                    <span className="text-xs font-semibold text-slate-500">
+                        {t('imnci_ui.courses.look.question_n', 'Question {{n}} of {{total}}', { n: number, total })}
+                    </span>
+                )}
+                <ClipboardCheck size={18} className="ms-auto text-slate-400" />
+            </div>
+            <div className="font-semibold text-slate-900 text-base sm:text-lg leading-snug mb-3">{block.text}</div>
             <div className="space-y-2">
                 {options.map((opt, i) => {
                     const chosen = picked === i;
-                    const correct = i === (block.answer ?? 0);
-                    const show = picked !== null;
+                    const correct = i === answer;
+                    const tone = show && correct ? 'border-sky-500 bg-sky-50 text-slate-900'
+                        : show && chosen ? 'border-rose-400 bg-rose-50 text-rose-900'
+                            : 'border-slate-200 bg-slate-50 hover:border-sky-400 hover:bg-white';
+                    const dot = show && correct ? 'bg-sky-700 text-white border-sky-700'
+                        : show && chosen ? 'bg-rose-600 text-white border-rose-600'
+                            : 'bg-white text-slate-600 border-slate-300';
                     return (
                         <button key={i} onClick={() => setPicked(i)} disabled={show}
-                            className={`w-full text-start px-3 py-2 rounded border text-sm transition-colors ${
-                                show && correct ? 'border-emerald-400 bg-emerald-50 text-emerald-900'
-                                    : show && chosen ? 'border-rose-400 bg-rose-50 text-rose-900'
-                                        : 'border-slate-300 bg-white hover:border-sky-400'}`}>
-                            <span className="font-mono text-xs text-slate-400 me-2">
-                                {String.fromCharCode(97 + i)}
+                            className={`w-full text-start min-h-[44px] px-3 py-2.5 rounded-xl border text-sm sm:text-base flex items-center gap-3 transition-colors ${tone}`}>
+                            <span className={`w-7 h-7 rounded-full border grid place-items-center text-xs font-bold shrink-0 ${dot}`}>
+                                {String.fromCharCode(65 + i)}
                             </span>
-                            {opt}
-                            {show && correct && <CheckCircle2 size={14} className="inline ms-2 text-emerald-600" />}
+                            <span className="flex-1">{opt}</span>
+                            {show && correct && <CheckCircle2 size={18} className="text-sky-700 shrink-0" />}
+                            {show && chosen && !correct && <XCircle size={18} className="text-rose-600 shrink-0" />}
                         </button>
                     );
                 })}
             </div>
-            {picked !== null && (
-                <div className="mt-3 text-sm">
-                    <div className={picked === (block.answer ?? 0) ? 'text-emerald-800 font-semibold' : 'text-rose-800 font-semibold'}>
-                        {picked === (block.answer ?? 0) ? t('imnci_ui.courses.question.correct', 'Correct.') : t('imnci_ui.courses.question.not_quite', 'Not quite.')}
+            {show && (
+                <div className={`mt-3 rounded-xl border p-3 sm:p-4 text-sm flex gap-3 ${right ? 'bg-sky-50 border-sky-200' : 'bg-rose-50 border-rose-200'}`}>
+                    <Lightbulb size={18} className={`shrink-0 mt-0.5 ${right ? 'text-sky-700' : 'text-rose-700'}`} />
+                    <div className="min-w-0">
+                        <div className={`text-[11px] font-bold uppercase tracking-wider ${right ? 'text-sky-800' : 'text-rose-800'}`}>
+                            {t('imnci_ui.courses.look.explanation', 'Explanation')}
+                        </div>
+                        <div className={`font-semibold mt-0.5 ${right ? 'text-sky-900' : 'text-rose-900'}`}>
+                            {right ? t('imnci_ui.courses.question.correct', 'Correct.') : t('imnci_ui.courses.question.not_quite', 'Not quite.')}
+                        </div>
+                        {block.explanation && <p className="text-slate-700 mt-1">{block.explanation}</p>}
+                        <button onClick={() => setPicked(null)}
+                            className="text-xs text-sky-700 font-semibold mt-2 hover:underline">{t('imnci_ui.courses.question.try_again', 'try again')}</button>
                     </div>
-                    {block.explanation && <p className="text-slate-600 mt-1">{block.explanation}</p>}
-                    <button onClick={() => setPicked(null)}
-                        className="text-xs text-sky-700 font-semibold mt-2">{t('imnci_ui.courses.question.try_again', 'try again')}</button>
                 </div>
             )}
         </div>
@@ -165,7 +188,7 @@ export function VideoBlock({ block }) {
     }
     return (
         <figure className="my-4 not-prose">
-            <div className="relative w-full rounded-lg overflow-hidden border border-slate-300 bg-black"
+            <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 bg-black shadow-sm"
                 style={{ aspectRatio: '16 / 9' }}>
                 {src.kind === 'embed' ? (
                     <iframe src={src.src} title={block.caption || t('imnci_ui.courses.video.video', 'Video')} allowFullScreen
@@ -197,7 +220,7 @@ export function ExerciseLinkBlock({ block }) {
         );
     }
     return (
-        <div className="not-prose border border-slate-200 rounded-xl overflow-hidden my-4">
+        <div className="not-prose border border-slate-200 rounded-xl overflow-hidden my-4 bg-white shadow-sm">
             <div className="px-4 py-2.5 bg-slate-800 text-white flex flex-wrap items-center gap-2">
                 <GraduationCap size={16} className="shrink-0" />
                 <span className="font-bold text-sm flex-1">{ex.title}</span>
@@ -228,7 +251,11 @@ export function ExerciseLinkBlock({ block }) {
 const MARKUP = /<\/?(b|strong|i|em|u|br|ul|ol|li|p|span)\b/i;
 
 export function ContentBlocks({ blocks, scale = 1 }) {
+    const { t } = useTranslation();
     if (!blocks?.length) return null;
+    // Questions are numbered among themselves, "Question 2 of 3".
+    const questionTotal = blocks.filter((b) => b.type === 'question').length;
+    let questionNo = 0;
     return (
         <div
             className="prose prose-slate max-w-none text-slate-800 leading-relaxed space-y-3"
@@ -244,7 +271,8 @@ export function ContentBlocks({ blocks, scale = 1 }) {
                 }
                 if (b.type === 'heading') {
                     return (
-                        <h4 key={i} className="font-bold text-slate-900 mt-4">
+                        <h4 key={i} className="font-bold text-slate-900 mt-6 text-[1.15em] leading-snug flex items-start gap-2">
+                            <span className="w-2 h-2 rounded-full bg-sky-600 shrink-0 mt-[0.55em]" aria-hidden="true" />
                             <RichText html={blockHtml(b)} className="inline" />
                         </h4>
                     );
@@ -257,7 +285,7 @@ export function ContentBlocks({ blocks, scale = 1 }) {
                 }
                 if (b.type === 'table') {
                     return (
-                        <div key={i} className="overflow-x-auto">
+                        <div key={i} className="not-prose overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm my-4">
                             <table className="min-w-full border-collapse text-sm">
                                 <tbody>
                                     {(b.rows || []).map((row, ri) => {
@@ -265,7 +293,7 @@ export function ContentBlocks({ blocks, scale = 1 }) {
                                         return (
                                             <tr key={ri}>
                                                 {(row.cells || []).map((cell, ci) => (
-                                                    <td key={ci} className={`border p-2 align-top whitespace-pre-line ${tone.row}`}>
+                                                    <td key={ci} className={`border-b border-e last:border-e-0 border-slate-200 px-3 py-2.5 align-top whitespace-pre-line ${tone.row}`}>
                                                         {MARKUP.test(String(cell)) ? <RichText html={cell} /> : cell}
                                                     </td>
                                                 ))}
@@ -278,7 +306,8 @@ export function ContentBlocks({ blocks, scale = 1 }) {
                     );
                 }
                 if (b.type === 'question') {
-                    return <QuestionBlock key={i} block={b} />;
+                    questionNo += 1;
+                    return <QuestionBlock key={i} block={b} number={questionNo} total={questionTotal} />;
                 }
                 if (b.type === 'video') {
                     return <VideoBlock key={i} block={b} />;
@@ -288,8 +317,16 @@ export function ContentBlocks({ blocks, scale = 1 }) {
                 }
                 if (b.type === 'note') {
                     return (
-                        <div key={i} className="p-3 bg-sky-50 border-s-4 border-sky-400 text-sky-900">
-                            <RichText html={blockHtml(b)} />
+                        <div key={i} className="not-prose rounded-xl border border-sky-200 border-s-4 border-s-sky-600 bg-sky-50 p-4 flex gap-3 my-4">
+                            <span className="w-8 h-8 rounded-lg bg-white border border-sky-200 text-sky-700 grid place-items-center shrink-0">
+                                <Lightbulb size={16} />
+                            </span>
+                            <div className="min-w-0 text-slate-800">
+                                <div className="text-[11px] font-bold uppercase tracking-wider text-sky-800 mb-0.5">
+                                    {t('imnci_ui.courses.look.key_point', 'Key point')}
+                                </div>
+                                <RichText html={blockHtml(b)} />
+                            </div>
                         </div>
                     );
                 }

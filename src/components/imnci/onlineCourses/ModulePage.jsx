@@ -24,9 +24,10 @@ export function ModulePage() {
 
     const secs = sectionsByModule[openModule.id] || [];
     const doneHere = secs.filter((s) => progress.completed?.[s.id]).length;
+    const moduleNo = modules.findIndex((m) => m.id === openModule.id) + 1;
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 max-w-4xl mx-auto">
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <button onClick={back}
                     className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-sky-700">
@@ -47,16 +48,19 @@ export function ModulePage() {
                 )}
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-                <div className="px-4 sm:px-5 py-4 border-b border-slate-100">
-                    <div className="text-xs font-medium text-sky-700">{openCourse.title}</div>
-                    <h2 className="text-lg font-bold text-slate-900 mt-0.5">{openModule.title}</h2>
-                    <div className="text-xs text-slate-500 mt-1">
+            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                <div className="px-4 sm:px-6 py-5 border-b border-slate-100">
+                    <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                        {moduleNo > 0 && <>{t('imnci_ui.courses.look.module_n', 'Module {{n}}', { n: moduleNo })} · </>}
+                        <span className="normal-case tracking-normal font-semibold text-sky-700">{openCourse.title}</span>
+                    </div>
+                    <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 mt-1">{openModule.title}</h2>
+                    <div className="text-sm text-slate-500 mt-1 tabular-nums">
                         {t('imnci_ui.courses.main.sections_complete', '{{n}} sections · {{done}} complete', { n: secs.length, done: doneHere })}
                         {minutesLeft(secs) > 0 && ' · ' + t('imnci_ui.courses.time.left', 'about {{time}} left', { time: duration(minutesLeft(secs)) })}
                     </div>
-                    <div className="h-1.5 bg-slate-100 rounded mt-3 overflow-hidden max-w-md">
-                        <div className="h-full bg-emerald-500 transition-all"
+                    <div className="h-2 bg-slate-100 rounded-full mt-3 overflow-hidden max-w-md">
+                        <div className="h-full bg-sky-600 rounded-full transition-all"
                             style={{ width: `${secs.length ? (doneHere / secs.length) * 100 : 0}%` }} />
                     </div>
                     {secs.length > 0 && (
@@ -79,7 +83,7 @@ export function ModulePage() {
                         )}
                     </div>
                 ) : (
-                    <ol className="divide-y">
+                    <ol className="divide-y divide-slate-100">
                         {secs.map((s, i) => {
                             const done = !!progress.completed?.[s.id];
                             const locked = sectionLocked(secs, i);
@@ -87,10 +91,10 @@ export function ModulePage() {
                                 .map((tb) => ({ tb, n: tabContent(s, tb.id).length }))
                                 .filter((x) => x.n > 0);
                             return (
-                                <li key={s.id} className={`flex items-center gap-3 px-4 py-3 transition-colors ${
+                                <li key={s.id} className={`flex items-center gap-3 px-4 sm:px-6 py-3.5 transition-colors ${
                                     locked ? 'bg-slate-50' : 'hover:bg-sky-50/60'}`}>
-                                    <span className={`w-7 h-7 rounded-full grid place-items-center text-xs font-bold shrink-0 ${
-                                        done ? 'bg-emerald-100 text-emerald-700'
+                                    <span className={`w-8 h-8 rounded-full grid place-items-center text-xs font-bold shrink-0 ${
+                                        done ? 'bg-emerald-50 text-emerald-600'
                                             : locked ? 'bg-slate-200 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
                                         {done ? <CheckCircle2 size={15} /> : locked ? <Lock size={13} /> : i + 1}
                                     </span>
@@ -101,7 +105,12 @@ export function ModulePage() {
                                             go({ section: s.id, tab: 'read' });
                                             setEditingTab(null);
                                         }}>
-                                        <div className={`font-medium truncate ${locked ? 'text-slate-400' : 'text-slate-800'}`}>{s.title}</div>
+                                        {moduleNo > 0 && (
+                                            <div className="text-xs font-semibold text-slate-500">
+                                                {t('imnci_ui.courses.look.section_n', 'Section {{n}}', { n: `${moduleNo}.${i + 1}` })}
+                                            </div>
+                                        )}
+                                        <div className={`font-semibold truncate ${locked ? 'text-slate-400' : 'text-slate-800'}`}>{s.title}</div>
                                         <div className="text-xs text-slate-500 flex gap-2 flex-wrap mt-0.5">
                                             {locked ? <span>{t('imnci_ui.courses.main.finish_previous', 'Finish the previous section first')}</span> : (<>
                                                 {filled.map(({ tb, n }) => (
