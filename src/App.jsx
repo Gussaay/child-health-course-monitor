@@ -1675,6 +1675,8 @@ export default function App() {
                     // role, roles and permissions server-side for every device.
                     if (!readFromServer || userSnap.metadata?.fromCache) {
                         console.warn("Profile read was not server-confirmed. Keeping existing role, not creating a default profile.");
+                        // Nothing saved to fall back on: say so instead of an unexplained empty menu.
+                        if (!backupRole && !lastAppliedProfile) setPermissionsError(true);
                         return;
                     }
 
