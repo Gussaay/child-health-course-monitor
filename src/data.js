@@ -4246,3 +4246,10 @@ export async function listDailyEvalResponses(courseId) {
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => !r.isDeleted);
 }
+
+// Every day set up for one course's daily evaluation (Share dialog list).
+export async function listDailyEvalForms(courseId) {
+    const q = query(collection(db, "dailyEvalForms"), where("courseId", "==", courseId));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(f => !f.isDeleted);
+}

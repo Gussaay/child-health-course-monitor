@@ -1415,14 +1415,7 @@ export function CoursesTable({
                                 )}
 
                                 {isOperationalGuideCourse(shareModalCourse) && (
-                                    <DailyEvaluationShare
-                                        key={shareModalCourse.id}
-                                        course={shareModalCourse}
-                                        onShare={(formId, day) => {
-                                            const link = `${getBaseUrl()}/public/evaluation/${formId}`;
-                                            setQrShareData({ url: link, title: `Daily evaluation - Day ${day}: ${shareModalCourse.course_type}` });
-                                        }}
-                                    />
+                                    <DailyEvaluationShare key={shareModalCourse.id} course={shareModalCourse} />
                                 )}
 
                                 <div className="bg-gray-50 p-3 rounded border">
@@ -3657,7 +3650,8 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
                              <div className="text-gray-600">
                                 <span className="font-semibold text-gray-900">{course.course_type}</span>
                                 <span className="mx-2">•</span>
-                                <span>{course.state} - {course.locality}</span>
+                                {/* The operational guide course gathers several localities; its link shows the state only. */}
+                                <span>{isOperationalGuideCourse(course) ? course.state : `${course.state} - ${course.locality}`}</span>
                              </div>
                         </div>
                     
