@@ -169,10 +169,12 @@ describe('course files', () => {
         bad.modules[0].sections[0].read.push({ type: 'wizard' });
         bad.exercises[1].questions[0].correct = [9];
         bad.exercises.push({ ...bad.exercises[0] });
+        bad.exercises.push({ id: 'blank-text', kind: 'quiz', title: 'T', questions: [{ type: 'text', question: 'Name it', correct: ' ' }] });
         const errors = checkPackage(bad).errors.join(' ');
         expect(errors).toContain('unknown block type');
         expect(errors).toContain('not one of its options');
         expect(errors).toContain('used twice');
+        expect(errors).toContain('expected text answer is missing');
     });
 
     it('warns about a link to an exercise that is nowhere', () => {

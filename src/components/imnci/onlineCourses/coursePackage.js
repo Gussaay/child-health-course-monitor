@@ -112,6 +112,7 @@ export function checkPackage(pkg, knownExerciseIds = []) {
                 if (!String(q?.question || '').trim()) errors.push(`${qw}: no question text.`);
                 if (q?.type === 'mcq' && (!(q.correct || []).length || q.correct.some((c) => !String(q.options?.[c] ?? '').trim()))) errors.push(`${qw}: the correct answer is not one of its options.`);
                 if (q?.type === 'tf' && typeof q.correct !== 'boolean') errors.push(`${qw}: true or false is not set.`);
+                if (q?.type === 'text' && !String(q.correct ?? '').trim()) errors.push(`${qw}: the expected text answer is missing.`);
                 if (q?.type === 'open' && !(q.points || []).length) errors.push(`${qw}: the written answer has no answer key.`);
             });
         } else if (!(e?.expected?.sections || []).length) {
