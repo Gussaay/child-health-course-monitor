@@ -12,7 +12,7 @@ import { db } from '../firebase';
 import { doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 
 import {
-    Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Modal, Spinner, Toast, FilterPanel, PageActions, FormActions
+    Card, PageHeader, Button, FormGroup, Input, Select, Textarea, Table, EmptyState, Modal, Spinner, Toast, FilterPanel, PageActions, FormActions, FormSection, FieldError
 } from "./CommonComponents";
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EMONC, JOB_TITLES_SSNC,
@@ -1967,6 +1967,9 @@ export function ParticipantsView({
 
     const [activeScreen, setActiveScreen] = useState('list'); 
     const [editingParticipant, setEditingParticipant] = useState(null);
+    // "Save and add another": what the next blank form starts with, and a key to give it a fresh start.
+    const [formCarryOver, setFormCarryOver] = useState(null);
+    const [participantFormKey, setParticipantFormKey] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
     const [processingRowId, setProcessingRowId] = useState(null);
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
@@ -2290,7 +2293,7 @@ export function ParticipantsView({
         setActiveScreen('list');
     };
 
-    const handleSaveParticipant = async (participantData, facilityUpdateData) => {
+    const handleSaveParticipant = async (participantData, facilityUpdateData, _oldFacilityUpdate, opts = {}) => {
         setIsProcessing(true);
         try {
             const fullPayload = { 
@@ -2307,6 +2310,19 @@ export function ParticipantsView({
 
             await fetchParticipants(navigator.onLine);
             if (onBatchUpdate) onBatchUpdate();
+            if (opts.addAnother && !editingParticipant?.id) {
+                // Same group, place and facility; a fresh form for the next person.
+                setFormCarryOver({
+                    group: participantData.group, state: participantData.state, locality: participantData.locality,
+                    facilityId: participantData.facilityId || null, center_name: participantData.center_name || '',
+                });
+                setEditingParticipant(null);
+                setParticipantFormKey(k => k + 1);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                setToast({ show: true, message: t('participants_page.save.saved_next', '{{name}} saved. Add the next participant.', { name: participantData.name }), type: 'success' });
+                return;
+            }
+            setFormCarryOver(null);
             setActiveScreen('list');
             setToast({ show: true, message: facilityUpdateData ? t('participants_page.save.with_facility', 'Participant saved and facility update submitted.') : t('participants_page.save.success', 'Participant saved successfully.'), type: 'success' });
         } catch (error) {
@@ -2556,8 +2572,11 @@ export function ParticipantsView({
                     onSubmit={handleSubmitReadd}
                 />
                 <ParticipantForm 
+                    key={participantFormKey}
                     course={course} 
                     initialData={editingParticipant} 
+                    carryOver={editingParticipant ? null : formCarryOver}
+                    existingParticipants={participants || []}
                     onCancel={() => leaveForm(() => setActiveScreen('list'))} 
                     onSave={handleSaveParticipant} 
                 />
@@ -3068,13 +3087,35 @@ export function ParticipantsView({
     );
 }
 
+/** Two big tap buttons instead of a yes/no dropdown. Tapping the chosen one again clears it. */
+const YesNo = ({ value, onChange, disabled, yes = 'نعم', no = 'لا' }) => (
+    <div className="grid grid-cols-2 gap-2" role="radiogroup">
+        {[['yes', yes], ['no', no]].map(([v, label]) => (
+            <button
+                key={v}
+                type="button"
+                role="radio"
+                aria-checked={value === v}
+                disabled={disabled}
+                onClick={() => onChange(value === v ? '' : v)}
+                className={`rounded-lg border px-3 py-2.5 text-sm font-bold transition-colors disabled:opacity-60 ${value === v ? 'border-sky-600 bg-sky-600 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}`}
+            >
+                {label}
+            </button>
+        ))}
+    </div>
+);
+
 const getBoolState = (val) => val === undefined || val === null ? '' : (val ? 'yes' : 'no');
 const getStrState = (val) => val === 'Yes' ? 'yes' : (val === 'No' ? 'no' : '');
 const parseBool = (val) => val === 'yes' ? true : (val === 'no' ? false : null);
 const parseStr = (val) => val === 'yes' ? 'Yes' : (val === 'no' ? 'No' : '');
 
-export function ParticipantForm({ course, initialData, onCancel, onSave }) {
-    const { t } = useTranslation();
+export function ParticipantForm({ course, initialData, onCancel, onSave, carryOver = null, existingParticipants = [] }) {
+    const { t, i18n: formI18n } = useTranslation();
+    // The form follows the app language (it used to be Arabic only).
+    const isAr = String(formI18n.language || 'ar').startsWith('ar');
+    const L = (ar, en) => (isAr ? ar : en);
     const { healthFacilities } = useDataCache();
     const isImnci = course.course_type === 'IMNCI';
     const isIccm = course.course_type === 'ICCM';
@@ -3099,12 +3140,12 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
     const [name, setName] = useState(String(initialData?.name || ''));
     const [email, setEmail] = useState(String(initialData?.email || ''));
-    const [state, setState] = useState(initialData?.state || course?.state || ''); 
-    const [locality, setLocality] = useState(initialData?.locality || course?.locality || ''); 
-    const [center, setCenter] = useState(String(initialData?.center_name || '')); 
+    const [state, setState] = useState(initialData?.state || carryOver?.state || course?.state || ''); 
+    const [locality, setLocality] = useState(initialData?.locality || carryOver?.locality || course?.locality || ''); 
+    const [center, setCenter] = useState(String(initialData?.center_name || carryOver?.center_name || '')); 
     const [department, setDepartment] = useState(String(initialData?.department || ''));
     const [phone, setPhone] = useState(String(initialData?.phone || ''));
-    const [group, setGroup] = useState(initialData?.group || 'Group A');
+    const [group, setGroup] = useState(initialData?.group || carryOver?.group || 'Group A');
     const [error, setError] = useState('');
     const [preTestScore, setPreTestScore] = useState(initialData?.pre_test_score ?? '');
     const [postTestScore, setPostTestScore] = useState(initialData?.post_test_score ?? '');
@@ -3251,6 +3292,10 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                              setCenter(initialData.center_name);
                              setSelectedFacility(null);
                          }
+                    } else if (!initialData && carryOver?.facilityId) {
+                         // "Save and add another": stay on the same facility.
+                         const matchedFacility = mergedFacilities.find(f => f.id === carryOver.facilityId);
+                         if (matchedFacility) { setSelectedFacility(matchedFacility); setCenter(matchedFacility['اسم_المؤسسة']); }
                     } else if (initialData?.center_name) {
                          const matchedFacility = mergedFacilities.find(f => f['اسم_المؤسسة'] === initialData.center_name);
                           if(matchedFacility){
@@ -3281,7 +3326,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
              setIsLoadingFacilities(false);
              isInitialLoad.current = false;
         }
-    }, [state, locality, initialData?.facilityId, initialData?.center_name, isIccm, isCpcm, isProgramManagement, healthFacilities]); 
+    }, [state, locality, initialData?.facilityId, initialData?.center_name, carryOver?.facilityId, isIccm, isCpcm, isProgramManagement, healthFacilities]); 
 
     const handleFacilitySelect = (facilityId) => {
         setError('');
@@ -3376,6 +3421,45 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         return 'كوادر';
      }, [job, otherJobTitle]);
 
+    // ---- Field errors, duplicates, phone tidy, counter ----
+    const [fieldErrors, setFieldErrors] = useState({});
+    const fe = (k) => !!fieldErrors[k];
+    const markWrap = (k) => ({ 'data-missing': fe(k) ? 'true' : undefined, className: fe(k) ? 'rounded-lg ring-2 ring-red-300 ring-offset-2' : '' });
+    const reqMsg = L('هذا الحقل مطلوب', 'This field is required');
+
+    const phoneDigits = (v) => String(v || '').replace(/\D/g, '');
+    const tidyPhone = () => setPhone(prev => String(prev || '').replace(/[\s\-()]/g, ''));
+    const phoneTooShort = phone.trim() !== '' && phoneDigits(phone).length < 9;
+
+    const others = useMemo(() => (existingParticipants || []).filter(x => x && x.id !== initialData?.id), [existingParticipants, initialData?.id]);
+    const normName = (v) => String(v || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    const last9 = (v) => phoneDigits(v).slice(-9);
+    const duplicateOf = useMemo(() => others.find(x =>
+        (name.trim() && normName(x.name) === normName(name)) ||
+        (last9(phone).length >= 9 && last9(x.phone) === last9(phone))
+    ), [others, name, phone]);
+    const alreadyInCourse = (worker) => others.some(x =>
+        (worker?.name && normName(x.name) === normName(worker.name)) ||
+        (last9(worker?.phone).length >= 9 && last9(x.phone) === last9(worker.phone)));
+
+    const groupCounts = useMemo(() => {
+        const n = {};
+        others.forEach(x => { const g = x.group || 'Group A'; n[g] = (n[g] || 0) + 1; });
+        return n;
+    }, [others]);
+    const groupShort = (g) => (isAr ? { 'Group A': 'أ', 'Group B': 'ب', 'Group C': 'ج', 'Group D': 'د' }[g] : String(g).replace('Group ', '')) || g;
+
+    // Facility questions already answered for this facility can stay folded.
+    const facilityAlreadyFilled = !!selectedFacility && [hasWeightScale, hasHeightScale, hasThermometer, hasTimer, hasORS, hasNutri, hasImm].some(v => v !== '');
+    const [facilityOpen, setFacilityOpen] = useState(null);
+    const facilitySectionOpen = facilityOpen === null ? !facilityAlreadyFilled : facilityOpen;
+    const facilityUpdatedAt = (() => {
+        const v = selectedFacility?.['اخر تحديث'] || selectedFacility?.lastSnapshotAt;
+        if (!v) return '';
+        const d = v?.toDate ? v.toDate() : (v?.seconds ? new Date(v.seconds * 1000) : new Date(v));
+        return Number.isNaN(d?.getTime?.()) ? '' : d.toLocaleDateString();
+    })();
+
     // Errors open in a popup as well as above the form: the inline box sits at
     // the top of a long form and is easy to miss after pressing Save.
     const showError = (msg) => {
@@ -3383,19 +3467,25 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
         alertDialog(msg, { title: 'تعذر حفظ المشارك (Participant not saved)' });
     };
 
-    const submit = async () => { 
+    const submit = async (addAnother = false) => { 
         setError('');
         const finalJobTitle = job === 'Other' ? otherJobTitle : job;
 
-        if (!name.trim()) { showError('اسم المشارك مطلوب.'); return; }
-        if (!state) { showError('الولاية مطلوبة.'); return; }
-        if (!locality) { showError('المحلية مطلوبة.'); return; }
-        
-        if (!isProgramManagement && !center.trim()) { showError((isIccm || isCpcm) ? 'اسم القرية مطلوب.' : 'اسم المؤسسة الصحية مطلوب.'); return; }
-        if (isProgramManagement && !department.trim()) { showError('اسم الإدارة مطلوب.'); return; }
-
-        if (!finalJobTitle) { showError('المسمى الوظيفي مطلوب.'); return; }
-        if (!phone.trim()) { showError('رقم الهاتف مطلوب.'); return; }
+        // Mark every missing field at once and jump to the first, instead of
+        // one popup per field.
+        const missingNow = {
+            state: !state, locality: !locality,
+            center: !isProgramManagement && !center.trim(),
+            department: isProgramManagement && !department.trim(),
+            name: !name.trim(), job: !finalJobTitle, phone: !phone.trim(),
+        };
+        if (Object.values(missingNow).some(Boolean)) {
+            setFieldErrors(missingNow);
+            setError(L('الرجاء إكمال الحقول المطلوبة المعلّمة باللون الأحمر.', 'Please fill in the fields marked in red.'));
+            setTimeout(() => document.querySelector('[data-missing="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
+            return;
+        }
+        setFieldErrors({});
 
         setIsSaving(true);
         try {
@@ -3609,7 +3699,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                 }
             }
 
-            await onSave(p, facilityUpdatePayload, oldFacilityUpdatePayload);
+            await onSave(p, facilityUpdatePayload, oldFacilityUpdatePayload, { addAnother: addAnother === true });
         } catch (error) {
             showError(error.message || t('participants_page.form.save_error', 'An error occurred while saving.'));
         } finally {
@@ -3618,7 +3708,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
     };
 
     return (
-        <div dir="rtl">
+        <div dir={isAr ? 'rtl' : 'ltr'}>
             <FacilitySearchModal 
                 isOpen={isFacilitySearchOpen}
                 onClose={() => setIsFacilitySearchOpen(false)}
@@ -3638,20 +3728,31 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
             <Card>
                 <div className="p-6">
-                    <PageHeader title={initialData ? 'تعديل بيانات المشارك' : 'إضافة مشارك جديد'} />
+                    <PageHeader title={initialData ? L('تعديل بيانات المشارك', 'Edit participant') : L('إضافة مشارك جديد', 'Add participant')} />
+                    {!initialData && (
+                        <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-bold text-slate-800">
+                                <span>{course.participants_count > 0 ? L(`${others.length} من ${course.participants_count} مشارك`, `${others.length} of ${course.participants_count} participants`) : L(`${others.length} مشارك`, `${others.length} participants`)}</span>
+                                <span className="font-semibold text-slate-500">{Object.keys(groupCounts).sort().map(g => `${L('المجموعة', 'Group')} ${groupShort(g)} ${groupCounts[g]}`).join(' · ')}</span>
+                            </div>
+                            {course.participants_count > 0 && (
+                                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200"><div className="h-full bg-sky-600" style={{ width: `${Math.min(100, Math.round(others.length / course.participants_count * 100))}%` }} /></div>
+                            )}
+                        </div>
+                    )}
                     {error && <div className="p-3 my-4 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm font-medium">{error}</div>}
                     
                     {/* --- القسم 1: البيانات الأساسية --- */}
                     <div className="mt-6 mb-6">
-                        <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">البيانات الأساسية</h3>
+                        <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">{L("البيانات الأساسية", "Basic details")}</h3>
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <FormGroup label="المجموعة (Group)">
+                            <FormGroup label={L("المجموعة (Group)", "Group")}>
                                 <Select disabled={isSaving} value={group} onChange={(e) => setGroup(e.target.value)}>
                                     {[
-                                        ['Group A', 'المجموعة أ (Group A)'],
-                                        ['Group B', 'المجموعة ب (Group B)'],
-                                        ['Group C', 'المجموعة ج (Group C)'],
-                                        ['Group D', 'المجموعة د (Group D)'],
+                                        ['Group A', L('المجموعة أ (Group A)', 'Group A')],
+                                        ['Group B', L('المجموعة ب (Group B)', 'Group B')],
+                                        ['Group C', L('المجموعة ج (Group C)', 'Group C')],
+                                        ['Group D', L('المجموعة د (Group D)', 'Group D')],
                                     ].map(([value, label]) => {
                                         // The sub-course comes from the group, so say which
                                         // one each group is: on an EmONC course picking
@@ -3663,7 +3764,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                 </Select>
                             </FormGroup>
 
-                            <FormGroup label="الولاية">
+                            <div {...markWrap('state')}><FormGroup label={L("الولاية", "State")}>
                                  <Select disabled={isSaving} value={state} onChange={(e) => {
                                     setState(e.target.value);
                                     setLocality(''); 
@@ -3671,45 +3772,47 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                     setSelectedFacility(null); 
                                     setFacilitiesInLocality([]); 
                                  }}>
-                                    <option value="">— اختر الولاية —</option>
-                                    {Object.keys(STATE_LOCALITIES).sort((a,b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)).map(s => <option key={s} value={s}>{STATE_LOCALITIES[s].ar}</option>)}
+                                    <option value="">{L("— اختر الولاية —", "— Choose state —")}</option>
+                                    {Object.keys(STATE_LOCALITIES).sort((a,b) => STATE_LOCALITIES[a].ar.localeCompare(STATE_LOCALITIES[b].ar)).map(s => <option key={s} value={s}>{isAr ? STATE_LOCALITIES[s].ar : s}</option>)}
                                 </Select>
-                            </FormGroup>
+                                <FieldError show={fe('state')}>{reqMsg}</FieldError>
+                            </FormGroup></div>
 
-                            <FormGroup label="المحلية">
+                            <div {...markWrap('locality')}><FormGroup label={L("المحلية", "Locality")}>
                                 <Select disabled={isSaving || !state} value={locality} onChange={(e) => {
                                     setLocality(e.target.value);
                                     setCenter(''); 
                                     setSelectedFacility(null); 
                                 }}>
-                                    <option value="">— اختر المحلية —</option>
-                                    {(STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{l.ar}</option>)}
+                                    <option value="">{L("— اختر المحلية —", "— Choose locality —")}</option>
+                                    {(STATE_LOCALITIES[state]?.localities || []).sort((a,b) => a.ar.localeCompare(b.ar)).map(l => <option key={l.en} value={l.en}>{isAr ? l.ar : l.en}</option>)}
                                 </Select>
-                            </FormGroup>
+                                <FieldError show={fe('locality')}>{reqMsg}</FieldError>
+                            </FormGroup></div>
                             
                             {isProgramManagement && (
-                                <FormGroup label="الإدارة (Department)">
+                                <FormGroup label={L("الإدارة (Department)", "Department")}>
                                     <Input
                                         disabled={isSaving || !locality}
                                         value={department}
                                         onChange={(e) => setDepartment(e.target.value)}
-                                        placeholder="أدخل اسم الإدارة"
+                                        placeholder={L("أدخل اسم الإدارة", "Department name")}
                                     />
                                 </FormGroup>
                             )}
 
                             {!isProgramManagement && (
                                 (isIccm || isCpcm) ? (
-                                    <FormGroup label="اسم القرية">
+                                    <FormGroup label={L("اسم القرية", "Village")}>
                                         <Input
                                             disabled={isSaving || !locality}
                                             value={center}
                                             onChange={(e) => setCenter(e.target.value)}
-                                            placeholder="أدخل اسم القرية"
+                                            placeholder={L("أدخل اسم القرية", "Village name")}
                                         />
                                     </FormGroup>
                                 ) : (
-                                    <FormGroup label={isEtat ? "اسم المستشفى" : "اسم المؤسسة الصحية"}>
+                                    <div {...markWrap('center')}><FormGroup label={isEtat ? L("اسم المستشفى", "Hospital") : L("اسم المؤسسة الصحية", "Health facility")}>
                                         <div 
                                             onClick={() => {
                                                 if (!isLoadingFacilities && locality && !isSaving) {
@@ -3724,26 +3827,27 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                             <Input
                                                 value={selectedFacility ? selectedFacility['اسم_المؤسسة'] : center}
                                                 readOnly
-                                                placeholder={isLoadingFacilities ? "جاري التحميل..." : (!locality ? "اختر المحلية أولاً" : "اضغط للبحث عن المؤسسة...")}
+                                                placeholder={isLoadingFacilities ? L("جاري التحميل...", "Loading…") : (!locality ? L("اختر المحلية أولاً", "Choose the locality first") : L("اضغط للبحث عن المؤسسة...", "Tap to find the facility…"))}
                                                 className="cursor-pointer bg-white pr-10" 
                                                 disabled={isLoadingFacilities || !locality || isSaving}
                                             />
                                         </div>
-                                    </FormGroup>
+                                        <FieldError show={fe('center')}>{reqMsg}</FieldError>
+                                    </FormGroup></div>
                                 )
                             )}
                             
                             {(isIccm || isCpcm || isProgramManagement) ? (
-                                 <FormGroup label="اسم المشارك">
+                                 <FormGroup label={L("اسم المشارك", "Participant name")}>
                                     <Input
                                         disabled={isSaving || !locality}
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
-                                        placeholder="أدخل الاسم الرباعي للمشارك"
+                                        placeholder={L("أدخل الاسم الرباعي للمشارك", "Participant's full name")}
                                     />
                                 </FormGroup>
                             ) : (
-                                <FormGroup label="اسم المشارك">
+                                <div {...markWrap('name')}><FormGroup label={L("اسم المشارك", "Participant name")}>
                                     <CreatableNameInput
                                         value={name}
                                         onChange={setName}
@@ -3751,36 +3855,50 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                         options={existingStaffOptions}
                                         disabled={!selectedFacility || selectedFacility.id.startsWith('pending_') || isSaving} 
                                     />
-                                     {isEditingExistingWorker && <p className="text-sm text-blue-600 mt-1">تعديل بيانات الموظف الحالي.</p>}
-                                     {!selectedFacility && !isLoadingFacilities && locality && <p className="text-sm text-orange-600 mt-1">اختر مؤسسة للبحث عن الكوادر الحالية.</p>}
-                                </FormGroup>
+                                     {isEditingExistingWorker && <p className="text-sm text-blue-600 mt-1">{L('تعديل بيانات الموظف الحالي.', 'Editing an existing staff member.')}</p>}
+                                     {!selectedFacility && !isLoadingFacilities && locality && <p className="text-sm text-orange-600 mt-1">{L('اختر مؤسسة للبحث عن الكوادر الحالية.', 'Choose a facility to pick from its staff.')}</p>}
+                                     {existingStaffOptions.some(w => alreadyInCourse(w)) && (
+                                        <p className="text-xs text-slate-500 mt-1">{L('في هذه الدورة مسبقاً من كوادر المؤسسة: ', 'Already in this course from this facility: ')}{existingStaffOptions.filter(w => alreadyInCourse(w)).map(w => w.name).join(isAr ? '، ' : ', ')}</p>
+                                     )}
+                                     <FieldError show={fe('name')}>{reqMsg}</FieldError>
+                                </FormGroup></div>
                             )}
 
-                            <FormGroup label="المسمى الوظيفي">
+                            <div {...markWrap('job')}><FormGroup label={L("المسمى الوظيفي", "Job title")}>
                                  <Select disabled={isEditingExistingWorker || isSaving} value={job} onChange={(e) => setJob(e.target.value)}>
-                                    <option value="">— اختر المسمى الوظيفي —</option>
+                                    <option value="">{L("— اختر المسمى الوظيفي —", "— Choose job title —")}</option>
                                     {jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                    <option value="Other">أخرى</option>
+                                    <option value="Other">{L("أخرى", "Other")}</option>
                                 </Select>
-                            </FormGroup>
+                                <FieldError show={fe('job')}>{reqMsg}</FieldError>
+                            </FormGroup></div>
                             {job === 'Other' && (
-                                <FormGroup label="حدد المسمى الوظيفي">
-                                    <Input disabled={isEditingExistingWorker || isSaving} value={otherJobTitle} onChange={(e) => setOtherJobTitle(e.target.value)} placeholder="الرجاء التحديد" />
+                                <FormGroup label={L("حدد المسمى الوظيفي", "Specify job title")}>
+                                    <Input disabled={isEditingExistingWorker || isSaving} value={otherJobTitle} onChange={(e) => setOtherJobTitle(e.target.value)} placeholder={L("الرجاء التحديد", "Please specify")} />
                                 </FormGroup>
                             )}
 
-                            <FormGroup label="رقم الهاتف"><Input disabled={isSaving} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" className="text-start" /></FormGroup>
-                            <FormGroup label="البريد الإلكتروني (اختياري)"><Input disabled={isSaving} type="email" value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" className="text-start" /></FormGroup>
+                            <div {...markWrap('phone')}><FormGroup label={L("رقم الهاتف", "Phone number")}>
+                                <Input disabled={isSaving} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={tidyPhone} dir="ltr" className="text-start" placeholder="09xxxxxxxx" />
+                                {phoneTooShort && <p className="text-xs font-semibold text-amber-700">⚠ {L('الرقم قصير، تأكد منه', 'This number looks too short')}</p>}
+                                <FieldError show={fe('phone')}>{reqMsg}</FieldError>
+                            </FormGroup></div>
+                            {duplicateOf && (
+                                <div className="md:col-span-2 lg:col-span-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
+                                    ⚠ {L(`${duplicateOf.name} مسجل مسبقاً في هذه الدورة`, `${duplicateOf.name} is already in this course`)}{duplicateOf.group ? ` (${L('المجموعة', 'Group')} ${groupShort(duplicateOf.group)})` : ''}
+                                </div>
+                            )}
+                            <FormGroup label={L("البريد الإلكتروني (اختياري)", "Email (optional)")}><Input disabled={isSaving} type="email" value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" className="text-start" /></FormGroup>
                         </div>
                     </div>
 
                     {/* --- القسم 2: التقييم والاختبارات --- */}
                     {showTestScores && (
                         <div className="mb-6 p-4 border rounded-md bg-gray-50/50">
-                            <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">التقييم والاختبارات</h3>
+                            <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">{L("التقييم والاختبارات", "Tests")}</h3>
                             <div className="grid md:grid-cols-2 gap-6">
-                                <FormGroup label="درجة الاختبار القبلي (%)"><Input disabled={isSaving} type="number" inputMode="decimal" min="0" max="100" value={preTestScore} onChange={(e) => setPreTestScore(e.target.value)} /></FormGroup>
-                                <FormGroup label="درجة الاختبار البعدي (%)"><Input disabled={isSaving} type="number" inputMode="decimal" min="0" max="100" value={postTestScore} onChange={(e) => setPostTestScore(e.target.value)} /></FormGroup>
+                                <FormGroup label={L("درجة الاختبار القبلي (%)", "Pre-test score (%)")}><Input disabled={isSaving} type="number" inputMode="decimal" min="0" max="100" value={preTestScore} onChange={(e) => setPreTestScore(e.target.value)} /></FormGroup>
+                                <FormGroup label={L("درجة الاختبار البعدي (%)", "Post-test score (%)")}><Input disabled={isSaving} type="number" inputMode="decimal" min="0" max="100" value={postTestScore} onChange={(e) => setPostTestScore(e.target.value)} /></FormGroup>
                             </div>
                         </div>
                     )}
@@ -3788,37 +3906,33 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                     {/* --- القسم 3: بيانات التدريب والمؤسسة --- */}
                     {(isImnci || isIccm || isCpcm || isEtat || isEenc || isSsnc) && (
                         <div className="mb-6">
-                            <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">بيانات التدريب وإحصائيات الكوادر</h3>
+                            <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">{L("بيانات التدريب وإحصائيات الكوادر", "Training and staff numbers")}</h3>
                             <div className="grid md:grid-cols-1 gap-6">
                                 
                                 {(isImnci || isIccm || isCpcm) && (
                                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        <FormGroup label={`هل تم التدريب مسبقاً في ${(isIccm || isCpcm) ? course.course_type : 'العلاج المتكامل (IMNCI)'}؟`}>
-                                            <Select disabled={isEditingExistingWorker || isSaving} value={trainedIMNCI} onChange={(e) => setTrainedIMNCI(e.target.value)}>
-                                                <option value="">— اختر —</option>
-                                                <option value="no">لا</option>
-                                                <option value="yes">نعم</option>
-                                            </Select>
+                                        <FormGroup label={L(`هل تم التدريب مسبقاً في ${(isIccm || isCpcm) ? course.course_type : 'العلاج المتكامل (IMNCI)'}؟`, `Trained in ${(isIccm || isCpcm) ? course.course_type : 'IMNCI'} before?`)}>
+                                            <YesNo disabled={isEditingExistingWorker || isSaving} value={trainedIMNCI} onChange={setTrainedIMNCI} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                         </FormGroup>
-                                        {trainedIMNCI === 'yes' && <FormGroup label="تاريخ آخر تدريب"><Input disabled={isEditingExistingWorker || isSaving} type="date" value={lastTrainIMNCI} onChange={(e) => setLastTrainIMNCI(e.target.value)}/></FormGroup>}
+                                        {trainedIMNCI === 'yes' && <FormGroup label={L("تاريخ آخر تدريب", "Last training date")}><Input disabled={isEditingExistingWorker || isSaving} type="date" value={lastTrainIMNCI} onChange={(e) => setLastTrainIMNCI(e.target.value)}/></FormGroup>}
                                     </div>
                                 )}
                                 
                                 {isImnci && (
                                     <div>
-                                        <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">إحصائية الكوادر الطبية بالمؤسسة</h4>
+                                        <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">{L("إحصائية الكوادر الطبية بالمؤسسة", "Medical staff at the facility")}</h4>
                                         <div className="overflow-x-auto bg-white border border-gray-200 rounded shadow-sm mb-6">
                                             <table className="min-w-full border-collapse text-sm text-center">
                                                 <thead className="bg-sky-100/50">
                                                     <tr>
-                                                        <th className="border p-2 text-right text-sky-800 w-1/3">الوصف الوظيفي</th>
-                                                        <th className="border p-2 text-sky-800 w-1/3">العدد الكلي الموجود</th>
-                                                        <th className="border p-2 text-sky-800 w-1/3">المدربين على العلاج المتكامل</th>
+                                                        <th className="border p-2 text-right text-sky-800 w-1/3">{L('الوصف الوظيفي', 'Job')}</th>
+                                                        <th className="border p-2 text-sky-800 w-1/3">{L('العدد الكلي الموجود', 'Total')}</th>
+                                                        <th className="border p-2 text-sky-800 w-1/3">{L('المدربين على العلاج المتكامل', 'Trained in IMNCI')}</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     <tr className="hover:bg-gray-50">
-                                                        <td className="border p-3 font-medium text-gray-700 text-right">طبيب</td>
+                                                        <td className="border p-3 font-medium text-gray-700 text-start">{L('طبيب', 'Doctor')}</td>
                                                         <td className="border p-2">
                                                             <Input disabled={isSaving} type="number" inputMode="decimal" value={imnciDoctorsTotal} onChange={(e) => setImnciDoctorsTotal(e.target.value)} min="0" />
                                                         </td>
@@ -3827,7 +3941,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                                         </td>
                                                     </tr>
                                                     <tr className="hover:bg-gray-50">
-                                                        <td className="border p-3 font-medium text-gray-700 text-right">مساعد طبي</td>
+                                                        <td className="border p-3 font-medium text-gray-700 text-start">{L('مساعد طبي', 'Medical assistant')}</td>
                                                         <td className="border p-2">
                                                             <Input disabled={isSaving} type="number" inputMode="decimal" value={imnciMedicalAssistantsTotal} onChange={(e) => setImnciMedicalAssistantsTotal(e.target.value)} min="0" />
                                                         </td>
@@ -3843,46 +3957,38 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
                                 
                                 {(isIccm || isCpcm) && (
                                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        <FormGroup label="أقرب مؤسسة صحية">
-                                            <Input disabled={isSaving} value={nearestHealthFacility} onChange={(e) => setNearestHealthFacility(e.target.value)} placeholder="اسم أقرب مؤسسة" />
+                                        <FormGroup label={L("أقرب مؤسسة صحية", "Nearest health facility")}>
+                                            <Input disabled={isSaving} value={nearestHealthFacility} onChange={(e) => setNearestHealthFacility(e.target.value)} placeholder={L("اسم أقرب مؤسسة", "Nearest facility name")} />
                                         </FormGroup>
-                                        <FormGroup label="الساعات للوصول للمؤسسة (سيراً على الأقدام)">
-                                            <Input disabled={isSaving} type="number" inputMode="decimal" min="0" value={hoursToFacility} onChange={(e) => setHoursToFacility(e.target.value)} placeholder="مثال: 2.5" />
+                                        <FormGroup label={L("الساعات للوصول للمؤسسة (سيراً على الأقدام)", "Hours to reach the facility (walking)")}>
+                                            <Input disabled={isSaving} type="number" inputMode="decimal" min="0" value={hoursToFacility} onChange={(e) => setHoursToFacility(e.target.value)} placeholder={L("مثال: 2.5", "e.g. 2.5")} />
                                         </FormGroup>
                                     </div>
                                 )}
 
                                 {isEtat && (
                                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        <FormGroup label="نوع المستشفى">
+                                        <FormGroup label={L("نوع المستشفى", "Hospital type")}>
                                             <Select disabled={isSaving} value={hospitalTypeEtat} onChange={e => setHospitalTypeEtat(e.target.value)}>
-                                                <option value="">— اختر النوع —</option>
+                                                <option value="">{L("— اختر النوع —", "— Choose type —")}</option>
                                                 <option value="Pediatric Hospital">مستشفى أطفال</option>
                                                 <option value="Pediatric Department in General Hospital">قسم أطفال في مستشفى عام</option>
                                                 <option value="Rural Hospital">مستشفى ريفي</option>
                                                 <option value="other">أخرى</option>
                                            </Select>
                                         </FormGroup>
-                                        <FormGroup label="هل تم التدريب مسبقاً على ETAT؟">
-                                            <Select disabled={isSaving} value={trainedEtat} onChange={e => setTrainedEtat(e.target.value)}>
-                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                            </Select>
+                                        <FormGroup label={L("هل تم التدريب مسبقاً على ETAT؟", "Trained in ETAT before?")}>
+                                            <YesNo disabled={isSaving} value={trainedEtat} onChange={setTrainedEtat} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                         </FormGroup>
-                                        {trainedEtat === 'yes' && <FormGroup label="تاريخ آخر تدريب (ETAT)"><Input disabled={isSaving} type="date" value={lastTrainEtat} onChange={(e) => setLastTrainEtat(e.target.value)} /></FormGroup>}
-                                        <FormGroup label="هل يوجد نظام فرز (Triage)؟">
-                                            <Select disabled={isSaving} value={hasTriageSystem} onChange={e => setHasTriageSystem(e.target.value)}>
-                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                            </Select>
+                                        {trainedEtat === 'yes' && <FormGroup label={L("تاريخ آخر تدريب (ETAT)", "Last ETAT training date")}><Input disabled={isSaving} type="date" value={lastTrainEtat} onChange={(e) => setLastTrainEtat(e.target.value)} /></FormGroup>}
+                                        <FormGroup label={L("هل يوجد نظام فرز (Triage)؟", "Triage system?")}>
+                                            <YesNo disabled={isSaving} value={hasTriageSystem} onChange={setHasTriageSystem} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                         </FormGroup>
-                                        <FormGroup label="هل يوجد مركز استقرار سوء التغذية؟">
-                                            <Select disabled={isSaving} value={hasStabilizationCenter} onChange={e => setHasStabilizationCenter(e.target.value)}>
-                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                            </Select>
+                                        <FormGroup label={L("هل يوجد مركز استقرار سوء التغذية؟", "Malnutrition stabilization centre?")}>
+                                            <YesNo disabled={isSaving} value={hasStabilizationCenter} onChange={setHasStabilizationCenter} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                         </FormGroup>
-                                        <FormGroup label="هل توجد غرفة العناية المتوسطة (HDU)؟">
-                                            <Select disabled={isSaving} value={hasHdu} onChange={e => setHasHdu(e.target.value)}>
-                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                            </Select>
+                                        <FormGroup label={L("هل توجد غرفة العناية المتوسطة (HDU)؟", "High dependency unit (HDU)?")}>
+                                            <YesNo disabled={isSaving} value={hasHdu} onChange={setHasHdu} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                         </FormGroup>
                                         <FormGroup label={`عدد الـ (${professionalCategory}) في الطوارئ`}><Input disabled={isSaving} type="number" inputMode="decimal" min="0" value={numStaffInEr} onChange={e => setNumStaffInEr(e.target.value)} /></FormGroup>
                                         <FormGroup label={`عدد الـ (${professionalCategory}) المدربين على ETAT`}><Input disabled={isSaving} type="number" inputMode="decimal" min="0" value={numStaffTrainedInEtat} onChange={e => setNumStaffTrainedInEtat(e.target.value)} /></FormGroup>
@@ -3891,35 +3997,27 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
                                 {(isEenc || isSsnc) && (
                                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        <FormGroup label="نوع المستشفى">
+                                        <FormGroup label={L("نوع المستشفى", "Hospital type")}>
                                             <Select disabled={isSaving} value={hospitalTypeEenc} onChange={e => setHospitalTypeEenc(e.target.value)}>
-                                                <option value="">— اختر النوع —</option>
+                                                <option value="">{L("— اختر النوع —", "— Choose type —")}</option>
                                                 <option value="Comprehensive EmONC">طوارئ توليد شاملة (Comprehensive EmONC)</option>
                                                 <option value="Basic EmONC">طوارئ توليد أساسية (Basic EmONC)</option>
                                                 <option value="other">أخرى (حدد)</option>
                                             </Select>
                                         </FormGroup>
-                                        {hospitalTypeEenc === 'other' && <FormGroup label="حدد نوع المستشفى"><Input disabled={isSaving} value={otherHospitalTypeEenc} onChange={e => setOtherHospitalTypeEenc(e.target.value)} /></FormGroup>}
+                                        {hospitalTypeEenc === 'other' && <FormGroup label={L("حدد نوع المستشفى", "Specify hospital type")}><Input disabled={isSaving} value={otherHospitalTypeEenc} onChange={e => setOtherHospitalTypeEenc(e.target.value)} /></FormGroup>}
                                         <FormGroup label={`هل تم التدريب مسبقاً على ${isEenc ? 'EENC/EmONC' : 'SSNC'}؟`}>
-                                            <Select disabled={isSaving} value={trainedEENC} onChange={e => setTrainedEENC(e.target.value)}>
-                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                            </Select>
+                                            <YesNo disabled={isSaving} value={trainedEENC} onChange={setTrainedEENC} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                         </FormGroup>
                                         {trainedEENC === 'yes' && <FormGroup label={`تاريخ آخر تدريب (${isEenc ? 'EENC/EmONC' : 'SSNC'})`}><Input disabled={isSaving} type="date" value={lastTrainEENC} onChange={(e) => setLastTrainEENC(e.target.value)} /></FormGroup>}
-                                        <FormGroup label="هل توجد وحدة رعاية حديثي الولادة الخاصة (SNCU)؟">
-                                            <Select disabled={isSaving} value={hasSncu} onChange={e => setHasSncu(e.target.value)}>
-                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                            </Select>
+                                        <FormGroup label={L("هل توجد وحدة رعاية حديثي الولادة الخاصة (SNCU)؟", "Special newborn care unit (SNCU)?")}>
+                                            <YesNo disabled={isSaving} value={hasSncu} onChange={setHasSncu} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                         </FormGroup>
-                                        <FormGroup label="هل يوجد مركز تغذية الرضع (IYCF)؟">
-                                            <Select disabled={isSaving} value={hasIycfCenter} onChange={e => setHasIycfCenter(e.target.value)}>
-                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                            </Select>
+                                        <FormGroup label={L("هل يوجد مركز تغذية الرضع (IYCF)؟", "IYCF centre?")}>
+                                            <YesNo disabled={isSaving} value={hasIycfCenter} onChange={setHasIycfCenter} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                         </FormGroup>
-                                        <FormGroup label="هل توجد غرفة رعاية الكنغر؟">
-                                            <Select disabled={isSaving} value={hasKangaroo} onChange={e => setHasKangaroo(e.target.value)}>
-                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                            </Select>
+                                        <FormGroup label={L("هل توجد غرفة رعاية الكنغر؟", "Kangaroo care room?")}>
+                                            <YesNo disabled={isSaving} value={hasKangaroo} onChange={setHasKangaroo} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                         </FormGroup>
 
                                         <FormGroup label={`عدد الـ (${professionalCategory}) في غرفة الولادة`}><Input disabled={isSaving} type="number" inputMode="decimal" min="0" value={numStaffInDelivery} onChange={e => setNumStaffInDelivery(e.target.value)} /></FormGroup>
@@ -3932,89 +4030,83 @@ export function ParticipantForm({ course, initialData, onCancel, onSave }) {
 
                     {/* --- القسم 4: معدات وخدمات المؤسسة (مخصص لـ IMNCI) --- */}
                     {isImnci && (
-                        <div className="mb-6 space-y-6">
+                        <FormSection
+                            tone="slate"
+                            title={L('معدات وخدمات المؤسسة', 'Facility equipment and services')}
+                            open={facilitySectionOpen}
+                            onToggle={() => setFacilityOpen(!facilitySectionOpen)}
+                            complete={facilityAlreadyFilled}
+                            summary={facilityAlreadyFilled ? L(`مكتملة لهذه المؤسسة${facilityUpdatedAt ? ` · آخر تحديث ${facilityUpdatedAt}` : ''} · اضغط للتحديث`, `Already filled for this facility${facilityUpdatedAt ? ` · last updated ${facilityUpdatedAt}` : ''} · tap to update`) : ''}
+                        >
+                        <div className="space-y-6">
                             
                             {/* 1. المعدات وأدوات العمل */}
                             <div className="p-4 border rounded-md bg-gray-50">
-                                <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">المعدات وأدوات العمل</h3>
+                                <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">{L("المعدات وأدوات العمل", "Equipment")}</h3>
                                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    <FormGroup label="ميزان وزن">
-                                        <Select disabled={isSaving} value={hasWeightScale} onChange={e => setHasWeightScale(e.target.value)}>
-                                            <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                        </Select>
+                                    <FormGroup label={L("ميزان وزن", "Weighing scale")}>
+                                        <YesNo disabled={isSaving} value={hasWeightScale} onChange={setHasWeightScale} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                     </FormGroup>
-                                    <FormGroup label="ميزان طول">
-                                        <Select disabled={isSaving} value={hasHeightScale} onChange={e => setHasHeightScale(e.target.value)}>
-                                            <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                        </Select>
+                                    <FormGroup label={L("ميزان طول", "Height board")}>
+                                        <YesNo disabled={isSaving} value={hasHeightScale} onChange={setHasHeightScale} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                     </FormGroup>
-                                    <FormGroup label="ميزان حرارة">
-                                        <Select disabled={isSaving} value={hasThermometer} onChange={e => setHasThermometer(e.target.value)}>
-                                            <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                        </Select>
+                                    <FormGroup label={L("ميزان حرارة", "Thermometer")}>
+                                        <YesNo disabled={isSaving} value={hasThermometer} onChange={setHasThermometer} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                     </FormGroup>
-                                    <FormGroup label="ساعة مؤقتة (Timer)">
-                                        <Select disabled={isSaving} value={hasTimer} onChange={e => setHasTimer(e.target.value)}>
-                                            <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                        </Select>
+                                    <FormGroup label={L("ساعة مؤقتة (Timer)", "Timer")}>
+                                        <YesNo disabled={isSaving} value={hasTimer} onChange={setHasTimer} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                     </FormGroup>
-                                    <FormGroup label="هل يوجد سجل العلاج المتكامل (IMNCI)؟">
-                                        <Select disabled={isSaving} value={hasImnciRegister} onChange={e => setHasImnciRegister(e.target.value)}>
-                                            <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                        </Select>
+                                    <FormGroup label={L("هل يوجد سجل العلاج المتكامل (IMNCI)؟", "IMNCI register?")}>
+                                        <YesNo disabled={isSaving} value={hasImnciRegister} onChange={setHasImnciRegister} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                     </FormGroup>
-                                    <FormGroup label="هل يوجد كتيب اللوحات؟">
-                                        <Select disabled={isSaving} value={hasChartBooklet} onChange={e => setHasChartBooklet(e.target.value)}>
-                                            <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                        </Select>
+                                    <FormGroup label={L("هل يوجد كتيب اللوحات؟", "Chart booklet?")}>
+                                        <YesNo disabled={isSaving} value={hasChartBooklet} onChange={setHasChartBooklet} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                     </FormGroup>
                                 </div>
                             </div>
 
                             {/* 2. الخدمات */}
                             <div className="p-4 border rounded-md bg-gray-50">
-                                <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">الخدمات</h3>
+                                <h3 className="text-lg font-bold mb-4 text-blue-700 border-b pb-2">{L("الخدمات", "Services")}</h3>
                                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    <FormGroup label="هل يوجد ركن إرواء (ORS)؟">
-                                        <Select disabled={isSaving} value={hasORS} onChange={e => setHasORS(e.target.value)}>
-                                            <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                        </Select>
+                                    <FormGroup label={L("هل يوجد ركن إرواء (ORS)؟", "ORS corner?")}>
+                                        <YesNo disabled={isSaving} value={hasORS} onChange={setHasORS} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                     </FormGroup>
-                                    <FormGroup label="خدمة مراقبة النمو">
-                                        <Select disabled={isSaving} value={hasGrowthMonitoring} onChange={e => setHasGrowthMonitoring(e.target.value)}>
-                                            <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                        </Select>
+                                    <FormGroup label={L("خدمة مراقبة النمو", "Growth monitoring service")}>
+                                        <YesNo disabled={isSaving} value={hasGrowthMonitoring} onChange={setHasGrowthMonitoring} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                     </FormGroup>
                                     
                                     <div>
-                                        <FormGroup label="هل توجد خدمة التغذية العلاجية؟">
-                                            <Select disabled={isSaving} value={hasNutri} onChange={e => setHasNutri(e.target.value)}>
-                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                            </Select>
+                                        <FormGroup label={L("هل توجد خدمة التغذية العلاجية؟", "Therapeutic feeding service available?")}>
+                                            <YesNo disabled={isSaving} value={hasNutri} onChange={setHasNutri} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                         </FormGroup>
-                                        {hasNutri === 'no' && <div className="mt-2"><FormGroup label="أقرب مركز تغذية علاجية؟"><Input disabled={isSaving} value={nearestNutri} onChange={e => setNearestNutri(e.target.value)} /></FormGroup></div>}
+                                        {hasNutri === 'no' && <div className="mt-2"><FormGroup label={L("أقرب مركز تغذية علاجية؟", "Nearest therapeutic feeding centre?")}><Input disabled={isSaving} value={nearestNutri} onChange={e => setNearestNutri(e.target.value)} /></FormGroup></div>}
                                     </div>
 
                                     <div>
-                                        <FormGroup label="هل توجد خدمة التحصين؟">
-                                            <Select disabled={isSaving} value={hasImm} onChange={e => setHasImm(e.target.value)}>
-                                                <option value="">— اختر —</option><option value="no">لا</option><option value="yes">نعم</option>
-                                            </Select>
+                                        <FormGroup label={L("هل توجد خدمة التحصين؟", "Immunization service available?")}>
+                                            <YesNo disabled={isSaving} value={hasImm} onChange={setHasImm} yes={L("نعم", "Yes")} no={L("لا", "No")} />
                                         </FormGroup>
-                                        {hasImm === 'no' && <div className="mt-2"><FormGroup label="أقرب مركز تحصين؟"><Input disabled={isSaving} value={nearestImm} onChange={e => setNearestImm(e.target.value)} /></FormGroup></div>}
+                                        {hasImm === 'no' && <div className="mt-2"><FormGroup label={L("أقرب مركز تحصين؟", "Nearest immunization centre?")}><Input disabled={isSaving} value={nearestImm} onChange={e => setNearestImm(e.target.value)} /></FormGroup></div>}
                                     </div>
                                 </div>
                             </div>
 
                         </div>
+                        </FormSection>
                     )}
 
                     {/* Submit Buttons */}
                     <FormActions className="mt-6 md:border-t md:pt-6">
-                        <Button variant="secondary" onClick={onCancel} disabled={isSaving}>إلغاء</Button>
-                        <Button onClick={submit} disabled={isSaving}>
-                            {isSaving ? <Spinner size="sm"/> : 'حفظ المشارك'}
+                        <Button variant="secondary" onClick={onCancel} disabled={isSaving}>{L('إلغاء', 'Cancel')}</Button>
+                        <Button variant={initialData ? 'primary' : 'secondary'} onClick={() => submit(false)} disabled={isSaving}>
+                            {isSaving ? <Spinner size="sm"/> : L('حفظ', 'Save')}
                         </Button>
+                        {!initialData && (
+                            <Button onClick={() => submit(true)} disabled={isSaving} className="bg-teal-700 hover:bg-teal-800 text-white">
+                                {isSaving ? <Spinner size="sm"/> : L('حفظ وإضافة آخر ＋', 'Save and add another ＋')}
+                            </Button>
+                        )}
                     </FormActions>
                 </div>
             </Card>
