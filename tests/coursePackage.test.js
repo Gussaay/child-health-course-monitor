@@ -1,12 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { splitForEditor, joinFromEditor, cardMarker, isCard } from '../src/components/imnci/book';
-import { DIMCI_M1_EXERCISES, DIMCI_M1_PLAN } from '../src/components/imnci/dimci/module1';
-import { EXERCISES, CLASSIFY_OPTIONS } from '../src/components/imnci/exercises';
+import fs from 'fs';
+import path from 'path';
+import { CLASSIFY_OPTIONS } from '../src/components/imnci/exercises';
+import {
+    checkPackage, packagePlan, buildPackage, exercisesToSave, packageFileName, PACKAGE_FORMAT,
+} from '../src/components/imnci/onlineCourses/coursePackage';
 import { gradeQuiz, gradeCase, REQUIRED_PATIENT_FIELDS } from '../src/components/imnci/exercises.jsx';
 import { NATIONAL_PROTOCOLS } from '../src/components/imnci/nationalProtocol';
 import { NATIONAL_FORMS } from '../src/components/imnci/recordingForms';
 
-const sections = DIMCI_M1_PLAN.items.filter((i) => i.kind === 'section');
+// Module 1 ships as a course file, imported in the app like any other.
+const PKG = JSON.parse(fs.readFileSync(path.join(__dirname, '../course-packages/who-dimci-module1.imnci.json'), 'utf8'));
+const DIMCI_M1_EXERCISES = PKG.exercises;
+const sections = PKG.modules.flatMap((m) => m.sections);
 const blocks = (s) => [...s.read, ...s.see, ...s.practise];
 
 describe('section editor cards keep their place in the text', () => {
@@ -61,13 +68,12 @@ describe('written answers in a quiz', () => {
 });
 
 describe('WHO distance learning Module 1', () => {
-    it('ships every exercise as a draft built-in', () => {
-        const ids = EXERCISES.map((e) => e.id);
-        DIMCI_M1_EXERCISES.forEach((e) => {
-            expect(ids).toContain(e.id);
-            expect(e.draft).toBe(true);
-        });
-        expect(new Set(ids).size).toBe(ids.length);
+    it('is a valid course file with every exercise as a draft', () => {
+        const check = checkPackage(PKG, []);
+        expect(check.errors).toEqual([]);
+        expect(check.warnings).toEqual([]);
+        expect(check.summary).toMatchObject({ modules: 1, sections: 5, exercises: 8 });
+        DIMCI_M1_EXERCISES.forEach((e) => expect(e.draft).toBe(true));
     });
 
     it('has quiz answers that point at real options', () => {
@@ -84,7 +90,7 @@ describe('WHO distance learning Module 1', () => {
     });
 
     it('marks Salina right when the form is filled as in the answer key', () => {
-        const ex = EXERCISES.find((e) => e.id === 'dimci-m1-ex-c-salina');
+        const ex = DIMCI_M1_EXERCISES.find((e) => e.id === 'dimci-m1-ex-c-salina');
         const want = ex.expected;
         const ids = CLASSIFY_OPTIONS.danger.map((o) => o.id);
         expect(ids).toEqual(expect.arrayContaining(want.classifications.danger));
@@ -102,8 +108,8 @@ describe('WHO distance learning Module 1', () => {
         expect(wrong.percent).toBeLessThan(100);
     });
 
-    it('links only to exercises that exist', () => {
-        const ids = new Set(EXERCISES.map((e) => e.id));
+    it('links only to exercises in the file', () => {
+        const ids = new Set(DIMCI_M1_EXERCISES.map((e) => e.id));
         sections.flatMap(blocks).filter((b) => b.type === 'exercise')
             .forEach((b) => expect(ids.has(b.exerciseId)).toBe(true));
     });
@@ -119,11 +125,14 @@ describe('WHO distance learning Module 1', () => {
         expect(all.some((b) => b.type === 'form')).toBe(true);
     });
 
-    it('is one course, one module and five sections that attach to it', () => {
-        const mod = DIMCI_M1_PLAN.items.find((i) => i.kind === 'module');
-        expect(DIMCI_M1_PLAN.course.isPublished).toBe(false);
-        expect(sections).toHaveLength(5);
-        sections.forEach((s) => expect(s.legacyModuleKey).toBe(mod.legacyKey));
+    it('imports as one unpublished course, one module and five sections in order', () => {
+        const plan = packagePlan(PKG);
+        const mod = plan.items.find((i) => i.kind === 'module');
+        const secs = plan.items.filter((i) => i.kind === 'section');
+        expect(plan.course.isPublished).toBe(false);
+        expect(plan.existingCourseId).toBe(null);
+        expect(secs.map((s) => s.title.slice(0, 3))).toEqual(['1.1', '1.2', '1.3', '1.4', '1.5']);
+        secs.forEach((s, i) => { expect(s.legacyModuleKey).toBe(mod.legacyKey); expect(s.order).toBe(i + 1); });
     });
 
     it('survives a round trip through the section editor', () => {
@@ -150,5 +159,56 @@ describe('Module 1 sections render', () => {
         expect(html.toLowerCase()).toContain('dysentery');
         const s11 = sections.find((s) => s.title.startsWith('1.1'));
         expect(renderToStaticMarkup(React.createElement(ContentBlocks, { blocks: s11.see }))).toContain('Vomits everything');
+    });
+});
+
+describe('course files', () => {
+    it('refuses a file that is not a course file, or is broken', () => {
+        expect(checkPackage({ hello: 1 }).errors.length).toBeGreaterThan(0);
+        const bad = JSON.parse(JSON.stringify(PKG));
+        bad.modules[0].sections[0].read.push({ type: 'wizard' });
+        bad.exercises[1].questions[0].correct = [9];
+        bad.exercises.push({ ...bad.exercises[0] });
+        const errors = checkPackage(bad).errors.join(' ');
+        expect(errors).toContain('unknown block type');
+        expect(errors).toContain('not one of its options');
+        expect(errors).toContain('used twice');
+    });
+
+    it('warns about a link to an exercise that is nowhere', () => {
+        const pkg = { format: PACKAGE_FORMAT, version: 1, modules: [{ title: 'M', sections: [{ title: 'S', practise: [{ type: 'exercise', exerciseId: 'nope' }] }] }] };
+        expect(checkPackage(pkg).warnings[0]).toContain('nope');
+        expect(checkPackage(pkg, ['nope']).warnings).toEqual([]);
+    });
+
+    it('adds modules to an existing course after the ones it has, without touching the course', () => {
+        const plan = packagePlan(PKG, { existingCourseId: 'abc', firstModuleOrder: 4 });
+        expect(plan.existingCourseId).toBe('abc');
+        expect(plan.course).toEqual({ id: 'abc' });
+        expect(plan.items.find((i) => i.kind === 'module').order).toBe(4);
+    });
+
+    it('keeps the app\'s exercises unless told to replace them', () => {
+        const ids = ['dimci-m1-pretest'];
+        expect(exercisesToSave(PKG, ids).map((e) => e.id)).not.toContain('dimci-m1-pretest');
+        expect(exercisesToSave(PKG, ids, { replace: true })).toHaveLength(8);
+        expect(checkPackage(PKG, ids).summary.clashes).toEqual(ids);
+    });
+
+    it('exports a module as a file that imports back the same', () => {
+        const plan = packagePlan(PKG);
+        const mod = { ...plan.items.find((i) => i.kind === 'module'), id: 'm1', courseId: 'c1' };
+        const secs = plan.items.filter((i) => i.kind === 'section').map((s, i) => ({ ...s, id: `s${i}`, moduleId: 'm1', courseId: 'c1', isDeleted: false }));
+        const out = buildPackage({ course: { id: 'c1', title: 'IMNCI distance learning modules' }, modules: [mod], sectionsByModule: { m1: secs }, exercises: [...PKG.exercises, { id: 'other', title: 'Not linked' }] });
+        expect(checkPackage(out).errors).toEqual([]);
+        expect(out.exercises.map((e) => e.id).sort()).toEqual(PKG.exercises.map((e) => e.id).sort());
+        const again = out.modules[0].sections;
+        expect(again.map((s) => s.title)).toEqual(PKG.modules[0].sections.map((s) => s.title));
+        expect(again[2].read).toEqual(PKG.modules[0].sections[2].read);
+        expect(JSON.stringify(out)).not.toMatch(/"(courseId|moduleId|legacyModuleKey)"/);
+    });
+
+    it('names the file after the module', () => {
+        expect(packageFileName('Module 1: General danger signs')).toBe('module-1-general-danger-signs.imnci.json');
     });
 });

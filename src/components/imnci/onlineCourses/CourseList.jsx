@@ -197,7 +197,7 @@ export function CourseList() {
 
             <CourseModal isOpen={!!courseModal} onClose={() => setCourseModal(null)}
                 course={courseModal?.id ? courseModal : null} onSaved={reload} />
-            <ImportModal isOpen={importOpen} onClose={() => setImportOpen(false)} onImported={reload} existingCourses={allCourses} />
+            <ImportModal isOpen={importOpen} onClose={() => setImportOpen(false)} onImported={reload} existingCourses={allCourses} existingItems={allItems} />
         </div>
     );
 }

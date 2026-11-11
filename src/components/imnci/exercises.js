@@ -53,8 +53,6 @@
 // until they press check, then both are shown side by side.
 // ---------------------------------------------------------------------------
 
-import { DIMCI_M1_EXERCISES } from './dimci/module1';
-
 // Must match the entry in IMNCI_SUBCOURSE_TYPES in constants.js exactly.
 export const ONLINE_SUB_COURSE = 'online IMCI course';
 
@@ -868,9 +866,6 @@ export const EXERCISES = [
     EXERCISE_5,
     EXERCISE_6,
     EXERCISE_7,
-    // WHO distance learning Module 1 (dimci/module1.js): its quizzes and
-    // recording-form cases, drafts until a facilitator publishes them.
-    ...DIMCI_M1_EXERCISES.map((e) => (e.expected ? { ...e, expected: withDefaults(e.expected) } : e)),
 ];
 
 // ---------------------------------------------------------------------------

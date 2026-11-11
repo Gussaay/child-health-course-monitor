@@ -4,7 +4,7 @@
 // it takes.
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, ArrowLeft, CheckCircle2, Wand2, Lock, Clock, RefreshCw } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, CheckCircle2, Wand2, Lock, Clock, RefreshCw, FileDown } from 'lucide-react';
 import { Button } from '../../CommonComponents';
 import { SECTION_TABS, tabContent } from '../book';
 import { TAB_ICONS } from './blocks';
@@ -12,6 +12,10 @@ import { ConvertBookModal } from './ConvertBookModal';
 import { ItemModal } from './ItemModals';
 import { OfflineSave } from './OfflineSave';
 import { useCourseScreen } from './screen';
+import { useImnci } from '../shared';
+import { notify } from '../../dialogs';
+import { shareFile } from '../../../utils/sharePdf';
+import { buildPackage, packageFileName } from './coursePackage';
 
 export function ModulePage() {
     const { t } = useTranslation();
@@ -22,7 +26,22 @@ export function ModulePage() {
         setItemModal, syncing, tabName,
     } = useCourseScreen();
 
+    const { exercises, loadExercises } = useImnci();
     const secs = sectionsByModule[openModule.id] || [];
+
+    // The whole module as a course file: its sections in order, every block,
+    // and the exercises they link to. Importing it rebuilds the module.
+    const downloadFile = async () => {
+        try {
+            const all = exercises || (await loadExercises?.()) || [];
+            const pkg = buildPackage({ course: openCourse, modules: [openModule], sectionsByModule: { [openModule.id]: secs }, exercises: all });
+            const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });
+            await shareFile(blob, packageFileName(openModule.title), { title: openModule.title });
+        } catch (e) {
+            console.error('Could not make the module file:', e);
+            notify(t('imnci_ui.courses.export.failed', 'Could not make the file. {{msg}}', { msg: e?.message || '' }), 'error');
+        }
+    };
     const doneHere = secs.filter((s) => progress.completed?.[s.id]).length;
     const moduleNo = modules.findIndex((m) => m.id === openModule.id) + 1;
 
@@ -35,6 +54,10 @@ export function ModulePage() {
                 </button>
                 {isAdmin && (
                     <div className="flex flex-wrap gap-2">
+                        <Button variant="secondary" onClick={downloadFile}
+                            title={t('imnci_ui.courses.export.title', 'Save this module, its sections and its exercises as a course file that can be imported again')}>
+                            <FileDown size={16} /> {t('imnci_ui.courses.export.download', 'Download file')}
+                        </Button>
                         <Button variant="secondary" onClick={() => setConvertOpen(true)}>
                             <Wand2 size={16} /> {t('imnci_ui.courses.main.convert_book', 'Convert a book')}
                         </Button>
