@@ -2341,6 +2341,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                 {activeCoursesTab === 'certificate-approvals' && (
                     <CertificateApprovalsView 
                         allCourses={allCourses} 
+                        courseType={activeCourseType || null}
                         setToast={setToast} 
                         currentUserRole={currentUserRole}
                         canUseFederalManagerAdvancedFeatures={canUseFederalManagerAdvancedFeatures}
@@ -2360,7 +2361,6 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                             currentUserRole={currentUserRole}
                             canUseFederalManagerAdvancedFeatures={canUseFederalManagerAdvancedFeatures}
                             singleCourseMode
-                            title={t('course_page.certificates_title', 'Certificates — {{type}}', { type: selectedCourse.course_type })}
                         />
                     ) : (
                         <Card className="p-6 text-center text-sm text-gray-600">

@@ -1,6 +1,6 @@
 // src/components/FinalReportManager.jsx
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Button, Card, FormGroup, Input, Modal, PageHeader, PdfIcon, Select, Table, Textarea, Spinner, finalReportStatus, FinalReportStatusBadges } from './CommonComponents';
+import { Button, Card, FormGroup, Input, Modal, PageHeader, PdfIcon, Select, Table, Textarea, Spinner, finalReportStatus, FinalReportStatusBadges, FilterPanel } from './CommonComponents';
 import { Copy, Image as ImageIcon, Users, BookOpen, PenLine, Stamp, X, Type, Share2, Trash2, Download, Eye } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { useDataCache } from '../DataContext';
@@ -1565,7 +1565,7 @@ const courseLabelOf = (c) => `${c.state || '—'}${c.locality ? ` - ${c.locality
  * @param onReportChanged (saved) => void, after a change in the popup
  * @param onOpenFullReport (courseId) => void, to write the narrative report
  */
-export function FinalReportsDashboard({ courseType, courses, reportsByCourse, loading, onReportChanged, onOpenFullReport }) {
+export function FinalReportsDashboard({ courseType: _courseType, courses, reportsByCourse, loading, onReportChanged, onOpenFullReport }) {
     const { t } = useTranslation();
     const [view, setView] = useState('courses');
     const [stateFilter, setStateFilter] = useState('All');
@@ -1712,13 +1712,8 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
 
     return (
         <div className="space-y-4">
-            <div>
-                <h2 className="text-2xl font-bold text-gray-800">{courseType ? t('final_report.dashboard.title_type', '{{type}} Final Reports Dashboard', { type: courseType }) : t('final_report.dashboard.title', 'Final Reports Dashboard')}</h2>
-                <p className="text-sm text-gray-500">{t('final_report.dashboard.subtitle', 'Final report documents, summaries, recommendations and potential facilitators for each course.')}</p>
-            </div>
-
-            <Card className="bg-gray-50 border border-gray-200 p-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <FilterPanel activeCount={[stateFilter, yearFilter, docFilter].filter(v => v !== 'All').length + (search.trim() ? 1 : 0)}>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     <FormGroup label={t('final_report.dashboard.state', 'State')}><Select value={stateFilter} onChange={e => setStateFilter(e.target.value)}>{states.map(s => <option key={s} value={s}>{s === 'All' ? t('final_report.dashboard.all', 'All') : s}</option>)}</Select></FormGroup>
                     <FormGroup label={t('final_report.dashboard.year', 'Year')}><Select value={yearFilter} onChange={e => setYearFilter(e.target.value)}>{years.map(y => <option key={y} value={y}>{y === 'All' ? t('final_report.dashboard.all', 'All') : y}</option>)}</Select></FormGroup>
                     <FormGroup label={t('final_report.dashboard.final_report', 'Final report')}>
@@ -1732,7 +1727,7 @@ export function FinalReportsDashboard({ courseType, courses, reportsByCourse, lo
                     </FormGroup>
                     <FormGroup label={t('final_report.dashboard.search', 'Search')}><Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('final_report.dashboard.search_placeholder', 'State, locality, director, summary…')} /></FormGroup>
                 </div>
-            </Card>
+            </FilterPanel>
 
             {loading ? (
                 <div className="flex items-center justify-center gap-2 p-10 text-sm text-slate-500"><Spinner /> {t('final_report.dashboard.loading', 'Loading final reports…')}</div>
