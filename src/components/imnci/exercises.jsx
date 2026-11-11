@@ -740,7 +740,7 @@ function QuizQuestion({ q, index, value, onChange, detail, locked }) {
     const right = detail && !open && detail.ok;
 
     return (
-        <div className={`border rounded-lg p-4 ${!detail ? 'border-slate-200 bg-white' : right ? 'border-emerald-300 bg-emerald-50/40' : 'border-rose-300 bg-rose-50/40'}`}>
+        <div className={`border rounded-lg p-4 ${!detail || open ? 'border-slate-200 bg-white' : right ? 'border-emerald-300 bg-emerald-50/40' : 'border-rose-300 bg-rose-50/40'}`}>
             <div className="flex items-start gap-2 mb-3">
                 <span className="text-xs font-bold text-slate-400 mt-0.5">{index + 1}.</span>
                 <p className="text-sm font-medium text-slate-800 flex-1 whitespace-pre-line">{q.question}</p>
