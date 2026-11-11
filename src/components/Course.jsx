@@ -4,7 +4,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { 
     Button, Card, EmptyState, FormGroup, Input, PageHeader, 
     Select, Spinner, PageSkeleton, SkeletonTable, PhoneCards, Table, Modal, CardBody, CardFooter, Toast, FinalReportStatusBadges,
-    PageTabs, FilterPanel, IS_NATIVE, PullToRefresh, FormActions, MenuTile, MenuGrid, MENU_ICON_CLASS
+    PageTabs, FilterPanel, IS_NATIVE, PullToRefresh, FormActions, FormSection, FieldError, MenuTile, MenuGrid, MENU_ICON_CLASS
 } from './CommonComponents';
 
 // --- Firebase Imports ---
@@ -3065,7 +3065,102 @@ export function CourseForm({
         });
     };
 
-    const submit = async () => {
+    // ---- Language: the form follows the app language (it was Arabic only). ----
+    const { i18n: formI18n } = useTranslation();
+    const isAr = String(formI18n.language || 'ar').startsWith('ar');
+    const L = (ar, en) => (isAr ? ar : en);
+
+    // ---- Which required fields are still empty, per section. ----
+    const hasFacilitator = groups.some(g => (facilitatorGroups[g] || []).some(a => a.name));
+    const missing = {
+        states: states.length === 0,
+        localities: localities.length === 0,
+        hall: !hall || !hall.trim(),
+        startDate: !startDate,
+        courseDuration: !courseDuration || courseDuration <= 0,
+        participantsCount: !participantsCount || participantsCount <= 0,
+        coordinator: !coordinator,
+        supporter: !supporter,
+        implementedBy: !implementedBy,
+        director: !isInfectionControl && !director,
+        facilitators: !isInfectionControl && !isSmallAndSick && !hasFacilitator,
+    };
+    const SECTION_FIELDS = {
+        basics: ['states', 'localities', 'hall', 'startDate', 'courseDuration', 'participantsCount'],
+        coordination: ['coordinator', 'supporter', 'implementedBy'],
+        leadership: ['director'],
+        facilitators: ['facilitators'],
+    };
+    const missingIn = (sec) => SECTION_FIELDS[sec].filter(f => missing[f]).length;
+    const [showErrors, setShowErrors] = useState(false);
+    const err = (field) => showErrors && missing[field];
+    // Adding: the first section open. Editing: all closed, each with a summary.
+    const [openSections, setOpenSections] = useState(() => (initialData ? {} : { basics: true }));
+    const toggleSection = (sec) => setOpenSections(prev => ({ ...prev, [sec]: !prev[sec] }));
+
+    // Two people in the same course twice is almost always a slip.
+    const duplicateFacilitators = useMemo(() => {
+        const seen = {}; const dup = new Set();
+        groups.forEach(g => (facilitatorGroups[g] || []).forEach(a => {
+            if (!a.name) return;
+            if (seen[a.name]) dup.add(a.name);
+            seen[a.name] = true;
+        }));
+        return dup;
+    }, [groups, facilitatorGroups]);
+
+    // The last day, shown as soon as start date and duration are known.
+    const endDateText = useMemo(() => {
+        if (!startDate || !(courseDuration > 0)) return '';
+        const start = new Date(startDate);
+        if (Number.isNaN(start.getTime())) return '';
+        const end = new Date(start.getTime() + (courseDuration - 1) * 86400000);
+        return formatDateRange(start, end);
+    }, [startDate, courseDuration]);
+
+    // ---- Draft: a new course being typed survives the app closing. ----
+    const draftKey = `courseFormDraft:${courseType || 'none'}`;
+    const draftSnapshot = {
+        courseLevel, states, localities, hall, hallEnglish, startDate, courseDuration, coordinator, participantsCount,
+        courseBudget, supporter, stateCoordinator, localityCoordinator, courseProject, implementedBy, director, clinical,
+        directorImciSubType, clinicalImciSubType, groups, facilitatorGroups
+    };
+    const [savedDraft, setSavedDraft] = useState(() => {
+        if (initialData) return null;
+        try { const raw = localStorage.getItem(draftKey); return raw ? JSON.parse(raw) : null; } catch { return null; }
+    });
+    const draftJson = JSON.stringify(draftSnapshot);
+    useEffect(() => {
+        if (initialData || savedDraft) return undefined; // don't overwrite a draft not yet restored/discarded
+        const id = setTimeout(() => {
+            try {
+                const d = JSON.parse(draftJson);
+                const touched = d.hall || d.startDate || d.coordinator || d.director || d.supporter || d.localities.length;
+                if (touched) localStorage.setItem(draftKey, JSON.stringify({ ...d, savedAt: Date.now() }));
+            } catch { /* storage unavailable */ }
+        }, 800);
+        return () => clearTimeout(id);
+    }, [draftJson, draftKey, initialData, savedDraft]);
+    const clearDraft = () => { try { localStorage.removeItem(draftKey); } catch { /* ignore */ } };
+    const restoreDraft = () => {
+        const d = savedDraft || {};
+        setCourseLevel(d.courseLevel ?? courseLevel); setStates(d.states || []); setLocalities(d.localities || []);
+        setHall(d.hall || ''); setHallEnglish(d.hallEnglish || ''); setStartDate(d.startDate || '');
+        setCourseDuration(d.courseDuration || 7); setCoordinator(d.coordinator || ''); setParticipantsCount(d.participantsCount || 0);
+        setCourseBudget(d.courseBudget || ''); setSupporter(d.supporter || ''); setStateCoordinator(d.stateCoordinator || '');
+        setLocalityCoordinator(d.localityCoordinator || ''); setCourseProject(d.courseProject || ''); setImplementedBy(d.implementedBy || '');
+        setDirector(d.director || ''); setClinical(d.clinical || '');
+        if (d.directorImciSubType) setDirectorImciSubType(d.directorImciSubType);
+        if (d.clinicalImciSubType) setClinicalImciSubType(d.clinicalImciSubType);
+        if (Array.isArray(d.groups) && d.groups.length) setGroups(d.groups);
+        if (d.facilitatorGroups) setFacilitatorGroups(d.facilitatorGroups);
+        setSavedDraft(null);
+    };
+    const discardDraft = () => { clearDraft(); setSavedDraft(null); };
+
+    const [reviewOpen, setReviewOpen] = useState(false);
+
+    const submit = async (confirmed = false) => {
         const allFacilitatorAssignments = groups.reduce((acc, group) => {
             const groupAssignments = facilitatorGroups[group].map(assignment => ({
                 ...assignment,
@@ -3081,39 +3176,39 @@ export function CourseForm({
             return [...acc, ...groupAssignments];
         }, []);
 
-        // --- ENHANCED VALIDATION CHECK ---
-        const missingFields = [];
-        if (states.length === 0) missingFields.push('الولايات');
-        if (localities.length === 0) missingFields.push('المحليات');
-        if (!hall || hall.trim() === '') missingFields.push('قاعة الدورة');
-        if (!startDate) missingFields.push('تاريخ بداية الدورة');
-        if (!courseDuration || courseDuration <= 0) missingFields.push('مدة الدورة بالأيام');
-        if (!participantsCount || participantsCount <= 0) missingFields.push('عدد المشاركين');
-        if (!coordinator) missingFields.push('المنسق الاتحادي للدورة');
-        if (!supporter) missingFields.push('بتمويل من');
-        if (!implementedBy) missingFields.push('تنفيذ');
-
-        if (!isInfectionControl && !director) {
-            missingFields.push('مدير الدورة');
-        }
-
-        if (!isInfectionControl && !isSmallAndSick && allFacilitatorAssignments.length === 0) {
-            missingFields.push('تعيين ميسر واحد على الأقل');
-        }
-
+        // --- VALIDATION: mark the fields, open their sections, jump to the first. ---
+        const labels = {
+            states: L('الولايات', 'States'), localities: L('المحليات', 'Localities'), hall: L('قاعة الدورة', 'Course hall'),
+            startDate: L('تاريخ بداية الدورة', 'Start date'), courseDuration: L('مدة الدورة بالأيام', 'Duration (days)'),
+            participantsCount: L('عدد المشاركين', 'Number of participants'), coordinator: L('المنسق الاتحادي للدورة', 'Federal coordinator'),
+            supporter: L('بتمويل من', 'Funded by'), implementedBy: L('تنفيذ', 'Implemented by'), director: L('مدير الدورة', 'Course director'),
+            facilitators: L('تعيين ميسر واحد على الأقل', 'At least one facilitator'),
+        };
+        const missingFields = Object.keys(missing).filter(k => missing[k]);
         if (missingFields.length > 0) {
-            const errorMsg = 'الرجاء إكمال الحقول الإلزامية التالية:\n- ' + missingFields.join('\n- ');
-            alertDialog(errorMsg, { title: 'تعذر حفظ الدورة (Course not saved)' });
-            setError('الرجاء إكمال الحقول الإلزامية التالية: ' + missingFields.join('، '));
+            setShowErrors(true);
+            setOpenSections(prev => {
+                const next = { ...prev };
+                Object.keys(SECTION_FIELDS).forEach(sec => { if (missingIn(sec) > 0) next[sec] = true; });
+                return next;
+            });
+            setError(L('الرجاء إكمال الحقول الإلزامية التالية: ', 'Please complete: ') + missingFields.map(k => labels[k]).join(isAr ? '، ' : ', '));
+            setTimeout(() => {
+                const el = document.querySelector('[data-missing="true"]');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 80);
             return;
         }
 
         if (!courseType) {
-            const typeError = 'تعذر تحديد نوع الدورة. الرجاء العودة لصفحة الدورات واختيار حزمة قبل إضافة دورة جديدة.';
-            alertDialog(typeError, { title: 'تعذر حفظ الدورة (Course not saved)' });
+            const typeError = L('تعذر تحديد نوع الدورة. الرجاء العودة لصفحة الدورات واختيار حزمة قبل إضافة دورة جديدة.', 'The course package is not known. Go back to Courses and choose a package first.');
+            alertDialog(typeError, { title: L('تعذر حفظ الدورة', 'Course not saved') });
             setError(typeError);
             return;
         }
+
+        // A new course gets one look at the summary before it is created.
+        if (!initialData && !confirmed) { setError(''); setReviewOpen(true); return; }
 
         const selectedDirectorObj = directorOptions.find(d => d.name === director);
         const directorId = selectedDirectorObj ? selectedDirectorObj.id : null;
@@ -3180,149 +3275,172 @@ export function CourseForm({
         setIsSaving(true);
         try {
             await onSave(payload);
+            clearDraft();
         } catch(e) {
-            const message = e.message || "حدث خطأ أثناء حفظ الدورة.";
+            const message = e.message || L("حدث خطأ أثناء حفظ الدورة.", "The course could not be saved.");
             setError(message);
-            alertDialog(message, { title: 'تعذر حفظ الدورة (Course not saved)' });
+            alertDialog(message, { title: L('تعذر حفظ الدورة', 'Course not saved') });
             setIsSaving(false);
         }
     };
 
+    const stateNames = states.map(st => (isAr ? STATE_LOCALITIES[st]?.ar : st) || st).join(isAr ? '، ' : ', ');
+    const facilitatorCount = groups.reduce((n, g) => n + (facilitatorGroups[g] || []).filter(a => a.name).length, 0);
+    const summaries = {
+        basics: [stateNames, endDateText, participantsCount > 0 ? L(`${participantsCount} مشارك`, `${participantsCount} participants`) : ''].filter(Boolean).join(' · '),
+        coordination: [coordinator, supporter].filter(Boolean).join(' · '),
+        leadership: director || '',
+        facilitators: L(`${groups.length} مجموعات · ${facilitatorCount} ميسرين`, `${groups.length} groups · ${facilitatorCount} facilitators`),
+    };
+    const sectionProps = (sec) => {
+        const n = missingIn(sec);
+        return {
+            open: !!openSections[sec],
+            onToggle: () => toggleSection(sec),
+            missing: showErrors ? n : 0,
+            missingLabel: L(`${n} ناقص`, `${n} missing`),
+            complete: n === 0,
+            summary: summaries[sec],
+        };
+    };
+    const req = L('هذا الحقل مطلوب', 'This field is required');
+    const searchPh = L('اكتب للبحث...', 'Type to search…');
+    // A plain function, not a component, so typing never remounts the inputs.
+    const fieldWrap = (name) => ({ 'data-missing': err(name) ? 'true' : undefined, className: err(name) ? 'rounded-lg ring-2 ring-red-300 ring-offset-2' : '' });
+
     return (
         <Card>
-            <div className="p-6" dir="rtl" style={{ textAlign: 'right' }}>
-                <PageHeader title={initialData ? 'تعديل دورة' : 'إضافة دورة'} subtitle={`الحزمة: ${courseType || 'غير محدد'}`} className="mb-6" />
-                {error && <div className="p-3 mb-6 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
-                
-                <div className="mb-8">
-                    <h3 className="text-lg font-bold bg-sky-100 text-sky-800 p-3 rounded-md mb-4 border-r-4 border-sky-500">معلومات الدورة الأساسية</h3>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <FormGroup label={<ReqLabel text="مستوى الدورة" />}>
+            <div className="p-3 md:p-6" dir={isAr ? 'rtl' : 'ltr'} style={{ textAlign: isAr ? 'right' : 'left' }}>
+                <PageHeader title={initialData ? L('تعديل دورة', 'Edit course') : L('إضافة دورة', 'Add course')} subtitle={`${L('الحزمة', 'Package')}: ${courseType || L('غير محدد', 'not set')}`} className="mb-4" />
+
+                {savedDraft && (
+                    <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                        <span className="flex-1 min-w-[12rem]">💾 {L('توجد مسودة غير مكتملة لدورة جديدة', 'There is an unfinished new-course draft')}{savedDraft.savedAt ? ` (${new Date(savedDraft.savedAt).toLocaleString()})` : ''}</span>
+                        <Button size="sm" onClick={restoreDraft}>{L('استعادة', 'Restore')}</Button>
+                        <Button size="sm" variant="secondary" onClick={discardDraft}>{L('تجاهل', 'Discard')}</Button>
+                    </div>
+                )}
+
+                {error && <div className="p-3 mb-3 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
+
+                <FormSection tone="sky" title={L('معلومات الدورة الأساسية', 'Course basics')} {...sectionProps('basics')}>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <FormGroup label={<ReqLabel text={L('مستوى الدورة', 'Course level')} />}>
                             <Select disabled={isSaving} value={courseLevel} onChange={(e) => setCourseLevel(e.target.value)}>
-                                <option value={COURSE_LEVELS.FEDERAL}>اتحادية (مشاركون من كل الولايات)</option>
-                                <option value={COURSE_LEVELS.STATE}>ولائية</option>
-                                <option value={COURSE_LEVELS.LOCALITY}>محلية</option>
+                                <option value={COURSE_LEVELS.FEDERAL}>{L('اتحادية (مشاركون من كل الولايات)', 'Federal (participants from all states)')}</option>
+                                <option value={COURSE_LEVELS.STATE}>{L('ولائية', 'State')}</option>
+                                <option value={COURSE_LEVELS.LOCALITY}>{L('محلية', 'Locality')}</option>
                             </Select>
                             {courseLevel === COURSE_LEVELS.FEDERAL && (
                                 <p className="mt-1 text-xs text-sky-700">
-                                    عند التسجيل، يمكن اختيار المشاركين من جميع الولايات. الولاية/المحلية أدناه هي مكان انعقاد الدورة فقط.
+                                    {L('عند التسجيل، يمكن اختيار المشاركين من جميع الولايات. الولاية/المحلية أدناه هي مكان انعقاد الدورة فقط.', 'Participants can come from every state. The state and locality below are only where the course is held.')}
                                 </p>
                             )}
                         </FormGroup>
-                        <FormGroup label={<ReqLabel text="الولايات (يمكن اختيار أكثر من ولاية)" />}>
-                            <MultiSelectDropdown 
-                                disabled={isSaving} 
-                                selectedValues={states} 
-                                onChange={setStates} 
-                                placeholder="— اختر الولايات —"
-                                options={availableStates.map(s => ({ value: s, label: STATE_LOCALITIES[s].ar }))} 
-                            />
-                        </FormGroup>
-                        <FormGroup label={<ReqLabel text="المحليات (يمكن اختيار أكثر من محلية)" />}>
-                            <MultiSelectDropdown 
-                                disabled={isSaving || states.length === 0} 
-                                selectedValues={localities} 
-                                onChange={setLocalities} 
-                                placeholder="— اختر المحليات —"
-                                options={availableLocalities.map(l => ({ value: l.en, label: l.ar }))} 
-                            />
-                        </FormGroup>
-                        <FormGroup label={<ReqLabel text="قاعة الدورة" />}>
-                            <Input disabled={isSaving} value={hall} onChange={(e) => setHall(e.target.value)} />
-                        </FormGroup>
-                        <FormGroup label="قاعة الدورة (باللغة الإنجليزية - للشهادات)">
+                        <div {...fieldWrap('states')}>
+                            <FormGroup label={<ReqLabel text={L('الولايات (يمكن اختيار أكثر من ولاية)', 'States (you can pick more than one)')} />}>
+                                <MultiSelectDropdown
+                                    disabled={isSaving}
+                                    selectedValues={states}
+                                    onChange={setStates}
+                                    placeholder={L('— اختر الولايات —', '— Choose states —')}
+                                    options={availableStates.map(st => ({ value: st, label: isAr ? STATE_LOCALITIES[st].ar : st }))}
+                                />
+                                <FieldError show={err('states')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        <div {...fieldWrap('localities')}>
+                            <FormGroup label={<ReqLabel text={L('المحليات (يمكن اختيار أكثر من محلية)', 'Localities (you can pick more than one)')} />}>
+                                <MultiSelectDropdown
+                                    disabled={isSaving || states.length === 0}
+                                    selectedValues={localities}
+                                    onChange={setLocalities}
+                                    placeholder={L('— اختر المحليات —', '— Choose localities —')}
+                                    options={availableLocalities.map(l => ({ value: l.en, label: isAr ? l.ar : l.en }))}
+                                />
+                                <FieldError show={err('localities')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        <div {...fieldWrap('hall')}>
+                            <FormGroup label={<ReqLabel text={L('قاعة الدورة', 'Course hall')} />}>
+                                <Input disabled={isSaving} value={hall} onChange={(e) => setHall(e.target.value)} />
+                                <FieldError show={err('hall')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        <FormGroup label={L('قاعة الدورة (باللغة الإنجليزية - للشهادات)', 'Course hall in English (for certificates)')}>
                             <Input disabled={isSaving} value={hallEnglish} onChange={(e) => setHallEnglish(e.target.value)} dir="ltr" placeholder="Course Hall Name in English" />
                         </FormGroup>
-                        <FormGroup label={<ReqLabel text="تاريخ بداية الدورة" />}><Input disabled={isSaving} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FormGroup>
-                        <FormGroup label={<ReqLabel text="مدة الدورة بالأيام" />}><Input disabled={isSaving} type="number" inputMode="decimal" value={courseDuration} onChange={(e) => setCourseDuration(Number(e.target.value))} /></FormGroup>
-                        <FormGroup label={<ReqLabel text="عدد المشاركين" />}><Input disabled={isSaving} type="number" inputMode="decimal" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} /></FormGroup>
-                        <FormGroup label="ميزانية الدورة بالدولار الأمريكي"><Input disabled={isSaving} type="number" inputMode="decimal" value={courseBudget} onChange={(e) => setCourseBudget(Number(e.target.value))} /></FormGroup>
+                        <div {...fieldWrap('startDate')}>
+                            <FormGroup label={<ReqLabel text={L('تاريخ بداية الدورة', 'Start date')} />}>
+                                <Input disabled={isSaving} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                                <FieldError show={err('startDate')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        <div {...fieldWrap('courseDuration')}>
+                            <FormGroup label={<ReqLabel text={L('مدة الدورة بالأيام', 'Duration in days')} />}>
+                                <Input disabled={isSaving} type="number" inputMode="decimal" value={courseDuration} onChange={(e) => setCourseDuration(Number(e.target.value))} />
+                                <FieldError show={err('courseDuration')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        {endDateText && (
+                            <div className="md:col-span-2 lg:col-span-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">
+                                📅 {L('الدورة تنعقد', 'Course runs')} {endDateText}
+                            </div>
+                        )}
+                        <div {...fieldWrap('participantsCount')}>
+                            <FormGroup label={<ReqLabel text={L('عدد المشاركين', 'Number of participants')} />}>
+                                <Input disabled={isSaving} type="number" inputMode="decimal" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} />
+                                <FieldError show={err('participantsCount')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        <FormGroup label={L('ميزانية الدورة بالدولار الأمريكي', 'Course budget (USD)')}><Input disabled={isSaving} type="number" inputMode="decimal" value={courseBudget} onChange={(e) => setCourseBudget(Number(e.target.value))} /></FormGroup>
                     </div>
-                </div>
+                </FormSection>
 
-                <div className="mb-8">
-                    <h3 className="text-lg font-bold bg-green-100 text-green-800 p-3 rounded-md mb-4 border-r-4 border-green-500">التنسيق والتمويل</h3>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <FormGroup label={<ReqLabel text="المنسق الاتحادي للدورة" />}>
-                            <SearchableSelect
-                                disabled={isSaving}
-                                value={coordinator}
-                                onChange={setCoordinator}
-                                options={federalCoordinatorOptions}
-                                placeholder="اكتب للبحث..."
-                                label="المنسق الاتحادي للدورة"
-                            />
+                <FormSection tone="green" title={L('التنسيق والتمويل', 'Coordination and funding')} {...sectionProps('coordination')}>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div {...fieldWrap('coordinator')}>
+                            <FormGroup label={<ReqLabel text={L('المنسق الاتحادي للدورة', 'Federal coordinator')} />}>
+                                <SearchableSelect disabled={isSaving} value={coordinator} onChange={setCoordinator} options={federalCoordinatorOptions} placeholder={searchPh} label={L('المنسق الاتحادي للدورة', 'Federal coordinator')} />
+                                <FieldError show={err('coordinator')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        <FormGroup label={L('المنسق الولائي للدورة', 'State coordinator')}>
+                            <SearchableSelect disabled={isSaving} value={stateCoordinator} onChange={setStateCoordinator} options={stateCoordinatorOptions} placeholder={searchPh} label={L('المنسق الولائي للدورة', 'State coordinator')} />
                         </FormGroup>
-                        <FormGroup label="المنسق الولائي للدورة">
-                            <SearchableSelect
-                                disabled={isSaving}
-                                value={stateCoordinator}
-                                onChange={setStateCoordinator}
-                                options={stateCoordinatorOptions}
-                                placeholder="اكتب للبحث..."
-                                label="المنسق الولائي للدورة"
-                            />
+                        <FormGroup label={L('منسق الدورة بالمحلية', 'Locality coordinator')}>
+                            <SearchableSelect disabled={isSaving} value={localityCoordinator} onChange={setLocalityCoordinator} options={localityCoordinatorOptions} placeholder={searchPh} label={L('منسق الدورة بالمحلية', 'Locality coordinator')} />
                         </FormGroup>
-                        <FormGroup label="منسق الدورة بالمحلية">
-                            <SearchableSelect
-                                disabled={isSaving}
-                                value={localityCoordinator}
-                                onChange={setLocalityCoordinator}
-                                options={localityCoordinatorOptions}
-                                placeholder="اكتب للبحث..."
-                                label="منسق الدورة بالمحلية"
-                            />
-                        </FormGroup>
-                        <FormGroup label={<ReqLabel text="بتمويل من" />}>
-                            <SearchableSelect
-                                disabled={isSaving}
-                                value={supporter}
-                                onChange={setSupporter}
-                                options={funderOptions}
-                                placeholder="اكتب للبحث..."
-                                label="بتمويل من"
-                            />
-                        </FormGroup>
-                        <FormGroup label={<ReqLabel text="تنفيذ" />}>
-                            <SearchableSelect
-                                disabled={isSaving}
-                                value={implementedBy}
-                                onChange={setImplementedBy}
-                                options={funderOptions}
-                                placeholder="اكتب للبحث..."
-                                label="تنفيذ"
-                            />
-                        </FormGroup>
-                        <FormGroup label="مشروع الدورة">
-                             <SearchableSelect
-                                disabled={isSaving}
-                                value={courseProject}
-                                onChange={setCourseProject}
-                                options={projectOptions}
-                                placeholder="اكتب للبحث..."
-                                label="مشروع الدورة"
-                            />
+                        <div {...fieldWrap('supporter')}>
+                            <FormGroup label={<ReqLabel text={L('بتمويل من', 'Funded by')} />}>
+                                <SearchableSelect disabled={isSaving} value={supporter} onChange={setSupporter} options={funderOptions} placeholder={searchPh} label={L('بتمويل من', 'Funded by')} />
+                                <FieldError show={err('supporter')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        <div {...fieldWrap('implementedBy')}>
+                            <FormGroup label={<ReqLabel text={L('تنفيذ', 'Implemented by')} />}>
+                                <SearchableSelect disabled={isSaving} value={implementedBy} onChange={setImplementedBy} options={funderOptions} placeholder={searchPh} label={L('تنفيذ', 'Implemented by')} />
+                                <FieldError show={err('implementedBy')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        <FormGroup label={L('مشروع الدورة', 'Project')}>
+                            <SearchableSelect disabled={isSaving} value={courseProject} onChange={setCourseProject} options={projectOptions} placeholder={searchPh} label={L('مشروع الدورة', 'Project')} />
                         </FormGroup>
                     </div>
-                </div>
+                </FormSection>
 
                 {!isInfectionControl && (
-                    <div className="mb-8">
-                        <h3 className="text-lg font-bold bg-amber-100 text-amber-800 p-3 rounded-md mb-4 border-r-4 border-amber-500">مهام القيادة</h3>
-                        <div className="flex flex-col space-y-4 p-5 border border-gray-200 shadow-sm rounded-lg bg-white">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end">
-                                <FormGroup label={<ReqLabel text="مدير الدورة" required={!isInfectionControl} />}>
-                                    <SearchableSelect
-                                        disabled={isSaving}
-                                        value={director}
-                                        onChange={setDirector}
-                                        options={directorOptions}
-                                        placeholder="اكتب للبحث..."
-                                        label="مدير الدورة"
-                                    />
-                                </FormGroup>
+                    <FormSection tone="amber" title={L('مهام القيادة', 'Course leadership')} {...sectionProps('leadership')}>
+                        <div className="flex flex-col space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                                <div {...fieldWrap('director')}>
+                                    <FormGroup label={<ReqLabel text={L('مدير الدورة', 'Course director')} required={!isInfectionControl} />}>
+                                        <SearchableSelect disabled={isSaving} value={director} onChange={setDirector} options={directorOptions} placeholder={searchPh} label={L('مدير الدورة', 'Course director')} />
+                                        <FieldError show={err('director')}>{req}</FieldError>
+                                    </FormGroup>
+                                </div>
                                 {isImnci && (
-                                    <FormGroup label="اسم الورشة الفرعية">
+                                    <FormGroup label={L('اسم الورشة الفرعية', 'Sub-course')}>
                                         <Select disabled={isSaving} value={directorImciSubType} onChange={(e) => setDirectorImciSubType(e.target.value)} className="w-full">
                                             {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
                                         </Select>
@@ -3331,19 +3449,12 @@ export function CourseForm({
                             </div>
 
                             {(isImnci || isIccm || isCpcm) && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end pt-5 border-t border-gray-100">
-                                    <FormGroup label="المدرب السريري - اختياري">
-                                        <SearchableSelect
-                                            disabled={isSaving}
-                                            value={clinical}
-                                            onChange={setClinical}
-                                            options={clinicalInstructorOptions}
-                                            placeholder="اكتب للبحث..."
-                                            label="المدرب السريري - اختياري"
-                                        />
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end pt-4 border-t border-gray-100">
+                                    <FormGroup label={L('المدرب السريري - اختياري', 'Clinical instructor (optional)')}>
+                                        <SearchableSelect disabled={isSaving} value={clinical} onChange={setClinical} options={clinicalInstructorOptions} placeholder={searchPh} label={L('المدرب السريري - اختياري', 'Clinical instructor (optional)')} />
                                     </FormGroup>
                                     {isImnci && (
-                                        <FormGroup label="اسم الورشة الفرعية">
+                                        <FormGroup label={L('اسم الورشة الفرعية', 'Sub-course')}>
                                             <Select disabled={isSaving} value={clinicalImciSubType} onChange={(e) => setClinicalImciSubType(e.target.value)} className="w-full">
                                                 {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
                                             </Select>
@@ -3352,38 +3463,43 @@ export function CourseForm({
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </FormSection>
                 )}
 
-                <div className="mb-8">
-                    <h3 className="text-lg font-bold bg-purple-100 text-purple-800 p-3 rounded-md mb-4 border-r-4 border-purple-500">مهام الميسرين / المدربين</h3>
-                    <div className="space-y-6">
+                <FormSection tone="purple" title={L('مهام الميسرين / المدربين', 'Facilitators')} {...sectionProps('facilitators')}>
+                    <div data-missing={err('facilitators') ? 'true' : undefined}>
+                        <FieldError show={err('facilitators')}>{L('عيّن ميسراً واحداً على الأقل', 'Assign at least one facilitator')}</FieldError>
+                    </div>
+                    <div className="space-y-4">
                         {groups.map(groupName => (
-                            <div key={groupName} className="p-6 border-2 border-indigo-50 shadow-md rounded-xl bg-white relative">
-                                <h4 className="text-md font-bold mb-5 text-indigo-700 bg-indigo-50 inline-block px-4 py-1.5 rounded-lg border border-indigo-200">{groupName}</h4>
+                            <div key={groupName} className="p-4 border border-indigo-100 rounded-xl bg-white">
+                                <h4 className="text-sm font-bold mb-3 text-indigo-700 bg-indigo-50 inline-block px-3 py-1 rounded-lg border border-indigo-200">{groupName}</h4>
                                 {facilitatorGroups[groupName]?.map((assignment, index) => (
-                                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4 items-end pb-4 border-b border-gray-50 last:border-0">
-                                        <FormGroup label={<ReqLabel text="اسم الميسر" required={!isInfectionControl && !isSmallAndSick} />} className={(isIccm || isCpcm) ? "lg:col-span-2" : ""}>
+                                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-3 items-end pb-3 border-b border-gray-50 last:border-0">
+                                        <FormGroup label={<ReqLabel text={L('اسم الميسر', 'Facilitator')} required={!isInfectionControl && !isSmallAndSick} />} className={(isIccm || isCpcm) ? "lg:col-span-2" : ""}>
                                             <SearchableSelect
                                                 disabled={isSaving}
                                                 value={assignment.name}
                                                 onChange={(value) => updateFacilitatorAssignment(groupName, index, 'name', value)}
                                                 options={facilitatorOptions}
-                                                placeholder="اكتب للبحث..."
-                                                label="اسم الميسر"
+                                                placeholder={searchPh}
+                                                label={L('اسم الميسر', 'Facilitator')}
                                             />
+                                            {assignment.name && duplicateFacilitators.has(assignment.name) && (
+                                                <p className="text-xs font-semibold text-amber-700">⚠ {L('هذا الميسر مضاف أكثر من مرة في هذه الدورة', 'This facilitator is listed more than once in this course')}</p>
+                                            )}
                                         </FormGroup>
-                                      {!(isIccm || isCpcm) && (
-                                            <FormGroup label="اسم الورشة الفرعية">
+                                        {!(isIccm || isCpcm) && (
+                                            <FormGroup label={L('اسم الورشة الفرعية', 'Sub-course')}>
                                                 <Select
                                                     disabled={isSaving}
                                                     value={assignment.imci_sub_type || ''}
                                                     onChange={(e) => updateFacilitatorAssignment(groupName, index, 'imci_sub_type', e.target.value)}
                                                     className="w-full"
                                                 >
-                                                    <option value="">— اختر الورشة الفرعية —</option>
-                                                    {(isImnci ? IMNCI_SUBCOURSE_TYPES : 
-                                                      isInfectionControl ? INFECTION_CONTROL_SUBCOURSE_TYPES : 
+                                                    <option value="">{L('— اختر الورشة الفرعية —', '— Choose sub-course —')}</option>
+                                                    {(isImnci ? IMNCI_SUBCOURSE_TYPES :
+                                                      isInfectionControl ? INFECTION_CONTROL_SUBCOURSE_TYPES :
                                                       isSmallAndSick ? SMALL_AND_SICK_SUBCOURSE_TYPES :
                                                       isEmonc ? EMONC_SUBCOURSE_TYPES :
                                                       isEtat ? ETAT_SUBCOURSE_TYPES :
@@ -3395,34 +3511,72 @@ export function CourseForm({
                                                 </Select>
                                             </FormGroup>
                                         )}
-
-
-
                                         <div className="flex items-end pb-1">
-                                            <Button type="button" variant="danger" disabled={isSaving || facilitatorGroups[groupName]?.length <= 1} onClick={() => removeFacilitatorFromGroup(groupName, index)}>إزالة</Button>
+                                            <Button type="button" variant="danger" disabled={isSaving || facilitatorGroups[groupName]?.length <= 1} onClick={() => removeFacilitatorFromGroup(groupName, index)}>{L('إزالة', 'Remove')}</Button>
                                         </div>
                                     </div>
                                 ))}
-                                <div className="flex justify-end mt-2 pt-4">
-                                    <Button type="button" variant="secondary" disabled={isSaving} onClick={() => addFacilitatorToGroup(groupName)} className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200">إضافة ميسر آخر لهذه المجموعة</Button>
+                                <div className="flex justify-end mt-2">
+                                    <Button type="button" variant="secondary" disabled={isSaving} onClick={() => addFacilitatorToGroup(groupName)} className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200">{L('إضافة ميسر آخر لهذه المجموعة', 'Add another facilitator to this group')}</Button>
                                 </div>
                             </div>
                         ))}
                     </div>
                     {groups.length < COURSE_GROUPS.length && (
-                        <div className="flex justify-start mt-4">
-                            <Button type="button" variant="secondary" disabled={isSaving} onClick={addGroup} className="font-bold border-dashed border-2">إضافة مجموعة أخرى</Button>
+                        <div className="flex justify-start mt-3">
+                            <Button type="button" variant="secondary" disabled={isSaving} onClick={addGroup} className="font-bold border-dashed border-2">{L('إضافة مجموعة أخرى', 'Add another group')}</Button>
                         </div>
                     )}
-                </div>
+                </FormSection>
 
-                <FormActions className="mt-8 md:border-t md:pt-6">
-                    <Button variant="secondary" onClick={onCancel} disabled={isSaving}>إلغاء</Button>
-                    <Button onClick={submit} disabled={isSaving}>
-                        {isSaving ? <Spinner size="sm" /> : 'حفظ الدورة'}
+                <FormActions className="mt-6 md:border-t md:pt-6">
+                    <Button variant="secondary" onClick={() => { clearDraft(); onCancel(); }} disabled={isSaving}>{L('إلغاء', 'Cancel')}</Button>
+                    <Button onClick={() => submit(false)} disabled={isSaving}>
+                        {isSaving ? <Spinner size="sm" /> : initialData ? L('حفظ الدورة', 'Save course') : L('مراجعة وحفظ', 'Review and save')}
                     </Button>
                 </FormActions>
             </div>
+
+            <Modal isOpen={reviewOpen} onClose={() => setReviewOpen(false)} title={L('مراجعة الدورة قبل الحفظ', 'Review the course before saving')}>
+                <CardBody className="space-y-2" >
+                    <div dir={isAr ? 'rtl' : 'ltr'} className="space-y-2">
+                        {[
+                            ['basics', L('الأساسيات', 'Basics'), [
+                                [L('المكان', 'Place'), stateNames],
+                                [L('القاعة', 'Hall'), hall],
+                                [L('التاريخ', 'Dates'), endDateText],
+                                [L('المشاركون', 'Participants'), participantsCount],
+                            ]],
+                            ['coordination', L('التنسيق والتمويل', 'Coordination and funding'), [
+                                [L('المنسق الاتحادي', 'Federal coordinator'), coordinator],
+                                [L('التمويل', 'Funded by'), supporter],
+                                [L('التنفيذ', 'Implemented by'), implementedBy],
+                            ]],
+                            !isInfectionControl && ['leadership', L('القيادة', 'Leadership'), [
+                                [L('مدير الدورة', 'Director'), director],
+                                [L('المدرب السريري', 'Clinical instructor'), clinical],
+                            ]],
+                            ['facilitators', L('الميسرون', 'Facilitators'), [
+                                [L('المجموعات', 'Groups'), summaries.facilitators],
+                            ]],
+                        ].filter(Boolean).map(([sec, title, rows]) => (
+                            <div key={sec} className="rounded-xl border border-slate-200 p-3 text-sm">
+                                <div className="mb-1 flex items-center justify-between font-bold text-slate-900">
+                                    <span>{title}</span>
+                                    <button type="button" className="text-xs font-bold text-sky-700 hover:underline" onClick={() => { setReviewOpen(false); setOpenSections(prev => ({ ...prev, [sec]: true })); }}>{L('تعديل', 'Edit')}</button>
+                                </div>
+                                {rows.filter(([, v]) => v !== '' && v != null).map(([k, v]) => (
+                                    <div key={k} className="flex justify-between gap-3 py-0.5 text-slate-600"><span>{k}</span><b className="text-slate-900 text-end">{v}</b></div>
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+                </CardBody>
+                <CardFooter>
+                    <Button variant="secondary" onClick={() => setReviewOpen(false)} disabled={isSaving}>{L('رجوع', 'Back')}</Button>
+                    <Button variant="success" onClick={() => { setReviewOpen(false); submit(true); }} disabled={isSaving}>✓ {L('حفظ الدورة', 'Save course')}</Button>
+                </CardFooter>
+            </Modal>
         </Card>
     );
 }

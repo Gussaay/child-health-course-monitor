@@ -35,6 +35,43 @@ export const FormActions = ({ children, className = '' }) => (
     </div>
 );
 
+/**
+ * A form section that folds. The header shows a ✓ when the section is complete,
+ * or how many required fields are still missing, and a one-line summary while
+ * it is closed, so a long form can be checked at a glance and edited one part
+ * at a time.
+ */
+export function FormSection({ title, tone = 'sky', open, onToggle, missing = 0, complete = false, summary = '', missingLabel, children, id }) {
+    const tones = {
+        sky: 'border-s-sky-500', green: 'border-s-emerald-500', amber: 'border-s-amber-500', purple: 'border-s-violet-500', slate: 'border-s-slate-400'
+    };
+    return (
+        <section id={id} className={`mb-3 rounded-xl border border-slate-200 border-s-4 ${tones[tone] || tones.sky} bg-white shadow-sm overflow-hidden`}>
+            <button
+                type="button"
+                onClick={onToggle}
+                aria-expanded={open}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-start hover:bg-slate-50"
+            >
+                <div className="min-w-0 flex-1">
+                    <div className="text-base font-bold text-slate-900">{title}</div>
+                    {!open && summary && <div className="mt-0.5 truncate text-sm text-slate-500">{summary}</div>}
+                </div>
+                {missing > 0 ? (
+                    <span className="shrink-0 rounded-full bg-red-50 border border-red-200 px-2.5 py-1 text-xs font-bold text-red-700">{missingLabel || `${missing} missing`}</span>
+                ) : complete ? (
+                    <span className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold" aria-label="complete">✓</span>
+                ) : null}
+                <ChevronDown size={18} className={`shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
+            </button>
+            {open && <div className="border-t border-slate-100 p-4">{children}</div>}
+        </section>
+    );
+}
+
+/** Small red message under a field that still needs filling. */
+export const FieldError = ({ show, children }) => (show ? <p className="text-xs font-semibold text-red-600" role="alert">⚠ {children}</p> : null);
+
 export const CardBody = ({ children, className = '' }) => <div className={`p-3 md:p-6 ${className}`}>{children}</div>;
 export const CardFooter = ({ children, className = '' }) => <div className={`p-4 bg-gray-50 border-t border-gray-200 rounded-b-lg flex justify-end gap-2 ${className}`}>{children}</div>;
 
