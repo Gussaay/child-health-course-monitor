@@ -138,6 +138,7 @@ import {
 } from './components/permissions.js';
 import { isTrainingMode } from './training/trainingSession.js';
 import { recordTrainingView } from './training/trainingProgress.js';
+import TrainingInvite from './training/TrainingInvite.jsx';
 
 import {
     listAllDataForCourse, deleteFacilitator,
@@ -3285,6 +3286,9 @@ case 'meetings':
 
             {/* in-app replacements for alert()/confirm(); see components/dialogs.jsx */}
             <DialogHost />
+
+            {/* A participant of a course whose training link is open: send them to it. */}
+            {user && !isSharedView && <TrainingInvite user={user} />}
 
             <main className="max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 w-full flex-grow pb-32 md:pb-8 overflow-x-clip">
                 {/* The role could not be loaded: say so, rather than showing an empty menu as if it were the person's real access. */}
