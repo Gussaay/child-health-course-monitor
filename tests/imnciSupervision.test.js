@@ -89,6 +89,11 @@ describe('facility readiness', () => {
         expect(noEpi).toEqual({ immunization_office_exists: 'No' });
     });
 
+    it('has the child pathway section with its two questions', () => {
+        const section = IMNCI_FACILITY_READINESS.sections.find((x) => x.id === 'child_pathway');
+        expect(section.items.map((i) => i.id)).toEqual(['malnutrition_screening', 'vaccination_screening']);
+    });
+
     it('skips immunization rows when the facility has no immunization services', () => {
         const form = { responses: { epi: { epi_services: no } } };
         const epi = assessmentProgress(IMNCI_FACILITY_READINESS, form).sections.epi;
