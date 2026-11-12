@@ -984,10 +984,11 @@ describe('trainingSandboxes — practice data only while the course window is op
             await assertFails(getDoc(doc(as('plainUser'), 'trainingSandboxes', id, 'courses', 'c1')));
         }
     });
-    it('lets staff review a closed sandbox but not change it', async () => {
-        await setCourse('expired', window(-2 * HOUR, -HOUR));
-        await assertSucceeds(getDoc(doc(as('facilitator'), 'trainingSandboxes', 'expired', 'courses', 'c1')));
-        await assertFails(setDoc(doc(as('facilitator'), 'trainingSandboxes', 'expired', 'courses', 'c1'), { x: 1 }));
+    it('lets staff review and prepare a sandbox outside the window, but not trainees', async () => {
+        await setCourse('future', window(HOUR, 2 * HOUR));
+        await assertSucceeds(getDoc(doc(as('facilitator'), 'trainingSandboxes', 'future', 'courses', 'c1')));
+        await assertSucceeds(setDoc(doc(as('facilitator'), 'trainingSandboxes', 'future', 'healthFacilities', 'f1'), { x: 1 }));
+        await assertFails(setDoc(doc(as('plainUser'), 'trainingSandboxes', 'future', 'healthFacilities', 'f1'), { x: 1 }));
     });
     it('does not let a plain user switch the window on', async () => {
         await setCourse('never', null);

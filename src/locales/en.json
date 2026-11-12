@@ -2106,7 +2106,11 @@
       "training_status_open": "Open now",
       "training_status_not_started": "Opens on the first course day",
       "training_status_expired": "Expired",
-      "qr_training": "Training (practice): {{type}}"
+      "qr_training": "Training (practice): {{type}}",
+      "training_ready": "Practice copy ready: facilities, facilitators, coordinators and partners.",
+      "training_prep_failed": "Could not prepare the practice copy now; the first trainee will prepare it instead.",
+      "training_preparing_n": "Preparing the practice copy… {{n}} / {{total}} facilities (keep this open)",
+      "training_preparing": "Preparing the practice copy… (keep this open)"
     },
     "status": {
       "active": "Active",

@@ -12,6 +12,7 @@ import { doc, updateDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Button } from '../components/CommonComponents';
 import { courseTrainingWindow, trainingStatus } from './trainingSession.js';
+import { seedSandbox } from './trainingSeed.js';
 
 const sameMillis = (ts, date) => !!ts && typeof ts.toMillis === 'function' && ts.toMillis() === date.getTime();
 
@@ -23,6 +24,8 @@ export default function TrainingLinkShare({ course, baseUrl, onShare, notify }) 
     const { t, i18n } = useTranslation();
     const ar = (i18n.language || '').toLowerCase().startsWith('ar');
     const [busy, setBusy] = useState(false);
+    // Preparing the practice copy: null, { n, total }, 'done' or 'failed'.
+    const [prep, setPrep] = useState(null);
     const [training, setTraining] = useState(course.training || null);
 
     const win = courseTrainingWindow(course);
@@ -51,6 +54,13 @@ export default function TrainingLinkShare({ course, baseUrl, onShare, notify }) 
                 setTraining({ ...next, updatedAt: null });
             }
             onShare(trainingLinkFor(baseUrl, course.id));
+            // Fill the practice copy now, so trainees never wait for it.
+            if (prep !== 'done') {
+                setPrep({ n: 0, total: 0 });
+                seedSandbox(course.id, course, (n, total) => setPrep({ n, total }))
+                    .then(() => setPrep('done'))
+                    .catch((e) => { console.warn('[training] practice copy not prepared:', e?.code || e?.message); setPrep('failed'); });
+            }
         } catch (e) {
             console.error('[training link]', e);
             notify?.(t('course_page.share.training_save_failed', 'Could not switch on the training link. Check your connection and permissions.'), 'error');
@@ -99,6 +109,17 @@ export default function TrainingLinkShare({ course, baseUrl, onShare, notify }) 
                     : t('course_page.share.training_needs_dates', 'Set the course start date and duration first.')}
                 {statusLabel && <span className="ms-1 font-semibold text-amber-800">({statusLabel})</span>}
             </p>
+            {prep && (
+                <p className="text-xs mt-1 text-slate-600" role="status">
+                    {prep === 'done'
+                        ? t('course_page.share.training_ready', 'Practice copy ready: facilities, facilitators, coordinators and partners.')
+                        : prep === 'failed'
+                            ? t('course_page.share.training_prep_failed', 'Could not prepare the practice copy now; the first trainee will prepare it instead.')
+                            : prep.total > 0
+                                ? t('course_page.share.training_preparing_n', 'Preparing the practice copy… {{n}} / {{total}} facilities (keep this open)', { n: prep.n, total: prep.total })
+                                : t('course_page.share.training_preparing', 'Preparing the practice copy… (keep this open)')}
+                </p>
+            )}
             {training?.enabled === true && (
                 <button type="button" onClick={stop} disabled={busy} className="mt-1 text-xs text-red-600 underline">
                     {t('course_page.share.training_stop', 'Switch off this link')}

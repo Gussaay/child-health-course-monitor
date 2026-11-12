@@ -2102,7 +2102,11 @@
       "training_status_open": "مفتوح الآن",
       "training_status_not_started": "يُفتح في أول يوم من الدورة",
       "training_status_expired": "منتهي",
-      "qr_training": "تدريب (ممارسة): {{type}}"
+      "qr_training": "تدريب (ممارسة): {{type}}",
+      "training_ready": "نسخة التدريب جاهزة: المؤسسات الصحية والميسّرون والمنسقون والشركاء.",
+      "training_prep_failed": "تعذّر تجهيز نسخة التدريب الآن؛ سيجهّزها أول متدرّب يفتح الرابط.",
+      "training_preparing_n": "جارٍ تجهيز نسخة التدريب… {{n}} / {{total}} مؤسسة (أبقِ النافذة مفتوحة)",
+      "training_preparing": "جارٍ تجهيز نسخة التدريب… (أبقِ النافذة مفتوحة)"
     },
     "status": {
       "active": "نشطة",

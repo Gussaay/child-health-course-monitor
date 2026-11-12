@@ -504,7 +504,9 @@ service cloud.firestore {
 
     match /trainingSandboxes/{courseId}/{document=**} {
       allow read: if request.auth != null && (trainingOpen(courseId) || isStaff());
-      allow write: if request.auth != null && trainingOpen(courseId);
+      // Staff also write, at any time: sharing the link prepares the copy
+      // (facilities and people lists) before the course starts.
+      allow write: if request.auth != null && (trainingOpen(courseId) || isStaff());
     }
 
     // Who practised on a course's training link and what they did
