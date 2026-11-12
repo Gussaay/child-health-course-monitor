@@ -7,6 +7,8 @@
 // table without a bespoke screen for each one. A new checklist is added by
 // appending one object to SUPERVISION_CHECKLISTS.
 
+import { IMNCI_CHECKLISTS } from './imnciChecklists';
+
 // =============================================================================
 // Response types
 //
@@ -38,6 +40,8 @@ export const RESPONSE_TYPES = {
     cascade: { scored: false },
     // Strengths, gaps and an action plan.
     findings: { scored: false },
+    // A few labelled answers, one under the other (numbers, dates, text).
+    fields: { scored: false },
 };
 
 // =============================================================================
@@ -565,7 +569,7 @@ export const SUPERVISION_SERVICES = [
     { key: 'IPC', title: 'Infection Prevention and Control', titleAr: 'الوقاية من العدوى ومكافحتها' },
 ];
 
-export const SUPERVISION_CHECKLISTS = [NICU_COE, INFANT_WARMER];
+export const SUPERVISION_CHECKLISTS = [NICU_COE, INFANT_WARMER, ...IMNCI_CHECKLISTS];
 
 export const getChecklist = (id) => SUPERVISION_CHECKLISTS.find((c) => c.id === id) || null;
 
@@ -771,7 +775,18 @@ export function sectionProgress(section, values = {}, form = {}) {
             section.items.forEach((i) => count(filled(values[i.id]?.available)));
             break;
         case 'grid':
-            section.items.forEach((i) => count(section.columns.some((c) => filled(values[i.id]?.[c.id])), i.optional));
+            section.items.forEach((i) => {
+                // A row switched off by its gate question ("no immunization
+                // services") is not asked, so it never holds the section back.
+                if (i.dependsOn && values[i.dependsOn]?.answer === false) return;
+                count(section.columns.some((c) => filled(values[i.id]?.[c.id])), i.optional);
+            });
+            break;
+        case 'fields':
+            section.items.forEach((i) => {
+                if (i.showIf && values[i.showIf] !== true) return;
+                count(filled(values[i.id]), i.optional);
+            });
             break;
         case 'monthly':
             periodMonths(form.periodStart).forEach((m) => {

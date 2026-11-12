@@ -19,7 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { QRCodeCanvas } from 'qrcode.react';
 import {
     Plus, Pencil, Trash2, ArrowLeft, Baby, ShieldCheck, Stethoscope, Siren, HeartPulse, ChevronRight,
-    ChevronDown, X, Hospital, Thermometer, ClipboardList, Share2, Copy, ExternalLink, CheckCircle2, Search,
+    ChevronDown, X, Hospital, Thermometer, ClipboardList, Share2, Copy, ExternalLink, CheckCircle2, Search, Pill,
 } from 'lucide-react';
 
 import {
@@ -28,7 +28,11 @@ import {
 } from './CommonComponents';
 import { notify, confirmDialog } from './dialogs';
 import { useDataCache } from '../DataContext';
-import { upsertSupervisionAssessment, deleteSupervisionAssessment } from '../data';
+import {
+    upsertSupervisionAssessment, deleteSupervisionAssessment,
+    saveFacilitySnapshot, submitFacilityDataForApproval, getHealthFacilityById,
+} from '../data';
+import { auth } from '../firebase';
 import { STATE_LOCALITIES } from './constants';
 import { useLeaveGuard, leaveForm, formSaved } from '../utils/leaveGuard';
 import { publicBaseUrl } from '../utils/publicLink';
@@ -38,6 +42,7 @@ import {
     defaultPeriodStart, periodMonths, cascadeMonths, monthLabel,
     serviceDataCalc, warmerResults, estimateNeed, assessmentProgress,
 } from './supervision/checklists';
+import { imnciFacilityPatch } from './supervision/imnciChecklists';
 
 const SupervisionDashboard = lazy(() => import('./supervision/SupervisionDashboard.jsx'));
 
@@ -142,7 +147,7 @@ function AnswerTable({ itemLabel, columns, rows, cell, labelWidth = 'w-[38%] md:
                                     <td key={c.id} className={`px-1 py-1.5 ${c.below ? 'hidden md:table-cell' : ''}`}>{cell(row, c)}</td>
                                 ))}
                             </tr>
-                            {below.length > 0 && (
+                            {below.length > 0 && !row.strong && (
                                 <tr className="md:hidden">
                                     <td colSpan={span} className="px-2 pb-2">
                                         <div className="grid grid-cols-2 gap-2">
@@ -243,18 +248,89 @@ function GridSection({ section, values, onChange, readOnly }) {
         below: c.kind === 'text' || c.kind === 'date' || c.kind === 'select',
         full: c.wide,
     }));
-    const rows = section.items.map((item, i) => ({
-        id: item.id, item, label: pickLabel(item, isArabic),
-        groupTitle: item.group === 'location' && section.items[i - 1]?.group !== 'location'
-            ? t('trackers.supervision.warmer.location', 'Where they are') : null,
+    // Rows behind a gate question ("does the facility offer immunization?")
+    // are hidden while the gate is answered no.
+    const items = section.items.filter((item) => !(item.dependsOn && values[item.dependsOn]?.answer === false));
+    const groupTitle = (item, prev) => {
+        if (!item.group || prev?.group === item.group) return null;
+        if (section.groups?.[item.group]) return pickLabel(section.groups[item.group], isArabic);
+        return item.group === 'location' ? t('trackers.supervision.warmer.location', 'Where they are') : null;
+    };
+    const rows = items.map((item, i) => ({
+        id: item.id, item, code: item.code, label: pickLabel(item, isArabic),
+        hint: isArabic ? item.hintAr || item.hint : item.hint,
+        groupTitle: groupTitle(item, items[i - 1]),
     }));
+    // A total row under count tables (the staff table): the sum of each number column.
+    const totalId = '__total';
+    if (section.totalRow) {
+        rows.push({ id: totalId, label: t('trackers.supervision.warmer.total', 'Total'), strong: true });
+    }
+    const colTotal = (colId) => {
+        const known = section.items.map((i) => toNum(values[i.id]?.[colId])).filter((v) => v != null);
+        return known.length ? known.reduce((a, b) => a + b, 0) : null;
+    };
     return (
         <AnswerTable itemLabel={t('trackers.supervision.cols.item', 'Item')} columns={columns} rows={rows}
-            cell={(row, c) => (
-                <CellInput kind={c.id === 'answer' && row.item.answerKind ? row.item.answerKind : c.kind}
-                    options={c.options} isArabic={isArabic} readOnly={readOnly}
-                    value={values[row.id]?.[c.id]} onChange={(v) => set(row.id, c.id, v)} />
-            )} />
+            cell={(row, c) => {
+                if (row.id === totalId) {
+                    return c.kind === 'number' ? <span className="block text-center font-semibold tabular-nums">{fmt(colTotal(c.id))}</span> : null;
+                }
+                const kind = (c.id === 'answer' || c.id === section.presenceColumn) && row.item.answerKind ? row.item.answerKind : c.kind;
+                return (
+                    <CellInput kind={kind}
+                        options={row.item.options || c.options} isArabic={isArabic} readOnly={readOnly}
+                        value={values[row.id]?.[c.id]} onChange={(v) => set(row.id, c.id, v)} />
+                );
+            }} />
+    );
+}
+
+// A few labelled answers one under the other; with showMetrics, the form's
+// worked-out results first (the drugs form's summary).
+function FieldsSection({ section, values, onChange, readOnly, checklist, form }) {
+    const { i18n } = useTranslation();
+    const isArabic = i18n.language === 'ar';
+    return (
+        <div className="space-y-3">
+            {section.showMetrics && checklist.metrics && <MetricList checklist={checklist} form={form} />}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {section.items.filter((f) => !f.showIf || values[f.showIf] === true).map((f) => {
+                    const label = pickLabel(f, isArabic);
+                    const wide = f.kind === 'textarea' ? 'sm:col-span-2' : '';
+                    if (f.kind === 'textarea') {
+                        return (
+                            <div key={f.id} className={wide}>
+                                <Textarea label={label} rows={3} disabled={readOnly} value={values[f.id] || ''}
+                                    onChange={(e) => onChange(f.id, e.target.value)} />
+                            </div>
+                        );
+                    }
+                    if (f.kind === 'yesno') {
+                        return (
+                            <div key={f.id} className="flex flex-col gap-1">
+                                <span className="text-sm font-medium text-gray-700">{label}</span>
+                                <div className="max-w-[12rem]"><YesNo value={values[f.id]} readOnly={readOnly} onChange={(v) => onChange(f.id, v)} /></div>
+                            </div>
+                        );
+                    }
+                    if (f.kind === 'select') {
+                        return (
+                            <Select key={f.id} label={label} value={values[f.id] || ''} disabled={readOnly}
+                                onChange={(e) => onChange(f.id, e.target.value)}>
+                                <option value="">—</option>
+                                {f.options.map((o) => <option key={o.value} value={o.value}>{pickLabel(o, isArabic)}</option>)}
+                            </Select>
+                        );
+                    }
+                    return (
+                        <Input key={f.id} label={label} type={f.kind || 'text'} value={values[f.id] ?? ''} disabled={readOnly}
+                            inputMode={f.kind === 'number' ? 'numeric' : undefined} min={f.kind === 'number' ? '0' : undefined}
+                            onChange={(e) => onChange(f.id, e.target.value)} />
+                    );
+                })}
+            </div>
+        </div>
     );
 }
 
@@ -357,11 +433,16 @@ function CascadeSection({ section, values, onChange, readOnly, periodStart, resp
 
 const EMPTY_ACTIONS = [{}, {}, {}];
 
-function FindingsSection({ values, onSet, readOnly }) {
-    const { t } = useTranslation();
+function FindingsSection({ section = {}, values, onSet, readOnly }) {
+    const { t, i18n } = useTranslation();
+    const isArabic = i18n.language === 'ar';
     const actions = values.actions?.length ? values.actions : EMPTY_ACTIONS;
     const setAction = (index, field, value) => onSet('actions', actions.map((a, i) => (i === index ? { ...a, [field]: value } : a)));
+    // A form can ask more of each action (the IMNCI form's problem and the
+    // level that solves it); they sit before the responsible person.
+    const extra = (section.extraActionColumns || []).map((c) => ({ ...c, label: pickLabel(c, isArabic), below: true }));
     const columns = [
+        ...extra,
         { id: 'responsible', label: t('trackers.supervision.warmer.responsible', 'Responsible'), kind: 'text', below: true },
         { id: 'deadline', label: t('trackers.supervision.warmer.deadline', 'Deadline'), kind: 'date', below: true },
         ...(!readOnly ? [{ id: 'remove', label: '', width: 'w-9' }] : []),
@@ -371,9 +452,9 @@ function FindingsSection({ values, onSet, readOnly }) {
         <div className="space-y-3">
             <Textarea label={t('trackers.supervision.warmer.strengths', 'Main strengths')} rows={3} disabled={readOnly}
                 value={values.strengths || ''} onChange={(e) => onSet('strengths', e.target.value)} />
-            <Textarea label={t('trackers.supervision.warmer.gaps', 'Main gaps / challenges')} rows={3} disabled={readOnly}
+            <Textarea label={section.gapsLabel ? pickLabel(section.gapsLabel, isArabic) : t('trackers.supervision.warmer.gaps', 'Main gaps / challenges')} rows={3} disabled={readOnly}
                 value={values.gaps || ''} onChange={(e) => onSet('gaps', e.target.value)} />
-            <AnswerTable itemLabel={t('trackers.supervision.warmer.action', 'Action')} labelWidth="w-auto"
+            <AnswerTable itemLabel={section.actionLabel ? pickLabel(section.actionLabel, isArabic) : t('trackers.supervision.warmer.action', 'Action')} labelWidth="w-auto"
                 columns={columns.map((c) => (c.id === 'remove' ? { ...c, label: <span className="sr-only">{t('trackers.supervision.warmer.remove_action', 'Remove action')}</span> } : c))}
                 rows={actions.map((a, i) => ({ id: String(i), index: i, label: (
                     <span className="flex items-center gap-1">
@@ -388,7 +469,7 @@ function FindingsSection({ values, onSet, readOnly }) {
                         <X size={16} />
                     </button>
                 ) : (
-                    <CellInput kind={c.kind} readOnly={readOnly} value={actions[row.index]?.[c.id]} onChange={(v) => setAction(row.index, c.id, v)} />
+                    <CellInput kind={c.kind} options={c.options} isArabic={isArabic} readOnly={readOnly} value={actions[row.index]?.[c.id]} onChange={(v) => setAction(row.index, c.id, v)} />
                 ))} />
             {!readOnly && (
                 <Button variant="secondary" onClick={() => onSet('actions', [...actions, {}])}>
@@ -412,6 +493,7 @@ const FACILITY_TYPE = 'نوع_المؤسسةالصحية';
 const facilityTypeChoice = (registryType = '') => {
     if (registryType.includes('مستشفى')) return 'hospital';
     if (registryType.includes('مركز')) return 'health_centre';
+    if (registryType.includes('وحدة')) return 'health_unit';
     return registryType ? 'other' : '';
 };
 
@@ -567,9 +649,59 @@ function SectionPanel({ index, section, progress, open, onToggle, children, isAr
 // Results and summary
 // =============================================================================
 
+// Figures of a checklist with its own metrics (the IMNCI forms): a
+// percentage, a count, or a yes / no.
+function metricText(m, t) {
+    if (m.value == null) return '—';
+    if (m.kind === 'pct') return pctText(m.value);
+    if (m.kind === 'bool') return m.value ? t('trackers.supervision.yes', 'Yes') : t('trackers.supervision.no', 'No');
+    return Math.round(m.value).toLocaleString();
+}
+
+function metricTone(m) {
+    if (m.value == null) return 'bg-gray-100 text-gray-600';
+    if (m.kind === 'pct') return toneFor(m.value);
+    if (m.kind === 'bool') return m.value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+    // Counts on these forms are problems (stock-outs): none is good.
+    return m.value === 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800';
+}
+
+export function MetricChip({ metric, label }) {
+    const { t } = useTranslation();
+    return (
+        <span className={`px-2 py-1 rounded ${metricTone(metric)}`}>
+            {label ? `${label}: ` : ''}{metricText(metric, t)}{metric.detail ? ` (${metric.detail})` : ''}
+        </span>
+    );
+}
+
+function MetricList({ checklist, form }) {
+    const { i18n } = useTranslation();
+    const isArabic = i18n.language === 'ar';
+    const metrics = checklist.metrics(form);
+    return (
+        <div className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+            {metrics.map((m) => (
+                <div key={m.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                    <span className="text-slate-700">{pickLabel(m, isArabic)}</span>
+                    <span className="shrink-0 text-xs"><MetricChip metric={m} /></span>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 // The headline figures shown at the top of the form while it is filled in.
 function ScoreChips({ checklist, form }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const isArabic = i18n.language === 'ar';
+    if (checklist.metrics) {
+        return (
+            <div className="flex flex-wrap gap-2 text-xs">
+                {checklist.metrics(form).map((m) => <MetricChip key={m.id} metric={m} label={pickLabel(m, isArabic)} />)}
+            </div>
+        );
+    }
     if (checklist.id === 'infant_warmer') {
         const r = warmerResults(form.responses, form.periodStart);
         const chips = [
@@ -597,6 +729,12 @@ function ScoreChips({ checklist, form }) {
 // What the list and the dashboard read without re-scoring every record.
 function buildSummary(checklist, form) {
     const progress = assessmentProgress(checklist, form).percent;
+    if (checklist.metrics) {
+        return {
+            completionPercent: progress,
+            metrics: Object.fromEntries(checklist.metrics(form).map((m) => [m.id, m.value ?? null])),
+        };
+    }
     if (checklist.id === 'infant_warmer') {
         const r = warmerResults(form.responses, form.periodStart);
         return {
@@ -624,8 +762,37 @@ const withoutUndefined = (value) => JSON.parse(JSON.stringify(value));
 // The assessment form
 // =============================================================================
 
-function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMode = false }) {
+// The IMNCI readiness form also updates the facility's IMNCI information in
+// the registry: written straight away for people who can approve facility
+// updates, otherwise sent for approval like the "Update IMNCI facility
+// information" form. Returns what happened, for the message after saving.
+async function syncFacilityFromAssessment({ form, cachedFacilities, direct, publicMode }) {
+    if (!form.facilityId) return 'no_facility';
+    const patch = imnciFacilityPatch(form);
+    if (!Object.keys(patch).length) return 'nothing';
+    let facility = null;
+    try { facility = await getHealthFacilityById(form.facilityId); } catch (e) { console.warn('Facility read failed, using the cached copy:', e); }
+    if (!facility) facility = (cachedFacilities || []).find((f) => f.id === form.facilityId) || null;
+    if (!facility) return 'not_found';
+    const who = auth.currentUser?.email || (publicMode ? 'PublicSupervisionForm' : 'SupervisionForm');
+    const payload = {
+        ...facility, ...patch,
+        date_of_visit: form.assessmentDate || new Date().toISOString().slice(0, 10),
+        updated_by: who,
+        'اخر تحديث': new Date().toISOString(),
+    };
+    Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
+    if (direct) {
+        await saveFacilitySnapshot(payload);
+        return 'saved';
+    }
+    await submitFacilityDataForApproval(payload, who);
+    return 'pending';
+}
+
+function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, canApproveFacility = false, publicMode = false }) {
     const { t, i18n } = useTranslation();
+    const { healthFacilities } = useDataCache();
     const isArabic = i18n.language === 'ar';
     useLeaveGuard(canEdit);
     const back = () => leaveForm(onBack);
@@ -687,6 +854,20 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMo
             });
             const id = await upsertSupervisionAssessment(payload);
             notify(status === 'submitted' ? t('trackers.supervision.form.submitted', 'Assessment submitted.') : t('trackers.supervision.form.draft_saved', 'Draft saved.'), 'success');
+            if (status === 'submitted' && checklist.syncsFacility) {
+                // The assessment is already saved; a failed facility update only warns.
+                try {
+                    const result = await syncFacilityFromAssessment({
+                        form, cachedFacilities: healthFacilities, direct: canApproveFacility && !publicMode, publicMode,
+                    });
+                    if (result === 'saved') notify(t('trackers.supervision.facility_sync.saved', 'The facility\'s IMNCI information was updated.'), 'success');
+                    else if (result === 'pending') notify(t('trackers.supervision.facility_sync.pending', 'The facility\'s IMNCI information update was sent for approval.'), 'success');
+                    else if (result === 'no_facility' || result === 'not_found') notify(t('trackers.supervision.facility_sync.no_facility', 'The facility is not in the registry, so its IMNCI information was not updated.'), 'info');
+                } catch (syncError) {
+                    console.error('Failed to update the facility from the assessment:', syncError);
+                    notify(t('trackers.supervision.facility_sync.failed', 'The assessment was saved, but the facility\'s IMNCI information could not be updated. {{error}}', { error: String(syncError?.message || syncError) }), 'error');
+                }
+            }
             formSaved();
             if (!form.id && id) setForm((p) => ({ ...p, id }));
             onSaved?.(status);
@@ -712,7 +893,8 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMo
             case 'grid': return <GridSection {...shared} />;
             case 'monthly': return <MonthlySection {...shared} periodStart={form.periodStart} responses={form.responses || {}} />;
             case 'cascade': return <CascadeSection {...shared} periodStart={form.periodStart} responses={form.responses || {}} />;
-            case 'findings': return <FindingsSection values={values} onSet={onChange} readOnly={readOnly} />;
+            case 'findings': return <FindingsSection section={section} values={values} onSet={onChange} readOnly={readOnly} />;
+            case 'fields': return <FieldsSection {...shared} checklist={checklist} form={form} />;
             default: return <ClassicSection {...shared} />;
         }
     };
@@ -756,8 +938,11 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMo
                             label={isHospital ? t('trackers.supervision.form.hospital_name', 'Hospital name') : t('trackers.supervision.form.facility_name', 'Facility name')}
                             onTypeName={(name) => setForm((p) => ({ ...p, facilityId: null, facilityName: name }))}
                             onPick={(f) => setForm((p) => {
-                                const type = facilityTypeChoice(f[FACILITY_TYPE]);
-                                const wantsType = (checklist.headerFields || []).some((h) => h.id === 'facilityType');
+                                const typeField = (checklist.headerFields || []).find((h) => h.id === 'facilityType');
+                                const choice = facilityTypeChoice(f[FACILITY_TYPE]);
+                                // A type this form does not offer (a hospital on the health-centre form) is "other".
+                                const type = choice && typeField && !typeField.options.some((o) => o.value === choice) ? 'other' : choice;
+                                const wantsType = !!typeField;
                                 return {
                                     ...p, facilityId: f.id, facilityName: f[FACILITY_NAME] || '',
                                     ...(wantsType && type && !p.details?.facilityType ? { details: { ...(p.details || {}), facilityType: type } } : {}),
@@ -789,6 +974,14 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMo
                     </div>
                 </CardBody>
             </Card>
+
+            {checklist.syncsFacility && canEdit && (
+                <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+                    {canApproveFacility && !publicMode
+                        ? t('trackers.supervision.facility_sync.note_direct', 'Submitting also updates this facility\'s IMNCI information (equipment, chart booklet, register, ORT corner, immunization and trained staff).')
+                        : t('trackers.supervision.facility_sync.note_approval', 'Submitting also sends an update of this facility\'s IMNCI information (equipment, chart booklet, register, ORT corner, immunization and trained staff) for approval.')}
+                </p>
+            )}
 
             {/* Overall progress and headline results; pinned under the top bar while scrolling. */}
             <div className="relative z-20 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur">
@@ -912,8 +1105,10 @@ export function PublicSupervisionForm({ checklistId }) {
 // =============================================================================
 
 const SERVICE_ICONS = { SSNC: Baby, IMNCI: Stethoscope, EENC: HeartPulse, ETAT: Siren, IPC: ShieldCheck };
-const FORM_ICONS = { hospital: Hospital, thermometer: Thermometer };
+const FORM_ICONS = { hospital: Hospital, thermometer: Thermometer, stethoscope: Stethoscope, pill: Pill };
 const FORM_TONES = {
+    stethoscope: 'bg-sky-100 text-sky-700',
+    pill: 'bg-emerald-100 text-emerald-700',
     hospital: 'bg-violet-100 text-violet-700',
     thermometer: 'bg-orange-100 text-orange-700',
 };
@@ -1089,6 +1284,7 @@ export default function SupervisionView({ permissions = {} }) {
                     checklist={getChecklist(editing.checklistId) || checklist}
                     initial={editing.id ? editing : null}
                     canEdit={canEdit}
+                    canApproveFacility={!!permissions.canApproveSubmissions}
                     onBack={() => setEditing(null)}
                     onSaved={reload}
                 />
@@ -1100,19 +1296,30 @@ export default function SupervisionView({ permissions = {} }) {
     if (page) return <div ref={topRef}>{page}</div>;
 
     const isWarmer = checklist.id === 'infant_warmer';
+    // Checklists with their own metrics show their headline one in the list.
+    const headlineOf = (row) => {
+        if (!checklist.metrics) return null;
+        const all = checklist.metrics(row);
+        return all.find((m) => m.id === checklist.headline) || all[0];
+    };
+    const headlineLabel = checklist.metrics
+        ? pickLabel(checklist.metrics({}).find((m) => m.id === checklist.headline) || {}, isArabic)
+        : null;
     const headers = [
         t('trackers.supervision.table.date', 'Date'),
-        isWarmer ? t('trackers.supervision.table.facility', 'Facility') : t('trackers.supervision.table.hospital', 'Hospital'),
+        checklist.scope === 'hospital' ? t('trackers.supervision.table.hospital', 'Hospital') : t('trackers.supervision.table.facility', 'Facility'),
         t('trackers.supervision.state', 'State'),
         t('trackers.supervision.table.status', 'Status'),
         t('trackers.supervision.table.completed', 'Completed'),
-        ...(isWarmer
+        ...(headlineLabel ? [headlineLabel] : isWarmer
             ? [t('trackers.supervision.warmer.coverage', 'Coverage of portable warming')]
             : [t('trackers.supervision.table.present', 'Present')]),
         ...(canEdit ? [t('trackers.supervision.table.actions', 'Actions')] : []),
     ];
     const resultCell = (row) => {
         const s = row.summary || {};
+        const headline = headlineOf(row);
+        if (headline) return <td className="text-xs"><MetricChip metric={headline} /></td>;
         if (isWarmer) {
             const coverage = s.coveragePercent !== undefined ? s.coveragePercent : warmerResults(row.responses, row.periodStart).service.total.coverage;
             return <td><span className={`px-2 py-0.5 rounded text-xs ${toneFor(coverage)}`}>{pctText(coverage)}</span></td>;
