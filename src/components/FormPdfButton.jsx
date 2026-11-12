@@ -6,11 +6,13 @@
 // beforeExport: optional; runs first (for example to open every folded
 // section so the whole form is printed) and may return a function that puts
 // things back afterwards.
+// dir: 'rtl' or 'ltr' for the printed page; by default Arabic forms print
+// right to left.
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Printer } from 'lucide-react';
 
-export default function FormPdfButton({ formName, subtitle = '', fileName, targetRef, beforeExport, className = '', compact = false }) {
+export default function FormPdfButton({ formName, subtitle = '', fileName, targetRef, beforeExport, dir, className = '', compact = false }) {
     const { t } = useTranslation();
     const btnRef = useRef(null);
     const [busy, setBusy] = useState(false);
@@ -30,7 +32,7 @@ export default function FormPdfButton({ formName, subtitle = '', fileName, targe
                 // Let React draw what was just opened before it is captured.
                 await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 50))));
             }
-            await exportFormPdf(root, { formName, subtitle, fileName });
+            await exportFormPdf(root, { formName, subtitle, fileName, dir });
         } catch (e) {
             console.error('Form PDF failed:', e);
             setError(t('form_pdf.failed', 'Could not make the PDF: {{error}}', { error: e?.message || '' }));

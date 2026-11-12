@@ -56,6 +56,18 @@ function fixTextBaseline() {
     return () => style.remove();
 }
 
+/**
+ * 'rtl' when the form is mostly Arabic, else 'ltr'. The app's page direction
+ * follows the interface language, so an Arabic form opened in the English
+ * interface would otherwise print left to right.
+ */
+export function textDirection(root) {
+    const text = root?.innerText || '';
+    const arabic = (text.match(/[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/g) || []).length;
+    const latin = (text.match(/[A-Za-z]/g) || []).length;
+    return arabic > latin ? 'rtl' : 'ltr';
+}
+
 /** The letterhead as an element off screen, ready to capture. */
 function buildLetterhead(formName, subtitle) {
     const el = document.createElement('div');
@@ -82,8 +94,11 @@ function buildLetterhead(formName, subtitle) {
  * anything sticky (a pinned score would otherwise land mid-page), and let
  * the form take the full capture width.
  */
-function prepareClone(clonedRoot) {
+function prepareClone(clonedRoot, dir) {
     const win = clonedRoot.ownerDocument.defaultView;
+    // Arabic forms read right to left on paper: questions on the right,
+    // answers on the left, whatever language the app is in.
+    if (dir) clonedRoot.setAttribute('dir', dir);
     clonedRoot.style.width = `${CAPTURE_WIDTH}px`;
     clonedRoot.style.maxWidth = 'none';
     clonedRoot.style.margin = '0';
@@ -179,10 +194,11 @@ async function saveDoc(doc, fileName) {
  * Builds the PDF of `root` (the form element) and downloads it, or on the
  * phone app saves it to Downloads and opens it.
  * @param {HTMLElement} root
- * @param {{ formName: string, subtitle?: string, fileName?: string, footerNote?: string }} options
+ * @param {{ formName: string, subtitle?: string, fileName?: string, footerNote?: string, dir?: 'rtl'|'ltr' }} options
+ *   dir: the form's reading direction; when left out it follows the form's text.
  * @returns {Promise<'downloaded'|'saved'>}
  */
-export async function exportFormPdf(root, { formName, subtitle = '', fileName, footerNote = '' } = {}) {
+export async function exportFormPdf(root, { formName, subtitle = '', fileName, footerNote = '', dir } = {}) {
     if (!root) throw new Error('Form not found');
     const unfix = fixTextBaseline();
     let headerCanvas;
@@ -206,7 +222,7 @@ export async function exportFormPdf(root, { formName, subtitle = '', fileName, f
             windowWidth: Math.max(CAPTURE_WIDTH + 100, window.innerWidth),
             scrollX: 0,
             scrollY: -window.scrollY,
-            onclone: (_doc, clonedRoot) => prepareClone(clonedRoot),
+            onclone: (_doc, clonedRoot) => prepareClone(clonedRoot, dir || textDirection(root)),
         });
     } finally {
         unfix();
