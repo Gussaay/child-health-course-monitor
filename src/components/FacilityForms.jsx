@@ -22,6 +22,7 @@ import {
 import { notify } from './dialogs';
 import StandardNameSelect from './StandardNameSelect';
 import { useLeaveGuard, leaveForm } from '../utils/leaveGuard';
+import FormPdfButton from './FormPdfButton';
 
 const SERVICE_LABELS = {
     'imnci_staff': 'العلاج المتكامل (IMNCI)',
@@ -1301,9 +1302,13 @@ export const GenericFacilityForm = React.forwardRef(({
                 setToast={setToast}
             />
 
+            <div data-pdf-root="">
             <Card className="shadow-xl border-t-4 border-t-sky-500 overflow-clip">
                 <div className="bg-gradient-to-r from-sky-50 to-white px-6 py-5 border-b border-gray-100">
-                    <h2 className="text-2xl font-extrabold text-sky-900">{isEditing ? `تعديل: ${title}` : `إضافة: ${title}`}</h2>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                        <h2 className="text-2xl font-extrabold text-sky-900">{isEditing ? `تعديل: ${title}` : `إضافة: ${title}`}</h2>
+                        <FormPdfButton formName="Health Facility Data Form" subtitle={[title, formData['اسم_المؤسسة']].filter(Boolean).join(' - ')} />
+                    </div>
                     <p className="text-sky-700 mt-1 font-medium">{subtitle || (isEditing ? (formData['اسم_المؤسسة'] || t('clinical_ui.facility_forms.update_details', 'Update details for this facility')) : "أدخل تفاصيل المنشأة الجديدة.")}</p>
                 </div>
                 
@@ -1367,6 +1372,7 @@ export const GenericFacilityForm = React.forwardRef(({
                     </form>
                 </div>
             </Card>
+            </div>
         </div>
     );
 });

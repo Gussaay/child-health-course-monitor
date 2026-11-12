@@ -9,6 +9,7 @@ import { Button, EmptyState, Select, Spinner, Textarea } from '../CommonComponen
 import { confirmDialog } from '../dialogs';
 import { saveParticipantOsceResult } from '../../data.js';
 import { OSCE_CHECKLISTS, getOsceChecklist, scoreOsce, buildOsceRecord } from './osceChecklists.js';
+import FormPdfButton from '../FormPdfButton';
 
 const ResultChip = ({ result, onClick }) => {
     if (!result) {
@@ -167,8 +168,12 @@ function OsceForm({ checklist, participant, participants, previous, canEdit, ass
                 </div>
             )}
 
-            <div dir="rtl" className="space-y-4">
-                <h3 className="text-lg font-bold text-slate-800">{checklist.title}</h3>
+            <div dir="rtl" className="space-y-4" data-pdf-root="">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                    <h3 className="text-lg font-bold text-slate-800">{checklist.title}</h3>
+                    <FormPdfButton formName={`OSCE Checklist: ${checklist.short || ''}`} subtitle={[checklist.title, participant?.name].filter(Boolean).join(' - ')}
+                        beforeExport={() => { const before = expanded; setExpanded(new Set(checklist.sections.map((_, i) => i))); return () => setExpanded(before); }} />
+                </div>
 
                 <div className="rounded-lg border border-slate-200 bg-slate-50">
                     <button type="button" onClick={() => setShowGuide(s => !s)} className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold text-slate-700">

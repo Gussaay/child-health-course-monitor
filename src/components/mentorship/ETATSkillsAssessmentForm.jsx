@@ -17,6 +17,7 @@ import { SaveStatusModal } from '../FacilityForms.jsx';
 // Reuse the IMNCI primitives so the look and feel stays identical
 import { ActionToggle, ScoreCircle, handleAutoScroll } from './IMNCSkillsAssessmentForm.jsx';
 
+import FormPdfButton from '../FormPdfButton';
 /* ============================================================================
    CHECKLIST DEFINITIONS
    Every `title`, `subtitle` and `label` below is also an i18n key.
@@ -451,7 +452,8 @@ const ETATSkillRow = ({ item, value, onChange }) => {
 };
 
 // --- One checklist, rendered as an accordion ---------------------------------
-const ChecklistBlock = ({ checklist, formData, scores, onSkillChange, defaultOpen }) => {
+// forceOpen: shown open while the printed PDF is made.
+const ChecklistBlock = ({ checklist, formData, scores, onSkillChange, defaultOpen, forceOpen = false }) => {
     const { t, i18n } = useTranslation();
     const isAr = i18n.language?.startsWith('ar');
     const [isExpanded, setIsExpanded] = useState(defaultOpen);
@@ -490,7 +492,7 @@ const ChecklistBlock = ({ checklist, formData, scores, onSkillChange, defaultOpe
                 </svg>
             </button>
 
-            {isExpanded && (
+            {(isExpanded || forceOpen) && (
                 <div>
                     {checklist.sections.map(section => {
                         const sScore = scores?.[`${checklist.key}_${section.id}`];
@@ -567,6 +569,8 @@ const ETATSkillsAssessmentForm = ({
     const { t, i18n } = useTranslation();
     const isAr = i18n.language?.startsWith('ar');
     const dir = isAr ? 'rtl' : 'ltr';
+    // While the PDF is made, every selected checklist is shown open.
+    const [printAll, setPrintAll] = useState(false);
     const auth = getAuth();
     const user = auth.currentUser;
     const editingIdRef = useRef(existingSessionData?.id || null);
@@ -758,6 +762,7 @@ const ETATSkillsAssessmentForm = ({
             />
 
             <form onSubmit={handleSubmit}>
+                <div className="flex justify-end mb-2" data-pdf-hide=""><FormPdfButton formName="ETAT Skills Mentorship Form" subtitle={isAr ? t('Emergency Triage, Assessment and Treatment (ETAT) Skills Mentorship') : ''} beforeExport={() => { setPrintAll(true); return () => setPrintAll(false); }} /></div>
                 <div className="p-6">
                     <div className="text-center mb-4">
                         <h2 className="text-2xl font-bold text-sky-800">
@@ -863,6 +868,7 @@ const ETATSkillsAssessmentForm = ({
                             scores={scores}
                             onSkillChange={handleSkillChange}
                             defaultOpen={idx === 0}
+                            forceOpen={printAll}
                         />
                     ))}
 

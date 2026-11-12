@@ -18,6 +18,7 @@ import { notify, confirmDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
 import { publicBaseUrl } from '../utils/publicLink';
 import { useLeaveGuard, leaveForm } from '../utils/leaveGuard';
+import FormPdfButton from './FormPdfButton';
 
 export const EENC_TEST_QUESTIONS = [
     { id: 'q1', text: '1. Delivering in the supine position during second stage of labour is best.', type: 'mc', options: [{ id: 'a', text: 'True' }, { id: 'b', text: 'False' }], correctAnswer: 'b' },
@@ -2677,14 +2678,18 @@ export function CourseTestForm({
             </Modal>
 
             {!isSetupModalOpen && !submissionResult && (
-                <div className="p-6" style={{ direction: 'ltr', textAlign: 'left' }}>
+                <div className="p-6" style={{ direction: 'ltr', textAlign: 'left' }} data-pdf-root="">
                     <div className="flex flex-wrap justify-between items-start gap-4">
                         <PageHeader 
                             title={isEditing ? t('course_tests.tests.editing_label', 'Editing {{label}}', { label: testTypeLabel(testType, t) }) : t('course_tests.tests.enter_label', 'Enter {{label}}', { label: testTypeLabel(testType, t) })} 
                             subtitle={`${participantNameForDisplay || t('course_tests.tests.unknown_participant', 'Unknown Participant')} - ${testTitle}`} 
                             className="p-0 m-0" 
                         />
-                        <div>
+                        <div className="flex flex-wrap items-start gap-2">
+                            <FormPdfButton
+                                formName={`${testTypeLabel(testType, t)} - ${testTitle}`}
+                                subtitle={participantNameForDisplay || ''} />
+                        <div data-pdf-hide="">
                             <Button 
                                 variant="secondary" 
                                 onClick={() => { 
@@ -2702,6 +2707,7 @@ export function CourseTestForm({
                             >
                                 {t('course_tests.tests.share_test_form', 'Share Test Form')}
                             </Button>
+                        </div>
                         </div>
                     </div>
 

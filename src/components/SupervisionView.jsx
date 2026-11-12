@@ -36,6 +36,7 @@ import { auth } from '../firebase';
 import { STATE_LOCALITIES } from './constants';
 import { useLeaveGuard, leaveForm, formSaved } from '../utils/leaveGuard';
 import { publicBaseUrl } from '../utils/publicLink';
+import FormPdfButton from './FormPdfButton';
 import {
     SUPERVISION_SERVICES, getChecklist, checklistsForService, pickLabel,
     scoreSection, scoreAssessment, pctText, toneFor, toNum,
@@ -904,13 +905,28 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, canAppro
     const draftLabel = saving ? t('trackers.supervision.form.saving', 'Saving…') : t('trackers.supervision.form.save_draft', 'Save draft');
     const submitLabel = saving ? t('trackers.supervision.form.saving', 'Saving…') : t('trackers.supervision.form.submit', 'Submit assessment');
 
+    // For the PDF every section is opened, then folded back as it was.
+    const openAllForPdf = () => {
+        const before = openSections;
+        setOpenSections(new Set(checklist.sections.map((s) => s.id)));
+        return () => setOpenSections(before);
+    };
+
     return (
-        <div className={`space-y-3 ${canEdit ? 'pb-24 sm:pb-0' : ''}`}>
+        <div data-pdf-root="" className={`space-y-3 ${canEdit ? 'pb-24 sm:pb-0' : ''}`}>
             {!IS_NATIVE && !publicMode && (
+                <span data-pdf-hide="">
                 <Button variant="secondary" onClick={back}>
                     <ArrowLeft size={16} /> {t('trackers.supervision.form.back', 'Back to assessments')}
                 </Button>
+                </span>
             )}
+            <div className="flex justify-end" data-pdf-hide="">
+                <FormPdfButton
+                    formName={checklist.title}
+                    subtitle={checklist.titleAr && checklist.titleAr !== checklist.title ? checklist.titleAr : ''}
+                    beforeExport={openAllForPdf} />
+            </div>
 
             <Card>
                 <CardBody className="space-y-4">
@@ -990,7 +1006,7 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, canAppro
                         {t('trackers.supervision.form.progress', 'Completed {{pct}}', { pct: `${Math.round(progress.percent)}%` })}
                     </span>
                     <ProgressBar percent={progress.percent} className="flex-1" />
-                    <button type="button" className="shrink-0 text-xs font-medium text-sky-700 hover:underline"
+                    <button type="button" data-pdf-hide="" className="shrink-0 text-xs font-medium text-sky-700 hover:underline"
                         onClick={() => setOpenSections(allOpen ? new Set() : new Set(checklist.sections.map((s) => s.id)))}>
                         {allOpen ? t('trackers.supervision.form.collapse_all', 'Collapse all') : t('trackers.supervision.form.expand_all', 'Expand all')}
                     </button>

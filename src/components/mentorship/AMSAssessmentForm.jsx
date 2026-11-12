@@ -8,6 +8,7 @@ import { getAuth } from 'firebase/auth';
 
 import { useStandardNames } from '../../hooks/useNameRegistry';
 import { hasRecordedProject } from '../../utils/visitProject';
+import FormPdfButton from '../FormPdfButton';
 // --- Local ActionToggle with logical RTL support ---
 function ActionToggle({ options, currentValue, onClick, name }) {
     return (
@@ -433,6 +434,7 @@ const AMSAssessmentForm = forwardRef(({ facility, onSaveComplete, onExit, setToa
         <Card dir="rtl" className="relative pb-20">
             <StickyOverallScore totalScore={scores.total} maxScore={210} />
             <form onSubmit={handleSubmit}>
+                <div className="flex justify-end mb-2" data-pdf-hide=""><FormPdfButton formName="Antimicrobial Stewardship (AMS) Assessment" subtitle="استبيان استخدام مضادات الميكروبات ومقاومتها والإشراف عليها (AMS)" /></div>
                 <div className="p-4 sm:p-8">
                     
                     {/* Header Info */}

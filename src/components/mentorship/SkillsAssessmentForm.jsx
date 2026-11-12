@@ -13,6 +13,7 @@ import { getAuth } from "firebase/auth";
 import { GenericFacilityForm, IMNCIFormFields, SaveStatusModal } from '../FacilityForms.jsx'; 
 import { submitFacilityDataForApproval } from '../../data';
 
+import FormPdfButton from '../FormPdfButton';
 // --- Import all IMNCI-specific logic and the renderer ---
 import {
     IMNCIFormRenderer,
@@ -757,6 +758,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 maxScore={scores?.overallScore?.maxScore}
             />
             <form onSubmit={handleSubmit}>
+                <div className="flex justify-end mb-2" data-pdf-hide=""><FormPdfButton formName="IMNCI Skills Mentorship Form" subtitle="متابعة مهارات العلاج المتكامل للأطفال اقل من 5 سنوات" beforeExport={() => { const before = visibleStep; setVisibleStep(10); return () => setVisibleStep(before); }} /></div>
                 <div className="p-6">
                     {/* --- Centered Title --- */}
                     <div className="text-center mb-4">
