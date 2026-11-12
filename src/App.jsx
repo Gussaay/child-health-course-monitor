@@ -3122,9 +3122,9 @@ case 'meetings':
             </div>
 
             <header data-app-chrome="header" ref={headerRef} className={`bg-slate-800 shadow-lg relative z-40 transition-all ${(isFileDownloading || isDownloadingAppUpdate) ? 'top-10 mb-10' : 'top-0'}`}>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+                <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
                         {user && !isMinimalUILayout && (
                             <button
                                 onClick={() => setSideMenuOpen(true)}
@@ -3146,16 +3146,16 @@ case 'meetings':
                             </button>
                         )}
                         <div className="flex items-center gap-3 sm:gap-4 cursor-pointer min-w-0" onClick={() => { if (scannedPublicOpen) leaveScannedPage(); else if (!isSharedView) navigate('landing'); }}>
-                            <div className="h-11 w-11 sm:h-14 sm:w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md shrink-0">
-                                <img src={logoUrl} alt={t('app_extra.header.logo_alt', 'NCHP Logo')} width="48" height="48" className="h-9 w-9 sm:h-12 sm:w-12 object-contain" />
+                            <div className="h-10 w-10 sm:h-14 sm:w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md shrink-0">
+                                <img src={logoUrl} alt={t('app_extra.header.logo_alt', 'NCHP Logo')} width="48" height="48" className="h-8 w-8 sm:h-12 sm:w-12 object-contain" />
                             </div>
                             <div className="min-w-0">
-                                <h1 className="text-lg sm:text-2xl font-bold text-white leading-tight">{IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program')}</h1>
-                                <p className="text-xs sm:text-sm text-slate-300 flex items-center flex-wrap gap-2 mt-1 sm:mt-0">
+                                <h1 className="text-[clamp(13px,4.3vw,17px)] sm:text-2xl font-bold text-white leading-tight whitespace-nowrap">{IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program')}</h1>
+                                <p className="text-[11px] sm:text-sm text-slate-300 flex items-center flex-wrap gap-1.5 sm:gap-2 mt-0.5 sm:mt-0">
                                     <span>{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : t('app.subtitle', 'Program & Course Monitoring System')}</span>
                                     <span
                                         onClick={(e) => { e.stopPropagation(); handleManualUpdateCheck(); }}
-                                        className="bg-slate-700 text-sky-300 text-xs px-1.5 py-0.5 rounded border border-slate-600 font-mono shadow-sm cursor-pointer hover:bg-slate-600 hover:text-sky-200 transition-colors"
+                                        className="bg-slate-700 text-sky-300 text-[10px] sm:text-xs leading-tight px-1 sm:px-1.5 py-0 sm:py-0.5 rounded border border-slate-600 font-mono shadow-sm cursor-pointer hover:bg-slate-600 hover:text-sky-200 transition-colors"
                                         title={t('app_extra.header.check_updates', 'Tap to check for updates')}
                                     >
                                         v{appVersion}
@@ -3165,7 +3165,7 @@ case 'meetings':
                         </div>
                         </div>
                         
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 shrink-0">
                             {!isMinimalUILayout && user && (
                                 <nav className="hidden md:flex items-center gap-1">
                                     {visibleNavItems.map(item => (
@@ -3175,15 +3175,19 @@ case 'meetings':
                                     ))} 
                                 </nav>
                             )}
-                            {(!user || isMinimalUILayout) && <ThemeToggle />}
+                            {/* Phones: theme and language sit one above the other in a slim
+                                column, so the programme name keeps the width of the header. */}
                             {(!user || isMinimalUILayout) && (
-                                <button
-                                    onClick={toggleLanguage}
-                                    className="p-1.5 text-sky-400 bg-slate-700 border border-slate-600 rounded hover:bg-slate-600 hover:text-sky-300 transition-colors flex items-center justify-center min-w-[36px]"
-                                    title={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
-                                >
-                                    <span className="font-bold text-sm">E/ع</span>
-                                </button>
+                                <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
+                                    <ThemeToggle className="h-6 w-7 !p-0 !min-w-0 sm:h-auto sm:w-auto sm:!p-1.5 sm:!min-w-[36px]" iconSize={14} />
+                                    <button
+                                        onClick={toggleLanguage}
+                                        className="h-6 w-7 sm:h-auto sm:w-auto p-0 sm:p-1.5 text-sky-400 bg-slate-700 border border-slate-600 rounded hover:bg-slate-600 hover:text-sky-300 transition-colors flex items-center justify-center sm:min-w-[36px]"
+                                        title={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
+                                    >
+                                        <span className="font-bold text-[11px] sm:text-sm whitespace-nowrap leading-none">E/ع</span>
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>

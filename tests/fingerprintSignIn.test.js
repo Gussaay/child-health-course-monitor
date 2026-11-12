@@ -22,6 +22,7 @@ const NB = {
   deleteCredentials: vi.fn(async ({ server }) => { delete store[server]; }),
 };
 vi.mock('@capgo/capacitor-native-biometric', () => ({ NativeBiometric: NB }));
+vi.mock('../src/data', () => ({ submitProblemReport: vi.fn(async () => 'id') }));
 
 const fp = await import('../src/utils/fingerprintSignIn.js');
 
@@ -118,5 +119,26 @@ describe('fingerprint sign-in', () => {
     await fp.rememberForFingerprint(fakeUser(session('i1', 'ri')));
     await fp.forgetFingerprintAccount();
     expect(await fp.savedFingerprintAccount()).toBeNull();
+  });
+
+  it('keeps the sign-in in app storage when the key store refuses it', async () => {
+    NB.setCredentials.mockRejectedValueOnce(new Error('Failed to save credentials'));
+    await fp.rememberForFingerprint(fakeUser(session('j1', 'rj')));
+    expect(await fp.savedFingerprintAccount()).toEqual({ uid: 'j1', email: 'j1@x.org', name: 'Dr Test' });
+    expect(await fp.fingerprintStatus()).toEqual({ state: 'on' });
+    expect(await fp.signInWithFingerprint()).toBe('ok');
+    expect(JSON.parse(localStorage.getItem('firebase:authUser:KEY:[DEFAULT]')).uid).toBe('j1');
+    await fp.forgetFingerprintAccount();
+    expect(await fp.savedFingerprintAccount()).toBeNull();
+  });
+
+  it('says why the fingerprint button is missing', async () => {
+    expect(await fp.fingerprintStatus()).toEqual({ state: 'not_yet', detail: '' });
+    NB.isAvailable.mockResolvedValue({ isAvailable: false, errorCode: 2 });
+    expect(await fp.fingerprintStatus()).toEqual({ state: 'no_fingerprint', detail: 2 });
+    native.plugin = false;
+    expect((await fp.fingerprintStatus()).state).toBe('old_apk');
+    native.on = false;
+    expect((await fp.fingerprintStatus()).state).toBe('web');
   });
 });

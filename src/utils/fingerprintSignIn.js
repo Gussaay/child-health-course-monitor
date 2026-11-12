@@ -39,15 +39,68 @@ function plugin() {
   return pluginPromise;
 }
 
+let lastAvailability = null;
 // True when the phone has a fingerprint (or face) enrolled.
 export async function fingerprintReady() {
   if (!fingerprintSupported()) return false;
   try {
     const res = await (await plugin()).isAvailable({ useFallback: false });
+    lastAvailability = res || null;
     return !!res?.isAvailable;
-  } catch {
+  } catch (err) {
+    lastAvailability = { isAvailable: false, error: String(err?.message || err) };
     return false;
   }
+}
+
+// What happened the last time this phone tried to keep the sign-in, shown on
+// the sign-in screen so a missing fingerprint button can be explained.
+const STATUS_KEY = 'fp_signin_status';
+function setStatus(state, detail = '') {
+  try { localStorage.setItem(STATUS_KEY, JSON.stringify({ state, detail: String(detail).slice(0, 200), at: new Date().toISOString() })); } catch { /* storage blocked */ }
+}
+function readStatus() {
+  try { return JSON.parse(localStorage.getItem(STATUS_KEY) || 'null'); } catch { return null; }
+}
+
+// A copy kept in the app's own storage, used when the phone's key store
+// refuses to save (some phones' key stores fail on long values). Firebase
+// keeps the same session in this storage anyway; the fingerprint is still
+// asked before it is used.
+const LOCAL_COPY = 'fp_signin_copy';
+function readLocalCopy() {
+  try {
+    const copy = JSON.parse(localStorage.getItem(LOCAL_COPY) || 'null');
+    return copy && isUsableSession(copy.session) && copy.account?.uid === copy.session.uid ? copy : null;
+  } catch { return null; }
+}
+
+let reportedSaveError = false;
+function reportSaveError(message) {
+  if (reportedSaveError) return;
+  reportedSaveError = true;
+  import('../data').then(({ submitProblemReport }) => submitProblemReport({
+    kind: 'permission',
+    what: `Fingerprint sign-in could not be saved: ${message}`.slice(0, 300),
+    context: 'fingerprint-signin',
+    source: 'fingerprintSignIn.js',
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 300) : null,
+    appVersion: typeof window !== 'undefined' ? window.__APP_VERSION__ || null : null,
+  })).catch(() => { /* best effort */ });
+}
+
+// Why the fingerprint button is or is not on the sign-in screen:
+// 'on', 'old_apk', 'no_fingerprint', 'not_yet' (no sign-in kept yet) or
+// 'web'. `detail` carries the phone's own reason when there is one.
+export async function fingerprintStatus() {
+  if (!Capacitor.isNativePlatform()) return { state: 'web' };
+  if (!fingerprintSupported()) return { state: 'old_apk' };
+  if (!(await fingerprintReady())) {
+    return { state: 'no_fingerprint', detail: lastAvailability?.errorCode ?? lastAvailability?.error ?? '' };
+  }
+  if (await savedFingerprintAccount()) return { state: 'on' };
+  const last = readStatus();
+  return { state: 'not_yet', detail: last?.state === 'save_failed' ? last.detail : '' };
 }
 
 // The persisted Firebase record, checked before it is used.
@@ -82,17 +135,32 @@ export async function rememberForFingerprint(user) {
   if (!isUsableSession(json)) return;
   const fingerprint = `${json.uid}:${json.stsTokenManager.refreshToken}`;
   if (savedFor === fingerprint) return;
-  if (!(await fingerprintReady())) return;
+  if (!(await fingerprintReady())) {
+    setStatus('no_fingerprint', lastAvailability?.errorCode ?? lastAvailability?.error ?? '');
+    return;
+  }
+  const account = { uid: json.uid, email: user.email || '', name: user.displayName || '' };
   try {
     const NB = await plugin();
     await NB.setCredentials({
       server: SERVER,
-      username: JSON.stringify({ uid: json.uid, email: user.email || '', name: user.displayName || '' }),
+      username: JSON.stringify(account),
       password: JSON.stringify(json),
     });
+    try { localStorage.removeItem(LOCAL_COPY); } catch { /* storage blocked */ }
     savedFor = fingerprint;
+    setStatus('on', 'keystore');
   } catch (err) {
-    console.warn('[Fingerprint] Could not save sign-in:', err?.message || err);
+    const message = String(err?.message || err);
+    console.warn('[Fingerprint] Key store refused the sign-in, keeping it in app storage:', message);
+    try {
+      localStorage.setItem(LOCAL_COPY, JSON.stringify({ account, session: json }));
+      savedFor = fingerprint;
+      setStatus('on', `app storage (${message})`);
+    } catch (err2) {
+      setStatus('save_failed', `${message}; ${err2?.message || err2}`);
+    }
+    reportSaveError(message);
   }
 }
 
@@ -101,20 +169,21 @@ export async function rememberForFingerprint(user) {
 export async function savedFingerprintAccount() {
   if (!fingerprintSupported()) return null;
   try {
+    if (!(await fingerprintReady())) return null;
     const NB = await plugin();
     const { isSaved } = await NB.isCredentialsSaved({ server: SERVER });
-    if (!isSaved) return null;
-    if (!(await fingerprintReady())) return null;
-    const { username } = await NB.getCredentials({ server: SERVER });
-    const account = JSON.parse(username || 'null');
-    return account?.uid ? account : null;
-  } catch {
-    return null;
-  }
+    if (isSaved) {
+      const { username } = await NB.getCredentials({ server: SERVER });
+      const account = JSON.parse(username || 'null');
+      if (account?.uid) return account;
+    }
+  } catch { /* fall back to the app-storage copy */ }
+  return readLocalCopy()?.account || null;
 }
 
 export async function forgetFingerprintAccount() {
   savedFor = null;
+  try { localStorage.removeItem(LOCAL_COPY); } catch { /* storage blocked */ }
   if (!fingerprintSupported()) return;
   try { await (await plugin()).deleteCredentials({ server: SERVER }); } catch { /* nothing saved */ }
 }
@@ -137,9 +206,17 @@ export async function signInWithFingerprint({ title, subtitle, cancel } = {}) {
     return 'cancelled';
   }
   try {
-    const { username, password } = await NB.getCredentials({ server: SERVER });
-    const json = JSON.parse(password || 'null');
-    const account = JSON.parse(username || 'null');
+    let json = null;
+    let account = null;
+    try {
+      const { username, password } = await NB.getCredentials({ server: SERVER });
+      json = JSON.parse(password || 'null');
+      account = JSON.parse(username || 'null');
+    } catch { /* not in the key store: try the app-storage copy */ }
+    if (!isUsableSession(json)) {
+      const copy = readLocalCopy();
+      if (copy) { json = copy.session; account = copy.account; }
+    }
     if (!isUsableSession(json) || account?.uid !== json.uid) return 'failed';
     localStorage.setItem(firebaseUserKey(json), JSON.stringify(json));
     localStorage.setItem('last_uid', json.uid);

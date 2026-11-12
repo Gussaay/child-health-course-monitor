@@ -25,7 +25,7 @@ import { useTranslation } from 'react-i18next';
 import { authErrorCode, authErrorKey } from './utils/authMessages';
 import { Fingerprint } from 'lucide-react';
 import {
-  fingerprintSupported,
+  fingerprintStatus,
   savedFingerprintAccount,
   signInWithFingerprint,
   forgetFingerprintAccount,
@@ -100,6 +100,8 @@ export function SignInBox({ above = null } = {}) {
   const [isMissingName, setIsMissingName] = useState(false);
   // Android app: the account saved for fingerprint sign-in on this phone.
   const [fpAccount, setFpAccount] = useState(null);
+  // Why the fingerprint button is missing, shown in small print on the app.
+  const [fpStatus, setFpStatus] = useState(null);
 
   const fingerprintSignIn = async () => {
     setError('');
@@ -119,7 +121,7 @@ export function SignInBox({ above = null } = {}) {
   };
 
   useEffect(() => {
-    if (!fingerprintSupported()) return undefined;
+    if (!Capacitor.isNativePlatform()) return undefined;
     let cancelled = false;
     (async () => {
       if (await takeFailedRestore()) {
@@ -127,7 +129,12 @@ export function SignInBox({ above = null } = {}) {
         return;
       }
       const account = await savedFingerprintAccount();
-      if (cancelled || !account) return;
+      if (cancelled) return;
+      if (!account) {
+        const status = await fingerprintStatus();
+        if (!cancelled) setFpStatus(status);
+        return;
+      }
       setFpAccount(account);
       if (account.email) setEmail((current) => current || account.email);
       // Ask for the fingerprint straight away, unless the person just pressed Log out.
@@ -141,6 +148,7 @@ export function SignInBox({ above = null } = {}) {
   const useAnotherAccount = async () => {
     await forgetFingerprintAccount();
     setFpAccount(null);
+    setFpStatus({ state: 'not_yet' });
     setEmail('');
     setError('');
     setMessage('');
@@ -457,8 +465,8 @@ export function SignInBox({ above = null } = {}) {
 
   if (isMissingName) {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-surface p-4">
-          <div dir={dir} className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl text-center">
+        <div className="sm:min-h-screen flex items-center justify-start sm:justify-center flex-col bg-surface px-4 pt-4 pb-4 sm:p-4">
+          <div dir={dir} className="w-full max-w-md px-5 py-5 sm:p-8 space-y-4 sm:space-y-6 bg-white rounded-lg shadow-xl text-center">
             <h1 className="text-3xl font-bold text-gray-800">{t('auth.complete_profile', "Complete Your Profile")}</h1>
             <p className="mt-2 text-gray-600">{t('auth.name_to_continue', "Please enter your full name to continue.")}</p>
 
@@ -489,12 +497,12 @@ export function SignInBox({ above = null } = {}) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col gap-3 items-center justify-center bg-surface p-4">
+    <div className="sm:min-h-screen flex flex-col gap-3 items-center justify-start sm:justify-center bg-surface px-4 pt-4 pb-4 sm:p-4">
       {above && <div dir={dir} className="w-full max-w-md">{above}</div>}
-      <div dir={dir} className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl text-center">
+      <div dir={dir} className="w-full max-w-md px-5 py-5 sm:p-8 space-y-4 sm:space-y-6 bg-white rounded-lg shadow-xl text-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">{t('auth.system_title', "Monitoring System")}</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">{t('auth.system_title', "Monitoring System")}</h1>
+          <p className="mt-1 sm:mt-2 text-gray-600">
             {isSignUpMode ? t('auth.create_account', "Create a new account") : t('auth.signin_to_account', "Sign in to your account")}
           </p>
         </div>
@@ -621,12 +629,24 @@ export function SignInBox({ above = null } = {}) {
             e.preventDefault();
             signInWithGoogle();
           }} 
-          className="flex items-center justify-center w-full gap-3 bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md disabled:bg-gray-400"
+          className="flex items-center justify-center w-full gap-3 bg-blue-600 text-white font-bold py-2.5 sm:py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md disabled:bg-gray-400"
           disabled={isLoading} 
         >
           <svg className="w-6 h-6" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19-5.238C39.902,35.619,44,29.89,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path></svg>
           {isLoading ? (message ? message : t('auth.processing', "Processing...")) : t('auth.google', "Sign in with Google")}
         </button>
+
+        {!fpAccount && fpStatus && fpStatus.state !== 'web' && fpStatus.state !== 'on' && (
+          <p className="flex items-start justify-center gap-1.5 text-xs text-gray-500">
+            <Fingerprint className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span>
+              {fpStatus.state === 'old_apk' && t('auth.fingerprint_status_old_apk', 'Fingerprint sign-in needs the latest app. Please install the new APK.')}
+              {fpStatus.state === 'no_fingerprint' && t('auth.fingerprint_status_none', "Fingerprint sign-in: add a fingerprint in your phone's Settings, then sign in once.")}
+              {fpStatus.state === 'not_yet' && t('auth.fingerprint_status_not_yet', 'Fingerprint sign-in turns on after you sign in once on this phone.')}
+              {fpStatus.detail ? ` (${fpStatus.detail})` : ''}
+            </span>
+          </p>
+        )}
       </div>
     </div>
   );
