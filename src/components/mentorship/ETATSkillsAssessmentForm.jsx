@@ -17,6 +17,7 @@ import { SaveStatusModal } from '../FacilityForms.jsx';
 // Reuse the IMNCI primitives so the look and feel stays identical
 import { ActionToggle, ScoreCircle, handleAutoScroll } from './IMNCSkillsAssessmentForm.jsx';
 
+import FormPdfButton from '../FormPdfButton';
 /* ============================================================================
    CHECKLIST DEFINITIONS
    Every `title`, `subtitle` and `label` below is also an i18n key.
@@ -758,6 +759,7 @@ const ETATSkillsAssessmentForm = ({
             />
 
             <form onSubmit={handleSubmit}>
+                <div className="flex justify-end mb-2" data-pdf-hide=""><FormPdfButton formName="ETAT Skills Mentorship Form" subtitle={isAr ? t('Emergency Triage, Assessment and Treatment (ETAT) Skills Mentorship') : ''} /></div>
                 <div className="p-6">
                     <div className="text-center mb-4">
                         <h2 className="text-2xl font-bold text-sky-800">

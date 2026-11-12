@@ -6,6 +6,7 @@ import { SKILLS_EENC_BREATHING, SKILLS_EENC_NOT_BREATHING, EENC_DOMAIN_LABEL_BRE
 import { notify, confirmDialog } from '../dialogs';
 import { useLeaveGuard } from '../../utils/leaveGuard';
 import { useTranslation } from 'react-i18next';
+import FormPdfButton from '../FormPdfButton';
 
 const generateHash = (buffer) => Object.keys(buffer).sort().map(k => `${k}:${buffer[k]}`).join('|');
 
@@ -756,6 +757,7 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
             )}
 
             {showGrid && (
+                <div data-pdf-root="">
                 <Card className="p-4 mb-4">
                     <div className="flex justify-between items-start mb-4 bg-slate-50 p-3 rounded-md border border-slate-200">
                         <div>
@@ -764,10 +766,14 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
                                 <span className="font-semibold">{t('clinical_ui.maternal.grid.day', 'Day:')}</span> {dayOfCourse} &bull; <span className="font-semibold ms-2">{t('clinical_ui.maternal.grid.date', 'Date:')}</span> {encounterDate} &bull; <span className="font-semibold ms-2">{t('clinical_ui.maternal.grid.checklist', 'Checklist:')}</span> {currentChecklist.title}
                             </p>
                         </div>
-                        <Button variant="secondary" size="sm" onClick={() => setShowSetupModal(true)}>{t('clinical_ui.maternal.btn.edit_setup', 'Edit Setup')}</Button>
+                        <div className="flex flex-wrap items-start justify-end gap-2" data-pdf-hide="">
+                            <FormPdfButton formName={`Maternal Emergency Care Observation Checklist: ${currentChecklist.title}`} subtitle={participant?.name || ''}
+                                beforeExport={() => { const before = expandedDomains; setExpandedDomains(new Set(currentDomains)); return () => setExpandedDomains(before); }} />
+                            <Button variant="secondary" size="sm" onClick={() => setShowSetupModal(true)}>{t('clinical_ui.maternal.btn.edit_setup', 'Edit Setup')}</Button>
+                        </div>
                     </div>
 
-                    <div className="flex gap-2 mb-4">
+                    <div className="flex gap-2 mb-4" data-pdf-hide="">
                         <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set(currentDomains))}>{t('clinical_ui.maternal.btn.expand_all', 'Expand All')}</Button>
                         <Button size="sm" variant="secondary" onClick={() => setExpandedDomains(new Set())}>{t('clinical_ui.maternal.btn.collapse_all', 'Collapse All')}</Button>
                     </div>
@@ -802,11 +808,12 @@ export function MaternalEmergencyMonitoring({ course, participant, participants,
                         })}
                     </div>
 
-                    <div className="flex justify-end gap-3 mt-4 border-t pt-4">
+                    <div className="flex justify-end gap-3 mt-4 border-t pt-4" data-pdf-hide="">
                         <Button variant="secondary" onClick={() => { setBuffer({}); setEditingCase(null); setShowGrid(false); }} disabled={isSaving}>{t('clinical_ui.maternal.btn.discard', 'Discard')}</Button>
                         <Button onClick={submitCase} disabled={isSaving}>{isSaving ? t('clinical_ui.maternal.btn.saving', 'Saving...') : (editingCase ? t('clinical_ui.maternal.btn.update_case', 'Update Case') : t('clinical_ui.maternal.btn.submit_case', 'Submit Case'))}</Button>
                     </div>
                 </Card>
+                </div>
             )}
 
             {loading ? <SkeletonCard /> : (

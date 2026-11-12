@@ -12,6 +12,7 @@ import { notify } from './dialogs';
 import { publicBaseUrl } from '../utils/publicLink';
 import { getCourseById, getDailyEvalForm, listDailyEvalForms, listDailyEvalResponses, saveDailyEvalForm, submitDailyEvalResponse } from '../data.js';
 import { Button, Card, CardBody, CardFooter, EmptyState, Input, Modal, PageSkeleton, Select, Spinner, Textarea } from './CommonComponents';
+import FormPdfButton from './FormPdfButton';
 
 export const evalFormId = (courseId, date) => `${courseId}_${date}`;
 
@@ -399,10 +400,13 @@ export const PublicDailyEvaluationView = ({ formId }) => {
     };
 
     return (
-        <div className="max-w-3xl mx-auto space-y-4 pb-28" dir="rtl">
+        <div className="max-w-3xl mx-auto space-y-4 pb-28" dir="rtl" data-pdf-root="">
             <Card>
                 <CardBody className="space-y-3">
-                    <div className="text-xs text-slate-500">وزارة الصحة الاتحادية · البرنامج القومي لصحة الطفل</div>
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="text-xs text-slate-500">وزارة الصحة الاتحادية · البرنامج القومي لصحة الطفل</div>
+                        <FormPdfButton formName={`Daily Evaluation Form - Day ${cfg.dayNumber}`} subtitle="استمارة التقييم اليومي" />
+                    </div>
                     <h1 className="text-xl font-bold text-slate-800">استمارة التقييم اليومي</h1>
                     <p className="text-sm text-slate-600">ورشة التدريب على الدليل التشغيلي لتطبيق العلاج المتكامل لأمراض الطفولة وحديثي الولادة</p>
                     <div className="flex flex-wrap gap-2 text-xs">

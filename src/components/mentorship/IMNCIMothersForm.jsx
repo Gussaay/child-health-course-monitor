@@ -14,6 +14,7 @@ import {
 import { getAuth } from "firebase/auth";
 import { handleAutoScroll, ActionToggle } from './IMNCSkillsAssessmentForm';
 
+import FormPdfButton from '../FormPdfButton';
 // --- Score Circle Component ---
 const ScoreCircle = ({ score, maxScore }) => {
     if (maxScore === null || maxScore === undefined || score === null || score === undefined) {
@@ -422,6 +423,7 @@ const MothersForm = ({
                 totalMaxScore={scores.overall.maxScore}
             />
             <form ref={formRef} onSubmit={handleSubmit}>
+                <div className="flex justify-end mb-2" data-pdf-hide=""><FormPdfButton formName="IMNCI Mothers Satisfaction and Knowledge Survey" subtitle="استبيان رضا ومعرفة الأمهات" /></div>
                 <div className="p-6">
                     <div className="text-center mb-4">
                         <h2 className="text-2xl font-bold text-sky-800">

@@ -6,6 +6,7 @@ import { getAuth } from 'firebase/auth';
 
 import { useStandardNames } from '../../hooks/useNameRegistry';
 import { hasRecordedProject } from '../../utils/visitProject';
+import FormPdfButton from '../FormPdfButton';
 const INDICATIONS = [
     { id: 'bef_pat', label: 'قبل التلامس مع المريض' },
     { id: 'bef_asep', label: 'قبل إجراء تنظيف أو مانع للتلوث' },
@@ -292,6 +293,7 @@ const HandwashingAssessmentForm = ({ facility, healthWorkerName, healthWorkerJob
             </div>
 
             <form onSubmit={handleSubmit} className="w-full text-right" dir="rtl">
+                <div className="flex justify-end mb-2" data-pdf-hide=""><FormPdfButton formName="Hand Hygiene Compliance Assessment" subtitle="استمارة رقم (1): تقييم الالتزام بنظافة وتطهير الأيدي" /></div>
                 <div className="p-4 sm:p-8">
                     <div className="text-center mb-8 pb-6 border-b border-gray-200">
                         <h2 className="text-2xl font-extrabold text-sky-900 mb-2">

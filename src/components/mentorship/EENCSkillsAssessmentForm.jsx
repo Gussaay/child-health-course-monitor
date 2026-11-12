@@ -10,6 +10,7 @@ import { getAuth } from "firebase/auth";
 import { GenericFacilityForm, EENCFormFields } from '../FacilityForms.jsx'; 
 import { submitFacilityDataForApproval } from '../../data';
 
+import FormPdfButton from '../FormPdfButton';
 // --- Smart Auto-Scroll Helper ---
 // After an answer, move down to the next unanswered question BELOW the one
 // just answered. Questions left unanswered higher up are not jumped back to
@@ -876,6 +877,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
 
             <StickyOverallScore score={scores?.overallScore?.score} maxScore={scores?.overallScore?.maxScore} />
             <form onSubmit={(e) => handleSubmit(e, 'complete')}>
+                <div className="flex justify-end mb-2" data-pdf-hide=""><FormPdfButton formName="EENC Skills Mentorship Form" subtitle="متابعة مهارات الرعاية الضرورية المبكرة (EENC)" /></div>
                 <div className="p-6">
                     <div className="text-center mb-4"><h2 className="text-2xl font-bold text-sky-800">متابعة مهارات الرعاية الضرورية المبكرة (EENC)</h2></div>
                     <div className="space-y-2 mb-4">

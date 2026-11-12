@@ -9,6 +9,7 @@ import {
 } from '../CommonComponents'; 
 import { handleAutoScroll, ActionToggle } from './IMNCSkillsAssessmentForm';
 
+import FormPdfButton from '../FormPdfButton';
 // --- Score Circle Component ---
 const ScoreCircle = ({ score, maxScore }) => {
     if (maxScore === null || maxScore === undefined || score === null || score === undefined) {
@@ -413,6 +414,7 @@ const EENCMothersForm = ({
             />
 
             <form onSubmit={handleSubmit}>
+                <div className="flex justify-end mb-2" data-pdf-hide=""><FormPdfButton formName="EENC Mothers Interview Form" subtitle="استبيان الأمهات (الرعاية الضرورية EENC)" /></div>
                 <div className="p-6">
                     <div className="text-center mb-4">
                         <h2 className="text-2xl font-bold text-sky-800">

@@ -8675,5 +8675,12 @@
       "feeding_problem_btn": "Feeding problem",
       "no_feeding_problem_btn": "No feeding problem"
     }
+  },
+  "form_pdf": {
+    "button": "Print / PDF",
+    "preparing": "Preparing PDF...",
+    "hint": "Save this form as a PDF with the ministry letterhead, ready to print",
+    "failed": "Could not make the PDF: {{error}}",
+    "not_found": "Could not find the form to print."
   }
 }
