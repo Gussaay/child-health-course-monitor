@@ -29,8 +29,9 @@ if (IS_EMONC_SITE) document.title = EMONC_SITE_TITLE;
 const IS_NATIVE = Capacitor.isNativePlatform();
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.2';
 window.APP_VERSION = APP_VERSION;
-// The version people see (package.json releaseVersion), stamped on problem reports.
-window.__APP_VERSION__ = import.meta.env.VITE_RELEASE_VERSION || APP_VERSION;
+// The running build's CI version ("36.4"), stamped on problem reports so a
+// report can be matched to its build in Admin → Updates.
+window.__APP_VERSION__ = APP_VERSION.replace(/^(\d+\.\d+)\.0$/, '$1');
 
 // -------------------------------------------------------------------------
 // VERSION LOG — the old "cache buster" is gone.

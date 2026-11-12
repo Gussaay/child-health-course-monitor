@@ -18,6 +18,10 @@ const AiActivityTab = lazy(() => import('./AiActivityTab'));
 const UsageCostPanel = lazy(() => import('./UsageCostPanel'));
 import { listFederalCoordinators } from '../data';
 import { downloadAndOpenFile } from '../utils/fileDownloader';
+import { nextDisplayVersion, displayVersionFor } from '../utils/appVersionLabel';
+
+// The shown version before the first APK gets its own number (package.json releaseVersion).
+const BASE_SHOWN_VERSION = import.meta.env.VITE_RELEASE_VERSION || '3.2';
 
 // --- NEW COMPONENT IMPORT ---
 import AdminNotificationSender from './AdminNotificationSender';
@@ -247,7 +251,8 @@ export function AdminDashboard({ appRoles = [] }) {
         isOpen: false,
         versionData: null,
         mandatory: true,
-        notify: false
+        notify: false,
+        displayVersion: ''
     });
 
     const [updateConfig, setUpdateConfig] = useState({
@@ -441,8 +446,13 @@ export function AdminDashboard({ appRoles = [] }) {
     const handlePushHistoryVersion = async () => {
         const { versionData, mandatory, notify } = historyPushModal;
         if (!versionData) return;
+        const shownVersion = String(historyPushModal.displayVersion || '').trim();
+        if (!/^\d+\.\d+$/.test(shownVersion)) {
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.bad_shown_version', 'Write the version users will see as two numbers, like 3.3.'), type: 'error' });
+            return;
+        }
     
-        if (!await confirmDialog(t('admin_pages.admin_dashboard.confirm.deploy', 'Are you sure you want to deploy v{{version}} to users?', { version: versionData.versionString }))) return;
+        if (!await confirmDialog(t('admin_pages.admin_dashboard.confirm.deploy', 'Are you sure you want to deploy v{{version}} to users?', { version: shownVersion }))) return;
         
         setLoading(true);
         try {
@@ -462,8 +472,12 @@ export function AdminDashboard({ appRoles = [] }) {
                 apkUrl: apkLink,
                 downloadUrl: apkLink,
                 mandatory: mandatory,
-                releaseNotes: versionData.releaseNotes || `Update to version ${versionData.versionString}.`,
-                mandatoryStack: updatedStack
+                releaseNotes: versionData.releaseNotes || `Update to version ${shownVersion}.`,
+                mandatoryStack: updatedStack,
+                // What users see: "3.3", then "3.3 (update 2)" after
+                // over-the-air updates (utils/appVersionLabel.js).
+                displayVersion: shownVersion,
+                displayVersions: { ...(updateConfig.displayVersions || {}), [newBuildId]: shownVersion },
             };
     
             await setDoc(doc(db, "meta", "update_config"), newConfig);
@@ -474,8 +488,8 @@ export function AdminDashboard({ appRoles = [] }) {
                 try {
                     const notifTitle = "App Update Available";
                     const notifMessage = mandatory 
-                        ? `A mandatory update to version ${newConfig.versionString} is required. ${newConfig.releaseNotes}`
-                        : `Version ${newConfig.versionString} is now available. ${newConfig.releaseNotes}`;
+                        ? `A mandatory update to version ${shownVersion} is required. ${newConfig.releaseNotes}`
+                        : `Version ${shownVersion} is now available. ${newConfig.releaseNotes}`;
     
                     await addDoc(collection(db, 'notifications'), {
                         title: notifTitle,
@@ -500,8 +514,8 @@ export function AdminDashboard({ appRoles = [] }) {
                 }
             }
     
-            setToast({show: true, message: t('admin_pages.admin_dashboard.toast.pushed', 'Version {{version}} successfully pushed!', { version: versionData.versionString }), type: 'success'});
-            setHistoryPushModal({ isOpen: false, versionData: null, mandatory: true, notify: false });
+            setToast({show: true, message: t('admin_pages.admin_dashboard.toast.pushed', 'Version {{version}} successfully pushed!', { version: shownVersion }), type: 'success'});
+            setHistoryPushModal({ isOpen: false, versionData: null, mandatory: true, notify: false, displayVersion: '' });
         } catch(e) {
             console.error("Failed to push history version", e);
             setToast({show: true, message: t('admin_pages.admin_dashboard.toast.deploy_failed', 'Failed to deploy historical version.'), type: 'error'});
@@ -550,7 +564,9 @@ export function AdminDashboard({ appRoles = [] }) {
                     downloadUrl: fallbackVersion.apkUrl || fallbackVersion.downloadUrl,
                     mandatory: fallbackVersion.mandatory !== undefined ? fallbackVersion.mandatory : true, 
                     releaseNotes: fallbackVersion.releaseNotes || `Fallback to version ${fallbackVersion.versionString}.`,
-                    mandatoryStack: validStack 
+                    mandatoryStack: validStack,
+                    displayVersion: displayVersionFor(fallbackVersion.latestNativeBuild, updateConfig.displayVersions, BASE_SHOWN_VERSION).version,
+                    displayVersions: updateConfig.displayVersions || {},
                 };
                 setToast({show: true, message: t('admin_pages.admin_dashboard.toast.reverted', 'Update cancelled. Reverted to alternative active version v{{version}}.', { version: fallbackVersion.versionString }), type: 'success'});
                 setIsUpdateActive(true);
@@ -926,7 +942,8 @@ export function AdminDashboard({ appRoles = [] }) {
                                         releaseNotes: `Update to version ${serverNativeConfig.versionString}. Includes latest bug fixes and improvements.`,
                                     },
                                     mandatory: true,
-                                    notify: true
+                                    notify: true,
+                                    displayVersion: nextDisplayVersion(updateConfig.displayVersions, BASE_SHOWN_VERSION)
                                 });
                             }}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md border border-emerald-700 whitespace-nowrap"
@@ -940,7 +957,7 @@ export function AdminDashboard({ appRoles = [] }) {
                     <div className="bg-green-50 border border-green-200 p-4 rounded-xl shadow-inner flex items-center gap-3">
                         <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
                         <div className="text-sm text-green-800 font-medium">
-                            <strong>{t('admin_pages.admin_dashboard.updates.system_status', 'System Status:')}</strong> {t('admin_pages.admin_dashboard.updates.version', 'Version')} <span className="font-mono font-bold bg-green-100 text-green-900 px-1.5 py-0.5 rounded">v{updateConfig.versionString}</span> ({t('admin_pages.admin_dashboard.updates.build_id', 'Build ID:')} {updateConfig.latestNativeBuild}) {t('admin_pages.admin_dashboard.updates.running_as', 'is currently running as the **Active Update**')} ({updateConfig.mandatory ? t('admin_pages.admin_dashboard.updates.mandatory_lock', 'Mandatory Lock') : t('admin_pages.admin_dashboard.updates.optional_prompt', 'Optional Prompt')}).
+                            <strong>{t('admin_pages.admin_dashboard.updates.system_status', 'System Status:')}</strong> {t('admin_pages.admin_dashboard.updates.version', 'Version')} <span className="font-mono font-bold bg-green-100 text-green-900 px-1.5 py-0.5 rounded">v{updateConfig.displayVersion || updateConfig.versionString}</span> ({t('admin_pages.admin_dashboard.updates.build_id', 'Build ID:')} {updateConfig.latestNativeBuild}) {t('admin_pages.admin_dashboard.updates.running_as', 'is currently running as the **Active Update**')} ({updateConfig.mandatory ? t('admin_pages.admin_dashboard.updates.mandatory_lock', 'Mandatory Lock') : t('admin_pages.admin_dashboard.updates.optional_prompt', 'Optional Prompt')}).
                         </div>
                     </div>
                 )}
@@ -985,9 +1002,18 @@ export function AdminDashboard({ appRoles = [] }) {
                                     return (
                                         <tr key={stat.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="py-3">
-                                                <div className="font-bold text-sky-700 bg-sky-50 px-2 py-1 rounded inline-block border border-sky-100 shadow-sm">
-                                                    v{stat.versionString}
-                                                </div>
+                                                {(updateConfig.displayVersions || {})[parseInt(stat.latestNativeBuild, 10)] ? (
+                                                    <div className="flex flex-col items-start gap-0.5">
+                                                        <div className="font-bold text-sky-700 bg-sky-50 px-2 py-1 rounded inline-block border border-sky-100 shadow-sm">
+                                                            v{updateConfig.displayVersions[parseInt(stat.latestNativeBuild, 10)]}
+                                                        </div>
+                                                        <span className="text-[11px] text-gray-400 font-mono">{stat.versionString}</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="font-bold text-sky-700 bg-sky-50 px-2 py-1 rounded inline-block border border-sky-100 shadow-sm">
+                                                        v{stat.versionString}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="py-3 text-gray-600 font-mono font-medium">{stat.latestNativeBuild}</td>
                                             <td className="py-3 text-sm text-gray-500 font-medium">
@@ -1008,7 +1034,7 @@ export function AdminDashboard({ appRoles = [] }) {
                                                     ) : (
                                                         <Button 
                                                             size="sm"
-                                                            onClick={() => setHistoryPushModal({ isOpen: true, versionData: stat, mandatory: true, notify: false })}
+                                                            onClick={() => setHistoryPushModal({ isOpen: true, versionData: stat, mandatory: true, notify: false, displayVersion: (updateConfig.displayVersions || {})[parseInt(stat.latestNativeBuild, 10)] || nextDisplayVersion(updateConfig.displayVersions, BASE_SHOWN_VERSION) })}
                                                             className="bg-sky-600 border-sky-700 hover:bg-sky-700 text-xs px-2 py-1 shadow-sm text-white border"
                                                         >
                                                             {t('admin_pages.admin_dashboard.updates.push_apk', 'Push APK Update')}
@@ -1433,6 +1459,18 @@ export function AdminDashboard({ appRoles = [] }) {
                                 </p>
                             )}
                         </div>
+                    </div>
+
+                    <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+                        <label className="block font-bold text-gray-800 text-sm" htmlFor="shown-version">{t('admin_pages.admin_dashboard.push_modal.shown_version', 'Version users will see')}</label>
+                        <input
+                            id="shown-version"
+                            inputMode="decimal"
+                            value={historyPushModal.displayVersion || ''}
+                            onChange={(e) => setHistoryPushModal({ ...historyPushModal, displayVersion: e.target.value })}
+                            className="mt-2 w-32 rounded-lg border border-gray-300 px-3 py-2 font-mono text-lg font-bold"
+                        />
+                        <span className="block text-xs text-gray-500 mt-1">{t('admin_pages.admin_dashboard.push_modal.shown_version_desc', 'Filled in as the next number. Over-the-air updates after this APK show as "{{version}} (update 1)", "(update 2)"… Type a bigger number (like 4.0) for a big release.', { version: historyPushModal.displayVersion || '3.3' })}</span>
                     </div>
 
                     <div className="space-y-3">

@@ -6960,7 +6960,8 @@
         "must_state": "You must select a State for this role configuration.",
         "must_locality": "You must select a Locality for this role configuration.",
         "no_apk_link": "This version has no APK link.",
-        "apk_downloading": "Downloading the APK…"
+        "apk_downloading": "Downloading the APK…",
+        "bad_shown_version": "Write the version users will see as two numbers, like 3.3."
       },
       "confirm": {
         "wipe_user": "Are you sure you want to wipe the local storage on {{email}}'s device? This will happen the next time they open the app while online.",
@@ -7138,7 +7139,9 @@
         "mandatory_desc": "If checked, users cannot dismiss the prompt and must download the APK.",
         "notify": "Send Push Notification",
         "notify_desc": "Alert all outdated users via FCM that this specific version is available.",
-        "push_now": "Push Version Now"
+        "push_now": "Push Version Now",
+        "shown_version": "Version users will see",
+        "shown_version_desc": "Filled in as the next number. Over-the-air updates after this APK show as \"{{version}} (update 1)\", \"(update 2)\"… Type a bigger number (like 4.0) for a big release."
       },
       "cancel": "Cancel",
       "roles_modal": {
@@ -7588,7 +7591,8 @@
       "close": "Close",
       "current_version": "Current version: {{version}}",
       "no_link": "The download link for this update is missing. Please tell the administrator.",
-      "installed_apk": "Installed APK: {{version}} (build {{build}})"
+      "installed_apk": "Installed APK: {{version}} (build {{build}})",
+      "new_version_named": "Version {{version}} of the app is available. Download and install it to keep receiving updates."
     }
   },
   "imnci_ui": {
