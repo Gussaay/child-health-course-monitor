@@ -7,7 +7,6 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getAuth,
   initializeAuth,
-  indexedDBLocalPersistence,
   browserLocalPersistence,
   browserSessionPersistence,
   browserPopupRedirectResolver,
@@ -26,6 +25,7 @@ import {
 } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { Capacitor } from '@capacitor/core';
+import { ResilientLocalPersistence } from './utils/resilientAuthPersistence';
 
 // Google sign-in opens its helper page on `authDomain`. When that is a
 // different site from the one the app is served on, phone browsers block the
@@ -80,7 +80,7 @@ function createAuth() {
   if (!Capacitor.isNativePlatform()) {
     try {
       return initializeAuth(firebaseApp, {
-        persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence],
+        persistence: [ResilientLocalPersistence, browserLocalPersistence, browserSessionPersistence],
         ...(IS_DESKTOP_SAFARI ? { popupRedirectResolver: browserPopupRedirectResolver } : {}),
       });
     } catch {
@@ -99,7 +99,10 @@ function createAuth() {
   }
   try {
     return initializeAuth(firebaseApp, {
-      persistence: [browserLocalPersistence, indexedDBLocalPersistence],
+      // localStorage first (survives the WebView clearing IndexedDB); the
+      // resilient IndexedDB store second, so a session still held only there
+      // is found even when the IndexedDB check fails at start-up, then moved.
+      persistence: [browserLocalPersistence, ResilientLocalPersistence],
     });
   } catch {
     return getAuth(firebaseApp); // already initialised (hot reload)

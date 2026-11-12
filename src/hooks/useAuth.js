@@ -7,6 +7,7 @@
 import { createContext, createElement, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
+import { authStorageInfo } from '../utils/resilientAuthPersistence';
 
 const AuthContext = createContext(null);
 
@@ -18,7 +19,7 @@ let reportingLost = false;
 // refresh, and how much storage the app is using (a full origin is when the
 // WebView starts clearing IndexedDB, where the session used to live).
 async function noteLostSession(lastUid) {
-  const note = { at: new Date().toISOString(), uid: lastUid, online: navigator.onLine };
+  const note = { at: new Date().toISOString(), uid: lastUid, online: navigator.onLine, store: { ...authStorageInfo } };
   try { note.lastAuthError = localStorage.getItem('last_auth_error') || null; } catch { /* blocked */ }
   try {
     const est = await navigator.storage?.estimate?.();
@@ -37,7 +38,7 @@ function reportLostSession() {
   import('../data').then(({ submitProblemReport }) => submitProblemReport({
     kind: 'permission',
     what: `Signed out without pressing Log out (at ${lost.at}, ${lost.online ? 'online' : 'offline'}${lost.uid ? `, previous account ${lost.uid}` : ''})`.slice(0, 300),
-    stack: [lost.lastAuthError && `Last token refresh error: ${lost.lastAuthError}`, lost.storage && `Storage used: ${lost.storage}`, lost.persisted != null && `Persistent storage: ${lost.persisted}`].filter(Boolean).join('\n') || null,
+    stack: [lost.lastAuthError && `Last token refresh error: ${lost.lastAuthError}`, lost.storage && `Storage used: ${lost.storage}`, lost.persisted != null && `Persistent storage: ${lost.persisted}`, lost.store && `Login store at start-up: ${JSON.stringify(lost.store)}`].filter(Boolean).join('\n') || null,
     context: 'session-lost',
     source: 'useAuth.js',
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 300) : null,
