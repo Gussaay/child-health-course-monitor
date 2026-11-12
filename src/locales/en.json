@@ -1702,6 +1702,8 @@
       "unit": "Assigned Unit",
       "job_title": "Job Title",
       "no_team_role": "No specific Program Team role assigned in the HR database yet.",
+      "default_language": "Default language",
+      "default_language_hint": "Saved on your account and used on all your devices.",
       "states": "Assigned States",
       "global_none": "Global / None",
       "localities": "Assigned Localities",

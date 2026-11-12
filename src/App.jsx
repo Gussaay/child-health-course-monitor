@@ -29,6 +29,8 @@ import { runInPageBack } from './utils/inPageBack';
 import { isFormGuarded, onGuardChange, setLeaveConfirmer } from './utils/leaveGuard';
 import { clearRememberedFilters } from './utils/rememberedState';
 import { usePushNotifications, usePushEvents } from './hooks/usePushNotifications';
+import { toggleLanguage, setPreferredLanguage, normalizeLanguage, currentLanguage, addressForcesLanguage } from './utils/languagePreference';
+import LanguagePickerModal from './components/LanguagePickerModal';
 
 // --- PRE-FLIGHT LANGUAGE CHECK ---
 if (typeof window !== 'undefined') {
@@ -784,6 +786,8 @@ export default function App() {
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
+    // users/{uid}.preferredLanguage: undefined until read, null when none saved.
+    const [savedLanguage, setSavedLanguage] = useState(undefined);
     const [sideMenuOpen, setSideMenuOpen] = useState(false);
     // Nothing sticks to the top of a page any more (the header scrolls away
     // with the page), so --app-top is only the download banner's height: the
@@ -875,12 +879,30 @@ export default function App() {
 
         const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
             if (unsubscribeDoc) { unsubscribeDoc(); unsubscribeDoc = null; }
+            setSavedLanguage(undefined);
             if (!user) return;
 
             const userRef = doc(db, 'users', user.uid);
-            unsubscribeDoc = onSnapshot(userRef, (docSnap) => {
+            // includeMetadataChanges: the language check below waits for the
+            // server's answer, which arrives as a metadata-only change when
+            // the cached copy was already up to date.
+            unsubscribeDoc = onSnapshot(userRef, { includeMetadataChanges: true }, (docSnap) => {
+                const data = docSnap.exists() ? docSnap.data() : {};
+
+                // Default language saved on the account: apply it on this
+                // device, or set null so the first-time picker is shown. A
+                // cached copy without one is not trusted as "nothing saved"
+                // (the choice may have been made on another device); wait for
+                // the server.
+                const savedLang = normalizeLanguage(data.preferredLanguage);
+                if (savedLang || !docSnap.metadata.fromCache) {
+                    setSavedLanguage(savedLang);
+                    if (savedLang && savedLang !== currentLanguage() && !addressForcesLanguage()) {
+                        i18n.changeLanguage(savedLang);
+                    }
+                }
+
                 if (!docSnap.exists()) return;
-                const data = docSnap.data();
                 if (!data.forceCacheReset) return;
 
                 const remoteResetTime = data.forceCacheReset.toMillis();
@@ -3035,10 +3057,7 @@ case 'meetings':
 
                 <ThemeToggle className="!bg-slate-600 !border-slate-500 hover:!bg-slate-500" />
                 <button
-                    onClick={() => {
-                        const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
-                        i18n.changeLanguage(newLang);
-                    }}
+                    onClick={toggleLanguage}
                     className="p-1 sm:p-1.5 text-sky-400 bg-slate-600 border border-slate-500 rounded hover:bg-slate-500 hover:text-sky-300 transition-colors flex items-center justify-center min-w-[32px] sm:min-w-[36px]"
                     title={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
                 >
@@ -3155,10 +3174,7 @@ case 'meetings':
                             {(!user || isMinimalUILayout) && <ThemeToggle />}
                             {(!user || isMinimalUILayout) && (
                                 <button
-                                    onClick={() => {
-                                        const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
-                                        i18n.changeLanguage(newLang);
-                                    }}
+                                    onClick={toggleLanguage}
                                     className="p-1.5 text-sky-400 bg-slate-700 border border-slate-600 rounded hover:bg-slate-600 hover:text-sky-300 transition-colors flex items-center justify-center min-w-[36px]"
                                     title={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
                                 >
@@ -3282,7 +3298,7 @@ case 'meetings':
                     onNavigate={guardedNavigate}
                     onProfile={() => setIsUserProfileModalOpen(true)}
                     onSync={() => setIsSyncModalOpen(true)}
-                    onLanguage={() => i18n.changeLanguage(i18n.language?.startsWith('en') ? 'ar' : 'en')}
+                    onLanguage={toggleLanguage}
                     languageLabel={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
                     onUpdate={handleManualUpdateCheck}
                     onLogout={handleLogout}
@@ -3411,6 +3427,25 @@ case 'meetings':
                                     </div>
                                 </div>
                                 
+                                <div className="border border-gray-200 p-3 rounded-lg bg-white shadow-sm md:col-span-2 flex items-center justify-between gap-3">
+                                    <div>
+                                        <span className="block text-xs text-gray-500 font-bold mb-1">{t('app_extra.profile.default_language', 'Default language')}</span>
+                                        <span className="text-xs text-gray-500">{t('app_extra.profile.default_language_hint', 'Saved on your account and used on all your devices.')}</span>
+                                    </div>
+                                    <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden shrink-0">
+                                        {[{ code: 'en', label: 'English' }, { code: 'ar', label: 'العربية' }].map(opt => (
+                                            <button
+                                                key={opt.code}
+                                                type="button"
+                                                onClick={() => setPreferredLanguage(opt.code)}
+                                                className={`px-3 py-1.5 text-sm font-semibold ${currentLanguage() === opt.code ? 'bg-sky-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
                                 <div className="border border-gray-200 p-3 rounded-lg bg-gray-50 shadow-sm">
                                     <span className="block text-xs text-gray-500 font-bold mb-1">{t('app_extra.profile.states', 'Assigned States')}</span>
                                     <span className="text-gray-800 font-medium">
@@ -3435,6 +3470,11 @@ case 'meetings':
                     </Modal>
                 )}
             </Suspense>
+
+            {/* First sign-in: ask once for the default language and save it on the account. */}
+            {user && !authLoading && !isProfileIncomplete && !isMinimalUILayout && savedLanguage === null && !addressForcesLanguage() && (
+                <LanguagePickerModal onDone={(code) => setSavedLanguage(code)} />
+            )}
 
             <Suspense fallback={null}>
                 {isSyncModalOpen && (
