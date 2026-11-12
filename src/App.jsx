@@ -1624,6 +1624,9 @@ export default function App() {
                         await user.getIdToken(true);
                     } catch (tokenErr) {
                         console.warn("Manual token refresh skipped or failed:", tokenErr);
+                        // Kept for the lost-session report (hooks/useAuth.js): a refused
+                        // refresh is what makes Firebase sign the person out.
+                        try { localStorage.setItem('last_auth_error', `${new Date().toISOString()} ${tokenErr?.code || ''} ${String(tokenErr?.message || '').slice(0, 150)}`); } catch { /* storage full */ }
                     }
                 }
 

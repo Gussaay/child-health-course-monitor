@@ -87,9 +87,19 @@ function createAuth() {
       return getAuth(firebaseApp); // already initialised (hot reload)
     }
   }
+  // Android app: the session is kept in localStorage first, IndexedDB second.
+  // Reports from the app showed sign-outs while online where localStorage
+  // (the saved role, last_uid) survived but the session did not. The session
+  // sat in IndexedDB, next to Firestore's 100 MB offline cache, and the WebView
+  // can clear IndexedDB on its own when storage runs short; it does not clear
+  // localStorage that way. Firebase moves an existing session from IndexedDB
+  // into the first store on start-up, so nobody is signed out by this change.
+  if (typeof navigator !== 'undefined' && navigator.storage?.persist) {
+    navigator.storage.persist().catch(() => {});
+  }
   try {
     return initializeAuth(firebaseApp, {
-      persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+      persistence: [browserLocalPersistence, indexedDBLocalPersistence],
     });
   } catch {
     return getAuth(firebaseApp); // already initialised (hot reload)

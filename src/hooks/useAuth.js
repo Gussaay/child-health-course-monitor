@@ -14,6 +14,19 @@ const AuthContext = createContext(null);
 // Admin > Problems once the person is signed in again.
 const LOST_KEY = 'auth_session_lost';
 let reportingLost = false;
+// What the device looked like when the session went: the last refused token
+// refresh, and how much storage the app is using (a full origin is when the
+// WebView starts clearing IndexedDB, where the session used to live).
+async function noteLostSession(lastUid) {
+  const note = { at: new Date().toISOString(), uid: lastUid, online: navigator.onLine };
+  try { note.lastAuthError = localStorage.getItem('last_auth_error') || null; } catch { /* blocked */ }
+  try {
+    const est = await navigator.storage?.estimate?.();
+    if (est) note.storage = `${Math.round((est.usage || 0) / 1048576)} of ${Math.round((est.quota || 0) / 1048576)} MB`;
+    note.persisted = (await navigator.storage?.persisted?.()) ?? null;
+  } catch { /* not supported */ }
+  try { localStorage.setItem(LOST_KEY, JSON.stringify(note)); } catch { /* storage full or blocked */ }
+}
 function reportLostSession() {
   if (reportingLost) return;
   let lost = null;
@@ -23,14 +36,15 @@ function reportLostSession() {
   // The note is removed only once the report is saved, so a failed write is retried at the next sign-in.
   import('../data').then(({ submitProblemReport }) => submitProblemReport({
     kind: 'permission',
-    what: `Signed out without pressing Log out (at ${lost.at}, ${lost.online ? 'online' : 'offline'}${lost.uid ? `, previous account ${lost.uid}` : ''})`,
+    what: `Signed out without pressing Log out (at ${lost.at}, ${lost.online ? 'online' : 'offline'}${lost.uid ? `, previous account ${lost.uid}` : ''})`.slice(0, 300),
+    stack: [lost.lastAuthError && `Last token refresh error: ${lost.lastAuthError}`, lost.storage && `Storage used: ${lost.storage}`, lost.persisted != null && `Persistent storage: ${lost.persisted}`].filter(Boolean).join('\n') || null,
     context: 'session-lost',
     source: 'useAuth.js',
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 300) : null,
     appVersion: typeof window !== 'undefined' ? window.__APP_VERSION__ || null : null,
     reporterEmail: auth.currentUser?.email || null,
   })).then(() => {
-    try { localStorage.removeItem(LOST_KEY); } catch { /* storage blocked */ }
+    try { localStorage.removeItem(LOST_KEY); localStorage.removeItem('last_auth_error'); } catch { /* storage blocked */ }
   }).catch(() => { /* kept for the next sign-in */ }).finally(() => { reportingLost = false; });
 }
 
@@ -50,9 +64,7 @@ export function AuthProvider({ children }) {
         console.warn('[Auth] Session lost without a sign-out. Stored login was cleared or rejected.');
         // Kept until the next sign-in, when it can be sent to Admin > Problems
         // (a signed-out device cannot write a report).
-        try {
-          localStorage.setItem(LOST_KEY, JSON.stringify({ at: new Date().toISOString(), uid: lastUid, online: navigator.onLine }));
-        } catch { /* storage full or blocked */ }
+        noteLostSession(lastUid);
       }
 
       setState({ user: firebaseUser || null, authLoading: false });
