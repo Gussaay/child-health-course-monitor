@@ -288,7 +288,8 @@ export function staffTotals(responses = {}) {
         untrained: total != null ? Math.max(0, total - (trained || 0)) : null,
         trainedPercent,
         // The paper form's minimum: one trained worker and 60% trained.
-        meetsMinimum: total ? (trained || 0) >= 1 && trainedPercent >= 60 : null,
+        // Unknown until the trained column is filled: a blank is not zero.
+        meetsMinimum: total && trained != null ? trained >= 1 && trainedPercent >= 60 : null,
     };
 }
 
@@ -340,8 +341,9 @@ export function imnciFacilityPatch(form = {}) {
     // The registry's "IMNCI service available" question is defined on its own
     // form as "staff at the facility are 50% or more trained".
     const totals = staffTotals(r);
-    if (totals.total) {
-        patch['وجود_العلاج_المتكامل_لامراض_الطفولة'] = (totals.trained || 0) >= 1 && totals.trainedPercent >= 50 ? 'Yes' : 'No';
+    // Only when the trained counts are known, so a blank column never writes a false "No".
+    if (totals.total && totals.trained != null) {
+        patch['وجود_العلاج_المتكامل_لامراض_الطفولة'] = totals.trained >= 1 && totals.trainedPercent >= 50 ? 'Yes' : 'No';
     }
     return patch;
 }

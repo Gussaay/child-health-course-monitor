@@ -65,6 +65,12 @@ describe('facility readiness', () => {
         expect(imnciFacilityPatch({ responses: {} })).toEqual({});
     });
 
+    it('leaves the IMNCI service status alone when trained counts are blank', () => {
+        const form = { responses: { staff: { doctor: { total: '2' }, nurse: { total: '3' } } } };
+        expect(imnciFacilityPatch(form)).toEqual({ imnci_doctors_total: 2 });
+        expect(staffTotals(form.responses).meetsMinimum).toBe(null);
+    });
+
     it('skips immunization rows when the facility has no immunization services', () => {
         const form = { responses: { epi: { epi_services: no } } };
         const epi = assessmentProgress(IMNCI_FACILITY_READINESS, form).sections.epi;
