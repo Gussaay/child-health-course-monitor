@@ -17,6 +17,7 @@ const ProblemReportsTab = lazy(() => import('./ProblemReports').then(m => ({ def
 const AiActivityTab = lazy(() => import('./AiActivityTab'));
 const UsageCostPanel = lazy(() => import('./UsageCostPanel'));
 import { listFederalCoordinators } from '../data';
+import { downloadAndOpenFile } from '../utils/fileDownloader';
 
 // --- NEW COMPONENT IMPORT ---
 import AdminNotificationSender from './AdminNotificationSender';
@@ -446,16 +447,20 @@ export function AdminDashboard({ appRoles = [] }) {
         setLoading(true);
         try {
             const newBuildId = parseInt(versionData.latestNativeBuild, 10);
-            let updatedStack = updateConfig.mandatoryStack || [];
+            const updatedStack = (updateConfig.mandatoryStack || []).map((id) => parseInt(id, 10)).filter(Number.isFinite);
             
             if (!updatedStack.includes(newBuildId)) {
                 updatedStack.push(newBuildId);
             }
     
+            // The app reads apkUrl (downloadUrl kept for older readers).
+            // Without apkUrl the phone's "Download and install" did nothing.
+            const apkLink = versionData.apkUrl || versionData.downloadUrl;
             const newConfig = {
                 latestNativeBuild: newBuildId,
                 versionString: versionData.versionString,
-                downloadUrl: versionData.downloadUrl,
+                apkUrl: apkLink,
+                downloadUrl: apkLink,
                 mandatory: mandatory,
                 releaseNotes: versionData.releaseNotes || `Update to version ${versionData.versionString}.`,
                 mandatoryStack: updatedStack
@@ -506,9 +511,11 @@ export function AdminDashboard({ appRoles = [] }) {
 
     const handleStopUpdate = async () => {
         const currentBuildId = parseInt(updateConfig.latestNativeBuild, 10) || 0;
-        let currentStack = updateConfig.mandatoryStack || [];
+        // Old configs may hold the stack as strings or as a non-array; a
+        // non-array is what made "Cancel" fail before.
+        let currentStack = Array.isArray(updateConfig.mandatoryStack) ? updateConfig.mandatoryStack : [];
         
-        currentStack = currentStack.filter(id => id !== currentBuildId);
+        currentStack = currentStack.map((id) => parseInt(id, 10)).filter((id) => Number.isFinite(id) && id !== currentBuildId);
     
         let fallbackVersion = null;
         let validStack = [...currentStack];
@@ -539,7 +546,8 @@ export function AdminDashboard({ appRoles = [] }) {
                 newConfig = {
                     latestNativeBuild: fallbackVersion.latestNativeBuild,
                     versionString: fallbackVersion.versionString,
-                    downloadUrl: fallbackVersion.downloadUrl,
+                    apkUrl: fallbackVersion.apkUrl || fallbackVersion.downloadUrl,
+                    downloadUrl: fallbackVersion.apkUrl || fallbackVersion.downloadUrl,
                     mandatory: fallbackVersion.mandatory !== undefined ? fallbackVersion.mandatory : true, 
                     releaseNotes: fallbackVersion.releaseNotes || `Fallback to version ${fallbackVersion.versionString}.`,
                     mandatoryStack: validStack 
@@ -861,6 +869,23 @@ export function AdminDashboard({ appRoles = [] }) {
     }, [usageStats]);
 
     const renderUpdatesTab = () => {
+        // How far the active APK update has reached, from what each phone
+        // writes to its own userUsageStats doc (utils/updateTelemetry.js).
+        const reachBuild = parseInt(updateConfig?.latestNativeBuild, 10) || 0;
+        const updateReach = reachBuild > 1 ? usageStats.reduce((acc, u) => {
+            const installed = parseInt(u.nativeBuild, 10) || 0;
+            const prompted = (parseInt(u.updatePromptBuild, 10) || 0) >= reachBuild;
+            const downloaded = (parseInt(u.updateDownloadBuild, 10) || 0) >= reachBuild;
+            const updated = installed >= reachBuild;
+            if (installed) acc.seen += 1;
+            if (installed && !updated) acc.older += 1;
+            if (prompted) acc.received += 1;
+            if (downloaded) acc.downloaded += 1;
+            if (updated) acc.updated += 1;
+            if (prompted && !updated) acc.pending += 1;
+            return acc;
+        }, { build: reachBuild, seen: 0, older: 0, received: 0, downloaded: 0, updated: 0, pending: 0 }) : null;
+
         const isNewApkAvailable = serverNativeConfig && serverNativeConfig.latestNativeBuild > (updateConfig?.latestNativeBuild || 0);
 
         return (
@@ -920,6 +945,29 @@ export function AdminDashboard({ appRoles = [] }) {
                     </div>
                 )}
 
+                {isUpdateActive && updateReach && (
+                    <Card className="shadow-sm border border-gray-100 p-5">
+                        <h3 className="text-md font-bold text-gray-800">{t('admin_pages.admin_dashboard.updates.reach_title', 'Who got build {{build}}', { build: updateReach.build })}</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">{t('admin_pages.admin_dashboard.updates.reach_desc', 'Counted per user account. Users who have not opened the app since this counter was added are not included yet.')}</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                            {[
+                                ['received', t('admin_pages.admin_dashboard.updates.reach_received', 'Got the update message'), 'text-sky-700 bg-sky-50 border-sky-100'],
+                                ['downloaded', t('admin_pages.admin_dashboard.updates.reach_downloaded', 'Downloaded the APK'), 'text-indigo-700 bg-indigo-50 border-indigo-100'],
+                                ['updated', t('admin_pages.admin_dashboard.updates.reach_updated', 'Actually updated'), 'text-emerald-700 bg-emerald-50 border-emerald-100'],
+                                ['pending', t('admin_pages.admin_dashboard.updates.reach_pending', 'Got the message, not updated yet'), 'text-amber-700 bg-amber-50 border-amber-100'],
+                            ].map(([key, label, tone]) => (
+                                <div key={key} className={`rounded-xl border p-3 ${tone}`}>
+                                    <div className="text-2xl font-black">{updateReach[key]}</div>
+                                    <div className="text-xs font-semibold mt-0.5">{label}</div>
+                                </div>
+                            ))}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-3">
+                            {t('admin_pages.admin_dashboard.updates.reach_total', '{{seen}} users reported their APK build; {{older}} are still on an older build. Update errors go to the Problems tab.', { seen: updateReach.seen, older: updateReach.older })}
+                        </p>
+                    </Card>
+                )}
+
                 <Card className="shadow-sm border border-gray-100 overflow-hidden">
                     <div className="p-5 border-b border-gray-100 bg-gray-50 flex items-center">
                         <History className="w-5 h-5 text-gray-500 me-3 shrink-0" />
@@ -970,7 +1018,7 @@ export function AdminDashboard({ appRoles = [] }) {
                                                     <Button 
                                                         size="sm"
                                                         variant="secondary"
-                                                        onClick={isActiveUpdate ? handleForceCacheReset : undefined}
+                                                        onClick={isActiveUpdate ? handleStopUpdate : undefined}
                                                         disabled={!isActiveUpdate}
                                                         className={`border-red-200 text-red-700 text-xs px-2 py-1 shadow-sm bg-white ${
                                                             isActiveUpdate 
@@ -981,15 +1029,27 @@ export function AdminDashboard({ appRoles = [] }) {
                                                         {t('admin_pages.admin_dashboard.updates.cancel_apk', 'Cancel APK Update')}
                                                     </Button>
 
-                                                    <a 
-                                                        href={stat.downloadUrl} 
-                                                        target="_blank" 
-                                                        rel="noopener noreferrer"
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const link = stat.apkUrl || stat.downloadUrl;
+                                                            if (!link) {
+                                                                setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.no_apk_link', 'This version has no APK link.'), type: 'error' });
+                                                                return;
+                                                            }
+                                                            // Inside the Android app a plain link does nothing, so
+                                                            // the file is downloaded and handed to the installer.
+                                                            downloadAndOpenFile(link, `NCHP-${stat.latestNativeBuild || stat.versionString}.apk`, {
+                                                                isSystemFile: true,
+                                                                onStart: () => setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.apk_downloading', 'Downloading the APK…'), type: 'info' }),
+                                                                onError: (e) => setToast({ show: true, message: t('admin_pages.app_update.download_failed', 'The download failed: {{message}}', { message: e?.message || '' }), type: 'error' }),
+                                                            });
+                                                        }}
                                                         className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium text-sky-600 bg-sky-50 border border-sky-200 rounded hover:bg-sky-100 transition-colors"
                                                         title={t('admin_pages.admin_dashboard.updates.download_apk', 'Download APK')}
                                                     >
                                                         {t('admin_pages.admin_dashboard.updates.download', 'Download')}
-                                                    </a>
+                                                    </button>
                                                     
                                                     <button 
                                                         onClick={() => handleDeleteHistoryRecord(stat)}

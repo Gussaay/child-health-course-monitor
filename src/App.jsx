@@ -565,7 +565,7 @@ function AppCredit({ className = '' }) {
 
 // Slide-out side menu (☰): who you are, every module you can open, and the
 // app's settings in one place. The header keeps its own buttons as well.
-function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, currentView, onNavigate, onProfile, onSync, onLanguage, onUpdate, onLogout, appVersion, isOffline, languageLabel }) {
+function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, currentView, onNavigate, onProfile, onSync, onLanguage, onUpdate, onLogout, appVersion, apkInfo, isOffline, languageLabel }) {
     const { t } = useTranslation();
     const closeRef = useRef(onClose);
     closeRef.current = onClose;
@@ -650,6 +650,9 @@ function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, current
                         <LogOut size={18} /> {t('app.logout', 'Logout')}
                     </button>
                     <p className="text-center text-xs text-slate-400 mt-3">{t('menu.version', 'App version')}: {appVersion}</p>
+                    {apkInfo?.build && (
+                        <p className="text-center text-xs text-slate-400">{t('menu.apk_version', 'Installed APK: {{version}} (build {{build}})', { version: apkInfo.version, build: apkInfo.build })}</p>
+                    )}
                 </div>
             </aside>
         </div>,
@@ -768,6 +771,7 @@ export default function App() {
 
     const {
         appVersion,
+        apkInfo,
         isDownloadingAppUpdate,
         appUpdateProgress,
         handleManualUpdateCheck,
@@ -3303,6 +3307,7 @@ case 'meetings':
                     onUpdate={handleManualUpdateCheck}
                     onLogout={handleLogout}
                     appVersion={appVersion}
+                    apkInfo={apkInfo}
                     isOffline={isOffline}
                 />
             )}

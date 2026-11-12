@@ -42,6 +42,13 @@ import {
   reportRequestFailure,
 } from '../firebase';
 import { downloadAndOpenFile } from '../utils/fileDownloader';
+import {
+  getApkInfo,
+  recordInstalledVersions,
+  recordUpdatePrompt,
+  recordUpdateDownloaded,
+  reportUpdateError,
+} from '../utils/updateTelemetry';
 import i18n from 'i18next';
 import { useTranslation } from 'react-i18next';
 
@@ -55,7 +62,20 @@ const WIFI_ONLY_DOWNLOADS = false;
 
 // What the screens show. Not the build number: that changes on every small
 // over-the-air update, which users should not notice (see vite.config.js).
-const SHOWN_VERSION = import.meta.env.VITE_RELEASE_VERSION || import.meta.env.VITE_APP_VERSION || '1.0.2';
+const RELEASE_VERSION = import.meta.env.VITE_RELEASE_VERSION || import.meta.env.VITE_APP_VERSION || '1.0.2';
+
+// The build number of the code running now. CI names every build
+// "<run/10 + 1>.<run % 10>.0" (deploy.yml), and the same run number is the
+// APK's versionCode and the "Build ID" in Admin → Update manager. Over-the-air
+// updates change it without a new APK, so it is shown in brackets:
+// "3.2 (build 353)".
+export function buildNumberOf(version) {
+  const m = /^(\d+)\.(\d+)\.0$/.exec(String(version || ''));
+  if (!m) return null;
+  return (parseInt(m[1], 10) - 1) * 10 + parseInt(m[2], 10);
+}
+const RUNNING_BUILD = buildNumberOf(import.meta.env.VITE_APP_VERSION);
+const SHOWN_VERSION = RUNNING_BUILD ? `${RELEASE_VERSION} (build ${RUNNING_BUILD})` : RELEASE_VERSION;
 
 const STARTUP_DELAY_MS = 2000;
 const MANIFEST_TIMEOUT_MS = 12_000;
@@ -262,6 +282,10 @@ async function runOtaCheck(reason, { force = false } = {}) {
         : e?.message || i18n.t('admin_pages.app_update.download_failed_generic', 'The update could not be downloaded.');
     console.warn('[OTA] Update failed:', message);
     setOta({ downloading: false, progress: 0, lastError: message });
+    reportUpdateError(`Over-the-air update failed: ${e?.code === 'timeout' ? 'timed out' : e?.message || 'unknown error'}`, {
+      stage: `ota-${reason}`,
+      stack: e?.stack,
+    });
     reportRequestFailure();
     return { status: 'error', message };
   } finally {
@@ -287,6 +311,7 @@ async function installNow() {
     }
   } catch (e) {
     console.error('[Update] Install failed:', e);
+    reportUpdateError(`Update install failed: ${e?.message || 'unknown error'}`, { stage: `install-${otaState.source}`, stack: e?.stack });
     setOta({ installing: false, lastError: e?.message || i18n.t('admin_pages.app_update.install_failed', 'Install failed') });
   }
 }
@@ -302,7 +327,7 @@ function startEngine() {
   if (!IS_NATIVE || engineStarted) return;
   engineStarted = true;
 
-  readCurrentVersion();
+  readCurrentVersion().then((v) => recordInstalledVersions(v));
   cleanupOldBundles();
 
   // Progress for large bundles on slow networks
@@ -311,11 +336,13 @@ function startEngine() {
   });
   CapacitorUpdater.addListener('updateFailed', (info) => {
     console.error('[OTA] ❌ Bundle rolled back:', JSON.stringify(info));
+    reportUpdateError(`Over-the-air bundle ${info?.bundle?.version || ''} failed to start and was rolled back`, { stage: 'ota-rollback', stack: JSON.stringify(info) });
     setOta({ lastError: i18n.t('admin_pages.app_update.rolled_back', 'The new version failed to start, so the previous one was restored.') });
   });
-  CapacitorUpdater.addListener('downloadFailed', (info) =>
-    console.error('[OTA] ❌ Download failed:', JSON.stringify(info))
-  );
+  CapacitorUpdater.addListener('downloadFailed', (info) => {
+    console.error('[OTA] ❌ Download failed:', JSON.stringify(info));
+    reportUpdateError(`Over-the-air download failed (${info?.version || 'unknown version'})`, { stage: 'ota-download', stack: JSON.stringify(info) });
+  });
 
   // First check, after the app is already on screen
   setTimeout(() => runOtaCheck('startup'), STARTUP_DELAY_MS);
@@ -359,6 +386,8 @@ export function useAppUpdate() {
   const [apkDownloading, setApkDownloading] = useState(false);
   const [apkProgress, setApkProgress] = useState(0);
   const [manualModal, setManualModal] = useState({ isOpen: false, status: 'idle', message: '' });
+  const [apkInfo, setApkInfo] = useState(null);
+  useEffect(() => { getApkInfo().then(setApkInfo); }, []);
 
   const promptRef = useRef(null);
   promptRef.current = nativeUpdatePrompt;
@@ -383,6 +412,7 @@ export function useAppUpdate() {
         return;
       }
       setNativeUpdatePrompt({ ...serverConfig, serverBuild });
+      recordUpdatePrompt(serverBuild, !!serverConfig.mandatory);
     } catch (e) {
       console.warn('[Native update] Could not read app info:', e);
     }
@@ -570,25 +600,42 @@ export function useAppUpdate() {
   }, [updateStatus, handleUpdateButton, ota.progress, ota.mandatory, nativeUpdatePrompt, apkDownloading, apkProgress, t]);
 
   const downloadApk = useCallback((config) => {
-    if (!config?.apkUrl) return;
-    downloadAndOpenFile(config.apkUrl, `NCHP-${config.latestNativeBuild || 'latest'}.apk`, {
+    // meta/update_config written by the Update manager only had `downloadUrl`
+    // (scripts/push-update.js writes both names), so the button did nothing.
+    const url = config?.apkUrl || config?.downloadUrl;
+    const build = config?.serverBuild || parseInt(config?.latestNativeBuild, 10) || null;
+    if (!url) {
+      reportUpdateError('APK update has no download link in meta/update_config', { stage: 'apk-link', targetBuild: build });
+      setManualModal({
+        isOpen: true,
+        status: 'error',
+        message: t('admin_pages.app_update.no_link', 'The download link for this update is missing. Please tell the administrator.'),
+      });
+      return;
+    }
+    downloadAndOpenFile(url, `NCHP-${build || 'latest'}.apk`, {
       isSystemFile: true,
       onStart: () => { setApkDownloading(true); setApkProgress(0); },
       onProgress: (p) => setApkProgress(Math.round(p)),
+      onSuccess: () => recordUpdateDownloaded(build),
       onFinally: () => setApkDownloading(false),
-      onError: (e) =>
+      onError: (e) => {
+        reportUpdateError(`APK download failed: ${e?.message || 'unknown error'}`, { stage: 'apk-download', targetBuild: build, url, stack: e?.stack });
         setManualModal({
           isOpen: true,
           status: 'error',
           message: t('admin_pages.app_update.download_failed', 'The download failed: {{message}}', { message: e?.message || t('admin_pages.app_update.unknown_error', 'unknown error') }),
-        }),
-      onOpenError: () =>
+        });
+      },
+      onOpenError: (e) => {
+        reportUpdateError(`APK installer did not open: ${e?.message || 'unknown error'}`, { stage: 'apk-open', targetBuild: build, stack: e?.stack });
         setManualModal({
           isOpen: true,
           status: 'info',
           message:
             t('admin_pages.app_update.open_from_downloads', 'The file was downloaded. Open it from your Downloads and allow installing from this app if asked.'),
-        }),
+        });
+      },
     });
   }, [t]);
 
@@ -756,15 +803,21 @@ export function useAppUpdate() {
                 )}
               </div>
               <p className="mt-3 text-xs text-gray-400">{t('admin_pages.app_update.current_version', 'Current version: {{version}}', { version: SHOWN_VERSION })}</p>
+              {apkInfo?.version && (
+                <p className="text-xs text-gray-400">{t('admin_pages.app_update.installed_apk', 'Installed APK: {{version}} (build {{build}})', { version: apkInfo.version, build: apkInfo.build })}</p>
+              )}
             </div>
           </div>
         )}
       </>
     );
-  }, [ota, net, nativeUpdatePrompt, apkDownloading, apkProgress, manualModal, downloadApk, skipNativeBuild, t]);
+  }, [ota, net, nativeUpdatePrompt, apkDownloading, apkProgress, manualModal, downloadApk, skipNativeBuild, apkInfo, t]);
 
   return {
     appVersion: SHOWN_VERSION,
+    releaseVersion: RELEASE_VERSION,
+    runningBuild: RUNNING_BUILD,
+    apkInfo,
     isDownloadingAppUpdate: ota.downloading || apkDownloading,
     appUpdateProgress: apkDownloading ? apkProgress : ota.progress,
     handleManualUpdateCheck,
