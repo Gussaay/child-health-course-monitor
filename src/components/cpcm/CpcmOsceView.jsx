@@ -171,7 +171,8 @@ function OsceForm({ checklist, participant, participants, previous, canEdit, ass
             <div dir="rtl" className="space-y-4" data-pdf-root="">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                     <h3 className="text-lg font-bold text-slate-800">{checklist.title}</h3>
-                    <FormPdfButton formName={`OSCE Checklist: ${checklist.short || ''}`} subtitle={[checklist.title, participant?.name].filter(Boolean).join(' - ')} />
+                    <FormPdfButton formName={`OSCE Checklist: ${checklist.short || ''}`} subtitle={[checklist.title, participant?.name].filter(Boolean).join(' - ')}
+                        beforeExport={() => { const before = expanded; setExpanded(new Set(checklist.sections.map((_, i) => i))); return () => setExpanded(before); }} />
                 </div>
 
                 <div className="rounded-lg border border-slate-200 bg-slate-50">

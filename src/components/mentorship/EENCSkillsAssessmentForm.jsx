@@ -282,7 +282,8 @@ const SkillChecklistItem = ({ label, itemKey, value, onChange, showPartial = fal
     );
 };
 
-const SectionRenderer = ({ title, items, formData, handleSkillChange, score, maxScore, visibleItemIndex }) => {
+// showAll: every item, open (for the printed PDF).
+const SectionRenderer = ({ title, items, formData, handleSkillChange, score, maxScore, visibleItemIndex, showAll = false }) => {
     const [isExpanded, setIsExpanded] = useState(true);
     
     const isCompleted = visibleItemIndex === -1;
@@ -297,7 +298,7 @@ const SectionRenderer = ({ title, items, formData, handleSkillChange, score, max
         }
     }, [isCompleted]);
 
-    if (visibleItemIndex === -2 || items.length === 0) return null;
+    if ((visibleItemIndex === -2 && !showAll) || items.length === 0) return null;
 
     return (
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden transition-all duration-200 mb-6 animate-fade-in" dir="rtl">
@@ -316,10 +317,10 @@ const SectionRenderer = ({ title, items, formData, handleSkillChange, score, max
                 </svg>
             </button>
             
-            {isExpanded && (
+            {(isExpanded || showAll) && (
                 <div className="divide-y divide-slate-100 bg-white">
                     {items.map((item, idx) => {
-                        const isVisible = visibleItemIndex === -1 || idx <= visibleItemIndex;
+                        const isVisible = showAll || visibleItemIndex === -1 || idx <= visibleItemIndex;
                         if (!isVisible) return null;
                         
                         return (
@@ -339,16 +340,19 @@ const SectionRenderer = ({ title, items, formData, handleSkillChange, score, max
     );
 };
 
-const ResuscitationSectionRenderer = ({ formData, handleFormChange, handleSkillChange, score, maxScore }) => {
+const ResuscitationSectionRenderer = ({ formData, handleFormChange, handleSkillChange, score, maxScore, showAll = false }) => {
     const [isExpanded, setIsExpanded] = useState(true);
     const baseItems = RESUSCITATION_ITEMS.slice(0, 10);
     const firstUnanswered = baseItems.findIndex(item => formData.skills[item.key] === 'na' || formData.skills[item.key] === '');
-    const visibleBaseCount = firstUnanswered === -1 ? baseItems.length : firstUnanswered + 1;
+    const visibleBaseCount = firstUnanswered === -1 || showAll ? baseItems.length : firstUnanswered + 1;
     const visibleBaseItems = baseItems.slice(0, visibleBaseCount);
 
     const isBaseComplete = firstUnanswered === -1;
-    const showBreathedNormally = isBaseComplete;
-    const showHasPulse = isBaseComplete && formData.eenc_resus_breathed_normally === 'no';
+    // For the printed PDF every branch is shown, except one already ruled out by an answer.
+    const showBreathedNormally = isBaseComplete || showAll;
+    const showHasPulse = (isBaseComplete && formData.eenc_resus_breathed_normally === 'no') || (showAll && formData.eenc_resus_breathed_normally !== 'yes');
+    const breathedIs = (v) => formData.eenc_resus_breathed_normally === v || (showAll && formData.eenc_resus_breathed_normally !== (v === 'yes' ? 'no' : 'yes'));
+    const pulseIs = (v) => formData.eenc_resus_has_pulse === v || (showAll && formData.eenc_resus_has_pulse !== (v === 'yes' ? 'no' : 'yes'));
     
     // Determine overall resuscitation section completion
     let isSectionComplete = false;
@@ -390,7 +394,7 @@ const ResuscitationSectionRenderer = ({ formData, handleFormChange, handleSkillC
                 </svg>
             </button>
             
-            {isExpanded && (
+            {(isExpanded || showAll) && (
                 <div className="divide-y divide-slate-100 bg-white">
                     {visibleBaseItems.map((item) => (
                         <SkillChecklistItem
@@ -426,7 +430,7 @@ const ResuscitationSectionRenderer = ({ formData, handleFormChange, handleSkillC
                         </div>
                     )}
 
-                    {showBreathedNormally && formData.eenc_resus_breathed_normally === 'yes' && (
+                    {showBreathedNormally && breathedIs('yes') && (
                         <SkillChecklistItem
                             label={RESUSCITATION_ITEMS[10].label}
                             itemKey={RESUSCITATION_ITEMS[10].key}
@@ -458,7 +462,7 @@ const ResuscitationSectionRenderer = ({ formData, handleFormChange, handleSkillC
                         </div>
                     )}
 
-                    {showHasPulse && formData.eenc_resus_has_pulse === 'yes' && (
+                    {showHasPulse && pulseIs('yes') && (
                         <SkillChecklistItem
                             label={RESUSCITATION_ITEMS[11].label}
                             itemKey={RESUSCITATION_ITEMS[11].key}
@@ -467,7 +471,7 @@ const ResuscitationSectionRenderer = ({ formData, handleFormChange, handleSkillC
                         />
                     )}
 
-                    {showHasPulse && formData.eenc_resus_has_pulse === 'no' && (
+                    {showHasPulse && pulseIs('no') && (
                         <SkillChecklistItem
                             label={RESUSCITATION_ITEMS[12].label}
                             itemKey={RESUSCITATION_ITEMS[12].key}
@@ -646,6 +650,8 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     const auth = getAuth();
     const user = auth.currentUser;
     const [isFormComplete, setIsFormComplete] = useState(false);
+    // While the PDF is made, every section and item is shown (a full blank or filled form).
+    const [printAll, setPrintAll] = useState(false);
     const [currentVisitNumber, setCurrentVisitNumber] = useState(() => existingSessionData?.visitNumber ? existingSessionData.visitNumber : visitNumber);
 
     const eencHistoryStats = useMemo(() => {
@@ -877,7 +883,7 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
 
             <StickyOverallScore score={scores?.overallScore?.score} maxScore={scores?.overallScore?.maxScore} />
             <form onSubmit={(e) => handleSubmit(e, 'complete')}>
-                <div className="flex justify-end mb-2" data-pdf-hide=""><FormPdfButton formName="EENC Skills Mentorship Form" subtitle="متابعة مهارات الرعاية الضرورية المبكرة (EENC)" /></div>
+                <div className="flex justify-end mb-2" data-pdf-hide=""><FormPdfButton formName="EENC Skills Mentorship Form" subtitle="متابعة مهارات الرعاية الضرورية المبكرة (EENC)" beforeExport={() => { setPrintAll(true); return () => setPrintAll(false); }} /></div>
                 <div className="p-6">
                     <div className="text-center mb-4"><h2 className="text-2xl font-bold text-sky-800">متابعة مهارات الرعاية الضرورية المبكرة (EENC)</h2></div>
                     <div className="space-y-2 mb-4">
@@ -920,11 +926,11 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                     </div>
 
                     {!isCesarean && (
-                        <SectionRenderer title="1. تحضيرات ما قبل الولادة" items={activePrepItems} formData={formData} handleSkillChange={handleSkillChange} score={scores.preparation?.score} maxScore={scores.preparation?.maxScore} visibleItemIndex={prepVisibleIndex} />
+                        <SectionRenderer title="1. تحضيرات ما قبل الولادة" items={activePrepItems} formData={formData} handleSkillChange={handleSkillChange} score={scores.preparation?.score} maxScore={scores.preparation?.maxScore} visibleItemIndex={prepVisibleIndex} showAll={printAll} />
                     )}
-                    <SectionRenderer title="2. التجفيف، التحفيز، التدفئة والشفط" items={activeDryingItems} formData={formData} handleSkillChange={handleSkillChange} score={scores.drying?.score} maxScore={scores.drying?.maxScore} visibleItemIndex={dryingVisibleIndex} />
+                    <SectionRenderer title="2. التجفيف، التحفيز، التدفئة والشفط" items={activeDryingItems} formData={formData} handleSkillChange={handleSkillChange} score={scores.drying?.score} maxScore={scores.drying?.maxScore} visibleItemIndex={dryingVisibleIndex} showAll={printAll} />
 
-                    {isDryingComplete && (
+                    {(isDryingComplete || printAll) && (
                         <div className={`mt-6 p-4 border rounded-xl bg-sky-50 shadow-sm animate-fade-in transition-all duration-500 mb-6 ${formData.eenc_breathing_status === 'na' ? 'row-unanswered' : 'row-answered'}`}>
                             <h3 className="text-lg font-bold mb-3 text-right text-sky-900">3. تحديد حالة الوليد</h3>
                             <FormGroup label="الرجاء تحديد حالة الوليد لبدء التقييم التالي:" className="text-right">
@@ -947,15 +953,15 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
                         </div>
                     )}
 
-                    {isDryingComplete && formData.eenc_breathing_status === 'yes' && (
-                        <SectionRenderer title="4. متابعة طفل يتنفس طبيعياً" items={activeNormalItems} formData={formData} handleSkillChange={handleSkillChange} score={scores.normal_breathing?.score} maxScore={scores.normal_breathing?.maxScore} visibleItemIndex={normalVisibleIndex} />
+                    {((isDryingComplete && formData.eenc_breathing_status === 'yes') || (printAll && formData.eenc_breathing_status !== 'no')) && (
+                        <SectionRenderer title="4. متابعة طفل يتنفس طبيعياً" items={activeNormalItems} formData={formData} handleSkillChange={handleSkillChange} score={scores.normal_breathing?.score} maxScore={scores.normal_breathing?.maxScore} visibleItemIndex={normalVisibleIndex} showAll={printAll} />
                     )}
 
-                    {isDryingComplete && formData.eenc_breathing_status === 'no' && (
-                        <ResuscitationSectionRenderer formData={formData} handleFormChange={handleFormChange} handleSkillChange={handleSkillChange} score={scores.resuscitation?.score} maxScore={scores.resuscitation?.maxScore} />
+                    {((isDryingComplete && formData.eenc_breathing_status === 'no') || (printAll && formData.eenc_breathing_status !== 'yes')) && (
+                        <ResuscitationSectionRenderer formData={formData} handleFormChange={handleFormChange} handleSkillChange={handleSkillChange} score={scores.resuscitation?.score} maxScore={scores.resuscitation?.maxScore} showAll={printAll} />
                     )}
                     
-                    {isFormComplete && (
+                    {(isFormComplete || printAll) && (
                         <FormGroup label="ملاحظات عامة" className="text-right mt-6 animate-fade-in">
                             <Textarea name="notes" value={formData.notes} onChange={handleFormChange} rows={4} placeholder="أضف أي ملاحظات إضافية..." className="text-right placeholder:text-right"/>
                         </FormGroup>
