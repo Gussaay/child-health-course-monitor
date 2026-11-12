@@ -6,7 +6,8 @@
 //   - imnci_facility_readiness: supervision of health centres and units and
 //     readiness of the facility to apply IMNCI. Submitting it also updates the
 //     facility's IMNCI information (the same fields the "Update IMNCI facility
-//     information" form edits) through imnciFacilityPatch below.
+//     information" form edits, including its ORT corner, immunization and
+//     nutrition details) through imnciFacilityPatch below.
 //   - imnci_drugs: form 7-C, free medicine and availability of IMNCI drugs and
 //     supplies.
 //
@@ -204,6 +205,20 @@ export const IMNCI_FACILITY_READINESS = {
             ],
         },
         {
+            id: 'nutrition',
+            title: 'Nutrition services available',
+            titleAr: 'خدمات التغذية المتوفرة',
+            type: 'grid',
+            presenceColumn: 'answer',
+            columns: YES_NO_COMMENT,
+            items: [
+                { id: 'growth_monitoring', label: 'Growth monitoring', ar: 'متابعة النمو' },
+                { id: 'otp_rutf', label: 'Outpatient therapeutic programme (OTP) with RUTF', ar: 'برنامج العلاج الخارجي (OTP) بالأغذية العلاجية الجاهزة (RUTF)' },
+                { id: 'otp_tsfp', label: 'OTP with supplementary feeding (TSFP)', ar: 'برنامج العلاج الخارجي (OTP) بالتغذية التكميلية (TSFP)' },
+                { id: 'iycf', label: 'Infant and young child feeding (IYCF)', ar: 'تغذية الرضع وصغار الأطفال (IYCF)' },
+            ],
+        },
+        {
             id: 'staff',
             title: '7. Health workers at the facility',
             titleAr: '7/ معلومات مقدمي الخدمة العاملين بالمرفق',
@@ -326,7 +341,31 @@ export function imnciFacilityPatch(form = {}) {
     yn('clinic', 'chart_booklet', 'وجود_كتيب_لوحات');
     yn('clinic', 'daily_register', 'وجود_سجل_علاج_متكامل');
     yn('ort', 'ort_corner', 'غرفة_إرواء');
+    yn('ort', 'ort_equipment', 'ort_equipment_complete');
+    yn('ort', 'safe_water', 'ort_safe_water');
+    yn('ort', 'ort_register', 'ort_register');
+    yn('ort', 'health_education', 'ort_health_education');
     yn('epi', 'epi_services', 'immunization_office_exists');
+    // The immunization details only mean something when there is a service.
+    if (r.epi?.epi_services?.answer !== false) {
+        yn('epi', 'strategy_fixed', 'immunization_strategy_fixed');
+        yn('epi', 'strategy_outreach', 'immunization_strategy_outreach');
+        yn('epi', 'strategy_mobile', 'immunization_strategy_mobile');
+        yn('epi', 'road_to_health', 'road_to_health_cards');
+        yn('epi', 'vaccines_available', 'vaccines_available');
+        yn('epi', 'fridge', 'vaccine_fridge_working');
+        yn('epi', 'vaccine_storage', 'vaccines_stored_correctly');
+        const epiNum = (item, field) => {
+            const n = toNum(r.epi?.[item]?.answer);
+            if (n != null) patch[field] = n;
+        };
+        epiNum('fixed_days', 'immunization_fixed_days_per_week');
+        epiNum('outreach_sessions', 'immunization_outreach_sessions_per_month');
+    }
+    yn('nutrition', 'growth_monitoring', 'growth_monitoring_service_exists');
+    yn('nutrition', 'otp_rutf', 'otp_rutf_exists');
+    yn('nutrition', 'otp_tsfp', 'otp_tsfp_exists');
+    yn('nutrition', 'iycf', 'iycf_service_exists');
 
     const staff = r.staff || {};
     const num = (row, col, field) => {

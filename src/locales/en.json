@@ -6692,8 +6692,8 @@
         "pending": "The facility's IMNCI information update was sent for approval.",
         "no_facility": "The facility is not in the registry, so its IMNCI information was not updated.",
         "failed": "The assessment was saved, but the facility's IMNCI information could not be updated. {{error}}",
-        "note_direct": "Submitting also updates this facility's IMNCI information (equipment, chart booklet, register, ORT corner, immunization and trained staff).",
-        "note_approval": "Submitting also sends an update of this facility's IMNCI information (equipment, chart booklet, register, ORT corner, immunization and trained staff) for approval."
+        "note_direct": "Submitting also updates this facility's IMNCI information (equipment, chart booklet, register, ORT corner, immunization, nutrition services and trained staff).",
+        "note_approval": "Submitting also sends an update of this facility's IMNCI information (equipment, chart booklet, register, ORT corner, immunization, nutrition services and trained staff) for approval."
       }
     },
     "supply": {

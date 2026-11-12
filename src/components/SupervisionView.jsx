@@ -978,8 +978,8 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, canAppro
             {checklist.syncsFacility && canEdit && (
                 <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
                     {canApproveFacility && !publicMode
-                        ? t('trackers.supervision.facility_sync.note_direct', 'Submitting also updates this facility\'s IMNCI information (equipment, chart booklet, register, ORT corner, immunization and trained staff).')
-                        : t('trackers.supervision.facility_sync.note_approval', 'Submitting also sends an update of this facility\'s IMNCI information (equipment, chart booklet, register, ORT corner, immunization and trained staff) for approval.')}
+                        ? t('trackers.supervision.facility_sync.note_direct', 'Submitting also updates this facility\'s IMNCI information (equipment, chart booklet, register, ORT corner, immunization, nutrition services and trained staff).')
+                        : t('trackers.supervision.facility_sync.note_approval', 'Submitting also sends an update of this facility\'s IMNCI information (equipment, chart booklet, register, ORT corner, immunization, nutrition services and trained staff) for approval.')}
                 </p>
             )}
 

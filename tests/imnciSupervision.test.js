@@ -71,6 +71,24 @@ describe('facility readiness', () => {
         expect(staffTotals(form.responses).meetsMinimum).toBe(null);
     });
 
+    it('fills the facility form\'s ORT, immunization and nutrition details', () => {
+        const patch = imnciFacilityPatch({
+            responses: {
+                ort: { ort_corner: yes, safe_water: no, health_education: yes },
+                epi: { epi_services: yes, strategy_fixed: yes, fixed_days: { answer: '3' }, fridge: no },
+                nutrition: { growth_monitoring: yes, otp_rutf: no, iycf: yes },
+            },
+        });
+        expect(patch).toMatchObject({
+            'غرفة_إرواء': 'Yes', ort_safe_water: 'No', ort_health_education: 'Yes',
+            immunization_office_exists: 'Yes', immunization_strategy_fixed: 'Yes', immunization_fixed_days_per_week: 3, vaccine_fridge_working: 'No',
+            growth_monitoring_service_exists: 'Yes', otp_rutf_exists: 'No', iycf_service_exists: 'Yes',
+        });
+        expect(patch).not.toHaveProperty('otp_tsfp_exists');
+        const noEpi = imnciFacilityPatch({ responses: { epi: { epi_services: no, fridge: yes } } });
+        expect(noEpi).toEqual({ immunization_office_exists: 'No' });
+    });
+
     it('skips immunization rows when the facility has no immunization services', () => {
         const form = { responses: { epi: { epi_services: no } } };
         const epi = assessmentProgress(IMNCI_FACILITY_READINESS, form).sections.epi;
