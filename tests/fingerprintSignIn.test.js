@@ -19,6 +19,9 @@ const NB = {
     return store[server];
   }),
   isCredentialsSaved: vi.fn(async ({ server }) => ({ isSaved: !!store[server] })),
+  // Like the real Capacitor plugin, which answers `then` too: a promise that
+  // resolves to it never settles.
+  then: () => new Promise(() => {}),
   deleteCredentials: vi.fn(async ({ server }) => { delete store[server]; }),
 };
 vi.mock('@capgo/capacitor-native-biometric', () => ({ NativeBiometric: NB }));

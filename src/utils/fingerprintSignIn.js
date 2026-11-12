@@ -34,7 +34,10 @@ export function fingerprintSupported() {
 let pluginPromise = null;
 function plugin() {
   if (!pluginPromise) {
-    pluginPromise = import('@capgo/capacitor-native-biometric').then((m) => m.NativeBiometric);
+    // Wrapped in an object on purpose: a Capacitor plugin answers every
+    // property, `then` included, so a promise that resolves to the plugin
+    // itself waits for ever (this kept the fingerprint button from showing).
+    pluginPromise = import('@capgo/capacitor-native-biometric').then((m) => ({ NB: m.NativeBiometric }));
   }
   return pluginPromise;
 }
@@ -44,7 +47,7 @@ let lastAvailability = null;
 export async function fingerprintReady() {
   if (!fingerprintSupported()) return false;
   try {
-    const res = await (await plugin()).isAvailable({ useFallback: false });
+    const res = await (await plugin()).NB.isAvailable({ useFallback: false });
     lastAvailability = res || null;
     return !!res?.isAvailable;
   } catch (err) {
@@ -141,7 +144,7 @@ export async function rememberForFingerprint(user) {
   }
   const account = { uid: json.uid, email: user.email || '', name: user.displayName || '' };
   try {
-    const NB = await plugin();
+    const { NB } = await plugin();
     await NB.setCredentials({
       server: SERVER,
       username: JSON.stringify(account),
@@ -170,7 +173,7 @@ export async function savedFingerprintAccount() {
   if (!fingerprintSupported()) return null;
   try {
     if (!(await fingerprintReady())) return null;
-    const NB = await plugin();
+    const { NB } = await plugin();
     const { isSaved } = await NB.isCredentialsSaved({ server: SERVER });
     if (isSaved) {
       const { username } = await NB.getCredentials({ server: SERVER });
@@ -185,14 +188,14 @@ export async function forgetFingerprintAccount() {
   savedFor = null;
   try { localStorage.removeItem(LOCAL_COPY); } catch { /* storage blocked */ }
   if (!fingerprintSupported()) return;
-  try { await (await plugin()).deleteCredentials({ server: SERVER }); } catch { /* nothing saved */ }
+  try { await (await plugin()).NB.deleteCredentials({ server: SERVER }); } catch { /* nothing saved */ }
 }
 
 // Asks for the fingerprint, then signs in. Resolves 'ok' (the page is
 // reloading), 'cancelled' or 'failed'.
 export async function signInWithFingerprint({ title, subtitle, cancel } = {}) {
   if (!fingerprintSupported()) return 'failed';
-  const NB = await plugin();
+  const { NB } = await plugin();
   try {
     await NB.verifyIdentity({
       reason: subtitle,
