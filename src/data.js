@@ -26,7 +26,8 @@ import {
     arrayUnion,
     onSnapshot,
     waitForPendingWrites,
-    runTransaction
+    runTransaction,
+    getCountFromServer
 } from "firebase/firestore";
 import { onAuthStateChanged } from 'firebase/auth'; 
 import { storage } from './firebase';
@@ -701,6 +702,14 @@ export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
         console.error("Error fetching health facilities:", error);
         throw error;
     }
+}
+
+// How many facilities the unfiltered list query returns on the server (one
+// read per 1,000 facilities). Lets a device notice that its saved list is
+// incomplete and download it again.
+export async function countHealthFacilities() {
+    const snap = await getCountFromServer(facilityQuery({}));
+    return snap.data().count;
 }
 
 export async function getHealthFacilityById(facilityId) {

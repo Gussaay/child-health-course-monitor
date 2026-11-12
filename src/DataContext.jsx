@@ -9,6 +9,7 @@ import {
     listStateCoordinators, 
     listLocalityCoordinators,
     listHealthFacilities,
+    countHealthFacilities,
     listMentorshipSessions, 
     listIMNCIVisitReports, 
     listEENCVisitReports, 
@@ -338,6 +339,36 @@ export const DataProvider = ({ children }) => {
         }, 0);
     }, []);
 
+    // A saved facility list can be incomplete: a full download that timed out
+    // and was then topped up only with recent changes (live listener / delta
+    // sync) leaves the device with a handful of facilities, and every later
+    // sync only adds to that. Once a session, the saved full list is compared
+    // with the server's count (one read per 1,000 facilities); if the saved list
+    // is shorter, it is downloaded again in full. The saved list stays on screen
+    // meanwhile.
+    const facilitiesCheckedRef = useRef(false);
+    const fetchFacilitiesRef = useRef(null);
+    const checkFacilitiesComplete = useCallback((localCount, filters) => {
+        if (facilitiesCheckedRef.current || !navigator.onLine) return;
+        facilitiesCheckedRef.current = true;
+        setTimeout(async () => {
+            try {
+                const serverCount = await countHealthFacilities();
+                // Only a list SHORTER than the server's is treated as broken. A
+                // longer one is normal (facilities saved without a state are in
+                // the delta sync but not in this count) and must not cause a
+                // full download every session.
+                if (serverCount > localCount) {
+                    console.warn(`[facilities] saved list has ${localCount}, server has ${serverCount}; downloading again`);
+                    await fetchFacilitiesRef.current?.(filters, true);
+                }
+            } catch (e) {
+                facilitiesCheckedRef.current = false; // try again next time
+                console.warn('[facilities] completeness check failed:', e?.code || e?.message || e);
+            }
+        }, 0);
+    }, []);
+
     const createFetcher = useCallback((key, fetchFn) => {
         if (key === 'healthFacilities') {
              // force: false = cache-first; 'sync' = ask the server now, but only
@@ -388,6 +419,7 @@ export const DataProvider = ({ children }) => {
                             
                             setIsLoading(prev => ({ ...prev, healthFacilities: false }));
                             
+                            if (filterKey === 'all') checkFacilitiesComplete(localData.length, filters);
                             if (!shouldForceServer && navigator.onLine) {
                                 fetchingRef.current[filterKey] = false;
                                 scheduleRevalidate(timeKey, lastFetchTime, () => fetchFacilities(filters, 'sync'));
@@ -431,7 +463,9 @@ export const DataProvider = ({ children }) => {
                     }
                     
                     // High timeout (60s) to allow first-time full downloads to succeed
-                    const newOrUpdatedData = await fetchWithTimeout(listHealthFacilities(activeFilters, { source: 'server' }), 60000); 
+                    // A full download of every facility can take minutes on a slow
+                    // phone connection; giving up after 60 s left the list empty.
+                    const newOrUpdatedData = await fetchWithTimeout(listHealthFacilities(activeFilters, { source: 'server' }), effectiveLastFetchTime === 0 ? 180000 : 60000); 
                     
                     let finalMergedData = localData;
 
@@ -476,6 +510,7 @@ export const DataProvider = ({ children }) => {
                 }
             };
             syncRegistryRef.current[key] = () => fetchFacilities(lastFacilityFiltersRef.current || {}, 'sync');
+            fetchFacilitiesRef.current = fetchFacilities;
             return fetchFacilities;
         }
         
@@ -649,7 +684,7 @@ export const DataProvider = ({ children }) => {
         };
         syncRegistryRef.current[key] = () => fetcher('sync');
         return fetcher;
-    }, [scheduleRevalidate]); 
+    }, [scheduleRevalidate, checkFacilitiesComplete]); 
 
     // Delta-sync every list already loaded on this device: only what changed
     // on the server since its last sync comes down. Lists never opened stay
@@ -743,7 +778,11 @@ export const DataProvider = ({ children }) => {
     }, [persistSoon]);
 
     const applyFacilityDelta = useCallback((filterKey, changes) => {
-        const next = mergeDelta(facilitiesFilterCacheRef.current[filterKey], changes);
+        // Never build a list out of changes alone: with no full list under it,
+        // the "list" would be just the few facilities changed recently.
+        const base = facilitiesFilterCacheRef.current[filterKey];
+        if (!Array.isArray(base) || base.length === 0) return;
+        const next = mergeDelta(base, changes);
         facilitiesFilterCacheRef.current[filterKey] = next;
         if (currentFacilitiesFilterKeyRef.current === filterKey) setCache((prev) => ({ ...prev, healthFacilities: next }));
         persistSoon(`cache_healthFacilities_${filterKey}`, next);
@@ -790,7 +829,8 @@ export const DataProvider = ({ children }) => {
             const since = parseInt(localStorage.getItem(`${syncMarkKey('healthFacilities')}_${liveFacilityFilterKey}`) || '0', 10);
             const filters = lastFacilityFiltersRef.current;
             const fk = liveFacilityFilterKey;
-            if (since > 0) {
+            const baseList = facilitiesFilterCacheRef.current[fk];
+            if (since > 0 && Array.isArray(baseList) && baseList.length > 0) {
                 try {
                     const unsub = subscribeFacilityDelta(filters, Math.max(0, since - LIVE_OVERLAP_MS), (ch) => applyFacilityDelta(fk, ch), refuse('healthFacilities'));
                     if (unsub) live.healthFacilities = { unsub, filterKey: fk };
