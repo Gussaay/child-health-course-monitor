@@ -10,6 +10,8 @@
 // path (/public, /monitor, /facilities, /verify, /mentorship, /attendance,
 // /submit) and of the paths the server answers itself (/mcp, /oauth, /assets).
 
+import { trainingPathPrefix } from '../training/trainingSession.js';
+
 const VIEW_SLUGS = {
     landing: '',
     dashboard: 'dashboard',
@@ -86,11 +88,16 @@ export function pagePath(page) {
     else path = `/${VIEW_SLUGS[page.view] ?? ''}`;
     const params = new URLSearchParams();
     OWN_KEYS.forEach((key) => { if (page[key]) params.set(key, page[key]); });
+    // A training tab keeps its link in the address: /training/<courseId>/courses…
+    const prefix = trainingPathPrefix();
+    if (prefix) path = path === '/' ? prefix : `${prefix}${path}`;
     return { path, params };
 }
 
 /** Reads a page back from an address. Returns null for an address that is not an app page. */
 export function pageFromLocation(pathname, search) {
+    const prefix = trainingPathPrefix();
+    if (prefix && (pathname === prefix || String(pathname || '').startsWith(`${prefix}/`))) pathname = pathname.slice(prefix.length) || '/';
     const parts = String(pathname || '/').split('/').filter(Boolean).map(decodeURIComponent);
     let page = null;
     if (parts.length === 0) page = { view: 'landing' };

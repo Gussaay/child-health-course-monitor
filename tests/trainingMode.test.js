@@ -2,6 +2,14 @@ import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from '@firebase/firestore';
 
+// Writes never reach a server in these tests: the SDK's setDoc / deleteDoc
+// resolve at once, so the wrapper's reporting can be checked.
+vi.mock('@firebase/firestore', async (importOriginal) => ({
+    ...(await importOriginal()),
+    setDoc: vi.fn(() => Promise.resolve()),
+    deleteDoc: vi.fn(() => Promise.resolve()),
+}));
+
 // Training links (src/training/): the Firestore wrapper must send every app
 // read and write to the course's sandbox, keep reference data real and
 // read-only, and refuse any write outside the sandbox.
@@ -74,7 +82,8 @@ describe('Firestore wrapper in a training tab', () => {
     it('enters training mode from the link and clears the address', async () => {
         const session = await import('../src/training/trainingSession.js');
         expect(session.trainingCourseId()).toBe('course123');
-        expect(window.location.pathname).toBe('/');
+        // The address keeps the training link.
+        expect(window.location.pathname).toBe('/training/course123');
         expect(sessionStorage.getItem('chm_training_course')).toBe('course123');
     });
 
@@ -112,5 +121,120 @@ describe('Cloud Functions wrapper in a training tab', () => {
         expect(BLOCKED_IN_TRAINING.has('sendFCMNotification')).toBe(true);
         const call = httpsCallable({}, 'sendFCMNotification');
         await expect(call({ title: 'x' })).resolves.toEqual({ data: {} });
+    });
+});
+
+describe('training activity', () => {
+    it('turns a write into log lines and counters', async () => {
+        const { activityFromWrite } = await import('../src/training/trainingRows.js');
+        const { entries, counters } = activityFromWrite({ kind: 'save', targets: [
+            { collection: 'participants', docId: 'p1' },
+            { collection: 'participants', docId: 'p2' },
+            { collection: 'courses', docId: 'c1' },
+        ] });
+        expect(entries).toEqual([
+            { kind: 'save', collection: 'participants', docId: null, count: 2 },
+            { kind: 'save', collection: 'courses', docId: 'c1', count: 1 },
+        ]);
+        expect(counters).toEqual({ saves: 3, 'collections.participants': 2, 'collections.courses': 1 });
+        expect(activityFromWrite({ kind: 'delete', targets: [{ collection: 'cases', docId: 'x' }] }).counters).toEqual({ deletes: 1, 'collections.cases': 1 });
+    });
+
+    it('finds the sandbox collection a path belongs to', async () => {
+        const { sandboxTarget } = await import('../src/training/firestoreShim.js');
+        expect(sandboxTarget('c1', 'trainingSandboxes/c1/participants/p1')).toEqual({ collection: 'participants', docId: 'p1' });
+        expect(sandboxTarget('c1', 'trainingSandboxes/c1/courses/x/sub/y')).toEqual({ collection: 'courses', docId: 'x' });
+        expect(sandboxTarget('c1', 'users/u1')).toBeNull();
+        expect(sandboxTarget('c1', 'trainingSandboxes/c2/courses/x')).toBeNull();
+    });
+
+    it('suggests the participant by e-mail, phone, then name', async () => {
+        const { suggestParticipant } = await import('../src/training/trainingRows.js');
+        const list = [
+            { id: 'a', name: 'Amna Ali', email: 'AMNA@example.org', phone: '0912 345 678' },
+            { id: 'b', name: 'Omer Hassan', phone: '+249 911 111 111' },
+        ];
+        expect(suggestParticipant(list, { email: 'amna@example.org' })?.id).toBe('a');
+        expect(suggestParticipant(list, { phoneNumber: '+249911111111' })?.id).toBe('b');
+        expect(suggestParticipant(list, { displayName: 'omer hassan ' })?.id).toBe('b');
+        expect(suggestParticipant(list, { email: 'x@y.z', displayName: 'Nobody' })).toBeNull();
+    });
+
+    it('builds one dashboard row per participant, plus guests', async () => {
+        const { buildTrainingRows } = await import('../src/training/trainingRows.js');
+        const at = (h) => new Date(2026, 10, 12, h);
+        const rows = buildTrainingRows(
+            [{ id: 'a', name: 'Amna' }, { id: 'b', name: 'Omer' }],
+            [
+                { uid: 'u1', participantId: 'a', email: 'a@x', saves: 3, views: { courses: 2 }, collections: { participants: 3 }, firstSeen: at(8), lastSeen: at(9) },
+                { uid: 'u2', participantId: 'a', email: 'a2@x', saves: 1, views: { courses: 1, skillsMentorship: 4 }, lastSeen: at(11) },
+                { uid: 'u3', participantId: null, displayName: 'Trainer', saves: 2, lastSeen: at(10) },
+            ],
+        );
+        expect(rows.map((r) => r.key)).toEqual(['p:a', 'g:u3', 'p:b']);
+        const amna = rows[0];
+        expect(amna.saves).toBe(4);
+        expect(amna.views).toEqual({ courses: 3, skillsMentorship: 4 });
+        expect(amna.lastSeen).toEqual(at(11));
+        expect(amna.firstSeen).toEqual(at(8));
+        expect(rows[1].guest).toBe(true);
+        expect(rows[2].accounts).toEqual([]);
+    });
+
+    it('reports sandbox saves and deletes to the recorder, not account writes', async () => {
+        vi.resetModules();
+        sessionStorage.setItem('chm_training_course', 'course123');
+        const shim = await import('../src/training/firestoreShim.js');
+        const seen = [];
+        shim.setTrainingActivityRecorder((r) => seen.push(r));
+        const db = getFirestore(initializeApp({ projectId: 'demo-training2', apiKey: 'x' }, 'training-test-2'));
+        await shim.setDoc(shim.doc(db, 'participants', 'p1'), { a: 1 });
+        await shim.deleteDoc(shim.doc(db, 'cases', 'k1'));
+        await shim.setDoc(shim.doc(db, 'users', 'u1'), { fcmToken: 'x' });
+        shim.setTrainingActivityRecorder(null);
+        expect(seen).toEqual([
+            { kind: 'save', targets: [{ collection: 'participants', docId: 'p1' }] },
+            { kind: 'delete', targets: [{ collection: 'cases', docId: 'k1' }] },
+        ]);
+    });
+});
+
+describe('automatic participant link', () => {
+    it('links by saved link, then a single e-mail or phone match, never by name alone', async () => {
+        const { autoLinkParticipant } = await import('../src/training/trainingRows.js');
+        const list = [
+            { id: 'a', name: 'Amna Ali', email: 'amna@example.org', phone: '0912345678' },
+            { id: 'b', name: 'Omer Hassan', phone: '+249 911 111 111', trainingLink: { uid: 'u-omer' } },
+            { id: 'c', name: 'Twin', email: 'shared@example.org' },
+            { id: 'd', name: 'Twin 2', email: 'shared@example.org' },
+        ];
+        expect(autoLinkParticipant(list, { uid: 'u-omer', email: 'other@x.org' })).toMatchObject({ participant: { id: 'b' }, method: 'saved' });
+        expect(autoLinkParticipant(list, { uid: 'u1', email: 'AMNA@example.org' })).toMatchObject({ participant: { id: 'a' }, method: 'email' });
+        expect(autoLinkParticipant(list, { uid: 'u2', phoneNumber: '+249912345678' })).toMatchObject({ participant: { id: 'a' }, method: 'phone' });
+        expect(autoLinkParticipant(list, { uid: 'u3', email: 'shared@example.org' })).toBeNull();
+        expect(autoLinkParticipant(list, { uid: 'u4', displayName: 'Amna Ali' })).toBeNull();
+        expect(autoLinkParticipant(list, null)).toBeNull();
+    });
+});
+
+describe('page addresses in a training tab', () => {
+    it('keep the /training/<courseId> prefix and read it back', async () => {
+        vi.resetModules();
+        sessionStorage.setItem('chm_training_course', 'course123');
+        window.history.pushState(null, '', '/training/course123');
+        const { pagePath, pageFromLocation } = await import('../src/utils/pageAddress.js');
+        expect(pagePath({ view: 'landing' }).path).toBe('/training/course123');
+        expect(pagePath({ view: 'courses', tab: 'participants' }).path).toBe('/training/course123/courses/participants');
+        expect(pageFromLocation('/training/course123', '')).toEqual({ view: 'landing' });
+        expect(pageFromLocation('/training/course123/courses/participants', '?course=abc')).toMatchObject({ view: 'courses', tab: 'participants', course: 'abc' });
+    });
+
+    it('puts the prefix back if the tab is sent to a plain address', async () => {
+        vi.resetModules();
+        sessionStorage.setItem('chm_training_course', 'course123');
+        window.history.pushState(null, '', '/courses?course=abc');
+        const session = await import('../src/training/trainingSession.js');
+        expect(session.trainingCourseId()).toBe('course123');
+        expect(window.location.pathname + window.location.search).toBe('/training/course123/courses?course=abc');
     });
 });

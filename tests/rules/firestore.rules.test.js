@@ -995,3 +995,44 @@ describe('trainingSandboxes — practice data only while the course window is op
         await assertSucceeds(updateDoc(doc(as('facilitator'), 'courses', 'never'), { training: window(-HOUR, HOUR) }));
     });
 });
+
+describe('trainingProgress — trainees log their own practice, staff read it', () => {
+    const HOUR = 60 * 60 * 1000;
+    const setCourse = (id, fromMs, toMs) => testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'courses', id), {
+            course_type: 'Program Management',
+            training: { enabled: true, startsAt: Timestamp.fromMillis(Date.now() + fromMs), endsAt: Timestamp.fromMillis(Date.now() + toMs) },
+        });
+    });
+
+    it('lets a trainee write their own profile and activity while open', async () => {
+        await setCourse('open', -HOUR, HOUR);
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'trainees', 'plainUser'), { uid: 'plainUser', participantId: 'p1', saves: 0 }));
+        await assertSucceeds(updateDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'trainees', 'plainUser'), { saves: 1 }));
+        await assertSucceeds(getDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'trainees', 'plainUser')));
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'activity', 'a1'), { uid: 'plainUser', kind: 'view', view: 'courses' }));
+    });
+    it('refuses writing as someone else, editing activity, or reading others', async () => {
+        await setCourse('open', -HOUR, HOUR);
+        await assertFails(setDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'trainees', 'facilitator'), { uid: 'facilitator' }));
+        await assertFails(setDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'activity', 'a2'), { uid: 'facilitator', kind: 'view' }));
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'activity', 'a3'), { uid: 'plainUser', kind: 'view' }));
+        await assertFails(updateDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'activity', 'a3'), { kind: 'save' }));
+        await assertFails(getDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'activity', 'a3')));
+        await assertFails(getDocs(collection(as('plainUser'), 'trainingProgress', 'open', 'trainees')));
+    });
+    it('refuses trainee writes after the course and lets staff read', async () => {
+        await setCourse('done', -2 * HOUR, -HOUR);
+        await assertFails(setDoc(doc(as('plainUser'), 'trainingProgress', 'done', 'trainees', 'plainUser'), { uid: 'plainUser' }));
+        await assertFails(setDoc(doc(as('plainUser'), 'trainingProgress', 'done', 'activity', 'a1'), { uid: 'plainUser' }));
+        await assertSucceeds(getDocs(collection(as('facilitator'), 'trainingProgress', 'done', 'trainees')));
+        await assertSucceeds(getDocs(collection(as('facilitator'), 'trainingProgress', 'done', 'activity')));
+    });
+});
+
+describe('participants — the training link is saved on the course record', () => {
+    it('lets a signed-in trainee save and clear their link on a participant', async () => {
+        await assertSucceeds(updateDoc(doc(as('plainUser'), 'participants', 'p1'), { trainingLink: { uid: 'plainUser', courseId: 'publicCourse', method: 'email' } }));
+        await assertSucceeds(updateDoc(doc(as('plainUser'), 'participants', 'p1'), { trainingLink: null }));
+    });
+});

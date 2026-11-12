@@ -227,7 +227,8 @@
       "admin_notifications": "Notify",
       "admin_problems": "Problems",
       "admin_usage": "Usage",
-      "admin_updates": "Updates"
+      "admin_updates": "Updates",
+      "training": "Training"
     },
     "dash_tabs": {
       "combined": "All",
@@ -2149,7 +2150,8 @@
       "participants": "Participants",
       "test_scores": "Test Scores",
       "osce": "OSCE Checklists",
-      "type_dashboard": "{{type}} Dashboard"
+      "type_dashboard": "{{type}} Dashboard",
+      "training": "Training link"
     },
     "toast": {
       "approval_failed": "Approval failed: {{message}}",

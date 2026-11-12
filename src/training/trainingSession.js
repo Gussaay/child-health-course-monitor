@@ -16,7 +16,9 @@
 // sessionStorage so it survives the app rewriting the address bar and page
 // reloads, but never leaks into another tab or a later visit.
 
-export const TRAINING_PATH = /^\/training\/([A-Za-z0-9_-]{1,128})\/?$/;
+// The link itself, and every page address inside a training tab, which keeps
+// the /training/<courseId> prefix so the address always shows the training link.
+export const TRAINING_PATH = /^\/training\/([A-Za-z0-9_-]{1,128})(?=\/|$)/;
 export const SANDBOX_ROOT = 'trainingSandboxes';
 const STORAGE_KEY = 'chm_training_course';
 
@@ -26,11 +28,16 @@ function readCourseId() {
         const match = TRAINING_PATH.exec(window.location.pathname);
         if (match) {
             sessionStorage.setItem(STORAGE_KEY, match[1]);
-            // The app routes by address; start it on its home page.
-            window.history.replaceState(null, '', '/');
             return match[1];
         }
-        return sessionStorage.getItem(STORAGE_KEY) || null;
+        const saved = sessionStorage.getItem(STORAGE_KEY) || null;
+        // A training tab never leaves training mode. If something sent it to a
+        // plain address, put the training prefix back.
+        if (saved) {
+            const { pathname, search, hash } = window.location;
+            window.history.replaceState(window.history.state, '', `/training/${saved}${pathname === '/' ? '' : pathname}${search}${hash}`);
+        }
+        return saved;
     } catch {
         return null;
     }
@@ -68,10 +75,9 @@ export function isTrainingMode() {
     return !!COURSE_ID;
 }
 
-/** Leaves training mode and opens the normal app. */
-export function exitTraining() {
-    try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* storage blocked */ }
-    window.location.replace('/');
+/** '/training/<courseId>' in a training tab, '' otherwise. Page addresses start with it. */
+export function trainingPathPrefix() {
+    return COURSE_ID ? `/training/${COURSE_ID}` : '';
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;

@@ -11,18 +11,21 @@
 //  4. shows a thin "Training mode" bar above the app with an Exit button.
 // Outside training mode it renders the app untouched.
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as fs from '@firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../hooks/useAuth';
 import {
-    isTrainingMode, trainingCourseId, exitTraining, trainingStatus,
+    isTrainingMode, trainingCourseId, trainingStatus,
     trainingEndsAt, trainingStartsAt, SANDBOX_ROOT,
 } from './trainingSession.js';
+import {
+    loadTrainee, loadCourseParticipants, linkTrainee, startTrainingRecorder, stopTrainingRecorder,
+} from './trainingProgress.js';
+import { suggestParticipant, autoLinkParticipant, norm, digits } from './trainingRows.js';
 
 const SEEDED_KEY = 'chm_training_seeded';
-const BATCH_SIZE = 400;
 
 function useL() {
     const { i18n } = useTranslation();
@@ -31,33 +34,71 @@ function useL() {
 }
 
 const fmtDate = (d, ar) => (d ? d.toLocaleDateString(ar ? 'ar-EG' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '');
+// Raise when the seed copies more. A sandbox seeded by an older version gets
+// only what was added since (copying again would overwrite practice edits).
+const SEED_VERSION = 2;
+const MAX_BATCH_DOCS = 400;
+const MAX_BATCH_BYTES = 8 * 1024 * 1024; // Firestore refuses commits over 10 MB
 
-// Copies the real facilities of the course's state into the sandbox once.
+// The people and organisation lists the forms pick from (facilitators,
+// coordinators, partners/funders). Copied whole: trainees choose real names
+// in their practice courses and can add or edit them in the copy.
+const SEED_LISTS = ['facilitators', 'funders', 'federalCoordinators', 'stateCoordinators', 'localityCoordinators', 'coordinators'];
+
+async function copyDocs(courseId, collectionName, docs) {
+    let batch = fs.writeBatch(db);
+    let count = 0;
+    let bytes = 0;
+    for (const d of docs) {
+        const data = d.data();
+        const size = (() => { try { return JSON.stringify(data).length; } catch { return 50000; } })();
+        if (count > 0 && (count >= MAX_BATCH_DOCS || bytes + size > MAX_BATCH_BYTES)) {
+            await batch.commit();
+            batch = fs.writeBatch(db);
+            count = 0;
+            bytes = 0;
+        }
+        batch.set(fs.doc(db, SANDBOX_ROOT, courseId, collectionName, d.id), data);
+        count += 1;
+        bytes += size;
+    }
+    if (count > 0) await batch.commit();
+    return docs.length;
+}
+
+// Fills the course's sandbox with copies of real reference data, once.
 // Uses the raw SDK on purpose: the app's wrapped imports would read the
-// (empty) sandbox instead of the real list.
+// (empty) sandbox instead of the real lists.
 async function seedSandbox(courseId, course) {
     const markerRef = fs.doc(db, SANDBOX_ROOT, courseId);
     const marker = await fs.getDoc(markerRef);
-    if (marker.exists() && marker.data()?.seededAt) return;
+    const done = marker.exists() ? (marker.data()?.seedVersion || (marker.data()?.seededAt ? 1 : 0)) : 0;
+    if (done >= SEED_VERSION) return;
 
-    let copied = 0;
-    if (course.state) {
+    const counts = {};
+    // Version 1: the health facilities of the course's state.
+    if (done < 1 && course.state) {
         const snap = await fs.getDocs(fs.query(fs.collection(db, 'healthFacilities'), fs.where('الولاية', '==', course.state)));
-        const docs = snap.docs.filter((d) => d.data()?.isDeleted !== true);
-        for (let i = 0; i < docs.length; i += BATCH_SIZE) {
-            const batch = fs.writeBatch(db);
-            docs.slice(i, i + BATCH_SIZE).forEach((d) => {
-                batch.set(fs.doc(db, SANDBOX_ROOT, courseId, 'healthFacilities', d.id), d.data());
-            });
-            await batch.commit();
-            copied += Math.min(BATCH_SIZE, docs.length - i);
+        counts.healthFacilities = await copyDocs(courseId, 'healthFacilities', snap.docs.filter((d) => d.data()?.isDeleted !== true));
+    }
+    // Version 2: facilitators, coordinators and partners.
+    if (done < 2) {
+        for (const name of SEED_LISTS) {
+            try {
+                const snap = await fs.getDocs(fs.collection(db, name));
+                counts[name] = await copyDocs(courseId, name, snap.docs);
+            } catch (e) {
+                console.warn(`[training] could not copy ${name}:`, e?.code || e?.message);
+            }
         }
     }
     await fs.setDoc(markerRef, {
         courseId,
         courseType: course.course_type || '',
         state: course.state || '',
-        facilitiesCopied: copied,
+        ...(counts.healthFacilities !== undefined ? { facilitiesCopied: counts.healthFacilities } : {}),
+        copied: counts,
+        seedVersion: SEED_VERSION,
         seededAt: fs.serverTimestamp(),
     }, { merge: true });
 }
@@ -99,15 +140,13 @@ export function TrainingClosed({ status, course }) {
                         ? L('هذا الرابط غير مفعّل لهذه الدورة.', 'Training is not switched on for this course.')
                         : L('كان يعمل خلال فترة الدورة فقط، وقد انتهت.', 'It only worked during the course period, which has now ended.')}
             </p>
-            <button type="button" onClick={exitTraining} className="px-4 py-2 rounded-lg bg-slate-800 text-white text-sm font-semibold hover:bg-slate-700">
-                {L('فتح التطبيق', 'Open the app')}
-            </button>
         </Centered>
     );
 }
 
-function TrainingBar({ course }) {
+function TrainingBar({ course, trainee, onChangeWho }) {
     const { ar, L } = useL();
+    const who = trainee?.participantName || (trainee?.linked ? L('ضيف', 'guest') : '');
     return (
         <div dir={ar ? 'rtl' : 'ltr'} className="bg-amber-400 text-amber-950 text-xs sm:text-sm px-3 py-1.5 flex items-center justify-center gap-3 flex-wrap" role="status">
             <span className="font-bold">🎓 {L('وضع التدريب', 'Training mode')}</span>
@@ -116,9 +155,96 @@ function TrainingBar({ course }) {
                 {' '}
                 {L(`ينتهي ${fmtDate(trainingEndsAt(course), ar)}.`, `Ends ${fmtDate(trainingEndsAt(course), ar)}.`)}
             </span>
-            <button type="button" onClick={exitTraining} className="underline font-semibold">
-                {L('خروج', 'Exit')}
-            </button>
+            {who && (
+                <button type="button" onClick={onChangeWho} className="underline" title={L('تغيير', 'Change')}>
+                    {L(`تتدرّب باسم: ${who}`, `Practising as: ${who}`)}
+                </button>
+            )}
+        </div>
+    );
+}
+
+// "Who are you?" — links the signed-in account to the course participant, so
+// the course's Training tab shows each participant's practice.
+function WhoAreYou({ courseId, course, user, existing, onDone }) {
+    const { ar, L } = useL();
+    const [participants, setParticipants] = useState(null);
+    const [search, setSearch] = useState('');
+    const [chosen, setChosen] = useState(existing?.participantId || null);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        loadCourseParticipants(courseId)
+            .then((list) => {
+                if (cancelled) return;
+                setParticipants(list);
+                if (!existing?.participantId) setChosen(suggestParticipant(list, user)?.id || null);
+            })
+            .catch(() => { if (!cancelled) setParticipants([]); });
+        return () => { cancelled = true; };
+    }, [courseId, user, existing]);
+
+    const shown = useMemo(() => {
+        const q = norm(search);
+        const list = participants || [];
+        return q ? list.filter((p) => norm(p.name).includes(q) || digits(p.phone).includes(q.replace(/\D/g, '') || '~')) : list;
+    }, [participants, search]);
+
+    const save = async (participant) => {
+        setSaving(true);
+        setError(null);
+        try {
+            onDone(await linkTrainee(courseId, user, participant, existing));
+        } catch (e) {
+            console.warn('[training] could not link participant:', e?.code || e?.message);
+            setError(L('تعذّر الحفظ. تحقق من الاتصال ثم أعد المحاولة.', 'Could not save. Check your connection and try again.'));
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div dir={ar ? 'rtl' : 'ltr'} className="min-h-screen flex items-start sm:items-center justify-center bg-slate-50 p-4">
+            <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <div className="text-xs font-bold text-amber-700 mb-1">🎓 {L('وضع التدريب', 'Training mode')} · {course.course_type}</div>
+                <h1 className="text-lg font-bold text-slate-800 mb-1">{L('من أنت؟', 'Who are you?')}</h1>
+                <p className="text-sm text-slate-600 mb-3">
+                    {L('اختر اسمك من قائمة المشاركين في الدورة، حتى يرى المدرّبون تدريبك.', 'Pick your name from the course participants, so your trainers can follow your practice.')}
+                </p>
+                <input
+                    type="search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={L('ابحث بالاسم أو رقم الهاتف', 'Search by name or phone')}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-2"
+                />
+                <div className="max-h-72 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100 mb-3">
+                    {participants === null && <p className="p-3 text-sm text-slate-500">{L('جارٍ التحميل…', 'Loading…')}</p>}
+                    {participants !== null && shown.length === 0 && <p className="p-3 text-sm text-slate-500">{L('لا يوجد مشاركون مطابقون.', 'No matching participants.')}</p>}
+                    {shown.map((p) => (
+                        <label key={p.id} className={`flex items-center gap-3 px-3 py-2 cursor-pointer ${chosen === p.id ? 'bg-amber-50' : ''}`}>
+                            <input type="radio" name="trainee" checked={chosen === p.id} onChange={() => setChosen(p.id)} />
+                            <span className="min-w-0">
+                                <span className="block text-sm font-medium text-slate-800 truncate">{p.name}</span>
+                                {(p.job_title || p.phone) && <span className="block text-xs text-slate-500 truncate" dir="ltr">{[p.job_title, p.phone].filter(Boolean).join(' · ')}</span>}
+                            </span>
+                        </label>
+                    ))}
+                </div>
+                {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
+                <button
+                    type="button"
+                    disabled={!chosen || saving}
+                    onClick={() => save(participants.find((p) => p.id === chosen))}
+                    className="w-full px-4 py-2 rounded-lg bg-slate-800 text-white text-sm font-semibold disabled:opacity-50"
+                >
+                    {L('هذا أنا، ابدأ التدريب', "That's me, start practising")}
+                </button>
+                <button type="button" disabled={saving} onClick={() => save(null)} className="w-full mt-2 text-sm text-slate-600 underline">
+                    {L('لست في القائمة (مدرّب أو ضيف)', "I'm not on the list (trainer or guest)")}
+                </button>
+            </div>
         </div>
     );
 }
@@ -131,8 +257,11 @@ function TrainingGateInner({ children }) {
     const [loadError, setLoadError] = useState(null);
     const [now, setNow] = useState(() => Date.now());
     const [seedState, setSeedState] = useState(() => {
-        try { return sessionStorage.getItem(SEEDED_KEY) === courseId ? 'done' : 'idle'; } catch { return 'idle'; }
+        try { return sessionStorage.getItem(SEEDED_KEY) === `${courseId}:v${SEED_VERSION}` ? 'done' : 'idle'; } catch { return 'idle'; }
     });
+    // undefined = not loaded yet, null = this account never linked.
+    const [trainee, setTrainee] = useState(undefined);
+    const [choosing, setChoosing] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -155,7 +284,7 @@ function TrainingGateInner({ children }) {
         setSeedState('running');
         seedSandbox(courseId, course)
             .then(() => {
-                try { sessionStorage.setItem(SEEDED_KEY, courseId); } catch { /* storage blocked */ }
+                try { sessionStorage.setItem(SEEDED_KEY, `${courseId}:v${SEED_VERSION}`); } catch { /* storage blocked */ }
                 setSeedState('done');
             })
             .catch((e) => {
@@ -164,6 +293,37 @@ function TrainingGateInner({ children }) {
                 setSeedState('done');
             });
     }, [status, user, seedState, courseId, course]);
+
+    // Who is practising: load the account's link once signed in.
+    useEffect(() => {
+        if (status !== 'open' || !user) { setTrainee(undefined); return undefined; }
+        let cancelled = false;
+        // Already linked: carry on. Otherwise link automatically when the
+        // account matches a registered participant (saved link, e-mail or
+        // phone), and only ask "Who are you?" when it does not.
+        (async () => {
+            const t = await loadTrainee(courseId, user.uid);
+            if (t?.linked) return t;
+            let list = [];
+            try { list = await loadCourseParticipants(courseId); } catch { /* ask instead */ }
+            const auto = autoLinkParticipant(list, user);
+            if (!auto) return t;
+            return linkTrainee(courseId, user, auto.participant, t, auto.method);
+        })()
+            .then((t) => { if (!cancelled) setTrainee(t); })
+            .catch((e) => {
+                console.warn('[training] could not load trainee:', e?.code || e?.message);
+                if (!cancelled) setTrainee(null);
+            });
+        return () => { cancelled = true; };
+    }, [status, user, courseId]);
+
+    // Record what this trainee saves and opens, for the course's Training tab.
+    useEffect(() => {
+        if (!user || !trainee?.linked) return undefined;
+        startTrainingRecorder(courseId, user, trainee);
+        return () => stopTrainingRecorder();
+    }, [courseId, user, trainee]);
 
     if (loadError) {
         return (
@@ -182,10 +342,26 @@ function TrainingGateInner({ children }) {
     if (!authLoading && user && seedState !== 'done') {
         return <Centered><p className="text-sm text-slate-600">{L('جارٍ تجهيز نسخة التدريب…', 'Preparing your practice copy…')}</p></Centered>;
     }
+    if (!authLoading && user) {
+        if (trainee === undefined) {
+            return <Centered><p className="text-sm text-slate-600">{L('جارٍ فتح رابط التدريب…', 'Opening the training link…')}</p></Centered>;
+        }
+        if (choosing || !trainee?.linked) {
+            return (
+                <WhoAreYou
+                    courseId={courseId}
+                    course={course}
+                    user={user}
+                    existing={trainee}
+                    onDone={(t) => { setTrainee(t); setChoosing(false); }}
+                />
+            );
+        }
+    }
 
     return (
         <>
-            <TrainingBar course={course} />
+            <TrainingBar course={course} trainee={user ? trainee : null} onChangeWho={() => setChoosing(true)} />
             {children}
         </>
     );

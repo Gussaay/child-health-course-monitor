@@ -29,6 +29,7 @@ import {
 
 import { DailyEvaluationShare } from './DailyEvaluation';
 import TrainingLinkShare from '../training/TrainingLinkShare.jsx';
+const TrainingActivityView = React.lazy(() => import('../training/TrainingActivityView.jsx'));
 import { isTrainingMode } from '../training/trainingSession.js';
 import { isOperationalGuideCourse } from './ExerciseMonitoring.jsx';
 import { ParticipantsView } from './Participants';
@@ -2329,6 +2330,8 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         !isGlobalView && selectedCourse && { id: 'reports', label: t('course_page.tabs.individual_report', 'Individual Participant Report'), short: t('ui.short.report', 'Report'), go: () => setActiveCoursesTab('reports') },
         showTestScores && { id: 'enter-test-scores', label: t('course_page.tabs.test_scores', 'Test Scores'), short: t('ui.short.tests', 'Tests'), go: () => setActiveCoursesTab('enter-test-scores') },
         showExercises && { id: 'exercises', label: t('course_page.tabs.exercises', 'Exercises'), short: t('ui.short.exercises', 'Exercises'), go: () => setActiveCoursesTab('exercises') },
+        // Training link activity (src/training/): who practised and what they did.
+        !isGlobalView && selectedCourse?.training && canManageCourse && !isTrainingMode() && { id: 'training-activity', label: t('course_page.tabs.training', 'Training link'), short: t('ui.short.training', 'Training'), go: openTab('training-activity') },
         !isGlobalView && selectedCourse && canManageCourseCertificates && { id: 'course-certificates', label: <>{t('course_page.tabs.certificates', 'Certificates')}{selectedCourse.isCertificateApproved && <span className="ms-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">{t('course_page.status.approved', 'Approved')}</span>}</>, short: t('ui.short.certificates', 'Certificates'), go: openTab('course-certificates') },
     ];
     // The app's round "Add" button (bottom corner) adds a course while the course list is open.
@@ -2464,6 +2467,12 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                     the course. Guarded twice: the tab is hidden without permission and
                     the panel itself refuses to render, so a stale activeCoursesTab
                     value can't expose it. */}
+                {activeCoursesTab === 'training-activity' && selectedCourse && canManageCourse && !isTrainingMode() && (
+                    <Suspense fallback={<Card className="p-6 text-center text-sm text-gray-500">…</Card>}>
+                        <TrainingActivityView course={selectedCourse} />
+                    </Suspense>
+                )}
+
                 {activeCoursesTab === 'course-certificates' && selectedCourse && (
                     canManageCourseCertificates ? (
                         <CertificateApprovalsView

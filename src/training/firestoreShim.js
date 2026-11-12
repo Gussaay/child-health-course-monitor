@@ -94,46 +94,96 @@ export function doc(parent, ...segments) {
     return real.doc(parent, ...segments);
 }
 
+// --- Activity ----------------------------------------------------------------
+// TrainingGate registers a recorder (trainingProgress.js) so the course's
+// Training activity dashboard can show what each trainee saved. Only writes
+// inside the sandbox count; account records and reference data never do.
+
+let activityRecorder = null;
+
+export function setTrainingActivityRecorder(fn) {
+    activityRecorder = typeof fn === 'function' ? fn : null;
+}
+
+/** { collection, docId } of a sandbox document path, or null. */
+export function sandboxTarget(courseId, path) {
+    const parts = String(path || '').split('/').filter(Boolean);
+    if (!courseId || parts[0] !== SANDBOX_ROOT || parts[1] !== courseId || parts.length < 3) return null;
+    return { collection: parts[2], docId: parts.length >= 4 ? parts[3] : null };
+}
+
+function report(kind, paths) {
+    if (!activityRecorder) return;
+    const courseId = trainingCourseId();
+    const targets = paths.map((p) => sandboxTarget(courseId, p)).filter(Boolean);
+    if (targets.length === 0) return;
+    try { activityRecorder({ kind, targets }); } catch { /* never break a save */ }
+}
+
+function tracked(promise, kind, paths) {
+    if (!trainingCourseId()) return promise;
+    return promise.then((result) => { report(kind, paths); return result; });
+}
+
 // --- Writes ----------------------------------------------------------------
 
 export function setDoc(ref, ...rest) {
     try { guard(ref); } catch (e) { return Promise.reject(e); }
-    return real.setDoc(ref, ...rest);
+    return tracked(real.setDoc(ref, ...rest), 'save', [ref.path]);
 }
 
 export function updateDoc(ref, ...rest) {
     try { guard(ref); } catch (e) { return Promise.reject(e); }
-    return real.updateDoc(ref, ...rest);
+    return tracked(real.updateDoc(ref, ...rest), 'save', [ref.path]);
 }
 
 export function deleteDoc(ref) {
     try { guard(ref); } catch (e) { return Promise.reject(e); }
-    return real.deleteDoc(ref);
+    return tracked(real.deleteDoc(ref), 'delete', [ref.path]);
 }
 
 export function addDoc(ref, data) {
     try { guard(real.doc(ref)); } catch (e) { return Promise.reject(e); }
-    return real.addDoc(ref, data);
+    if (!trainingCourseId()) return real.addDoc(ref, data);
+    return real.addDoc(ref, data).then((created) => { report('save', [created.path]); return created; });
 }
 
-function guardWrites(target) {
+function guardWrites(target, written) {
     if (!trainingCourseId()) return target;
     for (const method of ['set', 'update', 'delete']) {
         const original = target[method].bind(target);
         target[method] = (ref, ...rest) => {
             guard(ref);
             original(ref, ...rest);
+            written?.push({ kind: method === 'delete' ? 'delete' : 'save', path: ref.path });
             return target;
         };
     }
     return target;
 }
 
+function reportAll(written) {
+    const saves = written.filter((w) => w.kind === 'save').map((w) => w.path);
+    const deletes = written.filter((w) => w.kind === 'delete').map((w) => w.path);
+    if (saves.length) report('save', saves);
+    if (deletes.length) report('delete', deletes);
+}
+
 export function writeBatch(firestore) {
-    return guardWrites(real.writeBatch(firestore));
+    const batch = real.writeBatch(firestore);
+    if (!trainingCourseId()) return batch;
+    const written = [];
+    guardWrites(batch, written);
+    const commit = batch.commit.bind(batch);
+    batch.commit = () => commit().then((result) => { reportAll(written); return result; });
+    return batch;
 }
 
 export function runTransaction(firestore, updateFunction, options) {
     if (!trainingCourseId()) return real.runTransaction(firestore, updateFunction, options);
-    return real.runTransaction(firestore, (tx) => updateFunction(guardWrites(tx)), options);
+    let written = [];
+    return real.runTransaction(firestore, (tx) => {
+        written = []; // a retried transaction starts over
+        return updateFunction(guardWrites(tx, written));
+    }, options).then((result) => { reportAll(written); return result; });
 }

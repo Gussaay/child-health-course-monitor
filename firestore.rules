@@ -507,6 +507,23 @@ service cloud.firestore {
       allow write: if request.auth != null && trainingOpen(courseId);
     }
 
+    // Who practised on a course's training link and what they did
+    // (src/training/trainingProgress.js). Each trainee writes only their own
+    // profile and activity lines, only while the link is open; staff read
+    // them in the course's Training tab. Activity lines are never edited.
+    match /trainingProgress/{courseId}/trainees/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || isStaff());
+      allow create, update: if request.auth != null && request.auth.uid == uid
+                            && request.resource.data.get('uid', null) == uid
+                            && trainingOpen(courseId);
+    }
+    match /trainingProgress/{courseId}/activity/{entryId} {
+      allow read: if isStaff();
+      allow create: if request.auth != null
+                    && request.resource.data.get('uid', null) == request.auth.uid
+                    && trainingOpen(courseId);
+    }
+
     // =========================================================================
     // --- Certificate Templates ---
     // =========================================================================

@@ -133,6 +133,7 @@ import {
     applyDerivedPermissions 
 } from './components/permissions.js';
 import { isTrainingMode } from './training/trainingSession.js';
+import { recordTrainingView } from './training/trainingProgress.js';
 
 import {
     listAllDataForCourse, deleteFacilitator,
@@ -985,6 +986,8 @@ export default function App() {
     };
 
     const [view, setView] = useState("landing");
+    // Training link: count the screens a trainee opens (src/training/trainingProgress.js).
+    useEffect(() => { recordTrainingView(view); }, [view]);
     const [activeCourseType, setActiveCourseType] = useState(null);
     const [selectedCourseId, setSelectedCourseId] = useState(null);
     const [selectedParticipantId, setSelectedParticipantId] = useState(null);

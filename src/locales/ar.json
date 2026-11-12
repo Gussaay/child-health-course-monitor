@@ -223,7 +223,8 @@
       "admin_notifications": "الإشعارات",
       "admin_problems": "البلاغات",
       "admin_usage": "الاستخدام",
-      "admin_updates": "التحديثات"
+      "admin_updates": "التحديثات",
+      "training": "تدريب"
     },
     "dash_tabs": {
       "combined": "الكل",
@@ -2145,7 +2146,8 @@
       "participants": "المشاركون",
       "test_scores": "درجات الاختبارات",
       "osce": "قوائم الأوسكي",
-      "type_dashboard": "لوحة متابعة {{type}}"
+      "type_dashboard": "لوحة متابعة {{type}}",
+      "training": "رابط التدريب"
     },
     "toast": {
       "approval_failed": "فشلت الموافقة: {{message}}",
