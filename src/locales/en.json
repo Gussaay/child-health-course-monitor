@@ -8706,5 +8706,31 @@
     "hint": "Save this form as a PDF with the ministry letterhead, ready to print",
     "failed": "Could not make the PDF: {{error}}",
     "not_found": "Could not find the form to print."
+  },
+  "qr_scanner": {
+    "back_to_app": "Back to the app",
+    "camera_blocked": "The camera could not be opened here",
+    "camera_blocked_hint": "Take a photo of the QR code, or choose one from your pictures, and it will be read from the photo.",
+    "choose_image": "From pictures",
+    "close": "Close",
+    "copied": "Copied",
+    "copy": "Copy",
+    "link_placeholder": "Paste or type the link",
+    "no_code_in_photo": "No QR code was found in that picture. Try again closer, with the whole code in view.",
+    "open": "Open",
+    "open_in_browser": "Open in browser",
+    "photo_failed": "That picture could not be read.",
+    "point": "Point the camera at the QR code",
+    "row_hint": "Open a pre-test, post-test, evaluation or other app QR code here.",
+    "row_title": "Scan QR code",
+    "scan": "Scan",
+    "scan_again": "Scan again",
+    "starting": "Opening the camera…",
+    "take_photo": "Take photo",
+    "text_found": "This code holds text",
+    "title": "Scan QR code",
+    "try_camera_again": "Try the camera again",
+    "type_link": "Type a link",
+    "web_link": "This code holds a web link that is not part of the app"
   }
 }
