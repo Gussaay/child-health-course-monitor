@@ -9,13 +9,14 @@ import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { STATE_LOCALITIES } from './constants';
 
 // --- Icons & Data Imports ---
-import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History, Bell, Trash2, Download, MessageSquareWarning, AlertTriangle, Sparkles } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History, Bell, Trash2, Download, MessageSquareWarning, AlertTriangle, Sparkles, UserPlus } from 'lucide-react';
 
 // Lazy: the reports carry screenshots, and nobody opening Manage User Roles
 // should pay to download a screen they are not looking at.
 const ProblemReportsTab = lazy(() => import('./ProblemReports').then(m => ({ default: m.ProblemReportsTab })));
 const AiActivityTab = lazy(() => import('./AiActivityTab'));
 const UsageCostPanel = lazy(() => import('./UsageCostPanel'));
+const RegistrationsTab = lazy(() => import('./RegistrationsTab'));
 import { listFederalCoordinators } from '../data';
 import { downloadAndOpenFile } from '../utils/fileDownloader';
 import { nextDisplayVersion, displayVersionFor } from '../utils/appVersionLabel';
@@ -58,6 +59,8 @@ const AdminTabs = ({ activeTab, setActiveTab, currentUserRoles = [] }) => {
     const { t } = useTranslation();
     const tabs = [
         { key: 'roles', label: 'Manage User Roles', short: 'Roles', icon: Users },
+        // Who signed up, their work details and requests to join a team.
+        { key: 'registrations', label: 'Registrations', short: 'Sign-ups', icon: UserPlus },
         { key: 'permissions', label: 'Manage Role Permissions', short: 'Permissions', icon: Shield },
         { key: 'notifications', label: 'Push Notifications', short: 'Notify', icon: Bell }, 
         // What people reported, and what the app caught crashing by itself.
@@ -1431,6 +1434,15 @@ export function AdminDashboard({ appRoles = [] }) {
 
             <div className="mt-4">
                 {activeTab === 'roles' && renderUserRolesTab()}
+                {activeTab === 'registrations' && (
+                    <Suspense fallback={<Spinner />}>
+                        <RegistrationsTab
+                            users={users}
+                            approverEmail={currentUser?.email}
+                            onUserUpdated={(id, patch) => setUsers(list => list.map(u => (u.id === id ? { ...u, ...patch } : u)))}
+                        />
+                    </Suspense>
+                )}
                 {activeTab === 'permissions' && renderRolePermissionsTab()}
                 {activeTab === 'usage' && currentUserRoles.includes('super_user') && renderUsageTab()}
                 {activeTab === 'updates' && currentUserRoles.includes('super_user') && renderUpdatesTab()}

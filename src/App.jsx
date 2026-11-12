@@ -31,6 +31,8 @@ import { clearRememberedFilters } from './utils/rememberedState';
 import { usePushNotifications, usePushEvents } from './hooks/usePushNotifications';
 import { toggleLanguage, setPreferredLanguage, normalizeLanguage, currentLanguage, addressForcesLanguage } from './utils/languagePreference';
 import LanguagePickerModal from './components/LanguagePickerModal';
+import { isWorkProfileComplete, describeJob, describeWorkplace, optionLabel, HR_GROUPS } from './utils/workProfile';
+const WorkProfileModal = lazy(() => import('./components/WorkProfileModal'));
 
 // --- PRE-FLIGHT LANGUAGE CHECK ---
 if (typeof window !== 'undefined') {
@@ -792,6 +794,12 @@ export default function App() {
     const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
     // users/{uid}.preferredLanguage: undefined until read, null when none saved.
     const [savedLanguage, setSavedLanguage] = useState(undefined);
+    // users/{uid}.workProfile + hrRequest: undefined until the server answers.
+    const [workInfo, setWorkInfo] = useState(undefined);
+    const [workProfileOpen, setWorkProfileOpen] = useState(false);
+    const [workProfileLater, setWorkProfileLater] = useState(() => {
+        try { return sessionStorage.getItem('work_profile_later') === '1'; } catch { return false; }
+    });
     const [sideMenuOpen, setSideMenuOpen] = useState(false);
     // Nothing sticks to the top of a page any more (the header scrolls away
     // with the page), so --app-top is only the download banner's height: the
@@ -884,6 +892,7 @@ export default function App() {
         const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
             if (unsubscribeDoc) { unsubscribeDoc(); unsubscribeDoc = null; }
             setSavedLanguage(undefined);
+            setWorkInfo(undefined);
             if (!user) return;
 
             const userRef = doc(db, 'users', user.uid);
@@ -904,6 +913,12 @@ export default function App() {
                     if (savedLang && savedLang !== currentLanguage() && !addressForcesLanguage()) {
                         i18n.changeLanguage(savedLang);
                     }
+                }
+
+                // Work details asked for after sign in / sign up. Same rule as
+                // the language: a cached copy without them is not trusted.
+                if (data.workProfile || !docSnap.metadata.fromCache) {
+                    setWorkInfo({ profile: data.workProfile || null, hrRequest: data.hrRequest || null });
                 }
 
                 if (!docSnap.exists()) return;
@@ -3436,6 +3451,27 @@ case 'meetings':
                                     </div>
                                 </div>
                                 
+                                <div className="border border-gray-200 p-3 rounded-lg bg-white shadow-sm md:col-span-2 flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <span className="block text-xs text-gray-500 font-bold mb-1">{t('work_profile.card_title', 'Work details')}</span>
+                                        {isWorkProfileComplete(workInfo?.profile) ? (
+                                            <span className="block text-sm text-gray-800 font-medium">
+                                                {[describeJob(workInfo.profile, currentLanguage()), describeWorkplace(workInfo.profile, currentLanguage()), [workInfo.profile.state, workInfo.profile.state === 'Federal' ? '' : workInfo.profile.locality].filter(Boolean).join(' / ')].filter(Boolean).join(' · ')}
+                                            </span>
+                                        ) : (
+                                            <span className="block text-sm text-amber-700">{t('work_profile.card_missing', 'Not filled yet.')}</span>
+                                        )}
+                                        {workInfo?.hrRequest?.group && workInfo.hrRequest.status !== 'cancelled' && (
+                                            <span className="block text-xs text-gray-500 mt-1">
+                                                {t('work_profile.card_request', 'Team request')}: {optionLabel(HR_GROUPS, workInfo.hrRequest.group, currentLanguage())} · {t(`work_profile.status_${workInfo.hrRequest.status}`, workInfo.hrRequest.status)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <Button variant="secondary" onClick={() => setWorkProfileOpen(true)} className="shrink-0">
+                                        {t('work_profile.edit', 'Edit')}
+                                    </Button>
+                                </div>
+
                                 <div className="border border-gray-200 p-3 rounded-lg bg-white shadow-sm md:col-span-2 flex items-center justify-between gap-3">
                                     <div>
                                         <span className="block text-xs text-gray-500 font-bold mb-1">{t('app_extra.profile.default_language', 'Default language')}</span>
@@ -3483,6 +3519,34 @@ case 'meetings':
             {/* First sign-in: ask once for the default language and save it on the account. */}
             {user && !authLoading && !isProfileIncomplete && !isMinimalUILayout && savedLanguage === null && !addressForcesLanguage() && (
                 <LanguagePickerModal onDone={(code) => setSavedLanguage(code)} />
+            )}
+
+            {/* After sign in / sign up (once the language is chosen): job, place of
+                work, workplace and an optional request to join an HR group. Old
+                accounts are asked too, the next time they open the app. Also
+                opened from My Profile to edit. */}
+            {user && !authLoading && !isProfileIncomplete && !isMinimalUILayout && workInfo !== undefined && (
+                workProfileOpen || (
+                    !workProfileLater && !isWorkProfileComplete(workInfo.profile)
+                    && savedLanguage !== undefined && (savedLanguage !== null || addressForcesLanguage())
+                )
+            ) && (
+                <Suspense fallback={null}>
+                    <WorkProfileModal
+                        uid={user.uid}
+                        displayName={user.displayName}
+                        initial={workInfo.profile}
+                        hrRequest={workInfo.hrRequest}
+                        onDone={(profile) => { setWorkInfo((w) => ({ ...(w || {}), profile })); setWorkProfileOpen(false); }}
+                        onLater={() => {
+                            if (!workProfileOpen) {
+                                setWorkProfileLater(true);
+                                try { sessionStorage.setItem('work_profile_later', '1'); } catch { /* storage blocked */ }
+                            }
+                            setWorkProfileOpen(false);
+                        }}
+                    />
+                </Suspense>
             )}
 
             <Suspense fallback={null}>
