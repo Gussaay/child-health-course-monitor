@@ -53,6 +53,7 @@ import {
     INFANT_CLASSIFY_OPTIONS, INFANT_TREATMENT_OPTIONS,
     getExerciseById, getExercisesForSubCourse, matchesSubCourse,
 } from './exercises';
+import { findLinkedParticipant } from '../../utils/linkedParticipant';
 
 export {
     ONLINE_SUB_COURSE, EXERCISES, ALL_SECTIONS, SECTION_LABELS,
@@ -1741,7 +1742,7 @@ export function ExerciseCourseReport({ course, participants = [], subCourse = ON
     );
 }
 
-export function PublicExerciseView({ courseId }) {
+export function PublicExerciseView({ courseId, user = null }) {
     const { t } = useTranslation();
     const [course, setCourse] = useState(null);
     const [participants, setParticipants] = useState([]);
@@ -1761,7 +1762,11 @@ export function PublicExerciseView({ courseId }) {
                 const ps = await getCachedParticipants(courseId);
                 if (!alive) return;
                 setCourse(c);
-                setParticipants((ps || []).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+                const sorted = (ps || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                setParticipants(sorted);
+                // Opened from the app by a signed-in participant: their name is chosen already.
+                const own = findLinkedParticipant(sorted, courseId, user);
+                if (own) setPickId((current) => current || own.id);
             } catch (e) {
                 if (alive) setError(e.message);
             } finally {
@@ -1769,7 +1774,7 @@ export function PublicExerciseView({ courseId }) {
             }
         })();
         return () => { alive = false; };
-    }, [courseId]);
+    }, [courseId]); // eslint-disable-line react-hooks/exhaustive-deps -- the signed-in user only picks the first name shown
 
     if (loading) return <div className="flex justify-center p-10"><Spinner /></div>;
     if (error) return <EmptyState message={error} />;

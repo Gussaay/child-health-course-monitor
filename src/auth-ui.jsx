@@ -72,7 +72,8 @@ const AUTH_ERROR_DEFAULTS = {
 };
 
 // --- Sign-In and Sign-Up Component ---
-export function SignInBox() {
+// `above`: shown just above the sign-in box (the phone app's QR scan bar).
+export function SignInBox({ above = null } = {}) {
   const { t, i18n } = useTranslation();
   const dir = i18n.language?.startsWith('ar') ? 'rtl' : 'ltr';
   const friendlyError = (err) => {
@@ -433,7 +434,8 @@ export function SignInBox() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface p-4">
+    <div className="min-h-screen flex flex-col gap-3 items-center justify-center bg-surface p-4">
+      {above && <div dir={dir} className="w-full max-w-md">{above}</div>}
       <div dir={dir} className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl text-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">{t('auth.system_title', "Monitoring System")}</h1>

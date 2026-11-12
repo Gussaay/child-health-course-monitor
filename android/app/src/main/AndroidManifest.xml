@@ -91,6 +91,12 @@
     <!-- Needed to read the real network type (Wi-Fi vs mobile data). -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- The QR scanner (src/components/QrScanner.jsx) reads the camera inside
+         the page; Capacitor asks for this permission the first time it opens.
+         Phones without a camera can still install the app. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />

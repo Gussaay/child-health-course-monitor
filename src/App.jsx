@@ -108,6 +108,10 @@ const CLAUDE_CHAT_ENABLED = false;
 // the aiAssistant Cloud Function (Gemini and Groq free tiers, no Anthropic key).
 // The panel loads the first time it is opened.
 const DataAssistantPanel = lazy(() => import('./components/DataAssistant').then(m => ({ default: m.DataAssistantPanel })));
+// The phone app's QR scanner (camera code loads the first time it is opened).
+const QrScanner = lazy(() => import('./components/QrScanner'));
+// QR scanning is offered in the Android app only.
+const QR_SCAN_ENABLED = Capacitor.isNativePlatform();
 // Pages where the round button would sit on top of a form's own Save row.
 
 // Reporting a problem from wherever it happened.
@@ -168,6 +172,9 @@ import { notify, confirmDialog, DialogHost } from './components/dialogs';
 import ErrorBoundary, { QuietBoundary } from './components/ErrorBoundary.jsx';
 import { publicBaseUrl } from './utils/publicLink';
 import { DataAssistantCard, PageAddButton } from './components/DataAssistantLauncher';
+import { ScanQrCard } from './components/QrScanLauncher';
+import { isPublicAppPath } from './utils/appLinks';
+import { findLinkedParticipant, rememberLinkedParticipant } from './utils/linkedParticipant';
 import { usePageAddAction, useFormTitleOverride } from './utils/pageChrome';
 import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_SITE_HIDDEN_VIEWS } from './siteMode';
 import { ASK_DATA_EVENT } from './utils/askDataAssistant';
@@ -500,7 +507,7 @@ function GreetingCard({ greeting, firstName, level, levelLabel, scope, stats, st
     );
 }
 
-function Landing({ navigate, permissions, user, userStates = [], userLocalities = [], stats = null, onAskData }) {
+function Landing({ navigate, permissions, user, userStates = [], userLocalities = [], stats = null, onAskData, onScanQr }) {
     const { t, i18n } = useTranslation();
     const hour = new Date().getHours();
     const greeting = hour < 12 ? t('landing.good_morning', 'Good morning') : hour < 18 ? t('landing.good_afternoon', 'Good afternoon') : t('landing.good_evening', 'Good evening');
@@ -523,6 +530,7 @@ function Landing({ navigate, permissions, user, userStates = [], userLocalities 
             <GreetingCard greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} states={userStates} />
             <Card>
                 <div className="p-3 md:p-6">
+                    {onScanQr && <div className={onAskData && accessibleButtons.length > 0 ? 'mb-2' : 'mb-3 md:mb-5'}><ScanQrCard onOpen={onScanQr} /></div>}
                     {onAskData && accessibleButtons.length > 0 && <div className="mb-3 md:mb-5"><DataAssistantCard onOpen={onAskData} /></div>}
 
                     {accessibleButtons.length > 0 ? (
@@ -1129,6 +1137,39 @@ export default function App() {
     const applyPageRef = useRef(null);
     const formDirtyRef = useRef(false);
     const confirmLeaveRef = useRef(null);
+    // Reads the address again and opens the public page it names (set by the
+    // start-up effect below). A scanned QR code uses it to open a page in place.
+    const pathChangeRef = useRef(null);
+    // The history entry of a public page opened from the QR scanner, so Back
+    // returns to the app instead of closing it.
+    const scannedPublicRef = useRef(null);
+    const [scannedPublicOpen, setScannedPublicOpen] = useState(false);
+    const [qrScanner, setQrScanner] = useState({ loaded: false, open: false });
+    const openQrScanner = useCallback(() => setQrScanner({ loaded: true, open: true }), []);
+    const closeQrScanner = useCallback(() => setQrScanner((s) => ({ ...s, open: false })), []);
+    // A scanned app link opens here, in the app. Public pages (tests,
+    // evaluations, attendance, registration, certificates ...) open in place,
+    // signed in or not, on a history entry of their own so Back returns here.
+    // Any other page of the app is opened from its address, like a refresh,
+    // and asks for sign-in first when nobody is signed in.
+    const openScannedLink = useCallback((link) => {
+        setQrScanner((s) => ({ ...s, open: false }));
+        if (!link?.path) return;
+        if (link.public) {
+            const state = { chmIdx: (window.history.state?.chmIdx || 0) + 1, chmScan: true };
+            window.history.pushState(state, '', link.path);
+            scannedPublicRef.current = { state, url: link.path };
+            setScannedPublicOpen(true);
+            pathChangeRef.current?.();
+            window.scrollTo(0, 0);
+            return;
+        }
+        window.location.assign(link.path);
+    }, []);
+    // The arrow on a page opened from the scanner: back to where the scan began.
+    const leaveScannedPage = useCallback(() => {
+        if (scannedPublicRef.current) window.history.back();
+    }, []);
     const lastEntryRef = useRef(null);
     const viewRef = useRef('landing');
     const lastPageRef = useRef(null);
@@ -1452,6 +1493,7 @@ export default function App() {
             }
         };
 
+        pathChangeRef.current = handlePathChange;
         handlePathChange();
     }, []); 
 
@@ -1772,6 +1814,23 @@ export default function App() {
     // Browser back/forward: reopen the page that history entry was written for.
     useEffect(() => {
         const handlePopState = (event) => {
+            // Leaving a public page opened from the QR scanner (signed in or not).
+            if (scannedPublicRef.current) {
+                if (formDirtyRef.current) {
+                    const entry = scannedPublicRef.current;
+                    window.history.pushState(entry.state, '', entry.url);
+                    confirmLeaveRef.current?.().then((leave) => { if (leave) window.history.back(); });
+                    return;
+                }
+                pathChangeRef.current?.();
+                if (isPublicAppPath(window.location.pathname)) {
+                    scannedPublicRef.current = { state: window.history.state, url: `${window.location.pathname}${window.location.search}` };
+                    return;
+                }
+                scannedPublicRef.current = null;
+                setScannedPublicOpen(false);
+                window.scrollTo(0, 0);
+            }
             if (!hasWrittenPageRef.current) return;
             // Leaving a half-filled form: put the form's history entry back,
             // then ask, and step back again only if they choose to leave.
@@ -2465,7 +2524,7 @@ export default function App() {
         const viewToRender = view;
 
         switch (viewToRender) {
-            case 'landing': return <Landing navigate={navigate} permissions={permissions} user={user} roles={userRoles} userStates={userStates} userLocalities={userLocalities} stats={IS_EMONC_SITE ? null : homeStats} onAskData={IS_EMONC_SITE ? null : openDataAssistant} />;
+            case 'landing': return <Landing navigate={navigate} permissions={permissions} user={user} roles={userRoles} userStates={userStates} userLocalities={userLocalities} stats={IS_EMONC_SITE ? null : homeStats} onAskData={IS_EMONC_SITE ? null : openDataAssistant} onScanQr={QR_SCAN_ENABLED ? openQrScanner : null} />;
             case 'admin': return <AdminDashboard appRoles={userRoles} />;
             case 'about': return <AboutDeveloperPage permissions={permissions} />;
             case 'imciForm': 
@@ -2774,10 +2833,10 @@ case 'meetings':
                     mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicDailyEvaluationView formId={publicViewData.formId} /></Suspense> );
                     break;
                 case 'attendance':
-                    mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicAttendanceView courseId={publicViewData.courseId} /></Suspense> );
+                    mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicAttendanceView courseId={publicViewData.courseId} user={user} /></Suspense> );
                     break;
                 case 'onlineExercises':
-                    mainContent = ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><PublicExerciseView courseId={publicViewData.courseId} /></ImnciProvider></Suspense> );
+                    mainContent = ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><PublicExerciseView courseId={publicViewData.courseId} user={user} /></ImnciProvider></Suspense> );
                     break;
                 default:
                     mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{t('app_extra.errors.invalid_report_type', 'Invalid report type.')}</div></Card>;
@@ -2840,7 +2899,11 @@ case 'meetings':
                 <Suspense fallback={<PageSkeleton />}>
                     <CourseTestForm
                         course={publicTestData.course} participants={publicTestData.participants} participantTests={publicTestData.tests}
-                        onSaveTest={upsertParticipantTest} 
+                        onSaveTest={async (payload) => {
+                            const saved = await upsertParticipantTest(payload);
+                            rememberLinkedParticipant(publicTestData.course.id, payload?.participantId, user);
+                            return saved;
+                        }}
                         onSaveParticipant={async (participantData, facilityUpdateData) => {
                             const currentUserIdentifier = user?.displayName || user?.email || 'Public User';
                             const savedParticipant = await saveParticipantAndSubmitFacilityUpdate(participantData, facilityUpdateData, currentUserIdentifier);
@@ -2861,7 +2924,8 @@ case 'meetings':
                             };
                             refetchData();
                         }}
-                        initialParticipantId={''} isPublicView={true} canManageTests={permissions.canUseFederalManagerAdvancedFeatures} testType={publicTestType}
+                        initialParticipantId={findLinkedParticipant(publicTestData.participants, publicTestData.course.id, user)?.id || ''}
+                        isPublicView={true} canManageTests={permissions.canUseFederalManagerAdvancedFeatures} testType={publicTestType}
                     />
                 </Suspense>
             );
@@ -2871,7 +2935,9 @@ case 'meetings':
     }
 
     else if (!user && !authLoading) {
-        mainContent = <SignInBox />;
+        // The phone app offers the QR scanner before sign-in too: a
+        // participant opening their pre-test needs no account.
+        mainContent = <SignInBox above={QR_SCAN_ENABLED ? <ScanQrCard onOpen={openQrScanner} /> : null} />;
     }
     else if (user && isProfileIncomplete) {
         mainContent = <SignInBox />;
@@ -3043,7 +3109,17 @@ case 'meetings':
                                 <Menu size={24} />
                             </button>
                         )}
-                        <div className="flex items-center gap-3 sm:gap-4 cursor-pointer min-w-0" onClick={() => !isSharedView && navigate('landing')}>
+                        {scannedPublicOpen && isMinimalUILayout && (
+                            <button
+                                onClick={leaveScannedPage}
+                                aria-label={t('qr_scanner.back_to_app', 'Back to the app')}
+                                title={t('qr_scanner.back_to_app', 'Back to the app')}
+                                className="p-2 -ms-2 rounded-full text-white hover:bg-white/10 active:bg-white/20 shrink-0"
+                            >
+                                <ArrowLeft size={22} className="rtl:-scale-x-100" />
+                            </button>
+                        )}
+                        <div className="flex items-center gap-3 sm:gap-4 cursor-pointer min-w-0" onClick={() => { if (scannedPublicOpen) leaveScannedPage(); else if (!isSharedView) navigate('landing'); }}>
                             <div className="h-11 w-11 sm:h-14 sm:w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md shrink-0">
                                 <img src={logoUrl} alt={t('app_extra.header.logo_alt', 'NCHP Logo')} width="48" height="48" className="h-9 w-9 sm:h-12 sm:w-12 object-contain" />
                             </div>
@@ -3467,6 +3543,11 @@ case 'meetings':
                 "Add" button in that corner when the page has one. */}
             {user && !isMinimalUILayout && !dataAssistant.open && view !== 'landing' && pageAdd && (
                 <PageAddButton label={pageAdd.label} onClick={pageAdd.run} />
+            )}
+            {QR_SCAN_ENABLED && qrScanner.loaded && (
+                <Suspense fallback={null}>
+                    <QrScanner open={qrScanner.open} onClose={closeQrScanner} onOpenLink={openScannedLink} />
+                </Suspense>
             )}
             {dataAssistant.loaded && (
                 <Suspense fallback={null}>
