@@ -4111,7 +4111,7 @@ const SkillsMentorshipView = ({
         const itemWidth = `${100 / navItems.length}%`;
 
         return (
-            <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 flex justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
+            <div className="sm:hidden fixed bottom-[var(--bottom-nav,0px)] left-0 right-0 z-40 flex justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
                 {navItems.map(item => {
                     const IconComponent = item.icon;
                     return (

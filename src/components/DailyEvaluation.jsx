@@ -462,7 +462,7 @@ export const PublicDailyEvaluationView = ({ formId }) => {
                 </div>
             </Section>
 
-            <div className="fixed bottom-0 inset-x-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur px-4 py-3">
+            <div className="fixed bottom-[var(--bottom-nav,0px)] inset-x-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur px-4 py-3">
                 <div className="max-w-3xl mx-auto flex items-center gap-3" dir="rtl">
                     <div className="text-sm">
                         <div className="font-bold tabular-nums text-slate-800">{progress.done} / {progress.total}</div>
