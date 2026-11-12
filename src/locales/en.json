@@ -6710,6 +6710,16 @@
         "failed": "The assessment was saved, but the facility's IMNCI information could not be updated. {{error}}",
         "note_direct": "Submitting also updates this facility's IMNCI information (equipment, chart booklet, register, ORT corner, immunization, nutrition services and trained staff).",
         "note_approval": "Submitting also sends an update of this facility's IMNCI information (equipment, chart booklet, register, ORT corner, immunization, nutrition services and trained staff) for approval."
+      },
+      "list": {
+        "select_all": "Select all",
+        "supervisor": "Supervisor",
+        "no_match": "No assessments matched the current filters.",
+        "delete_selected_confirm": "Delete {{count}} selected assessments?",
+        "delete_some_failed": "{{failed}} of {{count}} could not be deleted.",
+        "deleted_n": "{{count}} assessments deleted.",
+        "all_localities": "All localities",
+        "count": "{{shown}} of {{total}} assessments · {{drafts}} drafts"
       }
     },
     "supply": {

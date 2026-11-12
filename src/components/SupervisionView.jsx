@@ -18,12 +18,13 @@ import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspens
 import { useTranslation } from 'react-i18next';
 import { QRCodeCanvas } from 'qrcode.react';
 import {
-    Plus, Pencil, Trash2, ArrowLeft, Baby, ShieldCheck, Stethoscope, Siren, HeartPulse, ChevronRight,
+    Plus, Trash2, ArrowLeft, RefreshCw, Baby, ShieldCheck, Stethoscope, Siren, HeartPulse, ChevronRight,
     ChevronDown, X, Hospital, Thermometer, ClipboardList, Share2, Copy, ExternalLink, CheckCircle2, Search, Pill,
 } from 'lucide-react';
 
 import {
-    Card, CardBody, PageHeader, Button, Tabs, Table, EmptyState, Modal,
+    Card, CardBody, PageHeader, Button, EmptyState, Modal, PageTabs, FilterPanel, PageActions, PhoneCards,
+    PullToRefresh, FormGroup, Spinner,
     Input, Select, Textarea, IS_NATIVE, useInPageBack, SkeletonTable, MenuTile, MenuGrid, BackArrow,
 } from './CommonComponents';
 import { notify, confirmDialog } from './dialogs';
@@ -36,6 +37,7 @@ import { auth } from '../firebase';
 import { STATE_LOCALITIES } from './constants';
 import { useLeaveGuard, leaveForm, formSaved } from '../utils/leaveGuard';
 import { publicBaseUrl } from '../utils/publicLink';
+import { isDateInRange, DATE_RANGE_OPTIONS } from '../utils/dateRange';
 import FormPdfButton from './FormPdfButton';
 import {
     SUPERVISION_SERVICES, getChecklist, checklistsForService, pickLabel,
@@ -1225,6 +1227,141 @@ const DELETED_TAB = 'deleted';
 // Older records were saved before the service split and may lack `service`.
 const serviceOf = (a) => a.service || getChecklist(a.checklistId)?.service;
 
+// Who filled the assessment: the assessor's name, else the account that saved it.
+const supervisorOf = (a) => (a.assessorName || '').trim() || a.createdByEmail || '';
+
+const EMPTY_FILTERS = { start: '', end: '', range: '', state: '', locality: '', facility: '', supervisor: '', status: '' };
+
+const localityLabel = (stateKey, localityKey, isArabic) => {
+    const loc = (STATE_LOCALITIES[stateKey]?.localities || []).find((l) => l.en === localityKey);
+    return loc ? (isArabic ? loc.ar || loc.en : loc.en) : localityKey || '';
+};
+
+// The assessments of one form, laid out like the mentorship lists: a numbered,
+// bordered table with tick boxes, coloured status, the result and
+// View / Edit / Del on every row; cards on a phone.
+function AssessmentsTable({ rows, checklist, canEdit, selectedIds, onSelectionChange, onView, onEdit, onDelete, isLoading, filtered, onClearFilters, onNew }) {
+    const { t, i18n } = useTranslation();
+    const isArabic = i18n.language === 'ar';
+    const isWarmer = checklist.id === 'infant_warmer';
+    const headline = (row) => {
+        if (!checklist.metrics) return null;
+        const all = checklist.metrics(row);
+        return all.find((m) => m.id === checklist.headline) || all[0];
+    };
+    const resultLabel = checklist.metrics
+        ? pickLabel(checklist.metrics({}).find((m) => m.id === checklist.headline) || {}, isArabic)
+        : isWarmer ? t('trackers.supervision.warmer.coverage', 'Coverage of portable warming') : t('trackers.supervision.table.present', 'Present');
+    const resultCell = (row) => {
+        const h = headline(row);
+        if (h) return <MetricChip metric={h} />;
+        const s = row.summary || {};
+        const value = isWarmer
+            ? (s.coveragePercent !== undefined ? s.coveragePercent : warmerResults(row.responses, row.periodStart).service.total.coverage)
+            : s.presencePercent;
+        return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${toneFor(value)}`}>{pctText(value)}</span>;
+    };
+    const completed = (row) => (row.summary?.completionPercent !== undefined
+        ? row.summary.completionPercent
+        : assessmentProgress(checklist, row).percent);
+
+    const ids = rows.map((r) => r.id);
+    const allSelected = rows.length > 0 && ids.every((id) => selectedIds.includes(id));
+    const someSelected = ids.some((id) => selectedIds.includes(id));
+    const toggleAll = (e) => onSelectionChange(e.target.checked
+        ? Array.from(new Set([...selectedIds, ...ids]))
+        : selectedIds.filter((id) => !ids.includes(id)));
+    const toggleRow = (id) => onSelectionChange(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id]);
+
+    const th = 'px-2 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300';
+    const td = 'px-2 py-2 text-xs text-gray-600 text-start border border-gray-300 break-words whitespace-normal';
+    const columns = 9 + (canEdit ? 1 : 0);
+
+    if (isLoading) return <SkeletonTable rows={8} columns={6} />;
+
+    return (
+        <PhoneCards className="w-full overflow-x-auto border border-gray-300 rounded-lg shadow-sm">
+            <table className="w-full border-collapse">
+                <thead className="bg-gray-50">
+                    <tr>
+                        {canEdit && (
+                            <th className="px-3 py-3 text-center w-10 border border-gray-300">
+                                <input type="checkbox" checked={allSelected}
+                                    ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                                    onChange={toggleAll} aria-label={t('trackers.supervision.list.select_all', 'Select all')}
+                                    className="w-4 h-4 text-sky-600 rounded focus:ring-sky-500 cursor-pointer" />
+                            </th>
+                        )}
+                        <th className={th}>#</th>
+                        <th className={th}>{checklist.scope === 'hospital' ? t('trackers.supervision.table.hospital', 'Hospital') : t('trackers.supervision.table.facility', 'Facility')}</th>
+                        <th className={th}>{t('trackers.supervision.state', 'State')}</th>
+                        <th className={th}>{t('trackers.supervision.list.supervisor', 'Supervisor')}</th>
+                        <th className={th}>{t('trackers.supervision.table.date', 'Date')}</th>
+                        <th className={th}>{t('trackers.supervision.table.status', 'Status')}</th>
+                        <th className={th}>{t('trackers.supervision.table.completed', 'Completed')}</th>
+                        <th className={th}>{resultLabel}</th>
+                        <th className={th}>{t('trackers.supervision.table.actions', 'Actions')}</th>
+                    </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                    {rows.length === 0 ? (
+                        <tr><td colSpan={columns} className="border border-gray-300">
+                            <EmptyState filtered={filtered} onClearFilters={filtered ? onClearFilters : undefined}
+                                title={filtered ? t('mentorship_page.empty.no_records', 'No Records Found') : undefined}
+                                message={filtered
+                                    ? t('trackers.supervision.list.no_match', 'No assessments matched the current filters.')
+                                    : t('trackers.supervision.empty', 'No assessments yet. Use New assessment to start one.')}
+                                action={!filtered && canEdit ? { label: t('trackers.supervision.new', 'New assessment'), onClick: onNew } : undefined} />
+                        </td></tr>
+                    ) : rows.map((row, index) => {
+                        const selected = selectedIds.includes(row.id);
+                        const draft = row.status !== 'submitted';
+                        const locality = localityLabel(row.stateKey, row.localityKey, isArabic);
+                        return (
+                            <tr key={row.id} className={selected ? 'bg-sky-50' : draft ? 'bg-yellow-50' : 'bg-white'}>
+                                {canEdit && (
+                                    <td className="px-3 py-2 text-center border border-gray-300">
+                                        <input type="checkbox" checked={selected} onChange={() => toggleRow(row.id)}
+                                            aria-label={row.facilityName}
+                                            className="w-4 h-4 text-sky-600 rounded focus:ring-sky-500 cursor-pointer" />
+                                    </td>
+                                )}
+                                <td className="px-2 py-2 text-sm font-medium text-gray-900 text-start border border-gray-300">{index + 1}</td>
+                                <td className={td}>
+                                    <div>
+                                        <span className="block font-semibold text-gray-800">{row.facilityName}</span>
+                                        {locality && <span className="block text-gray-500">{locality}</span>}
+                                    </div>
+                                </td>
+                                <td className={td}>{STATE_LOCALITIES[row.stateKey]?.[isArabic ? 'ar' : 'en'] || row.stateKey || '—'}</td>
+                                <td className={td}>{supervisorOf(row) || '—'}</td>
+                                <td className={`${td} whitespace-nowrap`}>{row.assessmentDate || '—'}</td>
+                                <td className={`${td} whitespace-nowrap`}>
+                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${draft ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                                        {draft ? t('trackers.supervision.status.draft', 'Draft') : t('trackers.supervision.status.submitted', 'Submitted')}
+                                    </span>
+                                    {row.submittedVia === 'public_link' && (
+                                        <span className="ms-1 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-sky-100 text-sky-800">{t('trackers.supervision.status.via_link', 'Via link')}</span>
+                                    )}
+                                </td>
+                                <td className={`${td} whitespace-nowrap font-medium text-gray-800`}>{pctText(completed(row))}</td>
+                                <td className={td}>{resultCell(row)}</td>
+                                <td className={`${td} whitespace-nowrap`}>
+                                    <div className="flex flex-wrap gap-1">
+                                        <Button size="sm" variant="info" onClick={() => onView(row)} className="text-xs px-2 py-1">{t('mentorship_page.buttons.view', 'View')}</Button>
+                                        {canEdit && <Button size="sm" variant="warning" onClick={() => onEdit(row)} className="text-xs px-2 py-1">{t('mentorship_page.buttons.edit', 'Edit')}</Button>}
+                                        {canEdit && <Button size="sm" variant="danger" onClick={() => onDelete(row)} className="text-xs px-2 py-1">{t('mentorship_page.buttons.del', 'Del')}</Button>}
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </PhoneCards>
+    );
+}
+
 export default function SupervisionView({ permissions = {} }) {
     const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
@@ -1236,8 +1373,11 @@ export default function SupervisionView({ permissions = {} }) {
     const [checklistId, setChecklistId] = useState(null);
     const [tab, setTab] = useState(LIST_TAB);
     const [editing, setEditing] = useState(null);
+    const [viewOnly, setViewOnly] = useState(false);
     const [sharing, setSharing] = useState(false);
-    const [stateFilter, setStateFilter] = useState('all');
+    const [filters, setFilters] = useState(EMPTY_FILTERS);
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [refreshing, setRefreshing] = useState(false);
     const canEmptyBin = !!permissions.canUseFederalManagerAdvancedFeatures;
     const topRef = useRef(null);
 
@@ -1249,6 +1389,10 @@ export default function SupervisionView({ permissions = {} }) {
     useEffect(() => { topRef.current?.scrollIntoView?.({ block: 'start' }); }, [service, checklistId, editing]);
 
     const reload = useCallback(() => fetchSupervisionAssessments('full'), [fetchSupervisionAssessments]);
+    const refresh = async () => {
+        setRefreshing(true);
+        try { await fetchSupervisionAssessments('full'); } finally { setRefreshing(false); }
+    };
 
     // Android app: the top-bar arrow steps back one page: form → forms → services.
     useInPageBack(() => (checklistId ? setChecklistId(null) : setService(null)), !!service && editing === null);
@@ -1261,10 +1405,43 @@ export default function SupervisionView({ permissions = {} }) {
     const formAssessments = useMemo(() => serviceAssessments.filter((a) => a.checklistId === checklistId),
         [serviceAssessments, checklistId]);
 
+    const setFilter = (name, value) => {
+        setFilters((f) => {
+            const next = { ...f, [name]: value };
+            // A wider place clears the narrower choices under it.
+            if (name === 'state') { next.locality = ''; next.facility = ''; }
+            if (name === 'locality') next.facility = '';
+            return next;
+        });
+        setSelectedIds([]);
+    };
+    const clearFilters = () => { setFilters(EMPTY_FILTERS); setSelectedIds([]); };
+    const activeFilters = Object.values(filters).filter(Boolean).length;
+
+    // Choices offered by each filter come from the records of this form.
+    const options = useMemo(() => {
+        const inState = formAssessments.filter((a) => !filters.state || a.stateKey === filters.state);
+        const inLocality = inState.filter((a) => !filters.locality || a.localityKey === filters.locality);
+        const uniq = (list) => Array.from(new Set(list.filter(Boolean))).sort((a, b) => a.localeCompare(b));
+        return {
+            states: uniq(formAssessments.map((a) => a.stateKey)),
+            localities: uniq(inState.map((a) => a.localityKey)),
+            facilities: uniq(inLocality.map((a) => a.facilityName)),
+            supervisors: uniq(formAssessments.map(supervisorOf)),
+        };
+    }, [formAssessments, filters.state, filters.locality]);
+
     const rows = useMemo(() => formAssessments
-        .filter((a) => stateFilter === 'all' || a.stateKey === stateFilter)
+        .filter((a) => !filters.state || a.stateKey === filters.state)
+        .filter((a) => !filters.locality || a.localityKey === filters.locality)
+        .filter((a) => !filters.facility || a.facilityName === filters.facility)
+        .filter((a) => !filters.supervisor || supervisorOf(a) === filters.supervisor)
+        .filter((a) => !filters.status || (filters.status === 'submitted') === (a.status === 'submitted'))
+        .filter((a) => (!filters.range && !filters.start && !filters.end) || isDateInRange(a.assessmentDate, filters.range, filters.start, filters.end))
         .sort((a, b) => String(b.assessmentDate || '').localeCompare(String(a.assessmentDate || ''))),
-    [formAssessments, stateFilter]);
+    [formAssessments, filters]);
+
+    const draftCount = formAssessments.filter((a) => a.status !== 'submitted').length;
 
     const handleDelete = async (row) => {
         const ok = await confirmDialog(
@@ -1275,6 +1452,7 @@ export default function SupervisionView({ permissions = {} }) {
         try {
             await deleteSupervisionAssessment(row.id);
             notify(t('trackers.supervision.deleted', 'Assessment deleted.'), 'success');
+            setSelectedIds((ids) => ids.filter((id) => id !== row.id));
             // A soft delete stamps lastUpdatedAt, so the delta sync is enough.
             fetchSupervisionAssessments('sync');
         } catch (error) {
@@ -1282,6 +1460,27 @@ export default function SupervisionView({ permissions = {} }) {
             notify(t('trackers.supervision.delete_failed', 'Could not delete the assessment.'), 'error');
         }
     };
+
+    const handleBulkDelete = async () => {
+        const count = selectedIds.length;
+        const ok = await confirmDialog(
+            t('trackers.supervision.list.delete_selected_confirm', 'Delete {{count}} selected assessments?', { count }),
+            { title: t('trackers.supervision.delete_title', 'Delete assessment'), confirmLabel: t('trackers.supervision.delete', 'Delete'), danger: true }
+        );
+        if (!ok) return;
+        let failed = 0;
+        for (const id of selectedIds) {
+            try { await deleteSupervisionAssessment(id); } catch (error) { failed += 1; console.error('Failed to delete assessment:', id, error); }
+        }
+        setSelectedIds([]);
+        notify(failed
+            ? t('trackers.supervision.list.delete_some_failed', '{{failed}} of {{count}} could not be deleted.', { failed, count })
+            : t('trackers.supervision.list.deleted_n', '{{count}} assessments deleted.', { count }), failed ? 'error' : 'success');
+        fetchSupervisionAssessments('sync');
+    };
+
+    const openRecord = (row, readOnlyView) => { setViewOnly(readOnlyView); setEditing(row); };
+    const startNew = () => { setViewOnly(false); setEditing({ checklistId: checklist.id }); };
 
     const page = (() => {
         if (!service) {
@@ -1291,7 +1490,7 @@ export default function SupervisionView({ permissions = {} }) {
             return (
                 <FormPicker service={service} assessments={serviceAssessments}
                     onBack={() => setService(null)}
-                    onSelect={(id) => { setChecklistId(id); setTab(LIST_TAB); setStateFilter('all'); }} />
+                    onSelect={(id) => { setChecklistId(id); setTab(LIST_TAB); setFilters(EMPTY_FILTERS); setSelectedIds([]); }} />
             );
         }
         if (editing !== null) {
@@ -1299,7 +1498,7 @@ export default function SupervisionView({ permissions = {} }) {
                 <AssessmentForm
                     checklist={getChecklist(editing.checklistId) || checklist}
                     initial={editing.id ? editing : null}
-                    canEdit={canEdit}
+                    canEdit={canEdit && !viewOnly}
                     canApproveFacility={!!permissions.canApproveSubmissions}
                     onBack={() => setEditing(null)}
                     onSaved={reload}
@@ -1311,72 +1510,42 @@ export default function SupervisionView({ permissions = {} }) {
 
     if (page) return <div ref={topRef}>{page}</div>;
 
-    const isWarmer = checklist.id === 'infant_warmer';
-    // Checklists with their own metrics show their headline one in the list.
-    const headlineOf = (row) => {
-        if (!checklist.metrics) return null;
-        const all = checklist.metrics(row);
-        return all.find((m) => m.id === checklist.headline) || all[0];
-    };
-    const headlineLabel = checklist.metrics
-        ? pickLabel(checklist.metrics({}).find((m) => m.id === checklist.headline) || {}, isArabic)
-        : null;
-    const headers = [
-        t('trackers.supervision.table.date', 'Date'),
-        checklist.scope === 'hospital' ? t('trackers.supervision.table.hospital', 'Hospital') : t('trackers.supervision.table.facility', 'Facility'),
-        t('trackers.supervision.state', 'State'),
-        t('trackers.supervision.table.status', 'Status'),
-        t('trackers.supervision.table.completed', 'Completed'),
-        ...(headlineLabel ? [headlineLabel] : isWarmer
-            ? [t('trackers.supervision.warmer.coverage', 'Coverage of portable warming')]
-            : [t('trackers.supervision.table.present', 'Present')]),
-        ...(canEdit ? [t('trackers.supervision.table.actions', 'Actions')] : []),
-    ];
-    const resultCell = (row) => {
-        const s = row.summary || {};
-        const headline = headlineOf(row);
-        if (headline) return <td className="text-xs"><MetricChip metric={headline} /></td>;
-        if (isWarmer) {
-            const coverage = s.coveragePercent !== undefined ? s.coveragePercent : warmerResults(row.responses, row.periodStart).service.total.coverage;
-            return <td><span className={`px-2 py-0.5 rounded text-xs ${toneFor(coverage)}`}>{pctText(coverage)}</span></td>;
-        }
-        return <td><span className={`px-2 py-0.5 rounded text-xs ${toneFor(s.presencePercent)}`}>{pctText(s.presencePercent)}</span></td>;
-    };
-    const completed = (row) => (row.summary?.completionPercent !== undefined
-        ? row.summary.completionPercent
-        : assessmentProgress(checklist, row).percent);
+    const serviceInfo = SUPERVISION_SERVICES.find((s) => s.key === service);
+    const loadingList = isLoading?.supervisionAssessments && !supervisionAssessments;
+    const stateName = (k) => STATE_LOCALITIES[k]?.[isArabic ? 'ar' : 'en'] || k;
 
     return (
-        <div ref={topRef} className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-                <BackArrow onClick={() => setChecklistId(null)} label={t('trackers.supervision.back_to_forms', 'All forms')} className="-ms-2" />
-                <FormIcon checklist={checklist} large />
-                <div className="min-w-0 flex-1">
-                    <h2 className="text-xl font-semibold text-slate-800">{isArabic ? checklist.titleAr : checklist.title}</h2>
-                    <p className="text-sm text-slate-500">{isArabic ? SUPERVISION_SERVICES.find((s) => s.key === service)?.titleAr : SUPERVISION_SERVICES.find((s) => s.key === service)?.title}</p>
-                </div>
-                {canEdit && (
-                    <div className="flex w-full gap-2 sm:w-auto">
-                        <Button variant="secondary" onClick={() => setSharing(true)} className="flex-1 sm:flex-none">
-                            <Share2 size={16} /> {t('trackers.supervision.share.button', 'Public link')}
-                        </Button>
-                        <Button onClick={() => setEditing({ checklistId: checklist.id })} className="flex-1 sm:flex-none">
-                            <Plus size={16} /> {t('trackers.supervision.new', 'New assessment')}
-                        </Button>
-                    </div>
-                )}
-            </div>
-
+        <div ref={topRef}>
             <Card>
-                <CardBody className="space-y-4">
-                    <Tabs
+                <div className="p-3 md:p-6">
+                    {/* Title row, as in the mentorship lists: back, the form, refresh. */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3 mb-3 md:mb-6 border-b border-gray-200 pb-2">
+                        <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                            <BackArrow onClick={() => setChecklistId(null)} label={t('trackers.supervision.back_to_forms', 'All forms')} className="-ms-2" />
+                            <FormIcon checklist={checklist} />
+                            <div className="min-w-0">
+                                <h2 className="text-lg md:text-xl font-semibold text-slate-800">{isArabic ? checklist.titleAr : checklist.title}</h2>
+                                <p className="text-xs md:text-sm text-slate-500">{isArabic ? serviceInfo?.titleAr : serviceInfo?.title}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <PullToRefresh onRefresh={refresh} disabled={refreshing} />
+                            <Button variant="secondary" onClick={refresh} disabled={refreshing} className="flex items-center gap-2">
+                                {refreshing ? <Spinner size="sm" /> : <RefreshCw size={16} />}
+                                <span className="hidden sm:inline">{refreshing ? t('mentorship_page.buttons.refreshing', 'Refreshing...') : t('mentorship_page.buttons.refresh', 'Refresh')}</span>
+                            </Button>
+                        </div>
+                    </div>
+
+                    <PageTabs
+                        className="md:!mb-6"
+                        active={tab}
+                        onChange={(id) => { setTab(id); setSelectedIds([]); }}
                         tabs={[
-                            { id: LIST_TAB, label: t('trackers.supervision.tabs.assessments', 'Assessments'), short: t('trackers.supervision.tabs.assessments_short', 'Forms') },
+                            { id: LIST_TAB, label: t('trackers.supervision.tabs.assessments', 'Assessments'), short: t('trackers.supervision.tabs.assessments_short', 'Forms'), count: formAssessments.length },
                             { id: DASHBOARD_TAB, label: t('trackers.supervision.tabs.dashboard', 'Dashboard'), short: t('trackers.supervision.tabs.dashboard', 'Dashboard') },
-                            ...(canEmptyBin ? [{ id: DELETED_TAB, label: t('trackers.supervision.deleted_items', 'Deleted Items'), short: t('ui.short.deleted', 'Deleted') }] : []),
+                            canEmptyBin && { id: DELETED_TAB, label: t('trackers.supervision.deleted_items', 'Deleted Items'), short: t('ui.short.deleted', 'Deleted') },
                         ]}
-                        activeTab={tab}
-                        onTabChange={setTab}
                     />
 
                     {tab === DELETED_TAB && canEmptyBin && (
@@ -1386,7 +1555,7 @@ export default function SupervisionView({ permissions = {} }) {
                     )}
 
                     {tab === DASHBOARD_TAB && (
-                        isLoading?.supervisionAssessments && !supervisionAssessments ? <SkeletonTable /> : (
+                        loadingList ? <SkeletonTable /> : (
                             <Suspense fallback={<SkeletonTable />}>
                                 <SupervisionDashboard checklist={checklist} assessments={formAssessments} />
                             </Suspense>
@@ -1394,58 +1563,93 @@ export default function SupervisionView({ permissions = {} }) {
                     )}
 
                     {tab === LIST_TAB && (<>
-                        <div className="w-full md:w-56">
-                            <Select label={t('trackers.supervision.state', 'State')} value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
-                                <option value="all">{t('trackers.supervision.all_states', 'All states')}</option>
-                                {Object.keys(STATE_LOCALITIES).filter((k) => k !== 'Federal')
-                                    .map((k) => <option key={k} value={k}>{isArabic ? STATE_LOCALITIES[k].ar || STATE_LOCALITIES[k].en : STATE_LOCALITIES[k].en}</option>)}
-                            </Select>
+                        <FilterPanel className="mb-4 md:mb-6" activeCount={activeFilters}>
+                            <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4">
+                                <FormGroup label={t('mentorship_page.filters.start_date', 'Start Date')}>
+                                    <Input type="date" value={filters.start} onChange={(e) => setFilter('start', e.target.value)} className="w-full" />
+                                </FormGroup>
+                                <FormGroup label={t('mentorship_page.filters.end_date', 'End Date')}>
+                                    <Input type="date" value={filters.end} onChange={(e) => setFilter('end', e.target.value)} className="w-full" />
+                                </FormGroup>
+                                <FormGroup label={t('mentorship_page.filters.date_range', 'Date Range')}>
+                                    <Select value={filters.range} onChange={(e) => setFilter('range', e.target.value)}>
+                                        <option value="">{t('mentorship_page.filters.all_time', 'All Time')}</option>
+                                        {DATE_RANGE_OPTIONS.map((r) => <option key={r} value={r}>{t(`mentorship_page.filters.${r}`, r)}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label={t('mentorship_page.filters.state', 'State')}>
+                                    <Select value={filters.state} onChange={(e) => setFilter('state', e.target.value)}>
+                                        <option value="">{t('trackers.supervision.all_states', 'All states')}</option>
+                                        {options.states.map((k) => <option key={k} value={k}>{stateName(k)}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label={t('mentorship_page.filters.locality', 'Locality')}>
+                                    <Select value={filters.locality} onChange={(e) => setFilter('locality', e.target.value)} disabled={!filters.state}>
+                                        <option value="">{t('trackers.supervision.list.all_localities', 'All localities')}</option>
+                                        {options.localities.map((k) => <option key={k} value={k}>{localityLabel(filters.state, k, isArabic)}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label={checklist.scope === 'hospital' ? t('trackers.supervision.table.hospital', 'Hospital') : t('mentorship_page.filters.facility', 'Facility')}>
+                                    <Select value={filters.facility} onChange={(e) => setFilter('facility', e.target.value)}>
+                                        <option value="">{t('mentorship_page.filters.all_facilities', 'All Facilities')}</option>
+                                        {options.facilities.map((f) => <option key={f} value={f}>{f}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label={t('mentorship_page.filters.supervisor', 'Supervisor')}>
+                                    <Select value={filters.supervisor} onChange={(e) => setFilter('supervisor', e.target.value)}>
+                                        <option value="">{t('mentorship_page.filters.all_supervisors', 'All Supervisors')}</option>
+                                        {options.supervisors.map((s) => <option key={s} value={s}>{s}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label={t('mentorship_page.filters.status', 'Status')}>
+                                    <Select value={filters.status} onChange={(e) => setFilter('status', e.target.value)}>
+                                        <option value="">{t('mentorship_page.filters.all_statuses', 'All Statuses')}</option>
+                                        <option value="submitted">{t('trackers.supervision.status.submitted', 'Submitted')}</option>
+                                        <option value="draft">{t('trackers.supervision.status.draft', 'Draft')}</option>
+                                    </Select>
+                                </FormGroup>
+                            </div>
+                        </FilterPanel>
+
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                            <PageActions keep={1}>
+                                {canEdit && selectedIds.length === 0 && (
+                                    <Button onClick={startNew}><Plus size={16} /> {t('trackers.supervision.new', 'New assessment')}</Button>
+                                )}
+                                {canEdit && selectedIds.length > 0 && (
+                                    <Button variant="danger" onClick={handleBulkDelete}>
+                                        <Trash2 size={16} /> {t('mentorship_page.buttons.delete_selected', 'Delete Selected ({{count}})', { count: selectedIds.length })}
+                                    </Button>
+                                )}
+                                {canEdit && (
+                                    <Button variant="secondary" onClick={() => setSharing(true)}>
+                                        <Share2 size={16} /> {t('trackers.supervision.share.button', 'Public link')}
+                                    </Button>
+                                )}
+                            </PageActions>
+                            {!loadingList && (
+                                <p className="text-xs text-slate-500">
+                                    {t('trackers.supervision.list.count', '{{shown}} of {{total}} assessments · {{drafts}} drafts', { shown: rows.length, total: formAssessments.length, drafts: draftCount })}
+                                </p>
+                            )}
                         </div>
 
-                        {isLoading?.supervisionAssessments && !supervisionAssessments ? <SkeletonTable /> : (
-                            <Table headers={headers} cardsOnPhone>
-                                {rows.length === 0 ? (
-                                    <EmptyState colSpan={headers.length}
-                                        message={t('trackers.supervision.empty', 'No assessments yet. Use New assessment to start one.')}
-                                        action={canEdit ? { label: t('trackers.supervision.new', 'New assessment'), onClick: () => setEditing({ checklistId: checklist.id }) } : undefined} />
-                                ) : rows.map((row) => (
-                                    <tr key={row.id} onClick={canEdit ? undefined : () => setEditing(row)} className={canEdit ? '' : 'cursor-pointer'}>
-                                        <td className="text-gray-600">{row.assessmentDate || '—'}</td>
-                                        <td className="font-medium">{row.facilityName}</td>
-                                        <td className="text-gray-600">
-                                            {STATE_LOCALITIES[row.stateKey]?.[isArabic ? 'ar' : 'en'] || row.stateKey}
-                                        </td>
-                                        <td>
-                                            <span className={`px-2 py-0.5 rounded text-xs ${
-                                                row.status === 'submitted'
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : 'bg-amber-100 text-amber-800'}`}>
-                                                {row.status === 'submitted' ? t('trackers.supervision.status.submitted', 'Submitted') : t('trackers.supervision.status.draft', 'Draft')}
-                                            </span>
-                                            {row.submittedVia === 'public_link' && (
-                                                <span className="ms-1 px-2 py-0.5 rounded text-xs bg-sky-100 text-sky-800">{t('trackers.supervision.status.via_link', 'Via link')}</span>
-                                            )}
-                                        </td>
-                                        <td className="text-gray-600">{pctText(completed(row))}</td>
-                                        {resultCell(row)}
-                                        {canEdit && (
-                                            <td>
-                                                <div className="flex gap-2">
-                                                    <Button variant="secondary" onClick={() => setEditing(row)}>
-                                                        <Pencil size={14} />
-                                                    </Button>
-                                                    <Button variant="danger" onClick={() => handleDelete(row)}>
-                                                        <Trash2 size={14} />
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                        )}
-                                    </tr>
-                                ))}
-                            </Table>
-                        )}
+                        <AssessmentsTable
+                            rows={rows}
+                            checklist={checklist}
+                            canEdit={canEdit}
+                            selectedIds={selectedIds}
+                            onSelectionChange={setSelectedIds}
+                            onView={(row) => openRecord(row, true)}
+                            onEdit={(row) => openRecord(row, false)}
+                            onDelete={handleDelete}
+                            isLoading={loadingList}
+                            filtered={activeFilters > 0}
+                            onClearFilters={clearFilters}
+                            onNew={startNew}
+                        />
                     </>)}
-                </CardBody>
+                </div>
             </Card>
 
             {sharing && <ShareLinkModal checklist={checklist} onClose={() => setSharing(false)} />}
