@@ -152,6 +152,7 @@ export const IMNCI_FACILITY_READINESS = {
                 { id: 'daily_register', label: 'Daily case register', ar: 'سجل التسجيل اليومي للحالات' },
                 { id: 'mother_cards', label: 'Mother\'s counselling cards', ar: 'كروت إرشاد الأم' },
                 { id: 'referral_form', label: 'Referral form', ar: 'استمارة الإحالة' },
+                { id: 'referral_transport', label: 'Phone or transport available to refer severe cases to hospital', ar: 'توجد وسيلة اتصال أو مواصلات لإحالة الحالات الحرجة إلى المستشفى' },
             ],
         },
         {
@@ -167,6 +168,7 @@ export const IMNCI_FACILITY_READINESS = {
                 { id: 'safe_water', label: 'Safe water source close to the health worker', ar: 'مصدر ماء آمن قريب من العامل الصحي' },
                 { id: 'ort_register', label: 'ORS administration register', ar: 'سجل مراقبة إعطاء محلول الإرواء' },
                 { id: 'health_education', label: 'Health education sessions for mothers are held there', ar: 'تُعقد به جلسات تثقيف صحي للأمهات' },
+                { id: 'ors_zinc_available', label: 'ORS and zinc available in the ORT corner on the day of the visit', ar: 'محلول الإرواء والزنك متوفران في ركن الإرواء يوم الزيارة' },
             ],
         },
         {
@@ -206,8 +208,8 @@ export const IMNCI_FACILITY_READINESS = {
         },
         {
             id: 'nutrition',
-            title: 'Nutrition services available',
-            titleAr: 'خدمات التغذية المتوفرة',
+            title: '7. Nutrition services available',
+            titleAr: '7/ خدمات التغذية المتوفرة',
             type: 'grid',
             presenceColumn: 'answer',
             columns: YES_NO_COMMENT,
@@ -219,9 +221,21 @@ export const IMNCI_FACILITY_READINESS = {
             ],
         },
         {
+            id: 'child_pathway',
+            title: '8. Child pathway',
+            titleAr: '8/ مسار الطفل',
+            type: 'grid',
+            presenceColumn: 'answer',
+            columns: YES_NO_COMMENT,
+            items: [
+                { id: 'malnutrition_screening', label: 'Every child is assessed for malnutrition (weight-for-height or MUAC) and referred to the right programme', ar: 'يُقيَّم كل طفل لسوء التغذية (الوزن مقابل الطول أو MUAC) ويُحال للبرنامج المناسب' },
+                { id: 'vaccination_screening', label: 'Every child is assessed for vaccination and receives, or is referred for, the vaccines due', ar: 'يُقيَّم كل طفل للتطعيم ويتلقى اللقاحات المستحقة أو يُحال للحصول عليها' },
+            ],
+        },
+        {
             id: 'staff',
-            title: '7. Health workers at the facility',
-            titleAr: '7/ معلومات مقدمي الخدمة العاملين بالمرفق',
+            title: '9. Health workers at the facility',
+            titleAr: '9/ معلومات مقدمي الخدمة العاملين بالمرفق',
             note: 'Readiness minimum: at least one trained treating health worker, and 60% or more of treating staff trained in IMNCI.',
             noteAr: 'الحد الأدنى للجاهزية: كادر مدرَّب واحد على الأقل، و60% فأكثر من الكوادر المعالجة مدرَّبة.',
             type: 'grid',
@@ -245,6 +259,7 @@ export const IMNCI_FACILITY_READINESS = {
                 { id: 'register_correct', label: 'Daily register filled in correctly', ar: 'سجل التسجيل اليومي مملوء بطريقة صحيحة' },
                 { id: 'monthly_report_copy', label: 'Copy of last month\'s monthly report available', ar: 'توجد نسخة من التقرير الشهري للشهر السابق' },
                 { id: 'report_sent', label: 'Monthly report sent to the locality on time', ar: 'أُرسل التقرير الشهري للمحلية في موعده' },
+                { id: 'dhis2', label: 'Monthly report entered in DHIS2', ar: 'يُدخَل التقرير الشهري في نظام DHIS2' },
             ],
         },
         {
