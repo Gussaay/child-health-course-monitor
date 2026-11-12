@@ -822,7 +822,7 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMo
                         <Button onClick={() => save('submitted')} disabled={saving}>{submitLabel}</Button>
                     </div>
                     {/* Phones: a bar fixed above the bottom navigation, as in the mentorship forms. */}
-                    <div className="sm:hidden fixed inset-x-0 bottom-[var(--bottom-nav,0px)] z-30 flex h-16 items-center justify-around gap-2 border-t border-slate-700 bg-slate-900 px-3 shadow-lg">
+                    <div className="sm:hidden fixed inset-x-0 bottom-[var(--bottom-nav,0px)] z-40 flex h-16 items-center justify-around gap-2 border-t border-slate-700 bg-slate-900 px-3 shadow-lg">
                         {cancelLabel && <Button variant="secondary" onClick={back} disabled={saving}>{cancelLabel}</Button>}
                         {!publicMode && <Button variant="secondary" onClick={() => save('draft')} disabled={saving}>{draftLabel}</Button>}
                         <Button onClick={() => save('submitted')} disabled={saving} className="flex-1">{submitLabel}</Button>
