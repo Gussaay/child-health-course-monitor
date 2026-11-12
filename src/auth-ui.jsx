@@ -23,6 +23,14 @@ import {
 import { auth } from './firebase.js';
 import { useTranslation } from 'react-i18next';
 import { authErrorCode, authErrorKey } from './utils/authMessages';
+import { Fingerprint } from 'lucide-react';
+import {
+  fingerprintSupported,
+  savedFingerprintAccount,
+  signInWithFingerprint,
+  forgetFingerprintAccount,
+  takeFailedRestore,
+} from './utils/fingerprintSignIn';
 
 // Google's sign-in helper is no longer loaded at start-up (firebase.js), so
 // every popup/redirect call passes it explicitly. Coming back from a redirect
@@ -89,6 +97,53 @@ export function SignInBox() {
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [fullName, setFullName] = useState(''); 
   const [isMissingName, setIsMissingName] = useState(false);
+  // Android app: the account saved for fingerprint sign-in on this phone.
+  const [fpAccount, setFpAccount] = useState(null);
+
+  const fingerprintSignIn = async () => {
+    setError('');
+    setMessage('');
+    setIsLoading(true);
+    const result = await signInWithFingerprint({
+      title: t('auth.fingerprint_title', 'Sign in'),
+      subtitle: t('auth.fingerprint_subtitle', 'Touch the fingerprint sensor to sign in'),
+      cancel: t('auth.fingerprint_cancel', 'Use password'),
+    });
+    if (result === 'ok') {
+      setMessage(t('auth.signin_success', "Sign in successful. Loading your dashboard..."));
+      return;
+    }
+    if (result === 'failed') setError(t('auth.fingerprint_failed', 'Fingerprint sign-in did not work. Please sign in with your password or Google.'));
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    if (!fingerprintSupported()) return undefined;
+    let cancelled = false;
+    (async () => {
+      if (await takeFailedRestore()) {
+        if (!cancelled) setError(t('auth.fingerprint_expired', 'Your saved sign-in has expired. Please sign in once with your password or Google; fingerprint sign-in will then work again.'));
+        return;
+      }
+      const account = await savedFingerprintAccount();
+      if (cancelled || !account) return;
+      setFpAccount(account);
+      if (account.email) setEmail((current) => current || account.email);
+      // Ask for the fingerprint straight away, unless the person just pressed Log out.
+      let loggedOut = false;
+      try { loggedOut = sessionStorage.getItem('intentional_signout') === '1'; } catch { /* storage blocked */ }
+      if (!loggedOut) fingerprintSignIn();
+    })();
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, when the sign-in screen opens
+
+  const useAnotherAccount = async () => {
+    await forgetFingerprintAccount();
+    setFpAccount(null);
+    setEmail('');
+    setError('');
+    setMessage('');
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -441,6 +496,32 @@ export function SignInBox() {
             {isSignUpMode ? t('auth.create_account', "Create a new account") : t('auth.signin_to_account', "Sign in to your account")}
           </p>
         </div>
+
+        {fpAccount && !isSignUpMode && (
+          <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50 p-4">
+            <p className="text-sm text-gray-700">
+              {t('auth.fingerprint_welcome', 'Welcome back')}{fpAccount.name ? `, ${fpAccount.name}` : ''}
+              {fpAccount.email && <span className="block text-xs text-gray-500" dir="ltr">{fpAccount.email}</span>}
+            </p>
+            <button
+              type="button"
+              onClick={fingerprintSignIn}
+              className="flex items-center justify-center w-full gap-3 bg-sky-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-sky-700 transition duration-300 shadow-md disabled:bg-gray-400"
+              disabled={isLoading}
+            >
+              <Fingerprint className="w-6 h-6" aria-hidden="true" />
+              {t('auth.fingerprint_button', 'Sign in with fingerprint')}
+            </button>
+            <button
+              type="button"
+              onClick={useAnotherAccount}
+              className="text-xs font-medium text-indigo-600 hover:text-indigo-500 disabled:opacity-50"
+              disabled={isLoading}
+            >
+              {t('auth.fingerprint_other_account', 'Use another account')}
+            </button>
+          </div>
+        )}
 
         <form className="space-y-4">
           {isSignUpMode && (

@@ -8,6 +8,7 @@ import { createContext, createElement, useContext, useEffect, useState } from 'r
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
 import { authStorageInfo } from '../utils/resilientAuthPersistence';
+import { rememberForFingerprint } from '../utils/fingerprintSignIn';
 
 const AuthContext = createContext(null);
 
@@ -60,6 +61,8 @@ export function AuthProvider({ children }) {
         localStorage.setItem('last_uid', firebaseUser.uid);
         try { sessionStorage.removeItem('intentional_signout'); } catch { /* storage blocked */ }
         reportLostSession();
+        // Android app: keep this sign-in for fingerprint sign-in next time.
+        rememberForFingerprint(firebaseUser);
       } else if (lastUid && !sessionStorage.getItem('intentional_signout')) {
         // Diagnostic: the user was signed in before, and no signOut() was traced.
         console.warn('[Auth] Session lost without a sign-out. Stored login was cleared or rejected.');

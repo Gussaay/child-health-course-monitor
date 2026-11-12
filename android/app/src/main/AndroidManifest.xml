@@ -87,6 +87,8 @@
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Fingerprint sign-in (src/utils/fingerprintSignIn.js) -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
     <!-- Needed to read the real network type (Wi-Fi vs mobile data). -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
