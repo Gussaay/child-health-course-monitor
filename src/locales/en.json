@@ -6403,7 +6403,9 @@
       "all_states": "All states",
       "checklists": {
         "infant_warmer": "Portable infant warmer — supervision checklist",
-        "nicu_coe": "NICU Centre of Excellence — initial assessment"
+        "nicu_coe": "NICU Centre of Excellence — initial assessment",
+        "imnci_facility_readiness": "Health centre supervision and IMNCI facility readiness",
+        "imnci_drugs": "Free medicine and IMNCI drugs and supplies (form 7-C)"
       },
       "cols": {
         "action": "Action needed",
@@ -6656,7 +6658,13 @@
         "thermal_note": "Functioning out of the total counted.",
         "vs_standard": "vs standard",
         "yes_share": "Share of facilities answering yes. Staff trained: {{n}}.",
-        "yes_share_plain": "Share of facilities answering yes."
+        "yes_share_plain": "Share of facilities answering yes.",
+        "share_yes": "share of facilities",
+        "per_facility": "average per facility",
+        "missing_note_yesno": "Facilities answering no.",
+        "stockouts": "Most frequent stock-outs (last 3 months)",
+        "no_stockouts": "No stock-outs reported.",
+        "stockout_count": "{{n}} of {{d}} facilities"
       },
       "choose_service": "Choose the service to supervise",
       "no_forms": "No checklists yet",
@@ -6678,7 +6686,15 @@
       "back_to_forms": "All forms",
       "choose_form": "Choose a supervision form",
       "form_count": "{{count}} forms",
-      "form_meta": "{{total}} assessments · {{submitted}} submitted"
+      "form_meta": "{{total}} assessments · {{submitted}} submitted",
+      "facility_sync": {
+        "saved": "The facility's IMNCI information was updated.",
+        "pending": "The facility's IMNCI information update was sent for approval.",
+        "no_facility": "The facility is not in the registry, so its IMNCI information was not updated.",
+        "failed": "The assessment was saved, but the facility's IMNCI information could not be updated. {{error}}",
+        "note_direct": "Submitting also updates this facility's IMNCI information (equipment, chart booklet, register, ORT corner, immunization, nutrition services and trained staff).",
+        "note_approval": "Submitting also sends an update of this facility's IMNCI information (equipment, chart booklet, register, ORT corner, immunization, nutrition services and trained staff) for approval."
+      }
     },
     "supply": {
       "add_item": "Add item",

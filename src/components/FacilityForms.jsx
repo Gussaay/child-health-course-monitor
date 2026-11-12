@@ -1479,8 +1479,27 @@ export const StaffTable = ({ serviceKey, formData, pendingData, isReadOnly, hand
     );
 };
 
+// A Yes / No question of the IMNCI facility form. Unlike the older equipment
+// questions these start blank, so "not asked yet" is never recorded as No.
+const IMNCIYesNo = ({ name, label, formData, pendingData, handleChange, isReadOnly }) => (
+    <FormGroup label={<>{label} <PendingBadge fieldKey={name} pendingData={pendingData} currentData={formData} /></>}>
+        <Select name={name} value={formData[name] || ''} onChange={handleChange} disabled={isReadOnly}>
+            <option value="">اختر...</option>
+            <option value="Yes">نعم</option>
+            <option value="No">لا</option>
+        </Select>
+    </FormGroup>
+);
+
+const IMNCINumber = ({ name, label, formData, pendingData, handleChange, isReadOnly }) => (
+    <FormGroup label={<>{label} <PendingBadge fieldKey={name} pendingData={pendingData} currentData={formData} /></>}>
+        <Input type="number" inputMode="numeric" min="0" name={name} value={formData[name] ?? ''} onChange={handleChange} disabled={isReadOnly} />
+    </FormGroup>
+);
+
 export const IMNCIFormFields = ({ formData, pendingData, handleChange, handleStaffChange, handleAddStaffRow, handleRemoveStaffRow, isReadOnly = false, onOpenMoveDeptModal, onOpenTransferFacModal }) => {
     const jobTitles = ['طبيب', 'مساعد طبي', 'ممرض معالج', 'مسؤول تغذية', 'زائرة صحية'];
+    const yn = { formData, pendingData, handleChange, isReadOnly };
 
     return (
         <div className="border border-sky-200 rounded-lg overflow-hidden bg-white shadow-sm">
@@ -1552,6 +1571,17 @@ export const IMNCIFormFields = ({ formData, pendingData, handleChange, handleSta
                             <FormGroup label={<>ساعة مؤقت <PendingBadge fieldKey="ساعة_مؤقت" pendingData={pendingData} currentData={formData} /></>}><Select name="ساعة_مؤقت" value={formData['ساعة_مؤقت'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
                             <FormGroup label={<>غرفة إرواء <PendingBadge fieldKey="غرفة_إرواء" pendingData={pendingData} currentData={formData} /></>}><Select name="غرفة_إرواء" value={formData['غرفة_إرواء'] || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
                         </div>
+                        {formData['غرفة_إرواء'] === 'Yes' && (
+                            <div className="mt-4 p-3 bg-sky-50/50 border border-sky-100 rounded">
+                                <p className="text-sm font-semibold text-sky-800 mb-3">تفاصيل ركن (غرفة) الإرواء</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <IMNCIYesNo {...yn} name="ort_equipment_complete" label="معدات ركن الإرواء مكتملة (طاولة وكراسي، أكواب، ملاعق، جك، أدوات قياس وخلط)" />
+                                    <IMNCIYesNo {...yn} name="ort_safe_water" label="مصدر ماء آمن قريب من العامل الصحي" />
+                                    <IMNCIYesNo {...yn} name="ort_register" label="سجل مراقبة إعطاء محلول الإرواء" />
+                                    <IMNCIYesNo {...yn} name="ort_health_education" label="تُعقد به جلسات تثقيف صحي للأمهات" />
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <hr className="border-gray-200" />
@@ -1559,16 +1589,34 @@ export const IMNCIFormFields = ({ formData, pendingData, handleChange, handleSta
                     <div>
                         <h4 className="text-lg font-semibold mb-4 text-sky-800 bg-sky-50 px-4 py-2 border border-sky-100 rounded-md">الخدمات الاخرى</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4">
-                            <div className="p-3 bg-gray-50 border border-gray-200 rounded">
+                            <div className="p-3 bg-gray-50 border border-gray-200 rounded md:col-span-2">
                                 <FormGroup label={<>هل يوجد مكتب تحصين؟ <PendingBadge fieldKey="immunization_office_exists" pendingData={pendingData} currentData={formData} /></>}><Select name="immunization_office_exists" value={formData.immunization_office_exists || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
                                 {formData.immunization_office_exists === 'No' && <FormGroup label={<>اين يقع اقرب مركز تحصين؟ <PendingBadge fieldKey="nearest_immunization_center" pendingData={pendingData} currentData={formData} /></>} className="mt-3"><Input type="text" name="nearest_immunization_center" value={formData.nearest_immunization_center || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>}
+                                {formData.immunization_office_exists === 'Yes' && (
+                                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <p className="sm:col-span-2 text-xs font-semibold text-gray-600">نوع استراتيجية التحصين وتفاصيل الخدمة</p>
+                                        <IMNCIYesNo {...yn} name="immunization_strategy_fixed" label="ثابتة" />
+                                        {formData.immunization_strategy_fixed === 'Yes' && <IMNCINumber {...yn} name="immunization_fixed_days_per_week" label="عدد أيام التحصين الثابت بالمرفق في الأسبوع" />}
+                                        <IMNCIYesNo {...yn} name="immunization_strategy_outreach" label="فرعي" />
+                                        <IMNCIYesNo {...yn} name="immunization_strategy_mobile" label="جوال" />
+                                        {(formData.immunization_strategy_outreach === 'Yes' || formData.immunization_strategy_mobile === 'Yes') && <IMNCINumber {...yn} name="immunization_outreach_sessions_per_month" label="عدد جلسات التحصين الفرعي / الجوال في الشهر" />}
+                                        <IMNCIYesNo {...yn} name="road_to_health_cards" label="توجد كروت الطريق إلى الصحة" />
+                                        <IMNCIYesNo {...yn} name="vaccines_available" label="كل اللقاحات متوفرة في يوم التحصين" />
+                                        <IMNCIYesNo {...yn} name="vaccine_fridge_working" label="ثلاجة اللقاحات تعمل ويُسجَّل فيها جدول درجة الحرارة" />
+                                        <IMNCIYesNo {...yn} name="vaccines_stored_correctly" label="تُحفظ اللقاحات بطريقة صحيحة" />
+                                    </div>
+                                )}
                             </div>
-                            <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                                <FormGroup label={<>هل يوجد مركز تغذية خارجي؟ <PendingBadge fieldKey="nutrition_center_exists" pendingData={pendingData} currentData={formData} /></>}><Select name="nutrition_center_exists" value={formData.nutrition_center_exists || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
-                                {formData.nutrition_center_exists === 'No' && <FormGroup label={<>اين يقع اقرب مركز تغذية خارجي؟ <PendingBadge fieldKey="nearest_nutrition_center" pendingData={pendingData} currentData={formData} /></>} className="mt-3"><Input type="text" name="nearest_nutrition_center" value={formData.nearest_nutrition_center || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>}
-                            </div>
-                            <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                                <FormGroup label={<>هل يوجد خدمة متابعة النمو ؟ <PendingBadge fieldKey="growth_monitoring_service_exists" pendingData={pendingData} currentData={formData} /></>}><Select name="growth_monitoring_service_exists" value={formData.growth_monitoring_service_exists || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                            <div className="p-3 bg-gray-50 border border-gray-200 rounded md:col-span-2">
+                                <p className="text-sm font-semibold text-gray-700 mb-3">خدمات التغذية المتوفرة</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <FormGroup label={<>هل يوجد مركز تغذية خارجي؟ <PendingBadge fieldKey="nutrition_center_exists" pendingData={pendingData} currentData={formData} /></>}><Select name="nutrition_center_exists" value={formData.nutrition_center_exists || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                                    {formData.nutrition_center_exists === 'No' && <FormGroup label={<>اين يقع اقرب مركز تغذية خارجي؟ <PendingBadge fieldKey="nearest_nutrition_center" pendingData={pendingData} currentData={formData} /></>} className="mt-3"><Input type="text" name="nearest_nutrition_center" value={formData.nearest_nutrition_center || ''} onChange={handleChange} disabled={isReadOnly} /></FormGroup>}
+                                    <FormGroup label={<>متابعة النمو <PendingBadge fieldKey="growth_monitoring_service_exists" pendingData={pendingData} currentData={formData} /></>}><Select name="growth_monitoring_service_exists" value={formData.growth_monitoring_service_exists || 'No'} onChange={handleChange} disabled={isReadOnly}><option value="Yes">نعم</option><option value="No">لا</option></Select></FormGroup>
+                                    <IMNCIYesNo {...yn} name="otp_rutf_exists" label="برنامج العلاج الخارجي (OTP) بالأغذية العلاجية الجاهزة (RUTF)" />
+                                    <IMNCIYesNo {...yn} name="otp_tsfp_exists" label="برنامج العلاج الخارجي (OTP) بالتغذية التكميلية (TSFP)" />
+                                    <IMNCIYesNo {...yn} name="iycf_service_exists" label="تغذية الرضع وصغار الأطفال (IYCF)" />
+                                </div>
                             </div>
                         </div>
                     </div>
