@@ -15,6 +15,7 @@ import { getAuth } from "firebase/auth";
 import { handleAutoScroll, ActionToggle } from './IMNCSkillsAssessmentForm';
 
 import FormPdfButton from '../FormPdfButton';
+import { PrintModeProvider, usePrintMode, usePrintAll } from '../pdfPrint';
 // --- Score Circle Component ---
 const ScoreCircle = ({ score, maxScore }) => {
     if (maxScore === null || maxScore === undefined || score === null || score === undefined) {
@@ -81,6 +82,7 @@ const StickyOverallScore = ({ totalScore, totalMaxScore }) => {
 // --- Accordion Wrapper for Mothers Form Sections ---
 const MothersSectionAccordion = ({ title, scoreData, children, isCompleted = false }) => {
     const [isExpanded, setIsExpanded] = useState(true);
+    const printAll = usePrintAll();
 
     useEffect(() => {
         if (isCompleted) {
@@ -105,7 +107,7 @@ const MothersSectionAccordion = ({ title, scoreData, children, isCompleted = fal
                 </div>
                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
             </button>
-            {isExpanded && (
+            {(isExpanded || printAll) && (
                 <div className="divide-y divide-slate-100 bg-white">
                     {children}
                 </div>
@@ -224,6 +226,8 @@ const MothersForm = ({
     // that visit and this component stops deriving its own.
     lockedVisitNumber = false
 }) => {
+    // While the PDF is made every section is shown open (the whole form).
+    const { printAll, beforeExport: beforePdfExport } = usePrintMode();
     const [formData, setFormData] = useState(() => {
         if (existingSessionData) {
             return {
@@ -422,8 +426,9 @@ const MothersForm = ({
                 totalScore={scores.overall.score}
                 totalMaxScore={scores.overall.maxScore}
             />
+            <PrintModeProvider value={printAll}>
             <form ref={formRef} onSubmit={handleSubmit}>
-                <div className="flex justify-end mb-2" data-pdf-hide=""><FormPdfButton formName="IMNCI Mothers Satisfaction and Knowledge Survey" subtitle="استبيان رضا ومعرفة الأمهات" /></div>
+                <div className="flex justify-end mb-2" data-pdf-hide=""><FormPdfButton beforeExport={beforePdfExport} formName="IMNCI Mothers Satisfaction and Knowledge Survey" subtitle="استبيان رضا ومعرفة الأمهات" /></div>
                 <div className="p-6">
                     <div className="text-center mb-4">
                         <h2 className="text-2xl font-bold text-sky-800">
@@ -525,6 +530,7 @@ const MothersForm = ({
                     </Button>
                 </div>
             </form>
+            </PrintModeProvider>
         </Card>
     );
 };

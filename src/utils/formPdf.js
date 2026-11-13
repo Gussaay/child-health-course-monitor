@@ -116,6 +116,16 @@ function prepareClone(clonedRoot, dir) {
             n.style.boxShadow = 'none';
         }
     });
+    // Scroll boxes (a list with a max height) are opened to their full
+    // length, so no choice or row is cut off on paper.
+    clonedRoot.querySelectorAll('*').forEach((n) => {
+        const cs = win.getComputedStyle(n);
+        if (cs.maxHeight === 'none' || n.scrollHeight <= n.clientHeight + 1) return;
+        if (!/(auto|scroll|hidden)/.test(`${cs.overflowY}${cs.overflow}`)) return;
+        n.style.maxHeight = 'none';
+        n.style.height = 'auto';
+        n.style.overflow = 'visible';
+    });
     // Text boxes become plain boxes holding their answer: html2canvas draws
     // Arabic inside inputs with the letters unjoined, but joins them in
     // ordinary text. Placeholders are dropped (on paper they read as answers).
@@ -128,6 +138,13 @@ function prepareClone(clonedRoot, dir) {
         if (n.tagName === 'SELECT') {
             const opt = n.options[n.selectedIndex];
             text = opt && opt.value !== '' ? opt.text : '';
+            // Nothing chosen: list every choice with a box to tick by hand,
+            // so a blank PDF shows what can be picked.
+            const choices = [...n.options].filter((o) => o.value !== '' && !o.disabled).map((o) => o.text.trim()).filter(Boolean);
+            if (!text && choices.length) {
+                n.replaceWith(choiceList(n.ownerDocument, choices, cs));
+                return;
+            }
         }
         const box = n.ownerDocument.createElement('div');
         box.className = n.className;
@@ -146,6 +163,26 @@ function prepareClone(clonedRoot, dir) {
         box.setAttribute('dir', 'auto');
         n.replaceWith(box);
     });
+}
+
+/** The choices of an unanswered drop-down, each with an empty tick box. */
+function choiceList(doc, choices, cs) {
+    const list = doc.createElement('div');
+    list.setAttribute('data-pdf-choices', '');
+    list.style.cssText = `box-sizing:border-box;display:flex;flex-wrap:wrap;gap:4px 14px;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;`
+        + `font-size:${cs.fontSize};line-height:1.5;color:#0f172a;max-width:100%;`;
+    choices.forEach((c) => {
+        const item = doc.createElement('span');
+        item.style.cssText = 'display:inline-flex;align-items:center;gap:5px;';
+        const tick = doc.createElement('span');
+        tick.style.cssText = 'display:inline-block;width:11px;height:11px;border:1.5px solid #475569;border-radius:2px;flex:none;';
+        const label = doc.createElement('span');
+        label.setAttribute('dir', 'auto');
+        label.textContent = c;
+        item.append(tick, label);
+        list.appendChild(item);
+    });
+    return list;
 }
 
 /**

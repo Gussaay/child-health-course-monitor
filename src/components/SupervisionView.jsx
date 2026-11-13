@@ -39,6 +39,7 @@ import { useLeaveGuard, leaveForm, formSaved } from '../utils/leaveGuard';
 import { publicBaseUrl } from '../utils/publicLink';
 import { isDateInRange, DATE_RANGE_OPTIONS } from '../utils/dateRange';
 import FormPdfButton from './FormPdfButton';
+import { PrintModeProvider, usePrintMode, usePrintAll, ConditionNote } from './pdfPrint';
 import {
     SUPERVISION_SERVICES, getChecklist, checklistsForService, pickLabel,
     scoreSection, scoreAssessment, pctText, toneFor, toNum,
@@ -294,11 +295,24 @@ function GridSection({ section, values, onChange, readOnly }) {
 function FieldsSection({ section, values, onChange, readOnly, checklist, form }) {
     const { i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
+    const printAll = usePrintAll();
+    // In the PDF a conditional answer is printed after a note of when it shows.
+    const shown = section.items
+        .filter((f) => !f.showIf || values[f.showIf] === true || printAll)
+        .flatMap((f) => (f.showIf && printAll ? [{ noteFor: f }, f] : [f]));
     return (
         <div className="space-y-3">
             {section.showMetrics && checklist.metrics && <MetricList checklist={checklist} form={form} />}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {section.items.filter((f) => !f.showIf || values[f.showIf] === true).map((f) => {
+                {shown.map((f) => {
+                    if (f.noteFor) {
+                        const source = section.items.find((x) => x.id === f.noteFor.showIf);
+                        return (
+                            <ConditionNote key={`${f.noteFor.id}-condition`} lang={isArabic ? 'ar' : 'en'} className="sm:col-span-2">
+                                {isArabic ? `الإجابة «نعم» على: ${pickLabel(source || {}, true) || f.noteFor.showIf}` : `Answer "Yes" to: ${pickLabel(source || {}, false) || f.noteFor.showIf}`}
+                            </ConditionNote>
+                        );
+                    }
                     const label = pickLabel(f, isArabic);
                     const wide = f.kind === 'textarea' ? 'sm:col-span-2' : '';
                     if (f.kind === 'textarea') {
@@ -913,8 +927,11 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, canAppro
         setOpenSections(new Set(checklist.sections.map((s) => s.id)));
         return () => setOpenSections(before);
     };
+    // While the PDF is made, answers that show only after a "Yes" are printed too, with a note.
+    const { printAll, beforeExport: beforePdfExport } = usePrintMode(openAllForPdf);
 
     return (
+        <PrintModeProvider value={printAll}>
         <div data-pdf-root="" className={`space-y-3 ${canEdit ? 'pb-24 sm:pb-0' : ''}`}>
             {!IS_NATIVE && !publicMode && (
                 <span data-pdf-hide="">
@@ -927,7 +944,7 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, canAppro
                 <FormPdfButton
                     formName={checklist.title}
                     subtitle={checklist.titleAr && checklist.titleAr !== checklist.title ? checklist.titleAr : ''}
-                    beforeExport={openAllForPdf} />
+                    beforeExport={beforePdfExport} />
             </div>
 
             <Card>
@@ -1041,6 +1058,7 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, canAppro
                 </>
             )}
         </div>
+        </PrintModeProvider>
     );
 }
 

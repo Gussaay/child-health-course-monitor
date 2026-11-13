@@ -14,6 +14,7 @@ import { GenericFacilityForm, IMNCIFormFields, SaveStatusModal } from '../Facili
 import { submitFacilityDataForApproval } from '../../data';
 
 import FormPdfButton from '../FormPdfButton';
+import { PrintModeProvider, usePrintMode } from '../pdfPrint';
 // --- Import all IMNCI-specific logic and the renderer ---
 import {
     IMNCIFormRenderer,
@@ -101,6 +102,9 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         existingSessionData ? rehydrateDraftData(existingSessionData, DIARRHEA_CLASSIFICATIONS, FEVER_CLASSIFICATIONS) : getInitialFormData()
     );
     const [visibleStep, setVisibleStep] = useState(existingSessionData ? 10 : 1);
+    // While the PDF is made the whole form is shown (every step and every
+    // conditional question, each with a note of when it appears).
+    const { printAll, beforeExport: beforePdfExport } = usePrintMode();
     const [isSaving, setIsSaving] = useState(false);
     const [isSavingDraft, setIsSavingDraft] = useState(false);
     const [isFacilityModalOpen, setIsFacilityModalOpen] = useState(false);
@@ -757,8 +761,9 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 score={scores?.overallScore?.score}
                 maxScore={scores?.overallScore?.maxScore}
             />
+            <PrintModeProvider value={printAll}>
             <form onSubmit={handleSubmit}>
-                <div className="flex justify-end mb-2" data-pdf-hide=""><FormPdfButton formName="IMNCI Skills Mentorship Form" subtitle="متابعة مهارات العلاج المتكامل للأطفال اقل من 5 سنوات" beforeExport={() => { const before = visibleStep; setVisibleStep(10); return () => setVisibleStep(before); }} /></div>
+                <div className="flex justify-end mb-2" data-pdf-hide=""><FormPdfButton formName="IMNCI Skills Mentorship Form" subtitle="متابعة مهارات العلاج المتكامل للأطفال اقل من 5 سنوات" beforeExport={beforePdfExport} /></div>
                 <div className="p-6">
                     {/* --- Centered Title --- */}
                     <div className="text-center mb-4">
@@ -856,7 +861,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                     />
                     
                     {/* --- Notes Section --- */}
-                    {(visibleStep >= 10 || !!editingIdRef.current) && (
+                    {(visibleStep >= 10 || !!editingIdRef.current || printAll) && (
                         <>
                            <FormGroup label="ملاحظات عامة" className="text-right">
                                 <Textarea name="notes" value={formData.notes} onChange={handleFormChange} rows={4} placeholder="أضف أي ملاحظات إضافية حول الجلسة..." className="text-right placeholder:text-right"/>
@@ -938,6 +943,7 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                     </Button>
                 </div>
             </form>
+            </PrintModeProvider>
 
             {/* --- INJECTED STATUS MODAL --- */}
             <SaveStatusModal statusData={statusData} onClose={handleCloseStatusModal} />
