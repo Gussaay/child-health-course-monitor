@@ -2938,7 +2938,8 @@ export function CourseForm({
     const [error, setError] = useState('');
 
     const directorOptions = useMemo(() => {
-        if (canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
+        // Program Management: any existing facilitator can be the course director.
+        if (isProgramManagement || canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
             return [...facilitatorsList].sort((a, b) => a.name.localeCompare(b.name));
         }
         return facilitatorsList
@@ -2953,7 +2954,7 @@ export function CourseForm({
                 return f.directorCourse === 'Yes';
             })
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, isCpcm, isSmallAndSick, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures]);
+    }, [facilitatorsList, isCpcm, isSmallAndSick, isProgramManagement, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures]);
 
     const clinicalInstructorOptions = useMemo(() => {
         if (canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
@@ -2965,7 +2966,8 @@ export function CourseForm({
     }, [facilitatorsList, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures]);
 
     const facilitatorOptions = useMemo(() => {
-        if (canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
+        // Program Management: any existing facilitator can facilitate.
+        if (isProgramManagement || canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
             return [...facilitatorsList].sort((a, b) => a.name.localeCompare(b.name));
         }
         return facilitatorsList
@@ -2974,7 +2976,6 @@ export function CourseForm({
                 
                 if (isIccm || isCpcm) return fCourses.includes('ICCM') || fCourses.includes('IMNCI') || fCourses.includes('Comprehensive Package For Community Midwives');
                 if (isInfectionControl) return fCourses.includes('IPC');
-                if (isProgramManagement) return fCourses.includes('Program Management') || fCourses.includes('IMNCI');
                 if (isSmallAndSick) return fCourses.includes('SSNC') || fCourses.includes('Small & Sick Newborn');
                 if (isEmonc) return fCourses.includes('EmONC') || fCourses.includes('EENC');
                 

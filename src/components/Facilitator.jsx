@@ -397,6 +397,7 @@ export function FacilitatorDataForm({ data, onDataChange, onFileChange, isPublic
         const types = new Set((COURSE_TYPES_FACILITATOR || []).filter(course => course !== 'Small and Sick Newborn' && course !== 'Small & Sick Newborn' && course !== 'SSNC'));
         types.add('SSNC');
         types.add('Comprehensive Package For Community Midwives');
+        types.add('IMNCI Operational Guide TOT');
         return Array.from(types);
     }, []);
 
