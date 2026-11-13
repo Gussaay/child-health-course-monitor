@@ -2899,7 +2899,9 @@ export function ParticipantsView({
                 </FilterPanel>
             </div>
 
-            <div className="hidden md:block overflow-hidden bg-white rounded-xl shadow-sm">
+            {/* overflow-x-auto: a long name or locality must never push the
+                Actions column (Edit / Delete) off the card. */}
+            <div className="hidden md:block overflow-x-auto bg-white rounded-xl shadow-sm">
                 <table className="w-full text-start border-collapse border border-slate-300 text-sm">
                     <thead>
                         <tr className="bg-slate-100 text-xs text-slate-600 whitespace-nowrap">
@@ -2926,7 +2928,7 @@ export function ParticipantsView({
                                     <td className="p-3 align-middle border border-slate-200">
                                         <div className="flex flex-col gap-0.5">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-bold text-gray-900 text-[13px] whitespace-nowrap">{p.name}</span>
+                                                <span className="font-bold text-gray-900 text-[13px] break-words">{p.name}</span>
                                                 {certAwaiting && (
                                                     <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-xs font-bold "
                                                         title={t('participants_page.list.stale_tooltip', 'Name or sub-course changed after this course was approved')}>
@@ -2942,7 +2944,7 @@ export function ParticipantsView({
                                         <div className="text-[12px] font-semibold text-gray-700 whitespace-nowrap truncate max-w-[220px]">
                                             {course.course_type === 'Program Management' ? (p.department || t('participants_page.common.na', 'N/A')) : p.center_name}
                                         </div>
-                                        {p.locality && <div className="text-xs text-gray-500 whitespace-nowrap">{t('participants_page.list.locality_value', 'Locality: {{locality}}', { locality: p.locality })}</div>}
+                                        {p.locality && <div className="text-xs text-gray-500 whitespace-nowrap truncate max-w-[260px]" title={p.locality}>{t('participants_page.list.locality_value', 'Locality: {{locality}}', { locality: p.locality })}</div>}
                                     </td>
                                     
                                     <td className="p-3 align-middle border border-slate-200 hidden lg:table-cell text-xs text-gray-500 whitespace-nowrap">
