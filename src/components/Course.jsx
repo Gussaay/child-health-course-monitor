@@ -242,6 +242,12 @@ export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
                     const f = getFacById(course.directorId);
                     if (f && f.name !== course.director) { updates.director = f.name; needsUpdate = true; }
                 }
+                // A spelling fix is the same person: keep the certificate's
+                // approved-director record in step so their signature still prints.
+                if (updates.director && course.approvedDirectorName
+                    && course.approvedDirectorName.trim().toLowerCase() === (course.director || '').trim().toLowerCase()) {
+                    updates.approvedDirectorName = updates.director;
+                }
 
                 // 2. Clinical
                 const mappedClin = getMatchedFac(course.clinical_instructor);

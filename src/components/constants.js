@@ -1849,3 +1849,47 @@ export const certificateApprovalSnapshot = (participant, course, approvedBy = ''
     at: new Date().toISOString(),
     by: approvedBy || '',
 });
+
+// --- Certificate course director -------------------------------------------
+
+const signerFilled = (...values) => {
+    for (const v of values) {
+        if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+    }
+    return '';
+};
+
+const sameSignerName = (a, b) => {
+    const norm = (v) => (v || '').trim().replace(/^(dr\.\s*|dr\s+|د\.\s*)/i, '').trim().toLowerCase().replace(/\s+/g, ' ');
+    return !!norm(a) && norm(a) === norm(b);
+};
+
+/**
+ * The course director printed on certificates: whoever the course names as
+ * director NOW. approvedDirectorName is only a record of who it was when the
+ * certificates were approved (or the signature uploaded); letting it win meant
+ * a course whose director was changed afterwards kept printing the old name.
+ */
+export const certificateDirectorName = (course = {}) =>
+    signerFilled(course?.director, course?.approvedDirectorName);
+
+/**
+ * The stored director signature, but only while it still belongs to the
+ * person printed above it. After the director is changed the old director's
+ * signature is left out (not deleted, so it returns if the change is undone)
+ * until the new director's signature is uploaded.
+ */
+export const certificateDirectorSignature = (course = {}) => {
+    const url = course?.approvedDirectorSignatureUrl || null;
+    if (!url) return null;
+    // A name typed into the certificate designer prints whoever the director is.
+    const override = signerFilled(course?.customCertificate?.directorTitleEn);
+    if (override) return url;
+    const signedId = course?.approvedDirectorId;
+    const currentId = course?.directorId;
+    if (signedId && currentId) return signedId === currentId ? url : null;
+    const signedAs = course?.approvedDirectorName;
+    const current = course?.director;
+    if (!signedAs || !current) return url;
+    return sameSignerName(signedAs, current) ? url : null;
+};

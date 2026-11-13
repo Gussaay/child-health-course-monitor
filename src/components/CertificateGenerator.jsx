@@ -19,7 +19,9 @@ import { Award, FileSignature, Stamp, CheckCircle, Settings, Upload, ArrowLeft, 
 // Data & Firebase
 import {
     STATE_LOCALITIES, certificateApprovalState, certificateSubCourseOf,
-    staleCertificateParticipants
+    staleCertificateParticipants,
+    certificateDirectorName,
+    certificateDirectorSignature,
 } from './constants'; 
 import { db } from '../firebase'; 
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc, deleteDoc, serverTimestamp, deleteField } from 'firebase/firestore'; 
@@ -831,7 +833,7 @@ export const resolveCertificateSignatories = (course = {}, fallbackManagerName =
     const cfg = course.customCertificate || {};
     const { directorNameAr = null, programManagerNameAr = null } = extra;
 
-    const courseDirector = firstFilled(course.approvedDirectorName, course.director);
+    const courseDirector = certificateDirectorName(course);
     const courseManager = firstFilled(course.approvedByManagerName, fallbackManagerName);
 
     const honorificEn = cfg.hideHonorific ? '' : firstFilled(cfg.honorificEn, CERT_DEFAULTS.honorificEn);
@@ -1178,11 +1180,14 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
 
     const containerStyle = { width: '297mm', height: '210mm', boxSizing: 'border-box', fontFamily: isArabic ? 'Arial, sans-serif' : 'Times New Roman, serif', color: 'black', backgroundColor: 'white', position: 'relative', direction: isArabic ? 'rtl' : 'ltr' };
     const qrContainerStyle = { position: 'absolute', top: '60mm', width: '45mm', height: 'auto', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', left: isArabic ? '15mm' : 'auto', right: isArabic ? 'auto' : '15mm' };
-    const finalDirectorName = directorName || course.director;
+    const finalDirectorName = directorName || certificateDirectorName(course);
+    // Drop a signature left behind by a previous course director.
+    const currentDirectorSignatureUrl = (directorSignatureUrl && course && !certificateDirectorSignature({ ...course, approvedDirectorSignatureUrl: directorSignatureUrl }))
+        ? null : directorSignatureUrl;
 
     // --- SIGNATORIES (director / manager / optional third party) ---
     const signatories = resolveCertificateSignatories(
-        { ...course, approvedDirectorName: finalDirectorName, approvedByManagerName: federalProgramManagerName },
+        { ...course, director: finalDirectorName, approvedDirectorName: finalDirectorName, approvedByManagerName: federalProgramManagerName },
         federalProgramManagerName,
         { directorNameAr, programManagerNameAr }
     );
@@ -1382,10 +1387,10 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     // In RTL the manager sits on the right, the director on the left (unchanged behaviour).
     const rightSignatory = isArabic
         ? { url: programManagerSignatureUrl, name: managerDisplayName, role: managerRole, hidden: signatories.hideManager, block: 'manager' }
-        : { url: directorSignatureUrl, name: directorDisplayName, role: directorRole, hidden: signatories.hideDirector, block: 'director' };
+        : { url: currentDirectorSignatureUrl, name: directorDisplayName, role: directorRole, hidden: signatories.hideDirector, block: 'director' };
 
     const leftSignatory = isArabic
-        ? { url: directorSignatureUrl, name: directorDisplayName, role: directorRole, hidden: signatories.hideDirector, block: 'director' }
+        ? { url: currentDirectorSignatureUrl, name: directorDisplayName, role: directorRole, hidden: signatories.hideDirector, block: 'director' }
         : { url: programManagerSignatureUrl, name: managerDisplayName, role: managerRole, hidden: signatories.hideManager, block: 'manager' };
 
     return (
@@ -1610,8 +1615,8 @@ export const generateCertificatePdf = async (inputCourse, participant, federalPr
     const finalManagerName = (course.approvedByManagerName || federalProgramManagerName || '').trim();
     const rawManagerSignature = course.approvedByManagerSignatureUrl || null;
 
-    const finalDirectorName = (course.approvedDirectorName || course.director || '').trim();
-    const rawDirectorSignature = course.approvedDirectorSignatureUrl || null;
+    const finalDirectorName = certificateDirectorName(course);
+    const rawDirectorSignature = certificateDirectorSignature(course);
     const rawProgramStamp = course.approvedProgramStampUrl || null;
     const rawThirdPartySignature = course.approvedThirdPartySignatureUrl || null;
     const rawFourthPartySignature = course.approvedFourthPartySignatureUrl || null;
@@ -1699,8 +1704,8 @@ export const generateBlankCertificatePdf = async (inputCourse, federalProgramMan
     const finalManagerName = (course.approvedByManagerName || federalProgramManagerName || '').trim();
     const rawManagerSignature = course.approvedByManagerSignatureUrl || null;
 
-    const finalDirectorName = (course.approvedDirectorName || course.director || '').trim();
-    const rawDirectorSignature = course.approvedDirectorSignatureUrl || null;
+    const finalDirectorName = certificateDirectorName(course);
+    const rawDirectorSignature = certificateDirectorSignature(course);
     const rawProgramStamp = course.approvedProgramStampUrl || null;
     const rawThirdPartySignature = course.approvedThirdPartySignatureUrl || null;
     const rawFourthPartySignature = course.approvedFourthPartySignatureUrl || null;
@@ -2057,8 +2062,8 @@ const LiveCertificatePreview = ({ course, data, language }) => {
                     participantSubCourse={course?.director_imci_sub_type || null}
                     language={language}
                     programManagerSignatureUrl={course?.approvedByManagerSignatureUrl || null}
-                    directorName={course?.approvedDirectorName || course?.director || ''}
-                    directorSignatureUrl={course?.approvedDirectorSignatureUrl || null}
+                    directorName={certificateDirectorName(course)}
+                    directorSignatureUrl={certificateDirectorSignature(course)}
                     programStampUrl={course?.approvedProgramStampUrl || null}
                     thirdPartySignatureUrl={course?.approvedThirdPartySignatureUrl || null}
                                 fourthPartySignatureUrl={course?.approvedFourthPartySignatureUrl || null}
@@ -2931,7 +2936,7 @@ export function CertificateDesigner({
     // images live on the course document; the third/fourth may also be sitting in
     // the unsaved form state.
     const managerImg = !!liveCourse.approvedByManagerSignatureUrl;
-    const directorImg = !!liveCourse.approvedDirectorSignatureUrl;
+    const directorImg = !!certificateDirectorSignature(liveCourse);
     const thirdImg = !!(data.thirdPartySignatureUrl || liveCourse.approvedThirdPartySignatureUrl);
     const fourthImg = !!(data.fourthPartySignatureUrl || liveCourse.approvedFourthPartySignatureUrl);
 
@@ -2971,7 +2976,7 @@ export function CertificateDesigner({
         const base = key.replace(/(En|Ar)$/, '');
         if (base === 'courseTitle') return liveCourse.course_type ? getCertificateCourseTitle(liveCourse.course_type, lang, autoSubCourse) : '';
         if (base === 'managerTitle') return stripHonorific(firstFilled(liveCourse.approvedByManagerName, federalProgramManagerName));
-        if (base === 'directorTitle') return stripHonorific(firstFilled(liveCourse.approvedDirectorName, liveCourse.director));
+        if (base === 'directorTitle') return stripHonorific(certificateDirectorName(liveCourse));
         if (base === 'place') {
             if (isTemplateScope) return '';
             const st = lang === 'ar'
@@ -4043,8 +4048,8 @@ export function CertificateDesigner({
                                 participantSubCourse={autoSubCourse || null}
                                 language={language}
                                 programManagerSignatureUrl={liveCourse.approvedByManagerSignatureUrl || null}
-                                directorName={liveCourse.approvedDirectorName || liveCourse.director || ''}
-                                directorSignatureUrl={liveCourse.approvedDirectorSignatureUrl || null}
+                                directorName={certificateDirectorName(liveCourse)}
+                                directorSignatureUrl={certificateDirectorSignature(liveCourse)}
                                 programStampUrl={liveCourse.approvedProgramStampUrl || null}
                                 thirdPartySignatureUrl={liveCourse.approvedThirdPartySignatureUrl || null}
                                 fourthPartySignatureUrl={liveCourse.approvedFourthPartySignatureUrl || null}
@@ -5359,12 +5364,13 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
             // Persist the names that will actually be printed, so approval records
             // and generated certificates never disagree.
             const approvedManager = sig.managerEn || courseToApprove.approvedByManagerName || managerName || '';
-            const approvedDirector = sig.directorEn || courseToApprove.approvedDirectorName || courseToApprove.director || '';
+            const approvedDirector = sig.directorEn || certificateDirectorName(courseToApprove);
 
             const approvalPayload = {
                 isCertificateApproved: true,
                 approvedByManagerName: approvedManager,
                 approvedDirectorName: approvedDirector,
+                approvedDirectorId: courseToApprove.directorId || null,
                 approvedThirdPartyName: sig.thirdPartyEnabled ? sig.thirdPartyEn : '',
                 approvedThirdPartyRole: sig.thirdPartyEnabled ? sig.thirdPartyRoleEn : '',
                 approvedThirdPartySignatureUrl: sig.thirdPartyEnabled ? sig.thirdPartySignatureUrl : '',
@@ -5513,7 +5519,7 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
             const sig = resolveCertificateSignatories(effective(course), managerName);
             
             if (assetType === 'managerSignature') { updatePayload.approvedByManagerSignatureUrl = url; updatePayload.approvedByManagerName = sig.managerEn || managerName; }
-            else if (assetType === 'directorSignature') { updatePayload.approvedDirectorSignatureUrl = url; updatePayload.approvedDirectorName = sig.directorEn || course.director || ''; }
+            else if (assetType === 'directorSignature') { updatePayload.approvedDirectorSignatureUrl = url; updatePayload.approvedDirectorName = sig.directorEn || certificateDirectorName(course); updatePayload.approvedDirectorId = course.directorId || null; }
             else if (assetType === 'stamp') { updatePayload.approvedProgramStampUrl = url; }
             else if (assetType === 'thirdSignature') {
                 updatePayload.approvedThirdPartySignatureUrl = url;
@@ -5634,8 +5640,8 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
                 </Pair>
 
                 <Pair>
-                    <Button onClick={() => triggerUpload(c, 'directorSignature')} disabled={isProcessing} variant={c.approvedDirectorSignatureUrl ? "success" : "secondary"} className={`${btn} ${uploaded(c.approvedDirectorSignatureUrl)} ${block ? 'flex-1' : ''}`}>
-                        {c.approvedDirectorSignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} {t('certificates.approvals.dir_signature', 'Dir Signature')}
+                    <Button onClick={() => triggerUpload(c, 'directorSignature')} disabled={isProcessing} variant={certificateDirectorSignature(c) ? "success" : "secondary"} className={`${btn} ${uploaded(certificateDirectorSignature(c))} ${block ? 'flex-1' : ''}`}>
+                        {certificateDirectorSignature(c) ? <CheckCircle size={12} /> : <FileSignature size={12} />} {t('certificates.approvals.dir_signature', 'Dir Signature')}
                     </Button>
                     {c.approvedDirectorSignatureUrl && (
                         <button type="button" title={t('certificates.approvals.remove_dir', 'Remove director signature image')} onClick={() => removeAsset(c, 'directorSignature')} disabled={isProcessing} className={kill}>&times;</button>
@@ -5769,8 +5775,8 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
                     </div>
 
                     <div className="flex flex-wrap gap-2 text-[11px]">
-                        <span className={`px-2 py-1 rounded font-semibold ${courseToApprove?.approvedDirectorSignatureUrl ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                            {courseToApprove?.approvedDirectorSignatureUrl ? t('certificates.approvals.dir_uploaded', 'Director signature uploaded') : t('certificates.approvals.no_dir', 'No director signature')}
+                        <span className={`px-2 py-1 rounded font-semibold ${certificateDirectorSignature(courseToApprove) ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                            {certificateDirectorSignature(courseToApprove) ? t('certificates.approvals.dir_uploaded', 'Director signature uploaded') : t('certificates.approvals.no_dir', 'No director signature')}
                         </span>
                         <span className={`px-2 py-1 rounded font-semibold ${courseToApprove?.approvedByManagerSignatureUrl ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
                             {courseToApprove?.approvedByManagerSignatureUrl ? t('certificates.approvals.mgr_uploaded', 'Manager signature uploaded') : t('certificates.approvals.no_mgr', 'No manager signature')}
