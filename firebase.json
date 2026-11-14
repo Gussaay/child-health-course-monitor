@@ -236,7 +236,9 @@
       "ignore": [
         "firebase.json",
         "**/.*",
-        "**/node_modules/**"
+        "**/node_modules/**",
+        "latest/*.zip",
+        "latest-*/*.zip"
       ],
       "headers": [
         {
@@ -404,7 +406,9 @@
         "firebase.json",
         "**/.*",
         "**/node_modules/**",
-        "index.html"
+        "index.html",
+        "latest/*.zip",
+        "latest-*/*.zip"
       ],
       "headers": [
         {
