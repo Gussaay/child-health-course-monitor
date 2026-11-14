@@ -10,7 +10,7 @@
 // to fill and edit.
 
 import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, I18nextProvider } from 'react-i18next';
 import { Plus, Trash2, RefreshCw, MapPin, ArrowLeft, Download, X, LocateFixed, ExternalLink, Share2, Copy, CheckCircle2 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 
@@ -28,8 +28,9 @@ import { isDateInRange, DATE_RANGE_OPTIONS } from '../utils/dateRange';
 import { publicBaseUrl } from '../utils/publicLink';
 import {
     SURVEYS, getSurvey, pickText, newAnswers, validateResponse, buildRecord, surveySummary, exportRows,
-    toLocation, betterFix, mapLink, GPS_GOOD_ENOUGH_M, GPS_WAIT_MS,
+    toLocation, betterFix, mapLink, GPS_GOOD_ENOUGH_M, GPS_WAIT_MS, readPresetPlace, surveyShareUrl,
 } from './survey/surveys';
+import { ensurePreciseLocation, watchPrecise, isPrecise } from './survey/gps';
 
 const DeletedItemsPanel = lazy(() => import('./DeletedItemsPanel.jsx'));
 const LIST_TAB = 'list';
@@ -50,6 +51,12 @@ export const surveyPublicUrl = (surveyId) => `${publicBaseUrl()}/public/survey/$
 const FILLER_KEY = 'survey.fillerName';
 const rememberedName = () => { try { return localStorage.getItem(FILLER_KEY) || ''; } catch { return ''; } };
 const rememberName = (name) => { try { if (name) localStorage.setItem(FILLER_KEY, name); } catch { /* private mode */ } };
+
+// The place of the last form saved on this device, per survey: a new form
+// starts there (state, locality, administrative unit).
+const placeKey = (surveyId) => `survey.lastPlace.${surveyId}`;
+const rememberedPlace = (surveyId) => { try { return JSON.parse(localStorage.getItem(placeKey(surveyId)) || 'null') || {}; } catch { return {}; } };
+const rememberPlace = (surveyId, place) => { try { localStorage.setItem(placeKey(surveyId), JSON.stringify(place)); } catch { /* private mode */ } };
 
 // Who is filling: the signed-in account, else the remembered name.
 function fillerDefaults() {
@@ -132,46 +139,90 @@ function PeopleTable({ question, rows, onChange, readOnly, isArabic }) {
     );
 }
 
-// Precise GPS: high-accuracy readings for up to GPS_WAIT_MS, keeping the most
-// precise one and stopping early once it is within GPS_GOOD_ENOUGH_M metres.
-function LocationCapture({ value, onChange, readOnly }) {
+// Precise GPS. Starts by itself on a new form (autoStart). Keeps the most
+// precise reading for up to GPS_WAIT_MS, stopping early within
+// GPS_GOOD_ENOUGH_M metres. When only approximate location is allowed, or it
+// is refused, it asks again (up to MAX_AUTO_ASKS times in a row, then on every
+// tap and whenever the person comes back to the page) until precise location
+// is granted.
+const MAX_AUTO_ASKS = 3;
+
+function LocationCapture({ value, onChange, readOnly, autoStart = false }) {
     const { t } = useTranslation();
     const [busy, setBusy] = useState(false);
     const [live, setLive] = useState(null);
     const [error, setError] = useState('');
+    const [needPrecise, setNeedPrecise] = useState(false);
     const stopRef = useRef(null);
-    useEffect(() => () => stopRef.current?.(), []);
+    const asksRef = useRef(0);
+    const retryRef = useRef(null);
+    const valueRef = useRef(value);
+    valueRef.current = value;
+    useEffect(() => () => { stopRef.current?.(); clearTimeout(retryRef.current); }, []);
 
-    const capture = () => {
-        if (!navigator.geolocation) { setError(t('survey.gps.unsupported', 'This device or browser cannot give a location.')); return; }
+    const askAgainSoon = useCallback((fn) => {
+        asksRef.current += 1;
+        if (asksRef.current < MAX_AUTO_ASKS) retryRef.current = setTimeout(fn, 1500);
+    }, []);
+
+    const capture = useCallback(async () => {
+        if (stopRef.current) return;
+        clearTimeout(retryRef.current);
         setError(''); setBusy(true); setLive(null);
+        const permission = await ensurePreciseLocation();
+        if (permission === 'unsupported') {
+            setBusy(false);
+            setError(t('survey.gps.unsupported', 'This device or browser cannot give a location.'));
+            return;
+        }
+        if (permission === 'denied' && IS_NATIVE) {
+            setBusy(false); setNeedPrecise(true);
+            askAgainSoon(capture);
+            return;
+        }
+        // Approximate only: take a reading anyway (better than nothing), but keep asking.
+        if (permission === 'coarse') setNeedPrecise(true);
         let best = null;
-        let watchId = null;
         let timer = null;
+        let stopWatch = null;
         const finish = (err) => {
-            if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+            stopWatch?.();
             clearTimeout(timer);
             stopRef.current = null;
             setBusy(false);
-            if (best) onChange(best);
-            else if (err) {
-                setError(err.code === 1
-                    ? t('survey.gps.denied', 'Location permission was refused. Allow location for this app and try again.')
-                    : t('survey.gps.failed', 'Could not get the location. Turn on GPS (location) and try again outdoors.'));
+            if (best) {
+                onChange(best);
+                if (isPrecise(best) && permission !== 'coarse') { setNeedPrecise(false); asksRef.current = 0; } else { setNeedPrecise(true); askAgainSoon(capture); }
+            } else if (err) {
+                if (err.code === 1) { setNeedPrecise(true); askAgainSoon(capture); }
+                else setError(t('survey.gps.failed', 'Could not get the location. Turn on GPS (location) and try again outdoors.'));
             }
         };
         stopRef.current = () => finish(null);
-        watchId = navigator.geolocation.watchPosition(
+        stopWatch = watchPrecise(
             (pos) => {
                 best = betterFix(best, toLocation(pos));
                 setLive(best);
                 if (best?.accuracy != null && best.accuracy <= GPS_GOOD_ENOUGH_M) finish(null);
             },
             (err) => { if (!best) finish(err); },
-            { enableHighAccuracy: true, timeout: GPS_WAIT_MS, maximumAge: 0 },
+            GPS_WAIT_MS,
         );
         timer = setTimeout(() => finish({ code: 3 }), GPS_WAIT_MS);
-    };
+    }, [onChange, t, askAgainSoon]);
+
+    // A new form starts looking at once.
+    useEffect(() => {
+        if (autoStart && !readOnly && !valueRef.current) capture();
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps -- only when the form opens
+
+    // Back from the settings screen (or another app): ask again.
+    useEffect(() => {
+        if (!needPrecise || readOnly) return undefined;
+        const onVisible = () => { if (document.visibilityState === 'visible') { asksRef.current = 0; capture(); } };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => document.removeEventListener('visibilitychange', onVisible);
+    }, [needPrecise, readOnly, capture]);
 
     const shown = busy ? live : value;
     return (
@@ -190,7 +241,18 @@ function LocationCapture({ value, onChange, readOnly }) {
                     )}
                 </div>
             ) : (
-                <p className="text-xs text-slate-500">{t('survey.gps.none', 'No location captured yet.')}</p>
+                <p className="text-xs text-slate-500">{busy ? t('survey.gps.searching_short', 'Looking for the location…') : t('survey.gps.none', 'No location captured yet.')}</p>
+            )}
+            {needPrecise && !readOnly && !busy && (
+                <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 space-y-2">
+                    <p className="font-semibold">{t('survey.gps.need_precise_title', 'Precise location is needed')}</p>
+                    <p>{IS_NATIVE
+                        ? t('survey.gps.need_precise_app', 'Allow location for this app and choose "Precise" (not "Approximate"), then come back.')
+                        : t('survey.gps.need_precise_web', 'Allow location for this site in the browser (tap the lock icon by the address), turn on GPS, then try again.')}</p>
+                    <Button size="sm" onClick={() => { asksRef.current = 0; capture(); }}>
+                        <LocateFixed size={14} /> {t('survey.gps.allow_precise', 'Allow precise location')}
+                    </Button>
+                </div>
             )}
             {!readOnly && (
                 <div className="flex flex-wrap gap-2">
@@ -199,7 +261,7 @@ function LocationCapture({ value, onChange, readOnly }) {
                             <Spinner size="sm" /> {t('survey.gps.searching', 'Getting a precise fix… tap to stop')}
                         </Button>
                     ) : (
-                        <Button variant="secondary" size="sm" onClick={capture}>
+                        <Button variant="secondary" size="sm" onClick={() => { asksRef.current = 0; capture(); }}>
                             <LocateFixed size={14} /> {value ? t('survey.gps.recapture', 'Capture again') : t('survey.gps.capture', 'Capture location')}
                         </Button>
                     )}
@@ -213,11 +275,11 @@ function LocationCapture({ value, onChange, readOnly }) {
     );
 }
 
-function Question({ question, value, onChange, readOnly, isArabic, error }) {
+function Question({ question, value, onChange, readOnly, isArabic, error, autoStart }) {
     const label = pickText(question, isArabic);
     const body = (() => {
         if (question.kind === 'yesno') return <YesNo value={value} onChange={onChange} readOnly={readOnly} />;
-        if (question.kind === 'location') return <LocationCapture value={value} onChange={onChange} readOnly={readOnly} />;
+        if (question.kind === 'location') return <LocationCapture value={value} onChange={onChange} readOnly={readOnly} autoStart={autoStart} />;
         if (question.kind === 'people') {
             return <PeopleTable question={question} rows={Array.isArray(value) ? value : []} onChange={onChange} readOnly={readOnly} isArabic={isArabic} />;
         }
@@ -242,9 +304,37 @@ function Question({ question, value, onChange, readOnly, isArabic, error }) {
 // The form
 // =============================================================================
 
-function ResponseForm({ survey, initial, onBack, onSaved, canEdit, publicMode = false }) {
-    const { t, i18n } = useTranslation();
-    const isArabic = i18n.language === 'ar';
+// The form opens in Arabic whatever language the app is in, with a switch to
+// English. It uses its own copy of i18next, so switching here leaves the
+// rest of the app (and the saved language choice) alone.
+function FormLanguage({ children }) {
+    const { i18n } = useTranslation();
+    const [lang, setLang] = useState('ar');
+    const inst = useMemo(() => i18n.cloneInstance({ lng: 'ar' }), [i18n]);
+    useEffect(() => { if (inst.language !== lang) inst.changeLanguage(lang); }, [inst, lang]);
+    return (
+        <I18nextProvider i18n={inst}>
+            <div dir={lang === 'ar' ? 'rtl' : 'ltr'} lang={lang}>{children({ lang, setLang })}</div>
+        </I18nextProvider>
+    );
+}
+
+function LanguageSwitch({ lang, setLang }) {
+    return (
+        <button type="button" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
+            className="shrink-0 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+            {lang === 'ar' ? 'English' : 'العربية'}
+        </button>
+    );
+}
+
+function ResponseForm(props) {
+    return <FormLanguage>{(l) => <ResponseFormBody {...props} {...l} />}</FormLanguage>;
+}
+
+function ResponseFormBody({ survey, initial, onBack, onSaved, canEdit, publicMode = false, preset = null, lang, setLang }) {
+    const { t } = useTranslation();
+    const isArabic = lang === 'ar';
     useLeaveGuard(canEdit);
     const back = () => leaveForm(onBack);
     useInPageBack(back, !publicMode);
@@ -261,7 +351,13 @@ function ResponseForm({ survey, initial, onBack, onSaved, canEdit, publicMode = 
         }
         const answers = newAnswers(survey, { user: auth.currentUser });
         if (!answers.completedBy && filler.name) answers.completedBy = filler.name;
-        return { stateKey: '', localityKey: '', answers };
+        // A link with a place set wins; otherwise the place used last on this device.
+        const last = rememberedPlace(survey.id);
+        const sameState = !preset?.stateKey || preset.stateKey === last.stateKey;
+        const stateKey = preset?.stateKey || last.stateKey || '';
+        const localityKey = preset?.localityKey || (sameState ? last.localityKey : '') || '';
+        if (!answers.adminUnit && sameState && (!preset?.localityKey || preset.localityKey === last.localityKey) && last.adminUnit) answers.adminUnit = last.adminUnit;
+        return { stateKey: STATE_LOCALITIES[stateKey] ? stateKey : '', localityKey, answers };
     });
     const [saving, setSaving] = useState(false);
     const [problems, setProblems] = useState([]);
@@ -285,6 +381,13 @@ function ResponseForm({ survey, initial, onBack, onSaved, canEdit, publicMode = 
         if (publicMode && !filler.signedIn && !String(form.answers.completedBy || '').trim()) found.push({ id: 'completedBy', code: 'required' });
         setProblems(found);
         if (found.length) { notify(t('survey.form.fix_errors', 'Some answers need attention.'), 'error'); return; }
+        const hasLocation = survey.questions.some((q) => q.kind === 'location');
+        if (hasLocation && !isPrecise(form.answers.location)) {
+            const ok = await confirmDialog(
+                t('survey.gps.save_without', 'The precise location of the village has not been captured. Save anyway?'),
+                { title: t('survey.gps.need_precise_title', 'Precise location is needed'), confirmLabel: t('survey.gps.save_anyway', 'Save anyway') });
+            if (!ok) return;
+        }
         setSaving(true);
         try {
             const record = withoutUndefined({
@@ -294,6 +397,7 @@ function ResponseForm({ survey, initial, onBack, onSaved, canEdit, publicMode = 
             });
             await upsertSurveyResponse(record);
             if (!filler.signedIn) rememberName(String(form.answers.completedBy || '').trim());
+            rememberPlace(survey.id, { stateKey: form.stateKey, localityKey: form.localityKey, adminUnit: form.answers.adminUnit || '' });
             formSaved();
             notify(t('survey.form.saved', 'Saved.'), 'success');
             onSaved?.();
@@ -320,10 +424,11 @@ function ResponseForm({ survey, initial, onBack, onSaved, canEdit, publicMode = 
                 <CardBody className="space-y-4">
                     <div className="flex items-start gap-3">
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-700"><MapPin size={22} /></span>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                             <h3 className="font-semibold text-slate-800">{pickText(survey, isArabic, 'title')}</h3>
                             <p className="text-xs text-slate-500">{t('survey.form.place', 'Place')}</p>
                         </div>
+                        <LanguageSwitch lang={lang} setLang={setLang} />
                     </div>
                     {publicMode && (
                         <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
@@ -334,7 +439,7 @@ function ResponseForm({ survey, initial, onBack, onSaved, canEdit, publicMode = 
                     )}
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
-                            <Select label={<>{t('survey.state', 'State')}<span className="text-red-600"> *</span></>} value={form.stateKey} disabled={readOnly}
+                            <Select label={<>{t('survey.state', 'State')}<span className="text-red-600"> *</span></>} value={form.stateKey} disabled={readOnly || !!preset?.stateKey}
                                 onChange={(e) => setForm((p) => ({ ...p, stateKey: e.target.value, localityKey: '' }))}>
                                 <option value="">{t('survey.select', 'Select…')}</option>
                                 {Object.keys(STATE_LOCALITIES).filter((k) => k !== 'Federal')
@@ -343,7 +448,7 @@ function ResponseForm({ survey, initial, onBack, onSaved, canEdit, publicMode = 
                             {problemText('stateKey') && <p className="mt-1 text-xs text-red-600">{problemText('stateKey')}</p>}
                         </div>
                         <div>
-                            <Select label={<>{t('survey.locality', 'Locality')}<span className="text-red-600"> *</span></>} value={form.localityKey} disabled={readOnly || !form.stateKey}
+                            <Select label={<>{t('survey.locality', 'Locality')}<span className="text-red-600"> *</span></>} value={form.localityKey} disabled={readOnly || !form.stateKey || !!preset?.localityKey}
                                 onChange={(e) => setForm((p) => ({ ...p, localityKey: e.target.value }))}>
                                 <option value="">{t('survey.select', 'Select…')}</option>
                                 {(STATE_LOCALITIES[form.stateKey]?.localities || [])
@@ -353,7 +458,7 @@ function ResponseForm({ survey, initial, onBack, onSaved, canEdit, publicMode = 
                         </div>
                         {visible.map((q) => (
                             <Question key={q.id} question={publicMode && !filler.signedIn && q.id === 'completedBy' ? { ...q, required: true } : q} value={form.answers[q.id]} readOnly={readOnly} isArabic={isArabic}
-                                error={problemText(q.id)} onChange={(v) => setAnswer(q.id, v)} />
+                                error={problemText(q.id)} onChange={(v) => setAnswer(q.id, v)} autoStart={canEdit && !form.id} />
                         ))}
                     </div>
                 </CardBody>
@@ -381,8 +486,12 @@ function ResponseForm({ survey, initial, onBack, onSaved, canEdit, publicMode = 
 
 function ShareLinkModal({ survey, onClose }) {
     const { t, i18n } = useTranslation();
-    const url = surveyPublicUrl(survey.id);
+    const isArabic = i18n.language === 'ar';
+    const [stateKey, setStateKey] = useState('');
+    const [localityKey, setLocalityKey] = useState('');
+    const url = surveyShareUrl(surveyPublicUrl(survey.id), { stateKey, localityKey });
     const [copied, setCopied] = useState(false);
+    useEffect(() => setCopied(false), [url]);
     const copy = async () => {
         try { await navigator.clipboard.writeText(url); setCopied(true); } catch { notify(url, 'info'); }
     };
@@ -390,7 +499,20 @@ function ShareLinkModal({ survey, onClose }) {
         <Modal isOpen onClose={onClose} title={t('survey.share.title', 'Share the survey')}>
             <CardBody className="space-y-4">
                 <p className="text-sm text-slate-600">{t('survey.share.note', 'Anyone with this link can fill the survey, with or without an account. Responses appear in this list.')}</p>
-                <p className="font-semibold text-slate-800">{pickText(survey, i18n.language === 'ar', 'title')}</p>
+                <p className="font-semibold text-slate-800">{pickText(survey, isArabic, 'title')}</p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <Select label={t('survey.share.state', 'State in the link (optional)')} value={stateKey}
+                        onChange={(e) => { setStateKey(e.target.value); setLocalityKey(''); }}>
+                        <option value="">{t('survey.share.any_state', 'Any state')}</option>
+                        {Object.keys(STATE_LOCALITIES).filter((k) => k !== 'Federal').map((k) => <option key={k} value={k}>{stateLabel(k, isArabic)}</option>)}
+                    </Select>
+                    <Select label={t('survey.share.locality', 'Locality in the link (optional)')} value={localityKey} disabled={!stateKey}
+                        onChange={(e) => setLocalityKey(e.target.value)}>
+                        <option value="">{t('survey.share.any_locality', 'Any locality')}</option>
+                        {(STATE_LOCALITIES[stateKey]?.localities || []).map((l) => <option key={l.en} value={l.en}>{isArabic ? l.ar || l.en : l.en}</option>)}
+                    </Select>
+                </div>
+                {stateKey && <p className="text-xs text-slate-500">{t('survey.share.preset_note', 'People who open this link will have the place already filled in and fixed.')}</p>}
                 <div className="flex justify-center"><QRCodeCanvas value={url} size={180} includeMargin /></div>
                 <div className="flex items-center gap-2">
                     <input readOnly value={url} dir="ltr" className="min-w-0 flex-1 rounded-md border border-slate-300 bg-slate-50 px-2 py-2 text-xs" onFocus={(e) => e.target.select()} />
@@ -405,33 +527,44 @@ function ShareLinkModal({ survey, onClose }) {
 }
 
 export function PublicSurveyForm({ surveyId }) {
-    const { t, i18n } = useTranslation();
     const survey = getSurvey(surveyId);
     const [round, setRound] = useState(0);
     const [done, setDone] = useState(false);
-    if (!survey) {
-        return <Card><CardBody className="text-center text-red-600 font-semibold">{t('survey.share.not_found', 'This survey link is not valid.')}</CardBody></Card>;
-    }
-    if (done) {
-        return (
-            <div className="mx-auto max-w-3xl p-2 md:p-4">
-                <Card>
-                    <CardBody className="flex flex-col items-center gap-3 py-10 text-center">
-                        <CheckCircle2 size={48} className="text-emerald-600" />
-                        <h3 className="text-lg font-semibold text-slate-800">{t('survey.share.thanks', 'Thank you, the form was saved')}</h3>
-                        <p className="text-sm text-slate-600">{pickText(survey, i18n.language === 'ar', 'title')}</p>
-                        <Button onClick={() => { setDone(false); setRound((r) => r + 1); }}>
-                            <Plus size={16} /> {t('survey.share.another', 'Fill another village')}
-                        </Button>
-                    </CardBody>
-                </Card>
-            </div>
-        );
-    }
+    const [preset] = useState(() => readPresetPlace(typeof window !== 'undefined' ? window.location.search : '', STATE_LOCALITIES));
+    return (
+        <FormLanguage>{({ lang, setLang }) => {
+            if (!survey) return <PublicMessage lang={lang} setLang={setLang} kind="not_found" />;
+            if (done) {
+                return <PublicMessage lang={lang} setLang={setLang} kind="thanks" survey={survey}
+                    onAnother={() => { setDone(false); setRound((r) => r + 1); }} />;
+            }
+            return (
+                <div className="mx-auto max-w-3xl p-2 md:p-4">
+                    <ResponseFormBody key={round} survey={survey} initial={null} canEdit publicMode preset={preset} lang={lang} setLang={setLang}
+                        onBack={() => {}} onSaved={() => { setDone(true); window.scrollTo(0, 0); }} />
+                </div>
+            );
+        }}</FormLanguage>
+    );
+}
+
+function PublicMessage({ kind, survey, onAnother, lang, setLang }) {
+    const { t } = useTranslation();
     return (
         <div className="mx-auto max-w-3xl p-2 md:p-4">
-            <ResponseForm key={round} survey={survey} initial={null} canEdit publicMode
-                onBack={() => {}} onSaved={() => { setDone(true); window.scrollTo(0, 0); }} />
+            <Card>
+                <CardBody className="flex flex-col items-center gap-3 py-10 text-center">
+                    <div className="self-end"><LanguageSwitch lang={lang} setLang={setLang} /></div>
+                    {kind === 'not_found' ? (
+                        <p className="text-red-600 font-semibold">{t('survey.share.not_found', 'This survey link is not valid.')}</p>
+                    ) : (<>
+                        <CheckCircle2 size={48} className="text-emerald-600" />
+                        <h3 className="text-lg font-semibold text-slate-800">{t('survey.share.thanks', 'Thank you, the form was saved')}</h3>
+                        <p className="text-sm text-slate-600">{pickText(survey, lang === 'ar', 'title')}</p>
+                        <Button onClick={onAnother}><Plus size={16} /> {t('survey.share.another', 'Fill another village')}</Button>
+                    </>)}
+                </CardBody>
+            </Card>
         </div>
     );
 }

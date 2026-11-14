@@ -69,3 +69,18 @@ describe('GPS location', () => {
         expect(out[0]).toMatchObject({ Latitude: 14.4, Longitude: 33.5, 'GPS accuracy (m)': 9 });
     });
 });
+
+describe('Share link with a fixed place', () => {
+    it('builds and reads back state and locality, ignoring unknown ones', async () => {
+        const { surveyShareUrl, readPresetPlace } = await import('../src/components/survey/surveys.js');
+        const { STATE_LOCALITIES } = await import('../src/components/constants.js');
+        const base = 'https://x.app/public/survey/community_midwives_mapping';
+        expect(surveyShareUrl(base)).toBe(base);
+        expect(surveyShareUrl(base, { localityKey: 'Al Kamlin' })).toBe(base);
+        const url = surveyShareUrl(base, { stateKey: 'Gezira', localityKey: 'Al Kamlin' });
+        expect(readPresetPlace(new URL(url).search, STATE_LOCALITIES)).toEqual({ stateKey: 'Gezira', localityKey: 'Al Kamlin' });
+        expect(readPresetPlace('?state=Gezira&locality=Nowhere', STATE_LOCALITIES)).toEqual({ stateKey: 'Gezira', localityKey: '' });
+        expect(readPresetPlace('?state=Atlantis', STATE_LOCALITIES)).toBeNull();
+        expect(readPresetPlace('', STATE_LOCALITIES)).toBeNull();
+    });
+});

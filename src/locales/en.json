@@ -8919,7 +8919,14 @@
       "recapture": "Capture again",
       "capture": "Capture location",
       "clear": "Clear",
-      "on_map": "Map"
+      "on_map": "Map",
+      "searching_short": "Looking for the location…",
+      "need_precise_title": "Precise location is needed",
+      "need_precise_app": "Allow location for this app and choose \"Precise\" (not \"Approximate\"), then come back.",
+      "need_precise_web": "Allow location for this site in the browser (tap the lock icon by the address), turn on GPS, then try again.",
+      "allow_precise": "Allow precise location",
+      "save_without": "The precise location of the village has not been captured. Save anyway?",
+      "save_anyway": "Save anyway"
     },
     "share": {
       "title": "Share the survey",
@@ -8930,7 +8937,12 @@
       "not_found": "This survey link is not valid.",
       "thanks": "Thank you, the form was saved",
       "another": "Fill another village",
-      "button": "Share link"
+      "button": "Share link",
+      "state": "State in the link (optional)",
+      "any_state": "Any state",
+      "locality": "Locality in the link (optional)",
+      "any_locality": "Any locality",
+      "preset_note": "People who open this link will have the place already filled in and fixed."
     },
     "public": {
       "signed_in": "Signed in as {{name}}. Your name is filled in for you.",

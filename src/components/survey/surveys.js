@@ -180,3 +180,22 @@ export function exportRows(rows, { stateName, localityName, isArabic }) {
     }
     return out;
 }
+
+/** A share link, optionally with the place fixed: ?state=<key>&locality=<key>. */
+export function surveyShareUrl(base, { stateKey = '', localityKey = '' } = {}) {
+    const q = new URLSearchParams();
+    if (stateKey) q.set('state', stateKey);
+    if (stateKey && localityKey) q.set('locality', localityKey);
+    const qs = q.toString();
+    return qs ? `${base}?${qs}` : base;
+}
+
+/** The place a share link fixes, checked against the state/locality list; null if none. */
+export function readPresetPlace(search, stateLocalities) {
+    const q = new URLSearchParams(search || '');
+    const stateKey = q.get('state') || '';
+    if (!stateLocalities[stateKey]) return null;
+    const localityKey = q.get('locality') || '';
+    const known = (stateLocalities[stateKey].localities || []).some((l) => l.en === localityKey);
+    return { stateKey, localityKey: known ? localityKey : '' };
+}

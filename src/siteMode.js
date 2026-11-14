@@ -1,7 +1,7 @@
 // One build serves three Firebase Hosting sites in the same project, so they
 // share data and logins:
 //   imnci-courses-monitor.web.app and ch-sudan.web.app  the full app
-//   emonc-sudan.web.app                                  home page with only Courses,
+//   emonc-sudan.web.app                                  home page with only Courses and Surveys,
 //                                                        and only the EmONC package in it
 // The site is told apart by its address at run time, so every site gets the
 // exact same files. `VITE_SITE=emonc npm run dev` shows the EmONC site locally.
@@ -24,6 +24,6 @@ export const EMONC_COURSE_TYPES = ['EmONC'];
 export const EMONC_SITE_HIDDEN_VIEWS = new Set([
     'dashboard', 'humanResources', 'facilitators', 'programTeams', 'partnersPage',
     'facilitatorForm', 'facilitatorReport', 'childHealthServices', 'skillsMentorship', 'imciForm',
-    'projects', 'meetings', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey',
+    'projects', 'meetings', 'planning', 'localityPlan', 'supplyManagement', 'supervision',
     'onlineCourses', 'downloads', 'admin', 'about',
 ]);
