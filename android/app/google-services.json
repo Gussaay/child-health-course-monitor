@@ -52,12 +52,73 @@
     },
     {
       "client_info": {
+        "mobilesdk_app_id": "1:928082473485:android:ec733d5c908038a62a9b44",
+        "android_client_info": {
+          "package_name": "com.nchp.monitoring.ch"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "928082473485-keh1a9u16mfudvmb29g1qvbijf96s87f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nchp.monitoring.ch",
+            "certificate_hash": "daa5e6f580b70093d5da7f0f879cc87deaa863dd"
+          }
+        },
+        {
+          "client_id": "928082473485-vbd1ib39vmofnplq7hapjo6j8s21ij0i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nchp.monitoring.ch",
+            "certificate_hash": "dd6dfa24f6e4ad569a77e25f158406f2c873deb2"
+          }
+        },
+        {
+          "client_id": "928082473485-bu2fbkb8p12qcjijmb9lg4j7asj8emje.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApaE6SnbttxkU3iaTSWu2-KFHQ6LD-ehw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "928082473485-bu2fbkb8p12qcjijmb9lg4j7asj8emje.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:928082473485:android:c334af55cd3223052a9b44",
         "android_client_info": {
           "package_name": "com.nchp.monitoring.emonc"
         }
       },
       "oauth_client": [
+        {
+          "client_id": "928082473485-4c9nkjm4dbtamnq8js4q8m9ufnuai1hl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nchp.monitoring.emonc",
+            "certificate_hash": "daa5e6f580b70093d5da7f0f879cc87deaa863dd"
+          }
+        },
+        {
+          "client_id": "928082473485-grj7oh378s050ikd99vecv4kn5904vrb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nchp.monitoring.emonc",
+            "certificate_hash": "dd6dfa24f6e4ad569a77e25f158406f2c873deb2"
+          }
+        },
         {
           "client_id": "928082473485-bu2fbkb8p12qcjijmb9lg4j7asj8emje.apps.googleusercontent.com",
           "client_type": 3
