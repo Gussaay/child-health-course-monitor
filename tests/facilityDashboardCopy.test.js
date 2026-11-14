@@ -108,6 +108,19 @@ describe('dashboard copy', () => {
         expect(db.reads.full).toBe(1);
     });
 
+    it('stops sending a soft-deleted facility, without a rebuild', async () => {
+        let now = 1_000_000;
+        const db = fakeDb({ a: facility('A', 900_000), b: facility('B', 950_000) });
+        const core = makeCore({ db, Timestamp, now: () => now });
+        const first = await core.answer(null);
+        now += 1000;
+        db.facilities.set('a', { ...facility('A', 1_001_000), isDeleted: true });
+        const after = await core.answer(first.version);
+        expect(after.version).not.toBe(first.version);
+        expect(after.items.map((f) => f.id)).toEqual(['b']);
+        expect(db.reads.full).toBe(1);
+    });
+
     it('rebuilds in full when a facility was deleted, and once a week', async () => {
         let now = 1_000_000;
         const db = fakeDb({ a: facility('A', 900_000), b: facility('B', 950_000) });

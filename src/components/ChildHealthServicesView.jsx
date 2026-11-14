@@ -1,5 +1,7 @@
 // ChildHealthServicesView.jsx
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
+
+const DeletedItemsPanel = lazy(() => import('./DeletedItemsPanel.jsx'));
 import * as XLSX from 'xlsx';
 import { getAuth } from "firebase/auth";
 import { writeBatch, collection, getDocs, doc, addDoc, serverTimestamp } from "firebase/firestore"; 
@@ -69,6 +71,7 @@ async function generateFacilityListPdf(_facilities, _activeTab, _serviceTypeFilt
 const TABS = {
     PENDING: 'Pending Submissions',
     ALL: 'All Facilities',
+    DELETED: 'Deleted Facilities',
 };
 
 // --- HELPER FUNCTIONS ---
@@ -2088,6 +2091,7 @@ const ChildHealthServicesView = ({
         const TAB_LABELS = {
             [TABS.PENDING]: t('facilities_page.services.tabs.pending', 'Pending Submissions'),
             [TABS.ALL]: t('facilities_page.services.tabs.all', 'All Facilities'),
+            [TABS.DELETED]: t('facilities_page.services.tabs.deleted', 'Deleted Facilities'),
         };
         
         const isLocalityManager = permissions.manageScope === 'locality';
@@ -2132,8 +2136,8 @@ const ChildHealthServicesView = ({
             ),
             [TABS.ALL]: <AllFacilitiesTab facilities={paginatedFacilities || []} onEdit={handleEditFacility} onDelete={handleDeleteFacility} onGenerateLink={handleGenerateLink} onOpenMap={handleOpenMapModal} onOpenHistory={handleOpenHistoryModal} emptyMessage={emptyStateMessage} canApproveSubmissions={permissions.canApproveSubmissions} canManageFacilities={permissions.canManageFacilities} />,
         };
-        const availableTabs = Object.values(TABS).filter(tab => tab === TABS.PENDING ? permissions.canManageFacilities : true);
-        const showFiltersAndActions = activeTab !== TABS.PENDING;
+        const availableTabs = Object.values(TABS).filter(tab => (tab === TABS.PENDING || tab === TABS.DELETED) ? permissions.canManageFacilities : true);
+        const showFiltersAndActions = activeTab !== TABS.PENDING && activeTab !== TABS.DELETED;
 
         const isStateFilterDisabled = userStates && userStates.length === 1;
         const isLocalityFilterDisabled = isLocalityManager || !stateFilter || stateFilter === 'NOT_ASSIGNED' || stateFilter === 'ALL_STATES';
@@ -2179,7 +2183,7 @@ const ChildHealthServicesView = ({
                     tabs={availableTabs.map(tabName => ({
                         id: tabName,
                         label: TAB_LABELS[tabName] || tabName,
-                        short: tabName === TABS.PENDING ? t('ui.short.pending', 'Pending') : t('ui.short.all_facilities', 'Facilities'),
+                        short: tabName === TABS.PENDING ? t('ui.short.pending', 'Pending') : tabName === TABS.DELETED ? t('ui.short.deleted', 'Deleted') : t('ui.short.all_facilities', 'Facilities'),
                         count: tabName === TABS.PENDING ? (uniquePendingSubmissions?.length || 0) : 0,
                     }))}
                 />
@@ -2277,7 +2281,13 @@ const ChildHealthServicesView = ({
                     </div>
                 </>)}
 
-                {isFacilitiesLoading || isReviewLoading || (activeTab === TABS.PENDING && isSubmissionsLoading) ? (
+                {activeTab === TABS.DELETED && (
+                    <Suspense fallback={<div className="mt-4"><SkeletonTable rows={4} columns={3} /></div>}>
+                        <DeletedItemsPanel types={['healthFacilities']} />
+                    </Suspense>
+                )}
+
+                {activeTab === TABS.DELETED ? null : isFacilitiesLoading || isReviewLoading || (activeTab === TABS.PENDING && isSubmissionsLoading) ? (
                     <div className="mt-4"><SkeletonTable rows={8} columns={5} /></div>
                 ) : (
                     <div className="mt-4" id="facility-list-content">

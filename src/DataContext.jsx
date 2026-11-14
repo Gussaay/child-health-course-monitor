@@ -565,7 +565,9 @@ export const DataProvider = ({ children }) => {
                         
                             newOrUpdatedData.forEach(newItem => {
                                 if (newItem && newItem.id) {
-                                    dataMap.set(newItem.id, newItem);
+                                    // A deleted facility leaves the saved list.
+                                    if (newItem.isDeleted === true || newItem.isDeleted === 'true') dataMap.delete(newItem.id);
+                                    else dataMap.set(newItem.id, newItem);
                                 }
                             });
                         

@@ -42,6 +42,8 @@ export const RECYCLE_BIN_TYPES = [
     { collection: 'observations', label: 'Monitoring observations', group: 'Courses' },
     { collection: 'finalReports', cacheKey: 'finalReports', label: 'Final reports', group: 'Courses' },
 
+    { collection: 'healthFacilities', cacheKey: 'healthFacilities', label: 'Health facilities', group: 'Facilities' },
+
     { collection: 'facilitators', cacheKey: 'facilitators', label: 'Facilitators', group: 'Human resources' },
     { collection: 'federalCoordinators', cacheKey: 'federalCoordinators', label: 'Federal coordinators', group: 'Human resources' },
     { collection: 'stateCoordinators', cacheKey: 'stateCoordinators', label: 'State coordinators', group: 'Human resources' },

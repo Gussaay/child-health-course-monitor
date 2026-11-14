@@ -81,13 +81,13 @@ describe('main menu copy', () => {
         let clock = 10_000_000;
         const home = makeHomeCopy({ db, Timestamp, now: () => clock });
         const first = await home.answer({});
-        expect(first.participants.items).toHaveLength(5);
+        expect(first.participants.items).toHaveLength(4); // the deleted one is not sent
         const versions = Object.fromEntries(Object.entries(first).map(([k, v]) => [k, v.version]));
         clock += 2 * 60 * 1000;
         data.participants.set('p6', { courseId: 'c1', post_test_score: 75, lastUpdatedAt: ts(clock) });
         const second = await home.answer(versions);
         expect(second.courses).toEqual({ unchanged: true, version: versions.courses });
         expect(second.sessions.unchanged).toBe(true);
-        expect(second.participants.items).toHaveLength(6);
+        expect(second.participants.items).toHaveLength(5);
     });
 });

@@ -706,6 +706,9 @@ function facilityQuery(filters = {}) {
 }
 // The filters Firestore cannot express, applied on the device.
 const facilityLocalFilter = (filters = {}) => (f) => {
+    // A deleted facility is hidden (and removed from a device that still holds
+    // it): facilities are soft-deleted, see deleteHealthFacility.
+    if (f && (f.isDeleted === true || f.isDeleted === 'true')) return false;
     if (filters.state === 'NOT_ASSIGNED' && f['الولاية']) return false;
     if (filters.functioningStatus === 'NOT_SET' && !(f['هل_المؤسسة_تعمل'] == null || f['هل_المؤسسة_تعمل'] === '')) return false;
     return true;
@@ -715,7 +718,14 @@ export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
     const q = facilityQuery(filters);
     try {
         const querySnapshot = await getData(q, sourceOptions);
-        return querySnapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(facilityLocalFilter(filters));
+        const rows = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        // A changes-only download (lastUpdatedAfter) must also return deleted
+        // facilities: DataContext uses them to remove the facility from the
+        // device's saved list. A plain list never shows them.
+        const keep = facilityLocalFilter(filters);
+        return filters.lastUpdatedAfter instanceof Date
+            ? rows.filter((f) => f.isDeleted === true || f.isDeleted === 'true' || keep(f))
+            : rows.filter(keep);
     } catch (error) {
         console.error("Error fetching health facilities:", error);
         throw error;
@@ -726,8 +736,12 @@ export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
 // read per 1,000 facilities). Lets a device notice that its saved list is
 // incomplete and download it again.
 export async function countHealthFacilities() {
-    const snap = await getCountFromServer(facilityQuery({}));
-    return snap.data().count;
+    const [all, deleted] = await Promise.all([
+        getCountFromServer(facilityQuery({})),
+        getCountFromServer(query(collection(db, "healthFacilities"), where("isDeleted", "in", [true, "true"]))),
+    ]);
+    // Deleted facilities are not in the saved list, so they are not counted.
+    return Math.max(0, all.data().count - deleted.data().count);
 }
 
 export async function getHealthFacilityById(facilityId) {
@@ -736,8 +750,21 @@ export async function getHealthFacilityById(facilityId) {
     if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() };
     return null;
 }
+// A facility is soft-deleted: it is marked and stamped, not removed. The stamp
+// (lastSnapshotAt, the facilities' sync mark) makes the next Refresh and every
+// live listener bring the deletion to each device, which then drops the
+// facility; a record removed outright leaves nothing for them to find. It
+// appears in the Deleted Items tab of Child Health Services, where it can be
+// removed for good.
+const facilityDeletionStamp = () => ({
+    isDeleted: true,
+    deletedAt: serverTimestamp(),
+    deletedBy: firebaseAuth.currentUser?.email || firebaseAuth.currentUser?.uid || null,
+    lastSnapshotAt: serverTimestamp(),
+    lastUpdatedAt: serverTimestamp(),
+});
 export async function deleteHealthFacility(facilityId) {
-    await deleteDoc(doc(db, "healthFacilities", facilityId));
+    await fbUpdateDoc(doc(db, "healthFacilities", facilityId), facilityDeletionStamp());
     return true;
 }
 export async function deleteFacilitiesBatch(facilityIds) {
@@ -747,7 +774,7 @@ export async function deleteFacilitiesBatch(facilityIds) {
     for (let i = 0; i < facilityIds.length; i += BATCH_SIZE) {
         const batch = writeBatch(db);
         const chunk = facilityIds.slice(i, i + BATCH_SIZE);
-        chunk.forEach(id => batch.delete(doc(db, "healthFacilities", id)));
+        chunk.forEach(id => batch.update(doc(db, "healthFacilities", id), facilityDeletionStamp()));
         await batch.commit();
         deletedCount += chunk.length;
     }

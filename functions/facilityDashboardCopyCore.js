@@ -202,7 +202,9 @@ function makeCore({
     if (!busy) busy = refresh().finally(() => { busy = null; });
     const s = await busy;
     if (knownVersion && knownVersion === s.version) return { unchanged: true, version: s.version };
-    const items = Array.from(s.items.values());
+    // Deleted facilities stay in the copy (the count check compares it with
+    // the collection) but are not sent.
+    const items = Array.from(s.items.values()).filter((f) => f.isDeleted !== true && f.isDeleted !== "true");
     const size = JSON.stringify(items).length;
     if (size > MAX_ANSWER_CHARS) {
       log("copy too large to send", size);
