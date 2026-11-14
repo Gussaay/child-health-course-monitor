@@ -23,7 +23,7 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
-const { FieldPath, FieldValue, getFirestore } = require("firebase-admin/firestore");
+const { FieldPath, FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
 
 const { accessFor, catalogueFor, scopedQuery, audit } = require("./claudeAccess");
 const { readReference } = require("./aiReference");
@@ -44,6 +44,7 @@ const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 const { GEMINI_MODELS, CEREBRAS_MODELS, GROQ_MODELS } = require("./aiModels");
 const { withAiLog } = require("./aiLog");
 const { remembered, readMemory } = require("./readMemory");
+const { createCopyReader } = require("./aiCopy");
 const {
   CHAT, SIZES, MAX_STEPS, LAST_STEP_AT, ANSWER_NOW, ProviderError, post, askChat, keepHistoryWithin,
 } = require("./aiChat");
@@ -83,6 +84,8 @@ const notDeleted = (r) => r.isDeleted !== true && r.isDeleted !== "true";
 /** A field name as Firestore's select() needs it: dotted paths as given, others literal. */
 const fieldPath = (name) => (/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/.test(name) ? name : new FieldPath(name));
 
+let copyReader = null;
+
 function explainReadError(e) {
   const msg = String(e?.message || e);
   if (e?.code === 9 || /index/i.test(msg)) {
@@ -99,7 +102,7 @@ async function countData(access, args) {
   const breakdown = cleanBreakdown(args.breakdown);
   const each = cleanEach(args.each);
   const eachFilters = each ? cleanFilters(args.eachFilters) : [];
-  const { q } = scopedQuery(access, args.collection, filters);
+  const { spec, q } = scopedQuery(access, args.collection, filters);
 
   // One overall count needs no records: Firestore counts on the server.
   if (!groupBy && !valueField && !breakdown.length && !each) {
@@ -119,7 +122,14 @@ async function countData(access, args) {
   }
 
   const wanted = [...new Set([groupBy, valueField, ...breakdown, "isDeleted", each].filter(Boolean))];
-  const snap = await remembered(access, ["count", args.collection, filters, wanted], async () => {
+  // Health facilities are counted from the server's kept copy when it has every
+  // field the question reads (aiCopy.js): a few reads, not up to 6,000.
+  let copied = null;
+  if (!bucket && !each && access.db) {
+    copyReader = copyReader || createCopyReader({ db: access.db, Timestamp, tally: (c, r, w) => tally("aiAssistant", c, r, w), log: (...a) => logger.info("[aiCopy]", ...a) });
+    copied = await copyReader.facilities(access, spec, args.collection, filters, wanted);
+  }
+  const snap = copied ? { size: copied.length, docs: copied.map((d) => ({ id: d.id, data: d })) } : await remembered(access, ["count", args.collection, filters, wanted], async () => {
     const got = await q.select(...wanted.map(fieldPath)).limit(COUNT_ROWS).get();
     tally("aiAssistant", args.collection, queryReads(got));
     return plainSnap(got);
