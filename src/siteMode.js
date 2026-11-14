@@ -24,6 +24,6 @@ export const EMONC_COURSE_TYPES = ['EmONC'];
 export const EMONC_SITE_HIDDEN_VIEWS = new Set([
     'dashboard', 'humanResources', 'facilitators', 'programTeams', 'partnersPage',
     'facilitatorForm', 'facilitatorReport', 'childHealthServices', 'skillsMentorship', 'imciForm',
-    'projects', 'meetings', 'planning', 'localityPlan', 'supplyManagement', 'supervision',
+    'projects', 'meetings', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey',
     'onlineCourses', 'downloads', 'admin', 'about',
 ]);

@@ -3306,6 +3306,57 @@ export async function deleteSupervisionAssessment(assessmentId) {
 }
 
 // ============================================================================
+// --- SURVEYS ---
+//
+// One document per filled survey form (surveyResponses). Like the supervision
+// checklists, each survey's questions are code (survey/surveys.js) and the
+// record keeps `surveyId`, so a response can always be read back against the
+// form it was filled on.
+// ============================================================================
+
+export async function upsertSurveyResponse(payload) {
+    if (payload.id) {
+        const { id, ...rest } = payload;
+        const writePromise = fbSetDoc(doc(db, "surveyResponses", id), { ...rest, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        await executeOfflineSafeWrite(writePromise, `Survey: ${payload.village || payload.surveyId}`);
+        return id;
+    }
+    const { id, ...dataToSave } = payload;
+    const newRef = doc(collection(db, "surveyResponses"));
+    const writePromise = fbSetDoc(newRef, {
+        ...dataToSave,
+        isDeleted: false,
+        createdByUid: firebaseAuth.currentUser?.uid || null,
+        createdByEmail: firebaseAuth.currentUser?.email || null,
+        createdAt: serverTimestamp(),
+        lastUpdatedAt: serverTimestamp(),
+    });
+    await executeOfflineSafeWrite(writePromise, `Survey: ${payload.village || payload.surveyId}`);
+    return newRef.id;
+}
+
+export async function listSurveyResponses(sourceOptions = {}, lastSync = 0) {
+    try {
+        let q = collection(db, "surveyResponses");
+        if (lastSync > 0) {
+            q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        }
+        const snapshot = await getData(q, sourceOptions);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+        console.error("Error fetching survey responses:", error);
+        throw error;
+    }
+}
+
+export async function deleteSurveyResponse(responseId) {
+    await fbUpdateDoc(doc(db, "surveyResponses", responseId), {
+        isDeleted: true, lastUpdatedAt: serverTimestamp(),
+    });
+    return true;
+}
+
+// ============================================================================
 // --- POPULATION TARGETS ---
 //
 // Projected denominators by year and locality. The document id is built from
@@ -4169,6 +4220,7 @@ const LIVE_LISTS = {
     supplyItems: { col: 'supplyItems' },
     populationTargets: { col: 'populationTargets' },
     supervisionAssessments: { col: 'supervisionAssessments' },
+    surveyResponses: { col: 'surveyResponses' },
     onlineCourses: { col: 'onlineCourses' },
     onlineCourseItems: { col: 'onlineCourseItems' },
     finalReports: { col: 'finalReports', map: (d) => lightFinalReport(d) },

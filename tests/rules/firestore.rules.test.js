@@ -427,6 +427,39 @@ describe('supervisionAssessments — supervising managers write, staff read', ()
 });
 
 // =============================================================================
+// Survey responses (Community Midwives Mapping and later surveys).
+// =============================================================================
+describe('surveyResponses — managers write, staff read', () => {
+    const response = { surveyId: 'community_midwives_mapping', stateKey: 'Gezira', village: 'Test', hasMidwives: false };
+
+    it('lets the managers write a response', async () => {
+        await assertSucceeds(setDoc(doc(as('federalManager'), 'surveyResponses', 's1'), response));
+        await assertSucceeds(setDoc(doc(as('statesManager'), 'surveyResponses', 's2'), response));
+    });
+
+    it('lets staff read, but not write', async () => {
+        await assertSucceeds(getDocs(collection(as('facilitator'), 'surveyResponses')));
+        await assertFails(setDoc(doc(as('facilitator'), 'surveyResponses', 's3'), response));
+    });
+
+    it('does NOT let a self-registered account or a visitor in', async () => {
+        await assertFails(getDocs(collection(as('plainUser'), 'surveyResponses')));
+        await assertFails(setDoc(doc(as('plainUser'), 'surveyResponses', 's4'), response));
+        await assertFails(getDocs(collection(anonymous(), 'surveyResponses')));
+    });
+
+    it('lets anyone add a response through the public link, but not change one', async () => {
+        const viaLink = (uid) => ({ ...response, isDeleted: false, submittedVia: 'public_link', createdByUid: uid });
+        await assertSucceeds(setDoc(doc(anonymous(), 'surveyResponses', 'p1'), viaLink(null)));
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'surveyResponses', 'p2'), viaLink('plainUser')));
+        await assertFails(setDoc(doc(as('plainUser'), 'surveyResponses', 'p3'), viaLink('someoneElse')));
+        await assertFails(setDoc(doc(anonymous(), 'surveyResponses', 'p4'), viaLink('someoneElse')));
+        await assertFails(setDoc(doc(anonymous(), 'surveyResponses', 'p5'), { ...response, isDeleted: false }));
+        await assertFails(setDoc(doc(anonymous(), 'surveyResponses', 'p1'), { ...viaLink(null), village: 'changed' }));
+    });
+});
+
+// =============================================================================
 // Population targets. These are the denominators every coverage figure and
 // every supply forecast divides by, so a state needs to read its own while
 // only the federal level may publish them.
@@ -772,7 +805,7 @@ describe('Deleted Items: federal managers can delete every soft-deleted type', (
     const collections = [
         'courses', 'participants', 'participantTests', 'cases', 'observations', 'finalReports',
         'facilitators', 'federalCoordinators', 'stateCoordinators', 'localityCoordinators', 'coordinators', 'funders',
-        'skillMentorship', 'imnciVisitReports', 'eencVisitReports', 'imnciPatientRecords', 'supervisionAssessments',
+        'skillMentorship', 'imnciVisitReports', 'eencVisitReports', 'imnciPatientRecords', 'supervisionAssessments', 'surveyResponses',
         'projects', 'masterPlans', 'operationalPlans', 'unitMeetings', 'populationTargets', 'supplyItems',
         'exerciseAttempts', 'exerciseDefinitions',
     ];

@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages, Sun, Moon, Monitor
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages, Sun, Moon, Monitor, MapPin
 } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
@@ -90,6 +90,8 @@ const SkillsMentorshipView = lazy(() => import('./components/mentorship/SkillsMe
 const ProjectTrackerView = lazy(() => import('./components/ProjectTrackerView'));
 const SupplyManagementView = lazy(() => import('./components/SupplyManagementView'));
 const SupervisionView = lazy(() => import('./components/SupervisionView'));
+const SurveyView = lazy(() => import('./components/SurveyView'));
+const PublicSurveyForm = lazy(() => import('./components/SurveyView').then(module => ({ default: module.PublicSurveyForm })));
 const PublicSupervisionForm = lazy(() => import('./components/SupervisionView').then(module => ({ default: module.PublicSupervisionForm })));
 const OnlineCoursesView = lazy(() => import('./components/imnci').then(m => ({ default: m.OnlineCoursesView })));
 // The IMNCI screens share one load of the exercise definitions. Wrapping them
@@ -403,7 +405,7 @@ function pageTitles(t) {
     skillsMentorship: t('landing.modules.mentorship', 'Skills Mentorship'), imciForm: t('landing.modules.imci', 'IMNCI Protocol'),
     projects: t('landing.modules.projects', 'Project Tracker'), meetings: t('landing.modules.meetings', 'Meeting Tracker'),
     planning: t('landing.modules.planning', 'Master Plan'), localityPlan: t('landing.modules.locality_plan', 'Bottom-up Planning'),
-    supplyManagement: t('landing.modules.supply', 'Supply Management'), supervision: t('landing.modules.supervision', 'Supervision'),
+    supplyManagement: t('landing.modules.supply', 'Supply Management'), supervision: t('landing.modules.supervision', 'Supervision'), survey: t('landing.modules.survey', 'Surveys'),
     onlineCourses: t('landing.modules.online_courses', 'Online Courses'), downloads: t('landing.modules.downloads', 'App Files & Downloads'),
     admin: t('landing.modules.admin', 'Admin'), about: t('landing.modules.about', 'About Team'),
     courseReport: t('landing.modules.course_report', 'Course Report'), participantReport: t('landing.modules.participant_report', 'Participant Report'),
@@ -429,6 +431,7 @@ function allModules(t, permissions) {
         { label: t('landing.modules.imci', 'IMNCI Protocol'), tagline: tile('imci', 'Assess and classify a sick child'), view: 'imciForm', group: 'training', icon: Activity, permission: permissions.canViewCourse },
         { label: t('landing.modules.online_courses', 'Online Courses'), tagline: tile('online_courses', 'Learn and practise online'), view: 'onlineCourses', group: 'training', icon: BookOpen, permission: permissions.canViewOnlineCourses },
         { label: t('landing.modules.supervision', 'Supervision'), tagline: tile('supervision', 'Supervision checklists'), view: 'supervision', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSupervision },
+        { label: t('landing.modules.survey', 'Surveys'), tagline: tile('survey', 'Field surveys and mapping'), view: 'survey', group: 'services', icon: MapPin, permission: permissions.canViewSupervision },
         { label: t('landing.modules.supply', 'Supply Management'), tagline: tile('supply', 'Stock and distribution'), view: 'supplyManagement', group: 'services', icon: Package, permission: permissions.canViewSupplyChain },
         { label: t('landing.modules.projects', 'Project Tracker'), tagline: tile('projects', 'Track project tasks'), view: 'projects', group: 'planning', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.meetings', 'Meeting Tracker'), tagline: tile('meetings', 'Meetings and attendance'), view: 'meetings', group: 'planning', icon: CalendarDays, permission: permissions.canUseFederalManagerAdvancedFeatures },
@@ -1112,6 +1115,7 @@ export default function App() {
     const [publicServiceType, setPublicServiceType] = useState(null);
     const [publicMentorshipProps, setPublicMentorshipProps] = useState(null);
     const [publicSupervisionFormId, setPublicSupervisionFormId] = useState(null);
+    const [publicSurveyId, setPublicSurveyId] = useState(null);
     const [submissionType, setSubmissionType] = useState(null);
     const [sharedReportData, setSharedReportData] = useState(null);
     const [sharedViewError, setSharedViewError] = useState(null);
@@ -1327,6 +1331,7 @@ export default function App() {
             setIsPublicProjectsView(false);
 
             setPublicSupervisionFormId(null);
+            setPublicSurveyId(null);
 
             // Check if the current URL parameters match a generated shared Project Tracker link
             const searchParamsPath = new URLSearchParams(window.location.search);
@@ -1450,6 +1455,9 @@ export default function App() {
 
             const publicSupervisionMatch = path.match(/^\/public\/supervision\/([a-zA-Z0-9_]+)\/?$/);
             if (publicSupervisionMatch) { setPublicSupervisionFormId(publicSupervisionMatch[1]); return; }
+
+            const publicSurveyMatch = path.match(/^\/public\/survey\/([a-zA-Z0-9_]+)\/?$/);
+            if (publicSurveyMatch) { setPublicSurveyId(publicSurveyMatch[1]); return; }
 
             const publicMentorshipMatch = path.match(/^\/mentorship\/submit\/([a-zA-Z0-9_]+)\/?$/);
             if (publicMentorshipMatch && publicMentorshipMatch[1]) { setPublicMentorshipProps({ serviceType: publicMentorshipMatch[1] }); return; }
@@ -2143,6 +2151,7 @@ export default function App() {
  'planning': permissions.canUseFederalManagerAdvancedFeatures, 'localityPlan': permissions.canViewLocalityPlan,
             'supplyManagement': permissions.canViewSupplyChain,
             'supervision': permissions.canViewSupervision,
+            'survey': permissions.canViewSupervision,
             'onlineCourses': permissions.canViewOnlineCourses,
             'downloads': Capacitor.isNativePlatform(), 'about': true, 
         };
@@ -2172,9 +2181,9 @@ export default function App() {
         if (state.openParticipantReport) { setSelectedParticipantId(state.openParticipantReport); setSelectedCourseId(state.openCourseReport); }
         if (state.caseToEdit) setEditingCaseFromReport(state.caseToEdit);
 
-        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'onlineCourses', 'downloads', 'about'].includes(newView)) {
+        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey', 'onlineCourses', 'downloads', 'about'].includes(newView)) {
             setSelectedCourseId(null); setSelectedParticipantId(null); setFinalReportCourse(null);
-            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'onlineCourses', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
+            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey', 'onlineCourses', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
         }
         if ((view === 'observe' || view === 'participantReport') && !['observe', 'participantReport'].includes(newView)) setSelectedParticipantId(null);
         return true;
@@ -2626,6 +2635,8 @@ export default function App() {
 
            case 'supervision':
     return permissions.canViewSupervision ? ( <Suspense fallback={<PageSkeleton />}><SupervisionView permissions={permissions} /></Suspense> ) : null;
+           case 'survey':
+    return permissions.canViewSupervision ? ( <Suspense fallback={<PageSkeleton />}><SurveyView permissions={permissions} /></Suspense> ) : null;
 
            case 'onlineCourses':
     return permissions.canViewOnlineCourses ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><OnlineCoursesView permissions={permissions} userRoles={userRoles} /></ImnciProvider></Suspense> ) : null;
@@ -2713,7 +2724,7 @@ case 'meetings':
     // window. Drawn with the full app chrome — header, navigation, bottom bar —
     // the consent card is pushed below the fold of a 600px popup and the window
     // looks empty, which is exactly how it was reported.
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || publicViewType === 'dailyEvaluation' || publicViewType === 'onlineExercises' || isPublicRegistrationView || isPublicMeetingView || isPublicProjectsView || !!publicSupervisionFormId || !!connectClaudeId;
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || publicViewType === 'dailyEvaluation' || publicViewType === 'onlineExercises' || isPublicRegistrationView || isPublicMeetingView || isPublicProjectsView || !!publicSupervisionFormId || !!publicSurveyId || !!connectClaudeId;
 
     let mainContent;
 
@@ -2908,6 +2919,12 @@ case 'meetings':
         }
     }
 
+    else if (publicSurveyId) {
+        // Open to everyone: signed-in people get their name filled in, others type it once.
+        mainContent = authLoading
+            ? <PageSkeleton />
+            : <Suspense fallback={<PageSkeleton />}><PublicSurveyForm key={user?.uid || 'guest'} surveyId={publicSurveyId} /></Suspense>;
+    }
     else if (publicSupervisionFormId) {
         if (authLoading) {
             mainContent = <PageSkeleton />;

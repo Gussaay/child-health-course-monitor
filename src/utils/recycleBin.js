@@ -54,6 +54,7 @@ export const RECYCLE_BIN_TYPES = [
     { collection: 'eencVisitReports', cacheKey: 'eencVisitReports', label: 'EENC visit reports', group: 'Mentorship' },
     { collection: 'imnciPatientRecords', cacheKey: 'imnciPatientRecords', label: 'IMNCI patient records', group: 'Mentorship' },
     { collection: 'supervisionAssessments', cacheKey: 'supervisionAssessments', label: 'Supervision assessments', group: 'Mentorship' },
+    { collection: 'surveyResponses', cacheKey: 'surveyResponses', label: 'Survey responses', group: 'Mentorship' },
 
     { collection: 'projects', cacheKey: 'projects', label: 'Projects', group: 'Planning' },
     { collection: 'masterPlans', cacheKey: 'masterPlans', label: 'Master plans', group: 'Planning' },
@@ -78,6 +79,7 @@ export function recordTitle(item) {
         item.facility_name, item['اسم_المؤسسة'], item.healthWorkerName, item.health_worker_name,
         item.item_name, item.itemName, item.meetingTitle, item.subject, item.projectName,
         item.course_type && [item.course_type, item.state, item.locality].filter(Boolean).join(' - '),
+        item.village && [item.village, item.adminUnit, item.localityKey].filter(Boolean).join(' - '),
     ) || item.id || '';
 }
 

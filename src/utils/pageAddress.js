@@ -22,6 +22,7 @@ const VIEW_SLUGS = {
     skillsMentorship: 'skills-mentorship',
     supplyManagement: 'supply',
     supervision: 'supervision',
+    survey: 'survey',
     onlineCourses: 'online-courses',
     projects: 'projects',
     meetings: 'meetings',

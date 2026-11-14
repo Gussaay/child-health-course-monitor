@@ -248,6 +248,26 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // --- SURVEYS ---
+    //
+    // Field surveys (the first is Community Midwives Mapping). Same people as
+    // supervision: staff read, the federal/state/locality managers write.
+    // =========================================================================
+    match /surveyResponses/{responseId} {
+      allow read: if isStaff();
+      allow write: if request.auth != null && (isManager() || isLocalityManager());
+      // The public link (/public/survey/<survey id>): anyone, signed in or
+      // not, may add a new response. A signed-in person only as themselves;
+      // nobody can change or delete one this way.
+      allow create: if request.resource.data.submittedVia == 'public_link'
+        && request.resource.data.isDeleted == false
+        && request.resource.data.surveyId is string
+        && (request.auth == null
+              ? request.resource.data.createdByUid == null
+              : request.resource.data.createdByUid == request.auth.uid);
+    }
+
+    // =========================================================================
     // --- AI LIBRARY (part of Online Courses) ---
     //
     // The course books (their page text and chapters) and the AI summaries
