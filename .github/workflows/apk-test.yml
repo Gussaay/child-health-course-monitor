@@ -8,6 +8,8 @@ on:
   push:
     branches:
       - claude/project-thread-rz6vnt
+      # Checks that both apps (NCHP and EmONC flavors) still build.
+      - claude/project-thread-bvpgtm
   workflow_dispatch:
 
 jobs:
@@ -43,9 +45,11 @@ jobs:
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/nchp-release.keystore
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease
+          # Two apps now (app/build.gradle flavors); this test is the NCHP one.
+          ./gradlew assembleNchpRelease
+          mkdir -p app/build/outputs/apk/release
           BT=$(ls -d ${ANDROID_HOME}/build-tools/* | sort -V | tail -1)
-          $BT/zipalign -v -p 4 app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/NCHP-background-update-TEST.apk > /dev/null
+          $BT/zipalign -v -p 4 app/build/outputs/apk/nchp/release/app-nchp-release-unsigned.apk app/build/outputs/apk/release/NCHP-background-update-TEST.apk > /dev/null
           $BT/apksigner sign --ks app/nchp-release.keystore \
             --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
             --ks-pass "pass:${{ secrets.KEYSTORE_PASSWORD }}" \
@@ -53,6 +57,18 @@ jobs:
             app/build/outputs/apk/release/NCHP-background-update-TEST.apk
           $BT/apksigner verify app/build/outputs/apk/release/NCHP-background-update-TEST.apk
           rm -f app/nchp-release.keystore
+      # The EmONC app: compiled only when google-services.json has it (Firebase
+      # console, Add app > Android). Not signed; this only proves it builds.
+      - name: Build the EmONC app
+        run: |
+          VITE_SITE=emonc npx vite build --outDir dist-emonc
+          if jq -e '.client[] | select(.client_info.android_client_info.package_name == "com.nchp.monitoring.emonc")' android/app/google-services.json > /dev/null; then
+            rm -rf android/app/src/main/assets/public
+            cp -r dist-emonc android/app/src/main/assets/public
+            cd android && ./gradlew assembleEmoncRelease
+          else
+            echo "::warning::google-services.json has no EmONC app yet; EmONC APK not built."
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: NCHP-background-update-TEST

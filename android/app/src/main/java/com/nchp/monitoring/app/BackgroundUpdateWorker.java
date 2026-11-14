@@ -55,7 +55,6 @@ import org.json.JSONObject;
 public class BackgroundUpdateWorker extends Worker {
 
     private static final String TAG = "BackgroundUpdate";
-    private static final String MANIFEST_URL = "https://imnci-courses-monitor.web.app/latest/update.json";
     private static final String UNIQUE_NAME = "background-ota-update";
     private static final int TIMEOUT_MS = 30_000;
     /** Set by the app (BackgroundUpdatePlugin) when an admin paused or pinned updates. */
@@ -109,7 +108,7 @@ public class BackgroundUpdateWorker extends Worker {
             return;
         }
 
-        final JSONObject manifest = new JSONObject(readText(MANIFEST_URL + "?t=" + System.currentTimeMillis()));
+        final JSONObject manifest = new JSONObject(readText(context.getString(R.string.update_manifest_url) + "?t=" + System.currentTimeMillis()));
         final String version = manifest.optString("version", "");
         final String url = manifest.optString("url", "");
         final String checksum = manifest.optString("checksum", "");

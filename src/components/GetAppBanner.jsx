@@ -19,8 +19,10 @@ import { Capacitor } from '@capacitor/core';
 import { Smartphone, X } from 'lucide-react';
 import { isPublicAppPath } from '../utils/appLinks';
 import { LIVE_HOSTS, LIVE_SITE } from '../utils/publicLink';
+import { IS_EMONC_SITE, NATIVE_APP } from '../siteMode';
 
-export const APP_PACKAGE = 'com.nchp.monitoring.app';
+// The EmONC site offers the EmONC app, the other sites the NCHP app.
+export const APP_PACKAGE = NATIVE_APP.package;
 const DISMISS_KEY = 'chm.getAppBanner.dismissedAt';
 const DISMISS_DAYS = 7;
 
@@ -38,12 +40,12 @@ export function shouldShowGetAppBanner({ native, userAgent, pathname, dismissedA
  * installed, and goes to the fallback address when it is not. Only the live
  * sites are claimed by the app, so anything else gets no link.
  */
-export function appIntentUrl(href, fallbackUrl) {
+export function appIntentUrl(href, fallbackUrl, appPackage = APP_PACKAGE) {
     let url;
     try { url = new URL(href); } catch { return ''; }
     if (!LIVE_HOSTS.includes(url.hostname)) return '';
     const fallback = fallbackUrl ? `S.browser_fallback_url=${encodeURIComponent(fallbackUrl)};` : '';
-    return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=https;package=${APP_PACKAGE};${fallback}end`;
+    return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=https;package=${appPackage};${fallback}end`;
 }
 
 function readDismissedAt() {
@@ -65,8 +67,10 @@ export default function GetAppBanner() {
     useEffect(() => {
         if (!visible) return undefined;
         let cancelled = false;
-        // Every site serves this file; the main site is asked if this one cannot be.
-        const read = (base) => fetch(`${base}/native-version.json?t=${Date.now()}`, { cache: 'no-store' })
+        // Every site serves these files; the main site is asked if this one
+        // cannot be. The EmONC site reads the EmONC app's file, which exists
+        // only once the EmONC app has been built.
+        const read = (base) => fetch(`${base}/${NATIVE_APP.versionFile}?t=${Date.now()}`, { cache: 'no-store' })
             .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))));
         read('').catch(() => read(LIVE_SITE))
             .then((info) => { if (!cancelled) setApkUrl(info?.apkUrl || info?.downloadUrl || ''); })
@@ -89,7 +93,9 @@ export default function GetAppBanner() {
                 <div className="flex items-center gap-2 flex-1 min-w-[14rem]">
                     <Smartphone className="w-5 h-5 text-sky-700 dark:text-sky-300 shrink-0" aria-hidden="true" />
                     <span className="flex-1 min-w-0 leading-snug">
-                        {L('افتح هذا الرابط في تطبيق البرنامج القومي لصحة الطفل على هاتفك.', 'Open this link in the Child Health app on your phone.')}
+                        {IS_EMONC_SITE
+                            ? L('افتح هذا الرابط في تطبيق EmONC على هاتفك.', 'Open this link in the EmONC app on your phone.')
+                            : L('افتح هذا الرابط في تطبيق البرنامج القومي لصحة الطفل على هاتفك.', 'Open this link in the Child Health app on your phone.')}
                     </span>
                 </div>
                 <div className="flex items-center gap-2 ms-auto">

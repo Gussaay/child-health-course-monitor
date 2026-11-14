@@ -26,6 +26,26 @@ export const EMONC_LOGO_URL = '/emonc-logo.png';
 // Used where the main site shows "NCHP Logo".
 export const EMONC_LOGO_ALT = 'EmONC logo';
 
+// Each site has its own Android app (android/app/build.gradle productFlavors).
+// The EmONC app is built from this same code with VITE_SITE=emonc, so inside
+// it IS_EMONC_SITE is true as well.
+//   package        Android application id (intent:// links, App Links)
+//   versionFile    native-version file the site's "Get the app" button reads
+//   updateManifest live-update manifest the app checks (deploy.yml writes both)
+//   apkFilePrefix  APK file names in Storage: <prefix><version>.apk
+const NCHP_APK_PREFIX = 'National_Child_Health_Program_APP_v';
+export const NATIVE_APP = IS_EMONC_SITE
+    ? { package: 'com.nchp.monitoring.emonc', name: 'EmONC', versionFile: 'native-version-emonc.json', updateManifest: 'latest-emonc/update.json', apkFilePrefix: 'EmONC_APP_v', downloadName: 'EmONC' }
+    : { package: 'com.nchp.monitoring.app', name: 'NCHP', versionFile: 'native-version.json', updateManifest: 'latest/update.json', apkFilePrefix: NCHP_APK_PREFIX, downloadName: 'NCHP' };
+
+// meta/update_config names the NCHP APK of a release. Both apps are built in
+// the same release with the same version, so the EmONC APK of that release is
+// the same address with the EmONC file name.
+export function siteApkUrl(url, app = NATIVE_APP) {
+    if (!url || app.apkFilePrefix === NCHP_APK_PREFIX) return url || '';
+    return url.split(NCHP_APK_PREFIX).join(app.apkFilePrefix);
+}
+
 // The only course type the EmONC site shows. The main app's EmONC list also
 // includes EENC courses (coursesForActiveType in Course.jsx); this site does not.
 export const EMONC_COURSE_TYPES = ['EmONC'];

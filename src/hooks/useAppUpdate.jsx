@@ -54,11 +54,13 @@ import {
 } from '../utils/updateTelemetry';
 import i18n from 'i18next';
 import { useTranslation } from 'react-i18next';
+import { NATIVE_APP, siteApkUrl } from '../siteMode';
 
 const IS_NATIVE = Capacitor.isNativePlatform();
 
 // Your self-hosted manifest: { version, url, checksum?, mandatory?, notes? }
-const UPDATE_MANIFEST_URL = 'https://imnci-courses-monitor.web.app/latest/update.json';
+// The EmONC app has its own (its web layer is the EmONC build, see siteMode.js).
+const UPDATE_MANIFEST_URL = `https://imnci-courses-monitor.web.app/${NATIVE_APP.updateManifest}`;
 
 // true = only download OTA bundles on Wi-Fi (Android can tell; iOS always allows)
 const WIFI_ONLY_DOWNLOADS = false;
@@ -621,7 +623,8 @@ export function useAppUpdate() {
   const downloadApk = useCallback((config) => {
     // meta/update_config written by the Update manager only had `downloadUrl`
     // (scripts/push-update.js writes both names), so the button did nothing.
-    const url = config?.apkUrl || config?.downloadUrl;
+    // The EmONC app downloads the EmONC APK of the same release.
+    const url = siteApkUrl(config?.apkUrl || config?.downloadUrl);
     const build = config?.serverBuild || parseInt(config?.latestNativeBuild, 10) || null;
     if (!url) {
       reportUpdateError('APK update has no download link in meta/update_config', { stage: 'apk-link', targetBuild: build });
@@ -632,7 +635,7 @@ export function useAppUpdate() {
       });
       return;
     }
-    downloadAndOpenFile(url, `NCHP-${build || 'latest'}.apk`, {
+    downloadAndOpenFile(url, `${NATIVE_APP.downloadName}-${build || 'latest'}.apk`, {
       isSystemFile: true,
       onStart: () => { setApkDownloading(true); setApkProgress(0); },
       onProgress: (p) => setApkProgress(Math.round(p)),

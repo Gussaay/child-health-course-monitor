@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!-- The EmONC app (product flavor "emonc" in app/build.gradle). Only what
+     differs from src/main/res/values/strings.xml is here. -->
+<resources>
+    <string name="app_name">EmONC</string>
+    <string name="title_activity_main">EmONC</string>
+    <!-- Live updates of the EmONC app come from its own web build (deploy.yml). -->
+    <string name="update_manifest_url">https://imnci-courses-monitor.web.app/latest-emonc/update.json</string>
+</resources>
