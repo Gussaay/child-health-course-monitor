@@ -176,6 +176,19 @@
               "value": "public, max-age=31536000, immutable"
             }
           ]
+        },
+        {
+          "source": "/.well-known/assetlinks.json",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
         }
       ],
       "rewrites": [
@@ -206,6 +219,10 @@
             "functionId": "claudeOAuthMetadata",
             "region": "us-central1"
           }
+        },
+        {
+          "source": "/.well-known/assetlinks.json",
+          "destination": "/app-links/assetlinks.json"
         },
         {
           "regex": "^/($|[^a].*|a($|[^s].*)|as($|[^s].*)|ass($|[^e].*)|asse($|[^t].*)|asset($|[^s].*)|assets($|[^/].*))$",
@@ -354,9 +371,26 @@
               "value": "public, max-age=31536000, immutable"
             }
           ]
+        },
+        {
+          "source": "/.well-known/assetlinks.json",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
         }
       ],
       "rewrites": [
+        {
+          "source": "/.well-known/assetlinks.json",
+          "destination": "/app-links/assetlinks.json"
+        },
         {
           "regex": "^/($|[^a].*|a($|[^s].*)|as($|[^s].*)|ass($|[^e].*)|asse($|[^t].*)|asset($|[^s].*)|assets($|[^/].*))$",
           "destination": "/index.html"
@@ -504,9 +538,26 @@
               "value": "public, max-age=31536000, immutable"
             }
           ]
+        },
+        {
+          "source": "/.well-known/assetlinks.json",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
         }
       ],
       "rewrites": [
+        {
+          "source": "/.well-known/assetlinks.json",
+          "destination": "/app-links/assetlinks.json"
+        },
         {
           "regex": "^/($|[^a].*|a($|[^s].*)|as($|[^s].*)|ass($|[^e].*)|asse($|[^t].*)|asset($|[^s].*)|assets($|[^/].*))$",
           "destination": "/index.html"

@@ -181,7 +181,8 @@ import ErrorBoundary, { QuietBoundary } from './components/ErrorBoundary.jsx';
 import { publicBaseUrl } from './utils/publicLink';
 import { DataAssistantCard, PageAddButton } from './components/DataAssistantLauncher';
 import { ScanQrCard } from './components/QrScanLauncher';
-import { isPublicAppPath } from './utils/appLinks';
+import { isPublicAppPath, parseScannedCode } from './utils/appLinks';
+import GetAppBanner from './components/GetAppBanner';
 import { findLinkedParticipant, rememberLinkedParticipant } from './utils/linkedParticipant';
 import { usePageAddAction, useFormTitleOverride } from './utils/pageChrome';
 import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_SITE_HIDDEN_VIEWS } from './siteMode';
@@ -2332,6 +2333,37 @@ export default function App() {
         return () => { sub.then((h) => h.remove()).catch(() => {}); };
     }, []);
 
+    // A shared link tapped in WhatsApp, SMS or e-mail opens in the app when it
+    // is installed (Android App Links, see AndroidManifest.xml). It opens like a
+    // scanned QR code: public pages in place with a Back arrow to the app. When
+    // the link started the app, the page may not be ready to switch in place
+    // yet, so the address is loaded the way a refresh would.
+    useEffect(() => {
+        if (!Capacitor.isNativePlatform()) return undefined;
+        let last = { url: '', at: 0 };
+        const openLink = (url) => {
+            if (!url) return;
+            // The start-up link can arrive twice (launch URL and the event).
+            if (url === last.url && Date.now() - last.at < 5000) return;
+            last = { url, at: Date.now() };
+            const link = parseScannedCode(url);
+            if (link.type !== 'app' || !link.path) return;
+            if (link.path === `${window.location.pathname}${window.location.search}`) return;
+            if (!pathChangeRef.current) { window.location.replace(link.path); return; }
+            openScannedLink(link);
+        };
+        // The launch link stays the same after an in-app reload (an update), so
+        // it is opened once per app start, not again on every reload.
+        Promise.resolve(CapacitorApp.getLaunchUrl?.()).then((res) => {
+            const url = res?.url;
+            if (!url) return;
+            try { if (sessionStorage.getItem('chm.launchLinkOpened') === url) return; sessionStorage.setItem('chm.launchLinkOpened', url); } catch { /* storage off: open it anyway */ }
+            openLink(url);
+        }).catch(() => {});
+        const sub = CapacitorApp.addListener('appUrlOpen', ({ url }) => openLink(url));
+        return () => { Promise.resolve(sub).then((h) => h?.remove()).catch(() => {}); };
+    }, [openScannedLink]);
+
 
     const handleOpenCourse = useCallback((courseId) => { setSelectedCourseId(courseId); setLoading(false); navigate('participants', { courseId }); }, [navigate]);
 
@@ -3113,6 +3145,8 @@ case 'meetings':
 
     return (
         <div className="min-h-screen bg-surface flex flex-col pt-0 relative">
+            {/* A shared link opened in a phone browser: offer the Android app. */}
+            <GetAppBanner />
             
             <style>{`
                 @media (max-width: 768px) {

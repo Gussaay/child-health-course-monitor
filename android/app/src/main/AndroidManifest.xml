@@ -31,6 +31,38 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+              Shared links open in this app when it is installed (Android App
+              Links). The sites prove the app is theirs with
+              /.well-known/assetlinks.json, which the deploy writes from the
+              signing key (deploy.yml, "Write Android App Links file"); without
+              it Android opens the link in the browser as before. All three
+              sites serve the same pages, so a link of any of them opens here
+              (App.jsx, "appUrlOpen"). Only the shared-page paths are claimed;
+              /training/ links stay in the browser because a training link
+              turns the whole tab into the practice copy.
+              <data> lines in one filter combine: every host with every path.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="imnci-courses-monitor.web.app" />
+                <data android:host="imnci-courses-monitor.firebaseapp.com" />
+                <data android:host="ch-sudan.web.app" />
+                <data android:host="ch-sudan.firebaseapp.com" />
+                <data android:host="emonc-sudan.web.app" />
+                <data android:host="emonc-sudan.firebaseapp.com" />
+                <data android:pathPrefix="/public/" />
+                <data android:pathPrefix="/attendance/" />
+                <data android:pathPrefix="/monitor/" />
+                <data android:pathPrefix="/verify/" />
+                <data android:pathPrefix="/mentorship/" />
+                <data android:pathPrefix="/facilities/" />
+                <data android:pathPrefix="/submit/" />
+            </intent-filter>
         </activity>
 
         <!--

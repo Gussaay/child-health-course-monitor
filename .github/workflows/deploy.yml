@@ -147,6 +147,41 @@ jobs:
       - name: Build Web Assets
         run: npm run build
 
+      # Android App Links: lets a shared link (WhatsApp, SMS, e-mail) open in
+      # the installed app instead of the browser. Android checks that each site
+      # names the app's signing certificate in /.well-known/assetlinks.json.
+      # Hosting skips dot-folders, so the file goes to /app-links/ and
+      # firebase.json serves it at /.well-known/assetlinks.json on every site.
+      # Only the certificate's public fingerprint is written; the keystore is
+      # read from a temp file that is deleted straight away. Secrets go through
+      # env: so they are never pasted into the script text.
+      - name: Write Android App Links file
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::No signing keystore, so shared links will open in the browser, not the app."
+            exit 0
+          fi
+          KS="$RUNNER_TEMP/applinks.keystore"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KS"
+          FINGERPRINT=$(keytool -list -v -keystore "$KS" -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" 2>/dev/null \
+            | grep -m1 -E '^\s*SHA256:' | sed -E 's/^\s*SHA256:\s*//' | tr -d '[:space:]')
+          rm -f "$KS"
+          if ! printf '%s' "$FINGERPRINT" | grep -qE '^([0-9A-F]{2}:){31}[0-9A-F]{2}$'; then
+            echo "::warning::Could not read the signing certificate, so shared links will open in the browser, not the app."
+            exit 0
+          fi
+          mkdir -p dist/app-links
+          jq -n --arg fp "$FINGERPRINT" '[{
+              relation: ["delegate_permission/common.handle_all_urls"],
+              target: { namespace: "android_app", package_name: "com.nchp.monitoring.app",
+                        sha256_cert_fingerprints: [$fp] } }]' \
+            > dist/app-links/assetlinks.json
+          cat dist/app-links/assetlinks.json
+
       - name: Create Web Update Manifests
         run: |
           FIREBASE_URL="https://imnci-courses-monitor.web.app"
