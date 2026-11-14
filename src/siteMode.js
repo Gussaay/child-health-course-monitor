@@ -14,6 +14,16 @@ export const IS_EMONC_SITE = import.meta.env.VITE_SITE === 'emonc' || EMONC_HOST
 
 export const EMONC_SITE_TITLE = 'Emergency Obstetrics and Newborn Care (EmONC)';
 
+// The EmONC site's logo, used instead of the Child Health Program logo in the
+// header, the loading screen, the browser tab and the installed-app icon.
+// To change it, replace public/emonc-logo.png (a square PNG, 512 px is best);
+// nothing else needs editing. emonc.html (vite.config.js emoncPage) points at
+// the same file.
+export const EMONC_LOGO_URL = '/emonc-logo.png';
+
+// Used where the main site shows "NCHP Logo".
+export const EMONC_LOGO_ALT = 'EmONC logo';
+
 // The only course type the EmONC site shows. The main app's EmONC list also
 // includes EENC courses (coursesForActiveType in Course.jsx); this site does not.
 export const EMONC_COURSE_TYPES = ['EmONC'];

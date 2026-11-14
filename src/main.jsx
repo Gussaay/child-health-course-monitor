@@ -14,7 +14,7 @@ import { DATA_ENTRY_PATH } from './hooks/useAppUpdate';
 import { applyWebUpdateQuietly } from './utils/quietWebUpdate';
 import { startUpdateHold } from './utils/updateHold';
 import { isOnline } from './firebase';
-import { IS_EMONC_SITE, EMONC_SITE_TITLE } from './siteMode';
+import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_LOGO_URL } from './siteMode';
 import { isChunkLoadError, recoverFromStaleBuild } from './utils/staleBuild';
 import { installErrorCapture } from './utils/errorCapture';
 import { i18nReady } from './i18n';
@@ -24,7 +24,15 @@ applyTheme();
 
 window.Buffer = Buffer;
 
-if (IS_EMONC_SITE) document.title = EMONC_SITE_TITLE;
+// The live EmONC site already gets emonc.html (title, description, icon,
+// manifest; see vite.config.js). This covers `VITE_SITE=emonc npm run dev` and
+// any page that was still served the main index.html.
+if (IS_EMONC_SITE) {
+    document.title = EMONC_SITE_TITLE;
+    document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach((l) => { l.href = EMONC_LOGO_URL; });
+    document.querySelector('meta[name="description"]')?.setAttribute('content', `${EMONC_SITE_TITLE} - Course Monitoring System`);
+    document.querySelector('#boot-splash img')?.setAttribute('src', EMONC_LOGO_URL);
+}
 
 const IS_NATIVE = Capacitor.isNativePlatform();
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.2';

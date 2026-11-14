@@ -4,7 +4,7 @@ import ThemeToggle from './components/ThemeToggle';
 // source artwork (still used for the native and desktop app icons); this is a
 // 160 px copy, about 10 KB. Imported, so it gets a hashed name under /assets/
 // and the long cache lifetime that folder has.
-import logoUrl from './assets/logo-160.webp';
+import mainLogoUrl from './assets/logo-160.webp';
 import { useTheme } from './utils/theme';
 import './i18n'; 
 import React, { useEffect, useMemo, useState, useRef, lazy, Suspense, useCallback } from "react";
@@ -185,7 +185,9 @@ import { isPublicAppPath, parseScannedCode } from './utils/appLinks';
 import GetAppBanner from './components/GetAppBanner';
 import { findLinkedParticipant, rememberLinkedParticipant } from './utils/linkedParticipant';
 import { usePageAddAction, useFormTitleOverride } from './utils/pageChrome';
-import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_SITE_HIDDEN_VIEWS } from './siteMode';
+import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_SITE_HIDDEN_VIEWS, EMONC_LOGO_URL, EMONC_LOGO_ALT } from './siteMode';
+// The EmONC site shows its own logo, never the Child Health Program one.
+const logoUrl = IS_EMONC_SITE ? EMONC_LOGO_URL : mainLogoUrl;
 import { ASK_DATA_EVENT } from './utils/askDataAssistant';
 
 const ShareIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.368a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>;
@@ -671,7 +673,7 @@ function SplashScreen() {
     const { t } = useTranslation();
     return (
         <div className="fixed inset-0 bg-surface flex flex-col items-center justify-center gap-6 text-center p-4 z-[9999]">
-            <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src={logoUrl} alt={t('app_extra.header.logo_alt', 'NCHP Logo')} width="80" height="80" className="h-20 w-20 object-contain" /></div>
+            <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src={logoUrl} alt={IS_EMONC_SITE ? EMONC_LOGO_ALT : t('app_extra.header.logo_alt', 'NCHP Logo')} width="80" height="80" className="h-20 w-20 object-contain" /></div>
             <div>
                 <h1 className="text-3xl font-bold text-slate-800">{IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program')}</h1>
                 <p className="text-lg text-slate-500 mt-1">{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : t('app.subtitle', 'Program & Course Monitoring System')}</p>
@@ -3214,7 +3216,7 @@ case 'meetings':
                         )}
                         <div className="flex items-center gap-3 sm:gap-4 cursor-pointer min-w-0" onClick={() => { if (scannedPublicOpen) leaveScannedPage(); else if (!isSharedView) navigate('landing'); }}>
                             <div className="h-10 w-10 sm:h-14 sm:w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md shrink-0">
-                                <img src={logoUrl} alt={t('app_extra.header.logo_alt', 'NCHP Logo')} width="48" height="48" className="h-8 w-8 sm:h-12 sm:w-12 object-contain" />
+                                <img src={logoUrl} alt={IS_EMONC_SITE ? EMONC_LOGO_ALT : t('app_extra.header.logo_alt', 'NCHP Logo')} width="48" height="48" className="h-8 w-8 sm:h-12 sm:w-12 object-contain" />
                             </div>
                             <div className="min-w-0">
                                 <h1 className="text-[clamp(13px,4.3vw,17px)] sm:text-2xl font-bold text-white leading-tight whitespace-nowrap">{IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program')}</h1>

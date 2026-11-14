@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from 'vite-plugin-pwa';
 import pkg from './package.json';
 import { fileURLToPath } from 'node:url';
+import { makeEmoncHtml, makeEmoncManifest } from './scripts/emoncPage.js';
 
 // Translations are loaded on demand, one language per visitor (src/i18n.js).
 // A dynamic import only starts once the app code has run, so this puts a small
@@ -29,10 +30,33 @@ const preloadLocale = () => {
   };
 };
 
+// The EmONC Hosting site (src/siteMode.js) gets its own copy of the start page,
+// dist/emonc.html, made from the finished index.html: its own title,
+// description, tab icon, loading-screen logo and install manifest, so neither
+// the browser tab nor a WhatsApp/link preview says "Child Health Program".
+// firebase.json's emonc target serves it in place of index.html. The main
+// sites and the Android app keep index.html unchanged.
+const emoncPage = () => ({
+  name: 'emonc-page',
+  apply: 'build',
+  enforce: 'post',
+  generateBundle(_, bundle) {
+    const index = bundle['index.html'];
+    if (!index || index.type !== 'asset') return;
+    this.emitFile({ type: 'asset', fileName: 'emonc.html', source: makeEmoncHtml(String(index.source)) });
+    this.emitFile({
+      type: 'asset',
+      fileName: 'emonc.webmanifest',
+      source: makeEmoncManifest(),
+    });
+  },
+});
+
 export default defineConfig({
   plugins: [
     react(),
     preloadLocale(),
+    emoncPage(),
     VitePWA({
       // CHANGED from 'autoUpdate'. With 'autoUpdate' the plugin reloads the page
       // by itself as soon as a new service worker is ready, so the

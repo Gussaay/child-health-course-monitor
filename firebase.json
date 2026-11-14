@@ -403,7 +403,8 @@
       "ignore": [
         "firebase.json",
         "**/.*",
-        "**/node_modules/**"
+        "**/node_modules/**",
+        "index.html"
       ],
       "headers": [
         {
@@ -425,7 +426,7 @@
           ]
         },
         {
-          "source": "/index.html",
+          "source": "/emonc.html",
           "headers": [
             {
               "key": "Cache-Control",
@@ -560,7 +561,7 @@
         },
         {
           "regex": "^/($|[^a].*|a($|[^s].*)|as($|[^s].*)|ass($|[^e].*)|asse($|[^t].*)|asset($|[^s].*)|assets($|[^/].*))$",
-          "destination": "/index.html"
+          "destination": "/emonc.html"
         }
       ]
     }
