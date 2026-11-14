@@ -6,22 +6,25 @@
 // Inside the Android app the page address is the app's own internal one
 // (https://com.nchp.monitoring.app), and on a test computer it is
 // http://localhost; neither opens for anyone else, so those use the site the
-// app is: the main site (or the EmONC site for `VITE_SITE=emonc`).
+// app is: the main site, the EmONC site for `VITE_SITE=emonc` (the EmONC app)
+// or ch-sudan for `VITE_SITE=ch` (the ch-sudan app).
 // Every site serves the same pages at the same paths, and the Android app
 // opens links of all of them (see AndroidManifest.xml).
-import { IS_EMONC_SITE } from '../siteMode';
+import { IS_EMONC_SITE, IS_CH_SITE } from '../siteMode';
 
 export const LIVE_SITE = 'https://imnci-courses-monitor.web.app';
 export const EMONC_LIVE_SITE = 'https://emonc-sudan.web.app';
+export const CH_LIVE_SITE = 'https://ch-sudan.web.app';
 export const LIVE_HOSTS = [
     'imnci-courses-monitor.web.app', 'imnci-courses-monitor.firebaseapp.com',
     'ch-sudan.web.app', 'ch-sudan.firebaseapp.com',
     'emonc-sudan.web.app', 'emonc-sudan.firebaseapp.com',
 ];
 
-export function publicBaseUrl(location = typeof window !== 'undefined' ? window.location : null, { emonc = IS_EMONC_SITE } = {}) {
+export function publicBaseUrl(location = typeof window !== 'undefined' ? window.location : null, { emonc = IS_EMONC_SITE, ch = IS_CH_SITE } = {}) {
     if (location && LIVE_HOSTS.includes(location.hostname)) return location.origin;
-    return emonc ? EMONC_LIVE_SITE : LIVE_SITE;
+    if (emonc) return EMONC_LIVE_SITE;
+    return ch ? CH_LIVE_SITE : LIVE_SITE;
 }
 
 // The live-site version of the page currently open.

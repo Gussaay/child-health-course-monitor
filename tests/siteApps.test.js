@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { siteApkUrl, NATIVE_APP } from '../src/siteMode';
+import { siteApkUrl, NATIVE_APP, SITE_APPS } from '../src/siteMode';
+import { publicBaseUrl } from '../src/utils/publicLink';
 
 // Each site has its own Android app; both are built in every release with the
 // same version, and the EmONC APK is found from the NCHP APK's address.
@@ -15,6 +16,14 @@ describe('site apps', () => {
 
     it('the EmONC app downloads the EmONC APK of the same release', () => {
         expect(siteApkUrl(NCHP_URL, EMONC_APP)).toBe(NCHP_URL.replace('National_Child_Health_Program_APP_v', 'EmONC_APP_v'));
+    });
+
+    it('the ch-sudan app downloads its own APK and shares ch-sudan links', () => {
+        expect(siteApkUrl(NCHP_URL, SITE_APPS.ch)).toContain('apks%2FCH_Sudan_APP_v37.6.0.apk');
+        const appPage = { hostname: 'com.nchp.monitoring.app', origin: 'https://com.nchp.monitoring.app' };
+        expect(publicBaseUrl(appPage, { ch: true })).toBe('https://ch-sudan.web.app');
+        expect(publicBaseUrl(appPage, { emonc: true })).toBe('https://emonc-sudan.web.app');
+        expect(publicBaseUrl(appPage)).toBe('https://imnci-courses-monitor.web.app');
     });
 
     it('no address gives no address', () => {

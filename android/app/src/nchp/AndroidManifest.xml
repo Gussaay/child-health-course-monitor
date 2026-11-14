@@ -4,8 +4,8 @@
     <application>
         <activity android:name="com.nchp.monitoring.app.MainActivity">
             <!--
-              Shared links of the main site and ch-sudan open in the NCHP app
-              (Android App Links). EmONC site links open in the EmONC app.
+              Shared links of the main site open in the NCHP app (Android App
+              Links). EmONC and ch-sudan links open in their own apps.
               The sites prove the app is theirs with /.well-known/assetlinks.json,
               which the deploy writes from the signing key (deploy.yml, "Write
               Android App Links file"); without it Android opens the link in the
@@ -21,8 +21,6 @@
                 <data android:scheme="https" />
                 <data android:host="imnci-courses-monitor.web.app" />
                 <data android:host="imnci-courses-monitor.firebaseapp.com" />
-                <data android:host="ch-sudan.web.app" />
-                <data android:host="ch-sudan.firebaseapp.com" />
                 <data android:pathPrefix="/public/" />
                 <data android:pathPrefix="/attendance/" />
                 <data android:pathPrefix="/monitor/" />

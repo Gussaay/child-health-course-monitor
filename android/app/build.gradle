@@ -18,15 +18,18 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    // Two apps from one project, each signed with the same key:
-    //   nchp   the National Child Health Program app (com.nchp.monitoring.app)
-    //   emonc  the EmONC app (com.nchp.monitoring.emonc): its own name, MCH
-    //          icon and splash (src/emonc/res), its own shared-link hosts
-    //          (src/emonc/AndroidManifest.xml) and the EmONC web build
-    //          (VITE_SITE=emonc, copied in by deploy.yml).
-    // Build one with ./gradlew assembleNchpRelease or assembleEmoncRelease.
-    // The EmONC app needs its own entry in google-services.json (Firebase
-    // console, Add app > Android); deploy.yml skips it until that is there.
+    // One app per site, from one project, all signed with the same key:
+    //   nchp   the National Child Health Program app (com.nchp.monitoring.app),
+    //          imnci-courses-monitor.web.app
+    //   emonc  the EmONC app (com.nchp.monitoring.emonc), emonc-sudan.web.app:
+    //          its own name, MCH icon and splash (src/emonc/res)
+    //   ch     the ch-sudan app (com.nchp.monitoring.ch), ch-sudan.web.app:
+    //          the full app with the NCHP icon, its own name
+    // Each claims its own site's shared links (src/<flavor>/AndroidManifest.xml)
+    // and runs that site's web build (VITE_SITE=<flavor>, copied in by
+    // deploy.yml). Build one with ./gradlew assemble<Flavor>Release.
+    // Every app needs its own entry in google-services.json (Firebase console,
+    // Add app > Android); deploy.yml skips a site app until that is there.
     flavorDimensions = ["site"]
     productFlavors {
         nchp {
@@ -36,6 +39,10 @@ android {
         emonc {
             dimension "site"
             applicationId "com.nchp.monitoring.emonc"
+        }
+        ch {
+            dimension "site"
+            applicationId "com.nchp.monitoring.ch"
         }
     }
     buildTypes {

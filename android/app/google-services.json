@@ -49,6 +49,35 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:928082473485:android:c334af55cd3223052a9b44",
+        "android_client_info": {
+          "package_name": "com.nchp.monitoring.emonc"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "928082473485-bu2fbkb8p12qcjijmb9lg4j7asj8emje.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApaE6SnbttxkU3iaTSWu2-KFHQ6LD-ehw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "928082473485-bu2fbkb8p12qcjijmb9lg4j7asj8emje.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

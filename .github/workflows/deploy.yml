@@ -16,6 +16,12 @@ env:
   # the version from it independently rather than passing it between them, so
   # the jobs need no shared state to agree on what they are shipping.
   NATIVE_BUILD_ID: ${{ github.run_number }}
+  # The site apps built next to the NCHP app (android/app/build.gradle
+  # flavors, src/siteMode.js NATIVE_APP): name:package:APK file prefix.
+  # Each one runs its site's web build (VITE_SITE=<name>) and is built only
+  # once google-services.json has its package (Firebase console, Add app >
+  # Android); until then it is skipped and the NCHP app ships as before.
+  SITE_APPS: "emonc:com.nchp.monitoring.emonc:EmONC_APP_v ch:com.nchp.monitoring.ch:CH_Sudan_APP_v"
 
 # =============================================================================
 # The pipeline is split so one broken thing stops only what depends on it.
@@ -147,24 +153,26 @@ jobs:
       - name: Build Web Assets
         run: npm run build
 
-      # The EmONC Android app (android/app/build.gradle, flavor "emonc") runs
-      # the EmONC site's build of the same code: Courses and Surveys only, its
-      # own name and logo, links pointing at emonc-sudan.web.app. It is never
-      # published as a site; it goes into the EmONC APK and its live updates.
-      - name: Build EmONC app web layer
-        run: VITE_SITE=emonc npx vite build --outDir dist-emonc
-
-      # The EmONC APK needs its own entry in google-services.json (Firebase
-      # console, Add app > Android, package com.nchp.monitoring.emonc). Until
-      # it is there the EmONC app is skipped and the NCHP app ships as before.
-      - name: Is the EmONC app set up in Firebase
+      # Each site app's web layer: the same code built for that site
+      # (EmONC: Courses and Surveys only, its own name and logo; ch: links
+      # point at ch-sudan.web.app). Never published as a site; it goes into
+      # that app's APK and its live updates. Apps not yet in
+      # google-services.json are listed as skipped.
+      - name: Build site app web layers
         run: |
-          if jq -e '.client[] | select(.client_info.android_client_info.package_name == "com.nchp.monitoring.emonc")' android/app/google-services.json > /dev/null; then
-            echo "EMONC_APP=true" >> $GITHUB_ENV
-          else
-            echo "EMONC_APP=false" >> $GITHUB_ENV
-            echo "::warning::google-services.json has no com.nchp.monitoring.emonc app yet, so the EmONC APK is not built."
-          fi
+          mkdir -p dist-apps
+          : > site-apps-ready.txt
+          for APP in $SITE_APPS; do
+            IFS=: read -r NAME PKG PREFIX <<< "$APP"
+            VITE_SITE=$NAME npx vite build --outDir dist-apps/$NAME
+            if jq -e --arg p "$PKG" '.client[] | select(.client_info.android_client_info.package_name == $p)' android/app/google-services.json > /dev/null; then
+              echo "$NAME" >> site-apps-ready.txt
+            else
+              echo "::warning::google-services.json has no $PKG app yet, so the $NAME APK is not built."
+            fi
+          done
+          echo "Site apps to build: $(tr '\n' ' ' < site-apps-ready.txt)"
+          cp site-apps-ready.txt dist-apps/
 
       # Android App Links: lets a shared link (WhatsApp, SMS, e-mail) open in
       # the installed app instead of the browser. Android checks that each site
@@ -194,9 +202,9 @@ jobs:
             exit 0
           fi
           mkdir -p dist/app-links
-          # Both apps are signed with the same key. Each claims only its own
-          # sites' links (android/app/src/<flavor>/AndroidManifest.xml).
-          jq -n --arg fp "$FINGERPRINT" '[("com.nchp.monitoring.app", "com.nchp.monitoring.emonc") | {
+          # All the apps are signed with the same key. Each claims only its own
+          # site's links (android/app/src/<flavor>/AndroidManifest.xml).
+          jq -n --arg fp "$FINGERPRINT" '[("com.nchp.monitoring.app", "com.nchp.monitoring.emonc", "com.nchp.monitoring.ch") | {
               relation: ["delegate_permission/common.handle_all_urls"],
               target: { namespace: "android_app", package_name: .,
                         sha256_cert_fingerprints: [$fp] } }]' \
@@ -234,20 +242,23 @@ jobs:
             > dist/latest/update.json
           cat dist/latest/update.json
 
-          # The EmONC app's live updates: the EmONC web layer, at /latest-emonc/
-          # (android/app/src/emonc/res/values/strings.xml, src/siteMode.js).
-          EMONC_ZIP="update-emonc-${{ env.BUILD_VERSION }}.zip"
-          (cd dist-emonc && zip -qr ../${EMONC_ZIP} .)
-          mkdir -p dist/latest-emonc
-          mv ${EMONC_ZIP} dist/latest-emonc/
-          jq -n \
-            --arg version "$BUILD_VERSION" \
-            --arg url "${FIREBASE_URL}/latest-emonc/${EMONC_ZIP}" \
-            --arg checksum "$(sha256sum dist/latest-emonc/${EMONC_ZIP} | cut -d ' ' -f1)" \
-            '{version: $version, url: $url, checksum: $checksum,
-              mandatory: false, notes: "", minNativeBuild: 1}' \
-            > dist/latest-emonc/update.json
-          cat dist/latest-emonc/update.json
+          # Each site app's live updates: its web layer, at /latest-<name>/
+          # (android/app/src/<name>/res/values/strings.xml, src/siteMode.js).
+          for APP in $SITE_APPS; do
+            IFS=: read -r NAME PKG PREFIX <<< "$APP"
+            APP_ZIP="update-${NAME}-${{ env.BUILD_VERSION }}.zip"
+            (cd dist-apps/$NAME && zip -qr ../../${APP_ZIP} .)
+            mkdir -p dist/latest-$NAME
+            mv ${APP_ZIP} dist/latest-$NAME/
+            jq -n \
+              --arg version "$BUILD_VERSION" \
+              --arg url "${FIREBASE_URL}/latest-${NAME}/${APP_ZIP}" \
+              --arg checksum "$(sha256sum dist/latest-$NAME/${APP_ZIP} | cut -d ' ' -f1)" \
+              '{version: $version, url: $url, checksum: $checksum,
+                mandatory: false, notes: "", minNativeBuild: 1}' \
+              > dist/latest-$NAME/update.json
+            cat dist/latest-$NAME/update.json
+          done
 
       # The APK URL is built from the version, not from the upload result, so
       # this manifest can be written before the APK exists. AdminDashboard.jsx
@@ -271,13 +282,15 @@ jobs:
             > public/native-version.json
           cp public/native-version.json dist/native-version.json
           cat public/native-version.json
-          # The EmONC site's "Get the app" button reads this one
-          # (GetAppBanner.jsx). Written only when the EmONC APK is built.
-          if [ "$EMONC_APP" = "true" ]; then
-            jq --arg url "${STORAGE_URL//National_Child_Health_Program_APP_v/EmONC_APP_v}" \
-              '.apkUrl = $url | .downloadUrl = $url' public/native-version.json > dist/native-version-emonc.json
-            cat dist/native-version-emonc.json
-          fi
+          # Each site's "Get the app" button reads native-version-<name>.json
+          # (GetAppBanner.jsx). Written only for the apps built this release.
+          for APP in $SITE_APPS; do
+            IFS=: read -r NAME PKG PREFIX <<< "$APP"
+            grep -qx "$NAME" site-apps-ready.txt || continue
+            jq --arg url "${STORAGE_URL//National_Child_Health_Program_APP_v/$PREFIX}" \
+              '.apkUrl = $url | .downloadUrl = $url' public/native-version.json > dist/native-version-$NAME.json
+            cat dist/native-version-$NAME.json
+          done
 
       - name: Upload web build
         uses: actions/upload-artifact@v4
@@ -286,11 +299,11 @@ jobs:
           path: dist
           retention-days: 3
 
-      - name: Upload EmONC app web layer
+      - name: Upload site app web layers
         uses: actions/upload-artifact@v4
         with:
-          name: dist-emonc
-          path: dist-emonc
+          name: dist-apps
+          path: dist-apps
           retention-days: 3
 
   # ---------------------------------------------------------------------------
@@ -475,11 +488,11 @@ jobs:
           name: dist
           path: dist
 
-      - name: Download EmONC app web layer
+      - name: Download site app web layers
         uses: actions/download-artifact@v4
         with:
-          name: dist-emonc
-          path: dist-emonc
+          name: dist-apps
+          path: dist-apps
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -488,14 +501,6 @@ jobs:
 
       - name: Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
-
-      - name: Is the EmONC app set up in Firebase
-        run: |
-          if jq -e '.client[] | select(.client_info.android_client_info.package_name == "com.nchp.monitoring.emonc")' android/app/google-services.json > /dev/null; then
-            echo "EMONC_APP=true" >> $GITHUB_ENV
-          else
-            echo "EMONC_APP=false" >> $GITHUB_ENV
-          fi
 
       - name: Build and Sign Native APK
         env:
@@ -535,13 +540,13 @@ jobs:
           # The NCHP app, with the main web build that cap sync copied in.
           ./gradlew assembleNchpRelease
           sign_apk nchp
-          # The EmONC app: same project, the EmONC web layer instead.
-          if [ "$EMONC_APP" = "true" ]; then
+          # The site apps: same project, each with its site's web layer.
+          for NAME in $(cat ../dist-apps/site-apps-ready.txt); do
             rm -rf app/src/main/assets/public
-            cp -r ../dist-emonc app/src/main/assets/public
-            ./gradlew assembleEmoncRelease
-            sign_apk emonc
-          fi
+            cp -r ../dist-apps/$NAME app/src/main/assets/public
+            ./gradlew assemble${NAME^}Release
+            sign_apk $NAME
+          done
           # The keystore must never stay on disk after signing.
           rm -f app/nchp-release.keystore
           cd ..
@@ -554,16 +559,15 @@ jobs:
             android/app/build/outputs/apk/nchp/release/app-nchp-release-aligned.apk \
             gs://imnci-courses-monitor.firebasestorage.app/apks/National_Child_Health_Program_APP_v${BUILD_VERSION}.apk \
             --cache-control="public, max-age=31536000, immutable"
-          # Same version, EmONC file name (src/siteMode.js siteApkUrl).
-          if [ "$EMONC_APP" = "true" ]; then
+          # Same version, each app's file name (src/siteMode.js siteApkUrl).
+          for APP in $SITE_APPS; do
+            IFS=: read -r NAME PKG PREFIX <<< "$APP"
+            grep -qx "$NAME" dist-apps/site-apps-ready.txt || continue
             gcloud storage cp \
-              android/app/build/outputs/apk/emonc/release/app-emonc-release-aligned.apk \
-              gs://imnci-courses-monitor.firebasestorage.app/apks/EmONC_APP_v${BUILD_VERSION}.apk \
+              android/app/build/outputs/apk/$NAME/release/app-$NAME-release-aligned.apk \
+              gs://imnci-courses-monitor.firebasestorage.app/apks/${PREFIX}${BUILD_VERSION}.apk \
               --cache-control="public, max-age=31536000, immutable"
-          fi
-          # The ?alt=media link only works if the file can be read without a
-          # login. If your Storage rules require authentication, users get a
-          # 403 and the Download button appears to do nothing.
+          done
 
   # ---------------------------------------------------------------------------
   # Release history and old-APK cleanup. Waits for BOTH the site and the APK:

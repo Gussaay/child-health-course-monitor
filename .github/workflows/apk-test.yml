@@ -57,18 +57,22 @@ jobs:
             app/build/outputs/apk/release/NCHP-background-update-TEST.apk
           $BT/apksigner verify app/build/outputs/apk/release/NCHP-background-update-TEST.apk
           rm -f app/nchp-release.keystore
-      # The EmONC app: compiled only when google-services.json has it (Firebase
-      # console, Add app > Android). Not signed; this only proves it builds.
-      - name: Build the EmONC app
+      # The site apps (EmONC, ch-sudan): compiled only when google-services.json
+      # has them (Firebase console, Add app > Android). Not signed; this only
+      # proves they build.
+      - name: Build the site apps
         run: |
-          VITE_SITE=emonc npx vite build --outDir dist-emonc
-          if jq -e '.client[] | select(.client_info.android_client_info.package_name == "com.nchp.monitoring.emonc")' android/app/google-services.json > /dev/null; then
+          for APP in emonc:com.nchp.monitoring.emonc ch:com.nchp.monitoring.ch; do
+            IFS=: read -r NAME PKG <<< "$APP"
+            if ! jq -e --arg p "$PKG" '.client[] | select(.client_info.android_client_info.package_name == $p)' android/app/google-services.json > /dev/null; then
+              echo "::warning::google-services.json has no $PKG app yet; $NAME APK not built."
+              continue
+            fi
+            VITE_SITE=$NAME npx vite build --outDir dist-apps/$NAME
             rm -rf android/app/src/main/assets/public
-            cp -r dist-emonc android/app/src/main/assets/public
-            cd android && ./gradlew assembleEmoncRelease
-          else
-            echo "::warning::google-services.json has no EmONC app yet; EmONC APK not built."
-          fi
+            cp -r dist-apps/$NAME android/app/src/main/assets/public
+            (cd android && ./gradlew assemble${NAME^}Release)
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: NCHP-background-update-TEST

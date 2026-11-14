@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 dist-emonc
+dist-apps
+site-apps-ready.txt
 release
 *.local
 

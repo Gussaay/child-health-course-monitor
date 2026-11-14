@@ -12,6 +12,12 @@ const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
 
 export const IS_EMONC_SITE = import.meta.env.VITE_SITE === 'emonc' || EMONC_HOSTS.includes(hostname);
 
+// ch-sudan is the full app like the main site; only its Android app, its
+// shared links and its "Get the app" button differ. `VITE_SITE=ch` is the
+// ch-sudan app's build.
+const CH_HOSTS = ['ch-sudan.web.app', 'ch-sudan.firebaseapp.com'];
+export const IS_CH_SITE = import.meta.env.VITE_SITE === 'ch' || CH_HOSTS.includes(hostname);
+
 export const EMONC_SITE_TITLE = 'Emergency Obstetrics and Newborn Care (EmONC)';
 // Shown in the header on phones and tablets, where the full name does not fit.
 export const EMONC_SHORT_TITLE = 'EmONC';
@@ -27,20 +33,25 @@ export const EMONC_LOGO_URL = '/emonc-logo.png';
 export const EMONC_LOGO_ALT = 'EmONC logo';
 
 // Each site has its own Android app (android/app/build.gradle productFlavors).
-// The EmONC app is built from this same code with VITE_SITE=emonc, so inside
-// it IS_EMONC_SITE is true as well.
+// The EmONC and ch-sudan apps are built from this same code with
+// VITE_SITE=emonc / VITE_SITE=ch, so inside them IS_EMONC_SITE / IS_CH_SITE
+// are true as well.
 //   package        Android application id (intent:// links, App Links)
 //   versionFile    native-version file the site's "Get the app" button reads
 //   updateManifest live-update manifest the app checks (deploy.yml writes both)
 //   apkFilePrefix  APK file names in Storage: <prefix><version>.apk
 const NCHP_APK_PREFIX = 'National_Child_Health_Program_APP_v';
-export const NATIVE_APP = IS_EMONC_SITE
-    ? { package: 'com.nchp.monitoring.emonc', name: 'EmONC', versionFile: 'native-version-emonc.json', updateManifest: 'latest-emonc/update.json', apkFilePrefix: 'EmONC_APP_v', downloadName: 'EmONC' }
-    : { package: 'com.nchp.monitoring.app', name: 'NCHP', versionFile: 'native-version.json', updateManifest: 'latest/update.json', apkFilePrefix: NCHP_APK_PREFIX, downloadName: 'NCHP' };
+// deploy.yml SITE_APPS and android/app/build.gradle productFlavors list the same apps.
+export const SITE_APPS = {
+    nchp: { package: 'com.nchp.monitoring.app', name: 'NCHP', versionFile: 'native-version.json', updateManifest: 'latest/update.json', apkFilePrefix: NCHP_APK_PREFIX, downloadName: 'NCHP' },
+    emonc: { package: 'com.nchp.monitoring.emonc', name: 'EmONC', versionFile: 'native-version-emonc.json', updateManifest: 'latest-emonc/update.json', apkFilePrefix: 'EmONC_APP_v', downloadName: 'EmONC' },
+    ch: { package: 'com.nchp.monitoring.ch', name: 'CH Sudan', versionFile: 'native-version-ch.json', updateManifest: 'latest-ch/update.json', apkFilePrefix: 'CH_Sudan_APP_v', downloadName: 'CH-Sudan' },
+};
+export const NATIVE_APP = IS_EMONC_SITE ? SITE_APPS.emonc : IS_CH_SITE ? SITE_APPS.ch : SITE_APPS.nchp;
 
-// meta/update_config names the NCHP APK of a release. Both apps are built in
-// the same release with the same version, so the EmONC APK of that release is
-// the same address with the EmONC file name.
+// meta/update_config names the NCHP APK of a release. All the apps are built
+// in the same release with the same version, so another app's APK of that
+// release is the same address with that app's file name.
 export function siteApkUrl(url, app = NATIVE_APP) {
     if (!url || app.apkFilePrefix === NCHP_APK_PREFIX) return url || '';
     return url.split(NCHP_APK_PREFIX).join(app.apkFilePrefix);
