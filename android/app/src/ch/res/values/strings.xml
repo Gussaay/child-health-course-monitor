@@ -3,8 +3,8 @@
      differs from src/main/res/values/strings.xml is here; the icon and
      splash are the NCHP ones. -->
 <resources>
-    <string name="app_name">CH Sudan</string>
-    <string name="title_activity_main">CH Sudan</string>
+    <string name="app_name">Child Health Sudan</string>
+    <string name="title_activity_main">Child Health Sudan</string>
     <!-- Live updates of the ch-sudan app come from its own web build (deploy.yml). -->
     <string name="update_manifest_url">https://imnci-courses-monitor.web.app/latest-ch/update.json</string>
 </resources>

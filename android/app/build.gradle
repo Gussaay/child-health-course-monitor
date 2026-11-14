@@ -24,7 +24,7 @@ android {
     //   emonc  the EmONC app (com.nchp.monitoring.emonc), emonc-sudan.web.app:
     //          its own name, MCH icon and splash (src/emonc/res)
     //   ch     the ch-sudan app (com.nchp.monitoring.ch), ch-sudan.web.app:
-    //          the full app with the NCHP icon, its own name
+    //          the full app with the NCHP icon, named "Child Health Sudan"
     // Each claims its own site's shared links (src/<flavor>/AndroidManifest.xml)
     // and runs that site's web build (VITE_SITE=<flavor>, copied in by
     // deploy.yml). Build one with ./gradlew assemble<Flavor>Release.

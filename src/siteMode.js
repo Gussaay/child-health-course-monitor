@@ -45,7 +45,7 @@ const NCHP_APK_PREFIX = 'National_Child_Health_Program_APP_v';
 export const SITE_APPS = {
     nchp: { package: 'com.nchp.monitoring.app', name: 'NCHP', versionFile: 'native-version.json', updateManifest: 'latest/update.json', apkFilePrefix: NCHP_APK_PREFIX, downloadName: 'NCHP' },
     emonc: { package: 'com.nchp.monitoring.emonc', name: 'EmONC', versionFile: 'native-version-emonc.json', updateManifest: 'latest-emonc/update.json', apkFilePrefix: 'EmONC_APP_v', downloadName: 'EmONC' },
-    ch: { package: 'com.nchp.monitoring.ch', name: 'CH Sudan', versionFile: 'native-version-ch.json', updateManifest: 'latest-ch/update.json', apkFilePrefix: 'CH_Sudan_APP_v', downloadName: 'CH-Sudan' },
+    ch: { package: 'com.nchp.monitoring.ch', name: 'Child Health Sudan', versionFile: 'native-version-ch.json', updateManifest: 'latest-ch/update.json', apkFilePrefix: 'CH_Sudan_APP_v', downloadName: 'CH-Sudan' },
 };
 export const NATIVE_APP = IS_EMONC_SITE ? SITE_APPS.emonc : IS_CH_SITE ? SITE_APPS.ch : SITE_APPS.nchp;
 
