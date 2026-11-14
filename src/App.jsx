@@ -185,7 +185,7 @@ import { isPublicAppPath, parseScannedCode } from './utils/appLinks';
 import GetAppBanner from './components/GetAppBanner';
 import { findLinkedParticipant, rememberLinkedParticipant } from './utils/linkedParticipant';
 import { usePageAddAction, useFormTitleOverride } from './utils/pageChrome';
-import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_SITE_HIDDEN_VIEWS, EMONC_LOGO_URL, EMONC_LOGO_ALT } from './siteMode';
+import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_SITE_HIDDEN_VIEWS, EMONC_LOGO_URL, EMONC_LOGO_ALT, EMONC_SHORT_TITLE } from './siteMode';
 // The EmONC site shows its own logo, never the Child Health Program one.
 const logoUrl = IS_EMONC_SITE ? EMONC_LOGO_URL : mainLogoUrl;
 import { ASK_DATA_EVENT } from './utils/askDataAssistant';
@@ -3219,7 +3219,10 @@ case 'meetings':
                                 <img src={logoUrl} alt={IS_EMONC_SITE ? EMONC_LOGO_ALT : t('app_extra.header.logo_alt', 'NCHP Logo')} width="48" height="48" className="h-8 w-8 sm:h-12 sm:w-12 object-contain" />
                             </div>
                             <div className="min-w-0">
-                                <h1 className="text-[clamp(13px,4.3vw,17px)] sm:text-2xl font-bold text-white leading-tight whitespace-nowrap">{IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program')}</h1>
+                                <h1 className="text-[clamp(13px,4.3vw,17px)] sm:text-2xl font-bold text-white leading-tight whitespace-nowrap">{IS_EMONC_SITE ? (
+                                    // The full EmONC name does not fit phone or tablet headers; they show the short name.
+                                    <><span className="lg:hidden">{EMONC_SHORT_TITLE}</span><span className="hidden lg:inline">{EMONC_SITE_TITLE}</span></>
+                                ) : t('app.title', 'National Child Health Program')}</h1>
                                 <p className="text-[11px] sm:text-sm text-slate-300 flex items-center flex-wrap gap-1.5 sm:gap-2 mt-0.5 sm:mt-0">
                                     <span>{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : t('app.subtitle', 'Program & Course Monitoring System')}</span>
                                     <span

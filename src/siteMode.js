@@ -13,6 +13,8 @@ const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
 export const IS_EMONC_SITE = import.meta.env.VITE_SITE === 'emonc' || EMONC_HOSTS.includes(hostname);
 
 export const EMONC_SITE_TITLE = 'Emergency Obstetrics and Newborn Care (EmONC)';
+// Shown in the header on phones and tablets, where the full name does not fit.
+export const EMONC_SHORT_TITLE = 'EmONC';
 
 // The EmONC site's logo, used instead of the Child Health Program logo in the
 // header, the loading screen, the browser tab and the installed-app icon.
