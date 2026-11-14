@@ -78,8 +78,8 @@ describe('Share link with a fixed place', () => {
         expect(surveyShareUrl(base)).toBe(base);
         expect(surveyShareUrl(base, { localityKey: 'Al Kamlin' })).toBe(base);
         const url = surveyShareUrl(base, { stateKey: 'Gezira', localityKey: 'Al Kamlin' });
-        expect(readPresetPlace(new URL(url).search, STATE_LOCALITIES)).toEqual({ stateKey: 'Gezira', localityKey: 'Al Kamlin' });
-        expect(readPresetPlace('?state=Gezira&locality=Nowhere', STATE_LOCALITIES)).toEqual({ stateKey: 'Gezira', localityKey: '' });
+        expect(readPresetPlace(new URL(url).search, STATE_LOCALITIES)).toMatchObject({ stateKey: 'Gezira', localityKey: 'Al Kamlin' });
+        expect(readPresetPlace('?state=Gezira&locality=Nowhere', STATE_LOCALITIES)).toMatchObject({ stateKey: 'Gezira', localityKey: '' });
         expect(readPresetPlace('?state=Atlantis', STATE_LOCALITIES)).toBeNull();
         expect(readPresetPlace('', STATE_LOCALITIES)).toBeNull();
     });

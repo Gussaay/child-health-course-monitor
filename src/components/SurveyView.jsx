@@ -26,6 +26,8 @@ import { STATE_LOCALITIES } from './constants';
 import { useLeaveGuard, leaveForm, formSaved } from '../utils/leaveGuard';
 import { isDateInRange, DATE_RANGE_OPTIONS } from '../utils/dateRange';
 import { publicBaseUrl } from '../utils/publicLink';
+import AdminUnitSelect from './AdminUnitSelect';
+import { ADMIN_UNITS, adminUnitsFor, adminUnitLabel } from './adminUnits';
 import {
     SURVEYS, getSurvey, pickText, newAnswers, validateResponse, buildRecord, surveySummary, exportRows,
     toLocation, betterFix, mapLink, GPS_GOOD_ENOUGH_M, GPS_WAIT_MS, readPresetPlace, surveyShareUrl,
@@ -35,7 +37,7 @@ import { ensurePreciseLocation, watchPrecise, isPrecise } from './survey/gps';
 const DeletedItemsPanel = lazy(() => import('./DeletedItemsPanel.jsx'));
 const LIST_TAB = 'list';
 const DELETED_TAB = 'deleted';
-const EMPTY_FILTERS = { start: '', end: '', range: '', state: '', locality: '', midwives: '' };
+const EMPTY_FILTERS = { start: '', end: '', range: '', state: '', locality: '', unit: '', midwives: '' };
 
 const stateLabel = (k, isArabic) => (STATE_LOCALITIES[k] ? (isArabic ? STATE_LOCALITIES[k].ar || STATE_LOCALITIES[k].en : STATE_LOCALITIES[k].en) : k || '');
 const localityLabel = (stateKey, localityKey, isArabic) => {
@@ -275,10 +277,13 @@ function LocationCapture({ value, onChange, readOnly, autoStart = false }) {
     );
 }
 
-function Question({ question, value, onChange, readOnly, isArabic, error, autoStart }) {
+function Question({ question, value, onChange, readOnly, isArabic, error, autoStart, place = {}, locked = false }) {
     const label = pickText(question, isArabic);
     const body = (() => {
         if (question.kind === 'yesno') return <YesNo value={value} onChange={onChange} readOnly={readOnly} />;
+        if (question.kind === 'adminUnit') {
+            return <AdminUnitSelect stateKey={place.stateKey} localityKey={place.localityKey} value={value || ''} onChange={onChange} disabled={readOnly || locked} />;
+        }
         if (question.kind === 'location') return <LocationCapture value={value} onChange={onChange} readOnly={readOnly} autoStart={autoStart} />;
         if (question.kind === 'people') {
             return <PeopleTable question={question} rows={Array.isArray(value) ? value : []} onChange={onChange} readOnly={readOnly} isArabic={isArabic} />;
@@ -356,7 +361,8 @@ function ResponseFormBody({ survey, initial, onBack, onSaved, canEdit, publicMod
         const sameState = !preset?.stateKey || preset.stateKey === last.stateKey;
         const stateKey = preset?.stateKey || last.stateKey || '';
         const localityKey = preset?.localityKey || (sameState ? last.localityKey : '') || '';
-        if (!answers.adminUnit && sameState && (!preset?.localityKey || preset.localityKey === last.localityKey) && last.adminUnit) answers.adminUnit = last.adminUnit;
+        if (preset?.adminUnit) answers.adminUnit = preset.adminUnit;
+        else if (!answers.adminUnit && sameState && (!preset?.localityKey || preset.localityKey === last.localityKey) && last.adminUnit) answers.adminUnit = last.adminUnit;
         return { stateKey: STATE_LOCALITIES[stateKey] ? stateKey : '', localityKey, answers };
     });
     const [saving, setSaving] = useState(false);
@@ -440,7 +446,7 @@ function ResponseFormBody({ survey, initial, onBack, onSaved, canEdit, publicMod
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
                             <Select label={<>{t('survey.state', 'State')}<span className="text-red-600"> *</span></>} value={form.stateKey} disabled={readOnly || !!preset?.stateKey}
-                                onChange={(e) => setForm((p) => ({ ...p, stateKey: e.target.value, localityKey: '' }))}>
+                                onChange={(e) => setForm((p) => ({ ...p, stateKey: e.target.value, localityKey: '', answers: { ...p.answers, adminUnit: '' } }))}>
                                 <option value="">{t('survey.select', 'Select…')}</option>
                                 {Object.keys(STATE_LOCALITIES).filter((k) => k !== 'Federal')
                                     .map((k) => <option key={k} value={k}>{stateLabel(k, isArabic)}</option>)}
@@ -449,7 +455,7 @@ function ResponseFormBody({ survey, initial, onBack, onSaved, canEdit, publicMod
                         </div>
                         <div>
                             <Select label={<>{t('survey.locality', 'Locality')}<span className="text-red-600"> *</span></>} value={form.localityKey} disabled={readOnly || !form.stateKey || !!preset?.localityKey}
-                                onChange={(e) => setForm((p) => ({ ...p, localityKey: e.target.value }))}>
+                                onChange={(e) => setForm((p) => ({ ...p, localityKey: e.target.value, answers: { ...p.answers, adminUnit: '' } }))}>
                                 <option value="">{t('survey.select', 'Select…')}</option>
                                 {(STATE_LOCALITIES[form.stateKey]?.localities || [])
                                     .map((l) => <option key={l.en} value={l.en}>{isArabic ? l.ar || l.en : l.en}</option>)}
@@ -458,7 +464,8 @@ function ResponseFormBody({ survey, initial, onBack, onSaved, canEdit, publicMod
                         </div>
                         {visible.map((q) => (
                             <Question key={q.id} question={publicMode && !filler.signedIn && q.id === 'completedBy' ? { ...q, required: true } : q} value={form.answers[q.id]} readOnly={readOnly} isArabic={isArabic}
-                                error={problemText(q.id)} onChange={(v) => setAnswer(q.id, v)} autoStart={canEdit && !form.id} />
+                                error={problemText(q.id)} onChange={(v) => setAnswer(q.id, v)} autoStart={canEdit && !form.id}
+                                place={form} locked={q.kind === 'adminUnit' && !!preset?.adminUnit} />
                         ))}
                     </div>
                 </CardBody>
@@ -489,7 +496,8 @@ function ShareLinkModal({ survey, onClose }) {
     const isArabic = i18n.language === 'ar';
     const [stateKey, setStateKey] = useState('');
     const [localityKey, setLocalityKey] = useState('');
-    const url = surveyShareUrl(surveyPublicUrl(survey.id), { stateKey, localityKey });
+    const [adminUnit, setAdminUnit] = useState('');
+    const url = surveyShareUrl(surveyPublicUrl(survey.id), { stateKey, localityKey, adminUnit });
     const [copied, setCopied] = useState(false);
     useEffect(() => setCopied(false), [url]);
     const copy = async () => {
@@ -502,15 +510,22 @@ function ShareLinkModal({ survey, onClose }) {
                 <p className="font-semibold text-slate-800">{pickText(survey, isArabic, 'title')}</p>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <Select label={t('survey.share.state', 'State in the link (optional)')} value={stateKey}
-                        onChange={(e) => { setStateKey(e.target.value); setLocalityKey(''); }}>
+                        onChange={(e) => { setStateKey(e.target.value); setLocalityKey(''); setAdminUnit(''); }}>
                         <option value="">{t('survey.share.any_state', 'Any state')}</option>
                         {Object.keys(STATE_LOCALITIES).filter((k) => k !== 'Federal').map((k) => <option key={k} value={k}>{stateLabel(k, isArabic)}</option>)}
                     </Select>
                     <Select label={t('survey.share.locality', 'Locality in the link (optional)')} value={localityKey} disabled={!stateKey}
-                        onChange={(e) => setLocalityKey(e.target.value)}>
+                        onChange={(e) => { setLocalityKey(e.target.value); setAdminUnit(''); }}>
                         <option value="">{t('survey.share.any_locality', 'Any locality')}</option>
                         {(STATE_LOCALITIES[stateKey]?.localities || []).map((l) => <option key={l.en} value={l.en}>{isArabic ? l.ar || l.en : l.en}</option>)}
                     </Select>
+                    {adminUnitsFor(stateKey, localityKey).length > 0 && (
+                        <Select label={t('survey.share.unit', 'Administrative unit in the link (optional)')} value={adminUnit}
+                            onChange={(e) => setAdminUnit(e.target.value)}>
+                            <option value="">{t('survey.share.any_unit', 'Any administrative unit')}</option>
+                            {adminUnitsFor(stateKey, localityKey).map((u) => <option key={u.ar} value={u.ar}>{isArabic ? u.ar : u.en}</option>)}
+                        </Select>
+                    )}
                 </div>
                 {stateKey && <p className="text-xs text-slate-500">{t('survey.share.preset_note', 'People who open this link will have the place already filled in and fixed.')}</p>}
                 <div className="flex justify-center"><QRCodeCanvas value={url} size={180} includeMargin /></div>
@@ -530,7 +545,7 @@ export function PublicSurveyForm({ surveyId }) {
     const survey = getSurvey(surveyId);
     const [round, setRound] = useState(0);
     const [done, setDone] = useState(false);
-    const [preset] = useState(() => readPresetPlace(typeof window !== 'undefined' ? window.location.search : '', STATE_LOCALITIES));
+    const [preset] = useState(() => readPresetPlace(typeof window !== 'undefined' ? window.location.search : '', STATE_LOCALITIES, ADMIN_UNITS));
     return (
         <FormLanguage>{({ lang, setLang }) => {
             if (!survey) return <PublicMessage lang={lang} setLang={setLang} kind="not_found" />;
@@ -636,7 +651,7 @@ function ResponsesTable({ rows, canEdit, selectedIds, onSelectionChange, onView,
                                 <td className="px-2 py-2 text-sm font-medium text-gray-900 text-start border border-gray-300">{index + 1}</td>
                                 <td className={td}>
                                     <span className="block font-semibold text-gray-800">{row.village || '—'}</span>
-                                    {row.adminUnit && <span className="block text-gray-500">{row.adminUnit}</span>}
+                                    {row.adminUnit && <span className="block text-gray-500">{adminUnitLabel(row.stateKey, row.localityKey, row.adminUnit, isArabic)}</span>}
                                     {row.location && (
                                         <a href={mapLink(row.location)} target="_blank" rel="noreferrer" className="mt-0.5 inline-flex items-center gap-1 text-sky-700 hover:underline">
                                             <MapPin size={12} /> {t('survey.gps.on_map', 'Map')} · {t('survey.gps.accuracy', 'Accuracy ±{{m}} m', { m: row.location.accuracy ?? '?' })}
@@ -758,7 +773,7 @@ export default function SurveyView({ permissions = {} }) {
     const surveyRows = useMemo(() => live.filter((r) => r.surveyId === surveyId), [live, surveyId]);
 
     const setFilter = (name, value) => {
-        setFilters((f) => ({ ...f, [name]: value, ...(name === 'state' ? { locality: '' } : {}) }));
+        setFilters((f) => ({ ...f, [name]: value, ...(name === 'state' ? { locality: '', unit: '' } : name === 'locality' ? { unit: '' } : {}) }));
         setSelectedIds([]);
     };
     const clearFilters = () => { setFilters(EMPTY_FILTERS); setSelectedIds([]); };
@@ -767,6 +782,7 @@ export default function SurveyView({ permissions = {} }) {
     const rows = useMemo(() => surveyRows
         .filter((r) => !filters.state || r.stateKey === filters.state)
         .filter((r) => !filters.locality || r.localityKey === filters.locality)
+        .filter((r) => !filters.unit || r.adminUnit === filters.unit)
         .filter((r) => !filters.midwives || (filters.midwives === 'yes') === (r.hasMidwives === true))
         .filter((r) => (!filters.range && !filters.start && !filters.end) || isDateInRange(r.surveyDate, filters.range, filters.start, filters.end))
         .sort((a, b) => String(b.surveyDate || '').localeCompare(String(a.surveyDate || ''))),
@@ -806,6 +822,7 @@ export default function SurveyView({ permissions = {} }) {
         const data = exportRows(rows, {
             isArabic,
             stateName: (k) => stateLabel(k, isArabic),
+            unitName: (st, lo, u) => adminUnitLabel(st, lo, u, isArabic),
             localityName: (s, l) => localityLabel(s, l, isArabic),
         });
         const ws = XLSX.utils.json_to_sheet(data);
@@ -831,6 +848,7 @@ export default function SurveyView({ permissions = {} }) {
 
     const loadingList = isLoading?.surveyResponses && !surveyResponses;
     const states = Array.from(new Set(surveyRows.map((r) => r.stateKey).filter(Boolean))).sort();
+    const units = Array.from(new Set(surveyRows.filter((r) => r.stateKey === filters.state && r.localityKey === filters.locality).map((r) => r.adminUnit).filter(Boolean))).sort();
     const localities = Array.from(new Set(surveyRows.filter((r) => r.stateKey === filters.state).map((r) => r.localityKey).filter(Boolean))).sort();
 
     return (
@@ -870,7 +888,7 @@ export default function SurveyView({ permissions = {} }) {
                     {tab === LIST_TAB && (<>
                         <SummaryStrip rows={rows} />
                         <FilterPanel className="mb-4 md:mb-6" activeCount={activeFilters}>
-                            <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-6">
+                            <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4 lg:grid-cols-7">
                                 <FormGroup label={t('mentorship_page.filters.start_date', 'Start Date')}>
                                     <Input type="date" value={filters.start} onChange={(e) => setFilter('start', e.target.value)} className="w-full" />
                                 </FormGroup>
@@ -893,6 +911,12 @@ export default function SurveyView({ permissions = {} }) {
                                     <Select value={filters.locality} onChange={(e) => setFilter('locality', e.target.value)} disabled={!filters.state}>
                                         <option value="">{t('survey.all_localities', 'All localities')}</option>
                                         {localities.map((k) => <option key={k} value={k}>{localityLabel(filters.state, k, isArabic)}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label={t('survey.unit', 'Administrative unit')}>
+                                    <Select value={filters.unit} onChange={(e) => setFilter('unit', e.target.value)} disabled={!filters.locality}>
+                                        <option value="">{t('survey.all_units', 'All administrative units')}</option>
+                                        {units.map((u) => <option key={u} value={u}>{adminUnitLabel(filters.state, filters.locality, u, isArabic)}</option>)}
                                     </Select>
                                 </FormGroup>
                                 <FormGroup label={t('survey.list.midwives', 'Midwives')}>

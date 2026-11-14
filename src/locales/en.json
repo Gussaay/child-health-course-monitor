@@ -8942,11 +8942,21 @@
       "any_state": "Any state",
       "locality": "Locality in the link (optional)",
       "any_locality": "Any locality",
-      "preset_note": "People who open this link will have the place already filled in and fixed."
+      "preset_note": "People who open this link will have the place already filled in and fixed.",
+      "unit": "Administrative unit in the link (optional)",
+      "any_unit": "Any administrative unit"
     },
     "public": {
       "signed_in": "Signed in as {{name}}. Your name is filled in for you.",
       "guest": "You are not signed in. Write your name below; this device will remember it next time."
-    }
+    },
+    "unit": "Administrative unit",
+    "all_units": "All administrative units"
+  },
+  "admin_units": {
+    "type": "Type the administrative unit",
+    "pick_locality": "Choose the locality first",
+    "select": "Select…",
+    "other": "Other (type it)"
   }
 }

@@ -7,6 +7,7 @@
 // Question kinds:
 //   text | number | date | time   one answer
 //   yesno                          true / false (null = not answered)
+//   adminUnit                      administrative unit of the chosen locality (ADMIN_UNITS)
 //   location                       a GPS point { lat, lng, accuracy (m), capturedAt }
 //   people                         a list of rows (columns: [{ id, label, kind }]),
 //                                  shown only when showIf(answers) is true
@@ -26,7 +27,7 @@ export const SURVEYS = [
         description: 'Which villages have community midwives, with each midwife\'s name and age.',
         descriptionAr: 'القرى التي توجد بها قابلات مجتمعيات، مع اسم وعمر كل قابلة.',
         questions: [
-            { id: 'adminUnit', kind: 'text', label: 'Administrative unit', labelAr: 'الوحدة الإدارية' },
+            { id: 'adminUnit', kind: 'adminUnit', label: 'Administrative unit', labelAr: 'الوحدة الإدارية' },
             { id: 'village', kind: 'text', label: 'Village', labelAr: 'القرية', required: true },
             { id: 'location', kind: 'location', label: 'Village location (GPS)', labelAr: 'موقع القرية (GPS)' },
             { id: 'hasMidwives', kind: 'yesno', label: 'Are there midwives in the village?', labelAr: 'هل توجد قابلات في القرية؟', required: true },
@@ -162,7 +163,7 @@ export function surveySummary(rows) {
 }
 
 /** One row per midwife (villages without midwives get one row with blanks), for Excel. */
-export function exportRows(rows, { stateName, localityName, isArabic }) {
+export function exportRows(rows, { stateName, localityName, unitName = (s, l, u) => u || '', isArabic }) {
     const h = isArabic
         ? { state: 'الولاية', locality: 'المحلية', unit: 'الوحدة الإدارية', village: 'القرية', lat: 'خط العرض', lng: 'خط الطول', acc: 'دقة الموقع (م)', has: 'توجد قابلات', name: 'اسم القابلة', age: 'العمر', by: 'مستكمل الاستمارة', date: 'التاريخ', time: 'الزمن', yes: 'نعم', no: 'لا' }
         : { state: 'State', locality: 'Locality', unit: 'Administrative unit', village: 'Village', lat: 'Latitude', lng: 'Longitude', acc: 'GPS accuracy (m)', has: 'Midwives present', name: 'Midwife name', age: 'Age', by: 'Completed by', date: 'Date', time: 'Time', yes: 'Yes', no: 'No' };
@@ -170,7 +171,7 @@ export function exportRows(rows, { stateName, localityName, isArabic }) {
     for (const r of rows) {
         const base = {
             [h.state]: stateName(r.stateKey), [h.locality]: localityName(r.stateKey, r.localityKey),
-            [h.unit]: r.adminUnit || '', [h.village]: r.village || '',
+            [h.unit]: unitName(r.stateKey, r.localityKey, r.adminUnit), [h.village]: r.village || '',
             [h.has]: r.hasMidwives === true ? h.yes : r.hasMidwives === false ? h.no : '',
         };
         const loc = r.location || {};
@@ -182,20 +183,23 @@ export function exportRows(rows, { stateName, localityName, isArabic }) {
 }
 
 /** A share link, optionally with the place fixed: ?state=<key>&locality=<key>. */
-export function surveyShareUrl(base, { stateKey = '', localityKey = '' } = {}) {
+export function surveyShareUrl(base, { stateKey = '', localityKey = '', adminUnit = '' } = {}) {
     const q = new URLSearchParams();
     if (stateKey) q.set('state', stateKey);
     if (stateKey && localityKey) q.set('locality', localityKey);
+    if (stateKey && localityKey && adminUnit) q.set('unit', adminUnit);
     const qs = q.toString();
     return qs ? `${base}?${qs}` : base;
 }
 
-/** The place a share link fixes, checked against the state/locality list; null if none. */
-export function readPresetPlace(search, stateLocalities) {
+/** The place a share link fixes, checked against the state/locality/unit lists; null if none. */
+export function readPresetPlace(search, stateLocalities, adminUnits = {}) {
     const q = new URLSearchParams(search || '');
     const stateKey = q.get('state') || '';
     if (!stateLocalities[stateKey]) return null;
     const localityKey = q.get('locality') || '';
     const known = (stateLocalities[stateKey].localities || []).some((l) => l.en === localityKey);
-    return { stateKey, localityKey: known ? localityKey : '' };
+    const unit = q.get('unit') || '';
+    const unitKnown = known && (adminUnits[stateKey]?.[localityKey] || []).some((u) => u.ar === unit);
+    return { stateKey, localityKey: known ? localityKey : '', adminUnit: unitKnown ? unit : '' };
 }
