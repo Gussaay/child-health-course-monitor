@@ -333,3 +333,44 @@ describe('any list inside a record', () => {
         expect(out.fields.find((f) => f.field === 'scores').subFields).toEqual(['total']);
     });
 });
+
+import { createRequire } from 'node:module';
+const { remembered, readMemory } = createRequire(import.meta.url)('../functions/readMemory.js');
+
+describe('read memory', () => {
+    const state = { manageScope: 'state', manageLocation: 'Kassala' };
+    const other = { manageScope: 'state', manageLocation: 'Sennar' };
+
+    it('runs a lookup once for the same list, filters and scope', async () => {
+        readMemory.clear();
+        let reads = 0;
+        const run = async () => { reads += 1; return { size: 3 }; };
+        await remembered(state, ['count', 'participants', []], run);
+        await remembered(state, ['count', 'participants', []], run);
+        expect(reads).toBe(1);
+    });
+
+    it('never shares a lookup across scopes, filters or lists', async () => {
+        readMemory.clear();
+        let reads = 0;
+        const run = async () => { reads += 1; return reads; };
+        await remembered(state, ['count', 'participants', []], run);
+        await remembered(other, ['count', 'participants', []], run);
+        await remembered(state, ['count', 'participants', [{ field: 'state', op: '==', value: 'x' }]], run);
+        await remembered(state, ['count', 'courses', []], run);
+        expect(reads).toBe(4);
+    });
+
+    it('asks again after 10 minutes, and forgets a failed lookup', async () => {
+        readMemory.clear();
+        let reads = 0;
+        const run = async () => { reads += 1; return reads; };
+        const t0 = 1_000_000;
+        await remembered(state, ['x'], run, t0);
+        await remembered(state, ['x'], run, t0 + 11 * 60 * 1000);
+        expect(reads).toBe(2);
+        await expect(remembered(state, ['bad'], async () => { throw new Error('index'); }, t0)).rejects.toThrow();
+        await Promise.resolve();
+        expect(readMemory.size).toBe(1);
+    });
+});
