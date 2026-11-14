@@ -1638,7 +1638,7 @@ const ChildHealthServicesView = ({
     const handleRefresh = async () => {
         setIsRefreshing(true);
         try {
-            if (activeTab === TABS.PENDING) { await refreshSubmissions(true); } else { const currentFilters = getCurrentFilters(); if (currentFilters) { await fetchHealthFacilities(currentFilters, true); } }
+            if (activeTab === TABS.PENDING) { await refreshSubmissions(true); } else { const currentFilters = getCurrentFilters(); if (currentFilters) { await fetchHealthFacilities(currentFilters, 'sync'); } }
             setToast({ show: true, message: t('facilities_page.services.refreshed', 'Data refreshed successfully.'), type: "success" });
         } catch (error) {
             setToast({ show: true, message: t('facilities_page.services.refresh_failed', 'Failed to refresh: {{message}}', { message: error.message }), type: "error" });
@@ -1765,7 +1765,8 @@ const ChildHealthServicesView = ({
             let message = t('facilities_page.services.import_success', '{{count}} facilities imported/updated successfully.', { count: successCount });
             if (errorCount > 0) { message += '\n' + t('facilities_page.services.import_rows_failed', '{{count}} rows failed to import.', { count: errorCount }); }
              setUploadStatus(prev => ({ ...prev, inProgress: false, message, errors: failedRowsData }));
-             await fetchHealthFacilities({}, true);
+             // Imported rows carry a new lastSnapshotAt, so the changes are enough.
+             await fetchHealthFacilities({}, 'sync');
         } catch (error) {
              setUploadStatus({ inProgress: false, processed: 0, total: 0, errors: [{ message: error.message }], message: t('facilities_page.services.import_failed', 'Import failed: {{message}}', { message: error.message }) });
         }

@@ -146,7 +146,7 @@ export default function UsageCostPanel() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [listening, month]);
 
-    const loadGoogle = async () => {
+    const loadGoogle = useCallback(async () => {
         setGoogleLoading(true);
         setGoogleError('');
         try {
@@ -157,7 +157,11 @@ export default function UsageCostPanel() {
             setGoogle(null);
             setGoogleError(e?.message || 'Could not reach Google\'s usage numbers.');
         } finally { setGoogleLoading(false); }
-    };
+    }, [month]);
+    // Google's own count is fetched once for each month opened, so the two
+    // numbers are always side by side (one function call; it reads Google's
+    // monitoring, not the database).
+    useEffect(() => { loadGoogle(); }, [loadGoogle]);
 
     const summary = useMemo(() => summariseUsage(docs || [], prices), [docs, prices]);
     const est = summary.totals.cost;
@@ -185,7 +189,9 @@ export default function UsageCostPanel() {
         live: t('admin_pages.admin_dashboard.usage_cost.src_live', 'Live updates (listeners)'),
         'auto-sync': t('admin_pages.admin_dashboard.usage_cost.src_auto', 'Automatic sync'),
         refresh: t('admin_pages.admin_dashboard.usage_cost.src_refresh', 'Refresh button'),
+        function: t('admin_pages.admin_dashboard.usage_cost.src_function', 'Cloud Functions (server)'),
     };
+    const notSeen = google ? Math.max(0, (google.totals?.reads || 0) - summary.totals.reads) : null;
     const monthLabel = (m) => {
         const [y, mo] = m.split('-').map(Number);
         return new Date(y, mo - 1, 1).toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' });
@@ -226,6 +232,12 @@ export default function UsageCostPanel() {
                     <div className="text-xs font-bold text-rose-700 mb-1">{t('admin_pages.admin_dashboard.usage_cost.estimate', 'Estimated database cost')}</div>
                     <div className="text-3xl font-black text-rose-900">{usd(est)}</div>
                     <div className="text-xs text-rose-600 mt-1">{t('admin_pages.admin_dashboard.usage_cost.users_n', '{{count}} user(s) reporting', { count: summary.totals.users })}</div>
+                    <div className="text-[11px] text-rose-500 mt-1">{t('admin_pages.admin_dashboard.usage_cost.estimate_note', 'Counted by the app, at list price, before the free daily quota.')}</div>
+                    {google && (
+                        <div className="text-xs font-semibold text-rose-800 mt-2">
+                            {t('admin_pages.admin_dashboard.usage_cost.google_after_free', 'Google\'s database cost after the free quota: {{amount}}', { amount: usd(google.costAfterFreeQuota) })}
+                        </div>
+                    )}
                 </div>
                 <div className="bg-emerald-50 border border-emerald-100 p-5 rounded-2xl shadow-sm">
                     <div className="text-xs font-bold text-emerald-700 mb-1 flex items-center gap-1"><Database size={12} /> {t('admin_pages.admin_dashboard.usage_cost.reads', 'Reads')}</div>
@@ -256,7 +268,7 @@ export default function UsageCostPanel() {
 
             <RankTable
                 title={t('admin_pages.admin_dashboard.usage_cost.by_user', 'Who')}
-                hint={t('admin_pages.admin_dashboard.usage_cost.by_user_hint', 'Each person\'s own phone or browser, highest cost first.')}
+                hint={t('admin_pages.admin_dashboard.usage_cost.by_user_hint', 'Each person\'s own phone or browser, and each Cloud Function, highest cost first.')}
                 nameLabel={t('admin_pages.admin_dashboard.usage_cost.col_user', 'User')}
                 rows={summary.byUser} total={est} t={t}
             />
@@ -309,12 +321,17 @@ export default function UsageCostPanel() {
                                 </div>
                             ))}
                         </div>
+                        {notSeen > 0 && (
+                            <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                {t('admin_pages.admin_dashboard.usage_cost.not_seen', '{{count}} reads were not counted by the app: the Firebase console\'s data viewer, import and repair scripts, Cloud Functions that do not report yet, and phones on an old app version.', { count: num(notSeen) })}
+                            </p>
+                        )}
                         <div className="overflow-x-auto rounded-lg border border-gray-200 max-h-72 overflow-y-auto">
                             <Table headers={[t('admin_pages.admin_dashboard.usage_cost.day', 'Day'), t('admin_pages.admin_dashboard.usage_cost.reads', 'Reads'), t('admin_pages.admin_dashboard.usage_cost.writes', 'Writes'), t('admin_pages.admin_dashboard.usage_cost.deletes', 'Deletes')]} cardsOnPhone>
                                 {[...google.days].reverse().map((d) => (
                                     <tr key={d.date}>
                                         <td className="font-medium text-gray-800">{d.date}</td>
-                                        <td className="font-mono text-emerald-700">{num(d.reads)}</td>
+                                        <td className={`font-mono ${d.reads > 50000 ? 'text-red-700 font-bold' : 'text-emerald-700'}`} title={d.reads > 50000 ? t('admin_pages.admin_dashboard.usage_cost.over_free', 'Over the free 50,000 reads') : undefined}>{num(d.reads)}</td>
                                         <td className="font-mono text-amber-700">{num(d.writes)}</td>
                                         <td className="font-mono text-gray-600">{num(d.deletes)}</td>
                                     </tr>

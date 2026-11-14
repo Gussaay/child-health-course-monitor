@@ -555,7 +555,7 @@ export function usePopulation(year) {
         // see those rows again and the table stays empty for good. The whole
         // collection is one document per locality, so a full reload is cheap
         // and cannot be defeated by a poisoned watermark.
-        refresh: (mode = 'full') => fetchPopulationTargets(mode),
+        refresh: (mode = 'sync') => fetchPopulationTargets(mode),
     };
 }
 
@@ -1138,7 +1138,7 @@ export default function PopulationManagementView({ permissions = {} }) {
                     {/* Forces a full re-download. Needed when the delta watermark
                         has moved past rows that are in Firestore but not on
                         screen — otherwise a sync can never fetch them again. */}
-                    <Button variant="secondary" onClick={() => population.refresh('full')}>
+                    <Button variant="secondary" onClick={() => population.refresh('sync')}>
                         <RefreshCw size={16} /> {t('trackers.population.reload', 'Reload')}
                     </Button>
                     {canEdit && (

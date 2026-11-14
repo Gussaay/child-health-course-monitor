@@ -15,6 +15,7 @@
 // The only thing it writes is its own audit trail.
 
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { tally, queryReads, flushUsage } = require("./usageTally");
 
 // The decisions live apart from the plumbing, so they can be tested without
 // the Cloud Functions runtime installed. See claudePolicy.js.
@@ -130,6 +131,8 @@ async function runQuery(access, { collection, filters = [], limit = 100, orderBy
   if (orderBy && typeof orderBy === "string") q = q.orderBy(orderBy, "desc");
 
   const snap = await q.limit(capped).get();
+  tally("claudeData", collection, queryReads(snap));
+  if (access && access.db) await flushUsage(access.db);
   const rows = snap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
     .filter((r) => r.isDeleted !== true && r.isDeleted !== "true");

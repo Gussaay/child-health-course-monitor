@@ -395,6 +395,24 @@ async function getData(query, sourceOptions = {}) {
     }
 }
 
+// --- DOWNLOAD SCOPE (participants) ---
+// A state or locality user's device downloads only the participants of their
+// own states or localities: the same records the Courses page already kept
+// for them (it filtered the full list on the device).
+// `scope` is { field, values }; Firestore's "in" takes 30 values at a time.
+// Delta and live queries stay unscoped (they bring only changed records) and
+// DataContext drops changes outside the scope.
+async function getScopedDocs(col, scope, sourceOptions) {
+    const values = [...new Set((scope.values || []).filter(Boolean))];
+    if (values.length === 0) return [];
+    const out = [];
+    for (let i = 0; i < values.length; i += 30) {
+        const snap = await getData(query(collection(db, col), where(scope.field, "in", values.slice(i, i + 30))), sourceOptions);
+        snap.docs.forEach((d) => out.push({ id: d.id, ...d.data() }));
+    }
+    return out;
+}
+
 // --- OFFLINE-SAFE WRITE HELPER ---
 // Uses isOnline() from firebase.js rather than navigator.onLine. navigator.onLine
 // reports that a network exists, not that it reaches anything — it says "online"
@@ -1601,8 +1619,9 @@ export async function listParticipants(courseId, lastVisible = null, sourceOptio
     return { participants, lastVisible: newLastVisible };
 }
 
-export async function listAllParticipants(sourceOptions = {}, lastSync = 0) {
+export async function listAllParticipants(sourceOptions = {}, lastSync = 0, scope = null) {
     try {
+        if (!(lastSync > 0) && scope) return await getScopedDocs("participants", scope, sourceOptions);
         let q = collection(db, "participants");
         if (lastSync > 0) {
             q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));

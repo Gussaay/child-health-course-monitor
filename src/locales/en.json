@@ -7099,7 +7099,7 @@
         "explained": "The counted operations cover the bill",
         "denied": "Only a super user can read the monthly usage. If you are one, deploy the updated Firestore rules.",
         "by_user": "Who",
-        "by_user_hint": "Each person's own phone or browser, highest cost first.",
+        "by_user_hint": "Each person's own phone or browser, and each Cloud Function, highest cost first.",
         "col_user": "User",
         "by_list": "Which list",
         "by_list_hint": "The database collection read or written.",
@@ -7132,7 +7132,12 @@
         "coverage": "the app counted {{pct}}%",
         "google_cost": "Database cost, after the free daily quota",
         "before_free": "before the free quota",
-        "google_note": "Days run from midnight Pacific time, when Google's free quota (50,000 reads, 20,000 writes, 20,000 deletes a day) resets. This is the database only. The full invoice, with Functions, Storage and Hosting, is under Billing > Reports in the Google Cloud console: group by SKU to see each service."
+        "google_note": "Days run from midnight Pacific time, when Google's free quota (50,000 reads, 20,000 writes, 20,000 deletes a day) resets. This is the database only. The full invoice, with Functions, Storage and Hosting, is under Billing > Reports in the Google Cloud console: group by SKU to see each service.",
+        "src_function": "Cloud Functions (server)",
+        "estimate_note": "Counted by the app, at list price, before the free daily quota.",
+        "google_after_free": "Google's database cost after the free quota: {{amount}}",
+        "not_seen": "{{count}} reads were not counted by the app: the Firebase console's data viewer, import and repair scripts, Cloud Functions that do not report yet, and phones on an old app version.",
+        "over_free": "Over the free 50,000 reads"
       },
       "page_title": "System Administration",
       "page_subtitle": "Securely manage user profiles, roles, broad permissions, and monitor telemetry.",

@@ -1772,10 +1772,13 @@ const [emoncModule, setEmoncModule] = useState('maternal');
     useEffect(() => {
         let cancelled = false;
         const coursesFirst = ['courses', 'dashboard', 'participants'].includes(activeCoursesTab)
-            ? Promise.resolve().then(() => fetchCourses(true)).catch(() => {})
+            ? Promise.resolve().then(() => fetchCourses()).catch(() => {})
             : Promise.resolve();
+        // Cache-first: the saved lists show at once and are kept current by
+        // the live listeners. Asking the server on every tab change ('sync')
+        // cost reads each time even when nothing had changed.
         Promise.race([coursesFirst, new Promise((resolve) => setTimeout(resolve, 8000))])
-            .then(() => { if (!cancelled) fetchParticipants(true); });
+            .then(() => { if (!cancelled) fetchParticipants(); });
         return () => { cancelled = true; };
     }, [activeCoursesTab, fetchCourses, fetchParticipants]);
 

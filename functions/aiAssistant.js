@@ -29,6 +29,7 @@ const { accessFor, catalogueFor, scopedQuery, audit } = require("./claudeAccess"
 const { readReference } = require("./aiReference");
 const { loadProgressReport } = require("./onlineProgress");
 const { progressForModel } = require("./onlineProgressReport");
+const { tally, queryReads, countReads, flushUsage } = require("./usageTally");
 const {
   TOOLS, cleanEach, eachRows, passes, systemFor, rowsWithin, describeFields, groupRows, cleanFilters, cleanBreakdown, pageOf, splitFollowUps, splitChart,
 } = require("./aiDataText");
@@ -103,6 +104,7 @@ async function countData(access, args) {
         q.count().get(),
         q.where("isDeleted", "in", [true, "true"]).count().get(),
       ]);
+      tally("aiAssistant", args.collection, countReads(all.data().count) + countReads(deleted.data().count));
       return { collection: args.collection, filters, total: all.data().count - deleted.data().count };
     } catch (e) {
       logger.info(`[aiAssistant] count() fell back to reading: ${e.message}`);
@@ -111,6 +113,7 @@ async function countData(access, args) {
 
   const wanted = [...new Set([groupBy, valueField, ...breakdown, "isDeleted", each].filter(Boolean))];
   const snap = await q.select(...wanted.map(fieldPath)).limit(COUNT_ROWS).get();
+  tally("aiAssistant", args.collection, queryReads(snap));
   const records = snap.docs.map((d) => d.data()).filter(notDeleted);
   // With `each`, every entry of the list (a facility's staff member) is a row.
   const rows = each ? eachRows(records, each).filter((r) => passes(r, eachFilters)) : records;
@@ -145,6 +148,7 @@ async function queryData(access, args, budget) {
   // until there are enough of them, with only their name and place beside.
   const listed = each ? q.select(...[each, "isDeleted", ...NAME_FIELDS, ...Object.values(spec.scope || {}), ...(pick || [])].map(fieldPath)) : q;
   const snap = await listed.limit(each ? COUNT_ROWS : limit + 10).get();
+  tally("aiAssistant", args.collection, queryReads(snap));
   const records = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter(notDeleted);
   const rows = (each ? eachRows(records, each).filter((r) => passes(r, cleanFilters(args.eachFilters))) : records).slice(0, limit);
   const shown = rowsWithin(rows, budget, each ? null : pick);
@@ -163,6 +167,7 @@ async function queryData(access, args, budget) {
 async function describe(access, args) {
   const { spec, q } = scopedQuery(access, args.collection, []);
   const snap = await q.limit(SAMPLE_ROWS).get();
+  tally("aiAssistant", args.collection, queryReads(snap));
   const rows = snap.docs.map((d) => d.data()).filter(notDeleted);
   return { collection: args.collection, ...describeFields(rows, { personal: !!spec.personal }) };
 }
@@ -184,6 +189,9 @@ async function runTool(access, name, args, budget) {
     }
   } catch (e) {
     return { error: explainReadError(e) };
+  } finally {
+    // Reads noted above reach the usage tab (written at most every 10 minutes).
+    if (access && access.db) await flushUsage(access.db);
   }
 }
 

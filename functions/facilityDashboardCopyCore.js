@@ -12,13 +12,14 @@
 //   - A count() of the collection (1 read per 1,000 facilities) catches hard
 //     deletes, which leave nothing for the delta query to find: if the count
 //     differs from the copy, the copy is rebuilt in full.
-//   - A full rebuild also happens once a day, whatever happens.
+//   - A full rebuild also happens once a week, whatever happens (it reads
+//     every facility, ~7,000 reads, so daily was 14% of the free quota).
 // The copy is kept in this instance's memory and saved to Firestore
 // (_dashboardCopies, admin-only) so a cold start does not re-read everything.
 //
 // Logic only; the callable wrapper is facilityDashboardCopy.js.
 
-const FULL_REBUILD_MS = 24 * 60 * 60 * 1000;
+const FULL_REBUILD_MS = 7 * 24 * 60 * 60 * 1000;
 // A save's server timestamp can land a little before an earlier-started
 // query sees it; re-asking for a 10 minute overlap costs nothing extra.
 const DELTA_OVERLAP_MS = 10 * 60 * 1000;
@@ -57,26 +58,49 @@ function slimFacility(id, data) {
   return out;
 }
 
-const newestMark = (items) => items.reduce((m, f) => {
-  const t = Number(f && f.lastSnapshotAt);
+const newestMarkOf = (field) => (items) => items.reduce((m, f) => {
+  const t = Number(f && f[field]);
   return Number.isFinite(t) && t > m ? t : m;
 }, 0);
 
-function makeCore({ db, Timestamp, now = () => Date.now(), log = () => {} }) {
+/**
+ * A kept copy of one collection. Defaults are the Dashboard's facility copy;
+ * homeCopy.js uses the same core for the main menu's lists.
+ *   collection  the Firestore collection copied
+ *   slim(id, data)  the copy of one document (timestamps as milliseconds)
+ *   markField   the server time every save sets (delta queries use it)
+ *   storeId     the _dashboardCopies document the copy is saved under
+ *   minRefreshMs  requests closer together than this share one refresh
+ *   countEveryMs  how often the count() check for hard deletes runs
+ *   persistEveryMs how often a changed copy is saved (a cold start catches
+ *                  up from the saved mark, so saving less often loses nothing)
+ * `tally(collection, reads, writes)` notes reads for the usage tab (usageTally.js).
+ */
+function makeCore({
+  db, Timestamp, now = () => Date.now(), log = () => {}, tally = () => {},
+  collection = "healthFacilities", slim = slimFacility, markField = "lastSnapshotAt", storeId = DOC_ID,
+  minRefreshMs = 0, countEveryMs = 0, persistEveryMs = 0,
+}) {
   let state = null; // { items: Map, mark, fullAt, version }
   let busy = null;
+  let refreshedAt = 0;
+  let countedAt = 0;
+  let persistedAt = 0;
+  const newestMark = newestMarkOf(markField);
 
-  const col = () => db.collection("healthFacilities");
-  const store = () => db.collection(STORE).doc(DOC_ID);
+  const col = () => db.collection(collection);
+  const store = () => db.collection(STORE).doc(storeId);
   const versionOf = (s) => `${s.fullAt}-${s.mark}-${s.items.size}-${s.changes || 0}`;
 
   async function restore() {
     try {
       const meta = await store().get();
+      tally(STORE, 1);
       if (!meta.exists) return null;
       const m = meta.data() || {};
       if (!(m.parts > 0)) return null;
       const parts = await Promise.all(Array.from({ length: m.parts }, (_, i) => store().collection("parts").doc(String(i)).get()));
+      tally(STORE, parts.length);
       if (parts.some((p) => !p.exists)) return null;
       const items = JSON.parse(parts.map((p) => p.data().text || "").join(""));
       if (!Array.isArray(items)) return null;
@@ -93,12 +117,14 @@ function makeCore({ db, Timestamp, now = () => Date.now(), log = () => {} }) {
       const parts = [];
       for (let i = 0; i < text.length; i += PART_CHARS) parts.push(text.slice(i, i + PART_CHARS));
       const old = await store().get();
+      tally(STORE, 1);
       const oldParts = old.exists ? (old.data().parts || 0) : 0;
       const batch = db.batch();
       parts.forEach((p, i) => batch.set(store().collection("parts").doc(String(i)), { text: p }));
       for (let i = parts.length; i < oldParts; i += 1) batch.delete(store().collection("parts").doc(String(i)));
       batch.set(store(), { parts: parts.length, mark: s.mark, fullAt: s.fullAt, changes: s.changes || 0, count: s.items.size, savedAt: now() });
       await batch.commit();
+      tally(STORE, 0, 1 + parts.length + Math.max(0, oldParts - parts.length));
     } catch (e) {
       // Not fatal: the copy in memory is still right; the next cold start rebuilds.
       log("persist failed", e && e.message);
@@ -107,15 +133,18 @@ function makeCore({ db, Timestamp, now = () => Date.now(), log = () => {} }) {
 
   async function rebuild() {
     const snap = await col().get();
+    tally(collection, Math.max(1, snap.size));
     const items = new Map();
-    snap.docs.forEach((d) => items.set(d.id, slimFacility(d.id, d.data())));
+    snap.docs.forEach((d) => items.set(d.id, slim(d.id, d.data())));
     const s = { items, mark: newestMark(Array.from(items.values())), fullAt: now(), changes: 0 };
     log("full rebuild", items.size);
     return s;
   }
 
   async function refresh() {
+    if (state && minRefreshMs > 0 && now() - refreshedAt < minRefreshMs) return state;
     let dirty = false;
+    let rebuilt = false;
     if (!state) {
       state = await restore();
       if (state) log("restored", state.items.size);
@@ -123,12 +152,15 @@ function makeCore({ db, Timestamp, now = () => Date.now(), log = () => {} }) {
     if (!state || now() - state.fullAt > FULL_REBUILD_MS) {
       state = await rebuild();
       dirty = true;
+      rebuilt = true;
+      countedAt = now();
     } else {
       const since = Math.max(0, state.mark - DELTA_OVERLAP_MS);
-      const delta = await col().where("lastSnapshotAt", ">", Timestamp.fromMillis(since)).get();
+      const delta = await col().where(markField, ">", Timestamp.fromMillis(since)).get();
+      tally(collection, Math.max(1, delta.size));
       let changed = 0;
       delta.docs.forEach((d) => {
-        const next = slimFacility(d.id, d.data());
+        const next = slim(d.id, d.data());
         const prev = state.items.get(d.id);
         if (!prev || JSON.stringify(prev) !== JSON.stringify(next)) changed += 1;
         state.items.set(d.id, next);
@@ -139,15 +171,26 @@ function makeCore({ db, Timestamp, now = () => Date.now(), log = () => {} }) {
         dirty = true;
       }
       // Hard deletes leave nothing for the delta to find.
-      const counted = await col().count().get();
-      if (counted.data().count !== state.items.size) {
-        log("count differs, rebuilding", counted.data().count, state.items.size);
-        state = await rebuild();
-        dirty = true;
+      if (!(countEveryMs > 0) || now() - countedAt >= countEveryMs) {
+        const counted = await col().count().get();
+        countedAt = now();
+        tally(collection, Math.max(1, Math.ceil(counted.data().count / 1000)));
+        if (counted.data().count !== state.items.size) {
+          log("count differs, rebuilding", counted.data().count, state.items.size);
+          state = await rebuild();
+          dirty = true;
+          rebuilt = true;
+        }
       }
     }
+    refreshedAt = now();
     state.version = versionOf(state);
-    if (dirty) await persist(state);
+    state.unsaved = state.unsaved || dirty;
+    if (state.unsaved && (rebuilt || !(persistEveryMs > 0) || now() - persistedAt >= persistEveryMs)) {
+      await persist(state);
+      persistedAt = now();
+      state.unsaved = false;
+    }
     return state;
   }
 
@@ -171,4 +214,4 @@ function makeCore({ db, Timestamp, now = () => Date.now(), log = () => {} }) {
   return { answer, _state: () => state };
 }
 
-module.exports = { makeCore, slimFacility, DROP_KEY, FULL_REBUILD_MS };
+module.exports = { makeCore, slimFacility, toMillis, DROP_KEY, FULL_REBUILD_MS, MAX_ANSWER_CHARS };

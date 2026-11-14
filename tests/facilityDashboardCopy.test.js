@@ -108,7 +108,7 @@ describe('dashboard copy', () => {
         expect(db.reads.full).toBe(1);
     });
 
-    it('rebuilds in full when a facility was deleted, and once a day', async () => {
+    it('rebuilds in full when a facility was deleted, and once a week', async () => {
         let now = 1_000_000;
         const db = fakeDb({ a: facility('A', 900_000), b: facility('B', 950_000) });
         const core = makeCore({ db, Timestamp, now: () => now });

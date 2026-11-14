@@ -138,8 +138,8 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [] }) 
     }, [user?.uid]);
 
     const reload = useCallback(() => {
-        fetchOnlineCourses('full');
-        fetchOnlineCourseItems('full');
+        fetchOnlineCourses('sync');
+        fetchOnlineCourseItems('sync');
     }, [fetchOnlineCourses, fetchOnlineCourseItems]);
 
     // A delta query against the server, skipping the one-hour cache. Cheap: it

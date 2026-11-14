@@ -43,6 +43,7 @@ import {
 import { useAuth } from './hooks/useAuth';
 import { setUsageSource } from './utils/usageLedger';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { keepLateAnswer } from './utils/keepLateAnswer';
 import { trainingCourseId } from './training/trainingSession.js';
 
 const DataCacheContext = createContext();
@@ -177,13 +178,9 @@ const stripSignaturesForDisk = (data) => {
     });
 };
 
-// --- STRICT TIMEOUT HELPER ---
-const fetchWithTimeout = async (promise, timeoutMs = 60000) => {
-    return Promise.race([
-        promise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out after " + timeoutMs + "ms")), timeoutMs))
-    ]);
-};
+// --- TIMEOUTS ---
+// A first (full) download of a big list can take minutes on a slow phone line.
+const FULL_DOWNLOAD_TIMEOUT_MS = 180000;
 
 // ============================================================================
 // --- NATIVE INDEXED-DB CACHE FOR STRICT INCREMENTAL UPDATES ---
@@ -205,17 +202,29 @@ const initDB = () => {
 const setLocalData = async (key, data) => {
     try {
         const db = await initDB();
-        return new Promise((resolve, reject) => {
+        // Never rejects: a list that cannot be saved on the device (disk full,
+        // storage blocked) is still shown for this session. The save used to
+        // hang for ever when the browser aborted the write (QuotaExceededError
+        // fires onabort, not always onerror), leaving the fetch unfinished.
+        return await new Promise((resolve) => {
+            const fail = (err) => { console.warn(`IDB put failed for ${key}:`, err?.name || err?.message || err); resolve(false); };
             const tx = db.transaction('apiData', 'readwrite');
-            tx.objectStore('apiData').put(data, key);
             tx.oncomplete = () => resolve(true);
-            tx.onerror = () => reject(tx.error);
+            tx.onerror = () => fail(tx.error);
+            tx.onabort = () => fail(tx.error || new Error('IndexedDB write aborted'));
+            try { tx.objectStore('apiData').put(data, key); } catch (err) { fail(err); }
         });
     } catch (e) { console.warn('IDB put error', e); return false; }
 };
 
 // IndexedDB key of the Dashboard's slim facility copy (see fetchDashboardFacilities).
 const DASHBOARD_COPY_KEY = 'dashboardCopy_facilities';
+// IndexedDB key of the main menu's slim lists (see fetchHomeCopy).
+const HOME_COPY_KEY = 'homeCopy_lists';
+// Lists a state or locality user downloads only for their own places. Only
+// participants (the large list): courses are few (about 1% of reads) and are
+// looked up by id from links, certificates and facilitator pages anywhere.
+const SCOPED_LISTS = ['participants'];
 
 const getLocalData = async (key) => {
     try {
@@ -325,14 +334,89 @@ export const DataProvider = ({ children }) => {
     useEffect(() => { cacheRef.current = cache; }, [cache]);
     useEffect(() => { lastFacilitiesFetchTimeRef.current = lastFacilitiesFetchTime; }, [lastFacilitiesFetchTime]);
 
+    // --- DOWNLOAD SCOPE (participants) ---
+    // State and locality users download only their own states' or localities'
+    // participants (data.js getScopedDocs); the Courses page already showed
+    // them only those (it filtered by the participant's state and locality). App.jsx calls setDataScope once the
+    // person's permissions are known. A change of scope (new role or places)
+    // drops the saved copy and downloads the new scope once.
+    const scopeRef = useRef(undefined); // undefined = not known yet; null = everything
+    const scopeWaitersRef = useRef([]);
+    const setDataScope = useCallback(({ level, states = [], localities = [] } = {}) => {
+        let next = null;
+        if (level === 'state') next = { field: 'state', values: [...new Set(states.filter(Boolean))].sort() };
+        else if (level === 'locality') next = { field: 'locality', values: [...new Set(localities.filter(Boolean))].sort() };
+        scopeRef.current = next;
+        scopeWaitersRef.current.splice(0).forEach((resolve) => resolve());
+    }, []);
+    const scopeFor = useCallback((key) => (SCOPED_LISTS.includes(key) ? (scopeRef.current || null) : null), []);
+    const inScope = useCallback((key) => {
+        const sc = scopeFor(key);
+        if (!sc) return () => true;
+        const allowed = new Set(sc.values);
+        return (rec) => !!rec && allowed.has(rec[sc.field]);
+    }, [scopeFor]);
+    // Waits (at most 4 s) for the scope, then makes sure what is saved on the
+    // device was downloaded for this scope.
+    const ensureScope = useCallback(async (key) => {
+        if (!SCOPED_LISTS.includes(key)) return;
+        if (scopeRef.current === undefined) {
+            await Promise.race([
+                new Promise((resolve) => scopeWaitersRef.current.push(resolve)),
+                new Promise((resolve) => setTimeout(resolve, 4000)),
+            ]);
+        }
+        const sc = scopeRef.current || null;
+        const sig = sc ? `${sc.field}:${sc.values.join('|')}` : 'all';
+        const sigKey = `${CACHE_NS}scopeSig_${key}`;
+        const savedSig = localStorage.getItem(sigKey);
+        if (savedSig === sig) return;
+        if (sc && (savedSig === null || savedSig === 'all')) {
+            // The device holds every record (saved before scopes, or as a
+            // federal user): keep only this scope's records, no download.
+            const keep = inScope(key);
+            const held = Array.isArray(cacheRef.current[key]) ? cacheRef.current[key] : await getLocalData(`cache_${key}`);
+            if (Array.isArray(held)) {
+                const kept = held.filter(keep);
+                await setLocalData(`cache_${key}`, stripSignaturesForDisk(kept));
+                if (Array.isArray(cacheRef.current[key])) {
+                    cacheRef.current = { ...cacheRef.current, [key]: kept };
+                    setCache((prev) => ({ ...prev, [key]: kept }));
+                }
+            }
+        } else if (savedSig !== null) {
+            // Saved for another scope: start again for this one.
+            try { liveRef.current[key]?.unsub?.(); } catch { /* closed */ }
+            delete liveRef.current[key];
+            localStorage.removeItem(syncMarkKey(key));
+            localStorage.removeItem(`${CACHE_NS}lastServerFetch_${key}`);
+            await setLocalData(`cache_${key}`, null);
+            cacheRef.current = { ...cacheRef.current, [key]: null };
+            setCache((prev) => ({ ...prev, [key]: null }));
+        }
+        try { localStorage.setItem(sigKey, sig); } catch { /* storage blocked */ }
+    }, [inScope]);
+
     // Called whenever a fetcher answers from memory or IndexedDB without asking
     // the server. Runs `refresh` (a 'sync' delta fetch) on the next tick, so the
     // cached answer is on screen first and the server's version replaces it a
     // moment later. Skipped offline, while a fetch for the same list is already
     // running, and when the server was asked less than REVALIDATE_MIN_INTERVAL_MS ago.
+    //
+    // A list kept current by a live listener (REAL-TIME LISTENERS below) is
+    // not re-asked: the listener opens from the list's server mark and brings
+    // the same changes, so the extra query only cost reads (at least one each
+    // time, plus the 10-minute overlap re-sent on every page open).
     const revalidatedAtRef = useRef({});
-    const scheduleRevalidate = useCallback((throttleKey, lastServerFetch, refresh) => {
+    const liveRef = useRef({});
+    const liveFailedRef = useRef(new Set());
+    const liveCovers = useCallback((liveKey, markKey) => {
+        if (!liveKey || liveFailedRef.current.has(liveKey)) return false;
+        return parseInt(localStorage.getItem(markKey) || '0', 10) > 0;
+    }, []);
+    const scheduleRevalidate = useCallback((throttleKey, lastServerFetch, refresh, live = null) => {
         if (!navigator.onLine) return;
+        if (live && liveCovers(live.key, live.markKey)) return;
         const now = Date.now();
         const last = Math.max(lastServerFetch || 0, revalidatedAtRef.current[throttleKey] || 0);
         if (now - last < REVALIDATE_MIN_INTERVAL_MS) return;
@@ -340,7 +424,7 @@ export const DataProvider = ({ children }) => {
         setTimeout(() => {
             refresh().catch(e => console.warn(`[sync] background refresh failed for ${throttleKey}:`, e));
         }, 0);
-    }, []);
+    }, [liveCovers]);
 
     // A saved facility list can be incomplete: a full download that timed out
     // and was then topped up only with recent changes (live listener / delta
@@ -363,7 +447,7 @@ export const DataProvider = ({ children }) => {
                 // full download every session.
                 if (serverCount > localCount) {
                     console.warn(`[facilities] saved list has ${localCount}, server has ${serverCount}; downloading again`);
-                    await fetchFacilitiesRef.current?.(filters, true);
+                    await fetchFacilitiesRef.current?.(filters, 'full');
                 }
             } catch (e) {
                 facilitiesCheckedRef.current = false; // try again next time
@@ -395,7 +479,7 @@ export const DataProvider = ({ children }) => {
                         currentFacilitiesFilterKeyRef.current = filterKey;
                     }
                     setIsLoading(prev => prev.healthFacilities === false ? prev : { ...prev, healthFacilities: false });
-                    scheduleRevalidate(timeKey, lastFetchTime, () => fetchFacilities(filters, 'sync'));
+                    scheduleRevalidate(timeKey, lastFetchTime, () => fetchFacilities(filters, 'sync'), { key: `healthFacilities:${filterKey}`, markKey: `${syncMarkKey(key)}_${filterKey}` });
                     return cachedData;
                 }
 
@@ -425,7 +509,7 @@ export const DataProvider = ({ children }) => {
                             if (filterKey === 'all') checkFacilitiesComplete(localData.length, filters);
                             if (!shouldForceServer && navigator.onLine) {
                                 fetchingRef.current[filterKey] = false;
-                                scheduleRevalidate(timeKey, lastFetchTime, () => fetchFacilities(filters, 'sync'));
+                                scheduleRevalidate(timeKey, lastFetchTime, () => fetchFacilities(filters, 'sync'), { key: `healthFacilities:${filterKey}`, markKey: `${syncMarkKey(key)}_${filterKey}` });
                                 return localData;
                             }
                         }
@@ -456,8 +540,11 @@ export const DataProvider = ({ children }) => {
                     if (!localData || localData.length === 0) {
                         effectiveLastFetchTime = 0; // First time, full load needed
                     }
-                    if (force === true) {
-                        effectiveLastFetchTime = 0; // Explicit refresh = get the truth
+                    // Only 'full' (an incomplete saved list, see checkFacilitiesComplete)
+                    // downloads every facility again. Refresh buttons pass true or
+                    // 'sync' and get only facilities changed since the last download.
+                    if (force === 'full') {
+                        effectiveLastFetchTime = 0;
                     }
 
                     const activeFilters = { ...filters };
@@ -465,40 +552,47 @@ export const DataProvider = ({ children }) => {
                         activeFilters.lastUpdatedAfter = new Date(effectiveLastFetchTime);
                     }
                     
-                    // High timeout (60s) to allow first-time full downloads to succeed
                     // A full download of every facility can take minutes on a slow
                     // phone connection; giving up after 60 s left the list empty.
-                    const newOrUpdatedData = await fetchWithTimeout(listHealthFacilities(activeFilters, { source: 'server' }), effectiveLastFetchTime === 0 ? 180000 : 60000); 
-                    
-                    let finalMergedData = localData;
+                    // A late answer is kept, not dropped (see keepLateAnswer).
+                    const serverCall = listHealthFacilities(activeFilters, { source: 'server' });
+                    const applyServerAnswer = async (newOrUpdatedData, late = false) => {
+                        const base = late ? (facilitiesFilterCacheRef.current[filterKey] || localData) : localData;
+                        let finalMergedData = base;
 
-                    if (newOrUpdatedData && newOrUpdatedData.length > 0) {
-                        const dataMap = new Map((localData || []).map(item => [item.id, item]));
+                        if (newOrUpdatedData && newOrUpdatedData.length > 0) {
+                            const dataMap = new Map((base || []).map(item => [item.id, item]));
                         
-                        newOrUpdatedData.forEach(newItem => {
-                            if (newItem && newItem.id) {
-                                dataMap.set(newItem.id, newItem);
-                            }
-                        });
+                            newOrUpdatedData.forEach(newItem => {
+                                if (newItem && newItem.id) {
+                                    dataMap.set(newItem.id, newItem);
+                                }
+                            });
                         
-                        finalMergedData = Array.from(dataMap.values());
+                            finalMergedData = Array.from(dataMap.values());
                         
-                        // Save merged data securely back to IndexedDB
-                        await setLocalData(`cache_${key}_${filterKey}`, stripSignaturesForDisk(finalMergedData));
-                    }
+                            // Save merged data securely back to IndexedDB
+                            await setLocalData(`cache_${key}_${filterKey}`, stripSignaturesForDisk(finalMergedData));
+                        }
                     
-                    // Log success time (captured before the request, not after)
-                    localStorage.setItem(timeKey, fetchStartedAt.toString());
-                    const newestFac = (finalMergedData || []).reduce((m, f) => Math.max(m, tsMillis(f?.lastSnapshotAt)), 0);
-                    localStorage.setItem(facMarkKey, String(newestFac > 0
-                        ? Math.max(effectiveLastFetchTime === 0 ? 0 : facMark, newestFac)
-                        : (facMark || fetchStartedAt)));
+                        // Log success time (captured before the request, not after)
+                        localStorage.setItem(timeKey, fetchStartedAt.toString());
+                        const newestFac = (finalMergedData || []).reduce((m, f) => Math.max(m, tsMillis(f?.lastSnapshotAt)), 0);
+                        localStorage.setItem(facMarkKey, String(newestFac > 0
+                            ? Math.max(effectiveLastFetchTime === 0 ? 0 : facMark, newestFac)
+                            : (facMark || fetchStartedAt)));
 
-                    facilitiesFilterCacheRef.current[filterKey] = finalMergedData;
-                    setCache(prev => ({ ...prev, healthFacilities: finalMergedData }));
-                    setLastFacilitiesFetchTime(prev => ({ ...prev, [filterKey]: fetchStartedAt })); 
-                    currentFacilitiesFilterKeyRef.current = filterKey;
-                    return finalMergedData;
+                        facilitiesFilterCacheRef.current[filterKey] = finalMergedData;
+                        setLastFacilitiesFetchTime(prev => ({ ...prev, [filterKey]: fetchStartedAt })); 
+                        // A late answer must not replace a list for other filters now on screen.
+                        if (!late || currentFacilitiesFilterKeyRef.current === filterKey) {
+                            setCache(prev => ({ ...prev, healthFacilities: finalMergedData }));
+                            currentFacilitiesFilterKeyRef.current = filterKey;
+                        }
+                        return finalMergedData;
+                    };
+                    const answer = await keepLateAnswer(serverCall, effectiveLastFetchTime === 0 ? FULL_DOWNLOAD_TIMEOUT_MS : 60000, (late) => applyServerAnswer(late, true), 'healthFacilities');
+                    return await applyServerAnswer(answer);
                 } catch (error) {
                     console.error(`Failed to fetch ${key} for ${filterKey}:`, error);
                     const defaultEmpty = [];
@@ -550,6 +644,7 @@ export const DataProvider = ({ children }) => {
         const returnsWholeResult = fetchFn.length < 2;
 
         const fetcher = async (mode = false) => {
+            await ensureScope(key);
             const force = mode === true || mode === 'sync' || mode === 'full';
             const fullReload = mode === 'full';
 
@@ -564,7 +659,7 @@ export const DataProvider = ({ children }) => {
 
             if (hasData && !shouldForceServer && !isDefaultSettings) {
                 setIsLoading(prev => prev[key] === false ? prev : { ...prev, [key]: false });
-                scheduleRevalidate(timeKey, lastFetchTime, () => fetcher('sync'));
+                scheduleRevalidate(timeKey, lastFetchTime, () => fetcher('sync'), LIVE_LIST_KEYS.includes(key) ? { key, markKey: syncMarkKey(key) } : null);
                 return currentCache;
             }
 
@@ -594,7 +689,7 @@ export const DataProvider = ({ children }) => {
                         }
                         
                         if (!shouldForceServer && navigator.onLine) {
-                            scheduleRevalidate(timeKey, lastFetchTime, () => fetcher('sync'));
+                            scheduleRevalidate(timeKey, lastFetchTime, () => fetcher('sync'), LIVE_LIST_KEYS.includes(key) ? { key, markKey: syncMarkKey(key) } : null);
                             return localData;
                         }
                     }
@@ -633,43 +728,60 @@ export const DataProvider = ({ children }) => {
                     effectiveLastFetchTime = 0;
                 }
 
-                const newOrUpdatedData = await fetchWithTimeout(fetchFn({ source: 'server' }, effectiveLastFetchTime), 60000); 
-                
-                let finalMergedData = localData;
-                const isCompleteAnswer = returnsWholeResult || effectiveLastFetchTime === 0;
+                // The answer is kept even when it arrives after the timeout:
+                // Firestore bills the download either way, and dropping it
+                // meant a slow phone downloaded the whole list again on every
+                // open (see keepLateAnswer).
+                const serverCall = fetchFn({ source: 'server' }, effectiveLastFetchTime);
+                const applyServerAnswer = async (newOrUpdatedData, late = false) => {
+                    const base = late ? (cacheRef.current[key] ?? localData) : localData;
+                    let finalMergedData = base;
+                    const isCompleteAnswer = returnsWholeResult || effectiveLastFetchTime === 0;
 
-                if (Array.isArray(newOrUpdatedData) && isCompleteAnswer) {
-                    finalMergedData = newOrUpdatedData.filter(item => item && item.id);
-                    await setLocalData(`cache_${key}`, stripSignaturesForDisk(finalMergedData));
-                } else if (Array.isArray(newOrUpdatedData) && newOrUpdatedData.length > 0) {
-                    const dataMap = new Map((Array.isArray(localData) ? localData : []).map(item => [item.id, item]));
-                    newOrUpdatedData.forEach(newItem => {
-                        if (newItem && newItem.id) {
-                            dataMap.set(newItem.id, newItem);
-                        }
-                    });
-                    finalMergedData = Array.from(dataMap.values());
-                    await setLocalData(`cache_${key}`, stripSignaturesForDisk(finalMergedData));
-                } else if (!Array.isArray(newOrUpdatedData)) {
-                    finalMergedData = newOrUpdatedData;
-                    await setLocalData(`cache_${key}`, stripSignaturesForDisk(finalMergedData));
-                } else if (newOrUpdatedData && newOrUpdatedData.length === 0) {
-                     finalMergedData = localData;
-                }
+                    if (Array.isArray(newOrUpdatedData) && isCompleteAnswer) {
+                        finalMergedData = newOrUpdatedData.filter(item => item && item.id);
+                        await setLocalData(`cache_${key}`, stripSignaturesForDisk(finalMergedData));
+                    } else if (Array.isArray(newOrUpdatedData) && newOrUpdatedData.length > 0) {
+                        const dataMap = new Map((Array.isArray(base) ? base : []).map(item => [item.id, item]));
+                        newOrUpdatedData.forEach(newItem => {
+                            if (newItem && newItem.id) {
+                                dataMap.set(newItem.id, newItem);
+                            }
+                        });
+                        finalMergedData = Array.from(dataMap.values());
+                        await setLocalData(`cache_${key}`, stripSignaturesForDisk(finalMergedData));
+                    } else if (!Array.isArray(newOrUpdatedData)) {
+                        finalMergedData = newOrUpdatedData;
+                        await setLocalData(`cache_${key}`, stripSignaturesForDisk(finalMergedData));
+                    } else if (newOrUpdatedData && newOrUpdatedData.length === 0) {
+                         finalMergedData = base;
+                    }
+                    // Deltas are not scoped: drop records outside this
+                    // person's scope (see DOWNLOAD SCOPE).
+                    if (SCOPED_LISTS.includes(key) && Array.isArray(finalMergedData) && Array.isArray(newOrUpdatedData) && newOrUpdatedData.length > 0) {
+                        const keep = inScope(key);
+                        const before = finalMergedData.length;
+                        finalMergedData = finalMergedData.filter(keep);
+                        if (finalMergedData.length !== before) await setLocalData(`cache_${key}`, stripSignaturesForDisk(finalMergedData));
+                    }
                 
-                localStorage.setItem(timeKey, fetchStartedAt.toString());
-                // Advance the mark only by what the server returned. A collection
-                // whose records carry no lastUpdatedAt cannot be delta-synced
-                // anyway; it keeps a client-clock mark so it is not re-downloaded
-                // in full on every sync.
-                const newest = newestServerStamp(Array.isArray(newOrUpdatedData) ? newOrUpdatedData : []);
-                const nextMark = newest > 0
-                    ? (isCompleteAnswer ? newest : Math.max(storedMark, newest))
-                    : (isCompleteAnswer ? (newestServerStamp(finalMergedData) || fetchStartedAt) : storedMark);
-                if (nextMark > 0) localStorage.setItem(syncMarkKey(key), String(nextMark));
+                    localStorage.setItem(timeKey, fetchStartedAt.toString());
+                    // Advance the mark only by what the server returned. A collection
+                    // whose records carry no lastUpdatedAt cannot be delta-synced
+                    // anyway; it keeps a client-clock mark so it is not re-downloaded
+                    // in full on every sync.
+                    const newest = newestServerStamp(Array.isArray(newOrUpdatedData) ? newOrUpdatedData : []);
+                    const nextMark = newest > 0
+                        ? (isCompleteAnswer ? newest : Math.max(storedMark, newest))
+                        : (isCompleteAnswer ? (newestServerStamp(finalMergedData) || fetchStartedAt) : storedMark);
+                    if (nextMark > 0) localStorage.setItem(syncMarkKey(key), String(nextMark));
 
-                setCache(prev => ({ ...prev, [key]: finalMergedData })); 
-                return finalMergedData;
+                    setCache(prev => ({ ...prev, [key]: finalMergedData })); 
+                    return finalMergedData;
+                };
+                const isFull = effectiveLastFetchTime === 0;
+                const answer = await keepLateAnswer(serverCall, isFull ? FULL_DOWNLOAD_TIMEOUT_MS : 60000, (late) => applyServerAnswer(late, true), key);
+                return await applyServerAnswer(answer);
             } catch (error) {
                 console.error(`Failed to fetch ${key}:`, error);
                 return localData || (key.includes('Settings') ? { isActive: false, openCount: 0 } : []);
@@ -687,14 +799,13 @@ export const DataProvider = ({ children }) => {
         };
         syncRegistryRef.current[key] = () => fetcher('sync');
         return fetcher;
-    }, [scheduleRevalidate, checkFacilitiesComplete]); 
+    }, [scheduleRevalidate, checkFacilitiesComplete, ensureScope, inScope]); 
 
     // Delta-sync every list already loaded on this device: only what changed
     // on the server since its last sync comes down. Lists never opened stay
     // unloaded (they load when their page opens). Calls closer together than
     // `minIntervalMs` are dropped, so page changes cannot hammer the server.
-    // Lists with a working live listener (see REAL-TIME LISTENERS below).
-    const liveRef = useRef({});
+    // Lists with a working live listener: liveRef (see REAL-TIME LISTENERS below).
     const lastSyncAllRef = useRef(0);
     const syncAllPromiseRef = useRef(null);
     const syncLoaded = useCallback(async ({ minIntervalMs = 0, skipLive = false } = {}) => {
@@ -755,7 +866,6 @@ export const DataProvider = ({ children }) => {
         };
     }, []);
 
-    const liveFailedRef = useRef(new Set());
     const persistTimersRef = useRef({});
     const persistSoon = useCallback((diskKey, data) => {
         clearTimeout(persistTimersRef.current[diskKey]);
@@ -770,15 +880,19 @@ export const DataProvider = ({ children }) => {
         return Array.from(map.values());
     };
 
-    const applyListDelta = useCallback((key, changes) => {
+    const applyListDelta = useCallback((key, rawChanges) => {
+        // Live changes are not scoped: one leaving or outside this person's
+        // scope is removed rather than added (see DOWNLOAD SCOPE).
+        const keep = inScope(key);
+        const changes = { upserts: rawChanges.upserts.filter(keep), removed: [...rawChanges.removed, ...rawChanges.upserts.filter((u) => !keep(u)).map((u) => u.id)] };
         const next = mergeDelta(cacheRef.current[key], changes);
         cacheRef.current = { ...cacheRef.current, [key]: next };
         setCache((prev) => ({ ...prev, [key]: mergeDelta(prev[key], changes) }));
         persistSoon(`cache_${key}`, next);
-        const newest = newestServerStamp(changes.upserts);
+        const newest = newestServerStamp(rawChanges.upserts);
         const stored = parseInt(localStorage.getItem(syncMarkKey(key)) || '0', 10);
         if (newest > stored) localStorage.setItem(syncMarkKey(key), String(newest));
-    }, [persistSoon]);
+    }, [persistSoon, inScope]);
 
     const applyFacilityDelta = useCallback((filterKey, changes) => {
         // Never build a list out of changes alone: with no full list under it,
@@ -851,7 +965,7 @@ export const DataProvider = ({ children }) => {
 
     const fetchers = useMemo(() => ({
         fetchCourses: createFetcher('courses', (opts, lastSync) => listAllCourses(opts, lastSync)),
-        fetchParticipants: createFetcher('participants', (opts, lastSync) => listAllParticipants(opts, lastSync)),
+        fetchParticipants: createFetcher('participants', (opts, lastSync) => listAllParticipants(opts, lastSync, scopeFor('participants'))),
         fetchFacilitators: createFetcher('facilitators', (opts, lastSync) => listFacilitators(opts, lastSync)),
         fetchFunders: createFetcher('funders', (opts, lastSync) => listFunders(opts, lastSync)),
         fetchFederalCoordinators: createFetcher('federalCoordinators', (opts, lastSync) => listFederalCoordinators(opts, lastSync)),
@@ -889,7 +1003,7 @@ export const DataProvider = ({ children }) => {
         fetchAboutTeamImages: createFetcher('aboutTeamImages', (opts) => getAboutTeamImages(opts)),
         // Light copies (no roster snapshots), delta-synced like the rest.
         fetchFinalReports: createFetcher('finalReports', (opts, lastSync) => listFinalReport(opts, lastSync)),
-    }), [createFetcher]);
+    }), [createFetcher, scopeFor]);
 
     // Put documents the app has just saved straight into the cache (memory and
     // disk), so the screens showing them update without a fetch. The next delta
@@ -1008,8 +1122,12 @@ export const DataProvider = ({ children }) => {
     const dashboardCopyInflight = useRef(null);
     useEffect(() => { dashboardCopyRef.current = dashboardCopy; }, [dashboardCopy]);
     useEffect(() => { if (!user) { setDashboardCopy(null); dashboardCopyRef.current = null; } }, [user]);
-    const fetchDashboardFacilities = useCallback(async () => {
+    // `maxAgeMs`: when the copy was checked with the server less than this long
+    // ago, the saved copy is used without calling the function (the main menu
+    // passes 30 minutes; the Dashboard itself always asks).
+    const fetchDashboardFacilities = useCallback(async ({ maxAgeMs = 0 } = {}) => {
         if (dashboardCopyInflight.current) return dashboardCopyInflight.current;
+        const checkedKey = `${CACHE_NS}dashboardCopy_checkedAt`;
         const run = (async () => {
             let current = dashboardCopyRef.current;
             if (!current) {
@@ -1021,9 +1139,12 @@ export const DataProvider = ({ children }) => {
                 }
             }
             if (!navigator.onLine) return current || null;
+            const checkedAt = parseInt(localStorage.getItem(checkedKey) || '0', 10);
+            if (current && maxAgeMs > 0 && Date.now() - checkedAt < maxAgeMs) return current;
             try {
                 const call = httpsCallable(getFunctions(), 'facilityDashboardCopy', { timeout: 90000 });
                 const { data } = await call({ version: current?.version || null });
+                try { localStorage.setItem(checkedKey, String(Date.now())); } catch { /* storage blocked */ }
                 if (data?.unchanged) return current;
                 if (Array.isArray(data?.items) && data.items.length > 0) {
                     const next = { items: data.items, version: data.version, savedAt: Date.now() };
@@ -1043,6 +1164,61 @@ export const DataProvider = ({ children }) => {
         try { return await run; } finally { dashboardCopyInflight.current = null; }
     }, []);
 
+    // --- MAIN MENU COPY (functions/homeCopy.js) ---
+    // Slim server-kept copies of courses, participants, mentorship visits and
+    // facilitators, for the main menu's numbers only. One function call
+    // instead of downloading those four lists in full on every new device;
+    // only lists that changed come back. Saved on the device, and asked again
+    // at most every `maxAgeMs`. Resolves to the copy, or null when it cannot be
+    // had (no saved copy and the call failed). Not used in training mode,
+    // whose lists are the practice copy.
+    const [homeCopy, setHomeCopy] = useState(null);
+    const homeCopyRef = useRef(null);
+    const homeCopyInflight = useRef(null);
+    const fetchHomeCopy = useCallback(async ({ maxAgeMs = 0 } = {}) => {
+        if (CACHE_NS) return null;
+        if (homeCopyInflight.current) return homeCopyInflight.current;
+        const checkedKey = 'homeCopy_checkedAt';
+        const run = (async () => {
+            let current = homeCopyRef.current;
+            if (!current) {
+                const saved = await getLocalData(HOME_COPY_KEY);
+                if (saved && saved.lists) {
+                    current = saved;
+                    homeCopyRef.current = saved;
+                    setHomeCopy(saved);
+                }
+            }
+            if (!navigator.onLine) return current || null;
+            const checkedAt = parseInt(localStorage.getItem(checkedKey) || '0', 10);
+            if (current && maxAgeMs > 0 && Date.now() - checkedAt < maxAgeMs) return current;
+            try {
+                const call = httpsCallable(getFunctions(), 'homeCopy', { timeout: 90000 });
+                const versions = Object.fromEntries(Object.entries(current?.lists || {}).map(([k, v]) => [k, v.version]));
+                const { data } = await call({ versions });
+                try { localStorage.setItem(checkedKey, String(Date.now())); } catch { /* storage blocked */ }
+                const lists = { ...(current?.lists || {}) };
+                let changed = false;
+                Object.entries(data || {}).forEach(([k, v]) => {
+                    if (v && Array.isArray(v.items)) { lists[k] = { version: v.version, items: v.items }; changed = true; }
+                });
+                // A list too large to send (or missing) leaves the menu number
+                // to the saved value; it is never half-filled.
+                if (!changed) return current || null;
+                const next = { lists, savedAt: Date.now() };
+                homeCopyRef.current = next;
+                setHomeCopy(next);
+                setLocalData(HOME_COPY_KEY, next);
+                return next;
+            } catch (e) {
+                console.warn('[home copy] unavailable:', e?.code || e?.message || e);
+                return current || null;
+            }
+        })();
+        homeCopyInflight.current = run;
+        try { return await run; } finally { homeCopyInflight.current = null; }
+    }, []);
+
     const value = {
         ...cache,
         ...fetchers,
@@ -1056,6 +1232,9 @@ export const DataProvider = ({ children }) => {
         syncLoaded,
         dashboardCopy,
         fetchDashboardFacilities,
+        homeCopy,
+        fetchHomeCopy,
+        setDataScope,
         liveLists: () => Object.keys(liveRef.current),
         mergeIntoCache,
         removeFromCache,

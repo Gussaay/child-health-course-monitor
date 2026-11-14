@@ -990,7 +990,7 @@ export default function App() {
         fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators,
         fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchParticipantTests,
         mergeIntoCache, participants: rawParticipants, skillMentorshipSubmissions, isLoading: dataLoading,
-        syncLoaded, dashboardCopy, fetchDashboardFacilities
+        syncLoaded, dashboardCopy, fetchDashboardFacilities, homeCopy, fetchHomeCopy, setDataScope
     } = useDataCache();
 
     const allCourses = useMemo(() => (rawCourses || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"), [rawCourses]);
@@ -1071,6 +1071,10 @@ export default function App() {
     // Automatic syncs are quiet and at most every 30 seconds.
     // Lists with a live listener are already current, so the quiet syncs skip them.
     const quietSync = useCallback(() => { syncLoaded({ minIntervalMs: 30 * 1000, skipLive: true }).catch(() => {}); }, [syncLoaded]);
+    // Page changes sync at most every 5 minutes: lists with a live listener are
+    // already current, and each query for the rest costs at least one read even
+    // when nothing changed (people change page many times a minute).
+    const pageChangeSync = useCallback(() => { syncLoaded({ minIntervalMs: 5 * 60 * 1000, skipLive: true }).catch(() => {}); }, [syncLoaded]);
     useEffect(() => {
         const onVisible = () => { if (document.visibilityState === 'visible') quietSync(); };
         document.addEventListener('visibilitychange', onVisible);
@@ -1093,9 +1097,9 @@ export default function App() {
     // a page shows are brought up to date with what changed on the server.
     useEffect(() => {
         if (!user) return undefined;
-        const timer = setTimeout(quietSync, 1500); // after the page's own first load
+        const timer = setTimeout(pageChangeSync, 1500); // after the page's own first load
         return () => clearTimeout(timer);
-    }, [user, view, quietSync]);
+    }, [user, view, pageChangeSync]);
     const [activeCoursesTab, setActiveCoursesTab] = useState('courses');
     const [activeHRTab, setActiveHRTab] = useState('facilitators');
 
@@ -1941,17 +1945,39 @@ export default function App() {
             new Promise((resolve) => setTimeout(resolve, 8000)),
         ]);
         (async () => {
-            // Coverage comes from the slim Dashboard copy; the full facility
-            // list is downloaded only if no copy can be had.
-            const facilitiesForCoverage = async () => { if (!(await fetchDashboardFacilities())) await fetchHealthFacilities(); };
-            const queue = [fetchCourses, fetchCoordinators, fetchFacilitators, fetchParticipants, fetchSkillMentorshipSubmissions, facilitiesForCoverage];
+            // Coverage comes from the slim Dashboard copy, checked with the
+            // server at most every 30 minutes from here. The full facility list
+            // (~7,000 records) is no longer downloaded for one number on the
+            // main menu when the copy cannot be had: the last saved coverage
+            // (or the facilities this device already holds) is shown instead.
+            const facilitiesForCoverage = () => fetchDashboardFacilities({ maxAgeMs: 30 * 60 * 1000 });
+            // Participants, mentorship visits and facilitators come from the
+            // server's slim copy (functions/homeCopy.js): one call, checked at
+            // most every 30 minutes, instead of every record downloaded to
+            // each phone. Only if no copy can be had at all are the lists
+            // downloaded as before, so the numbers never go missing.
+            const menuLists = async () => {
+                if (await fetchHomeCopy({ maxAgeMs: 30 * 60 * 1000 })) return;
+                for (const load of [fetchFacilitators, fetchParticipants, fetchSkillMentorshipSubmissions]) {
+                    if (!stillHere()) return;
+                    await step(load);
+                }
+            };
+            const queue = [fetchCourses, fetchCoordinators, menuLists, facilitiesForCoverage];
             for (const load of queue) {
                 if (!stillHere()) return;
                 await step(load);
             }
         })();
         return () => { cancelled = true; };
-    }, [view, isSharedView, user, isPublicMentorshipDashboardView, fetchCourses, fetchCoordinators, fetchFacilitators, fetchParticipants, fetchSkillMentorshipSubmissions, fetchHealthFacilities, fetchDashboardFacilities]);
+    }, [view, isSharedView, user, isPublicMentorshipDashboardView, fetchCourses, fetchCoordinators, fetchFacilitators, fetchParticipants, fetchSkillMentorshipSubmissions, fetchDashboardFacilities, fetchHomeCopy]);
+
+    // Which participants this device downloads: a state or locality user only
+    // their own places' (DataContext DOWNLOAD SCOPE). Set once permissions load.
+    useEffect(() => {
+        if (!user || permissionsLoading) return;
+        setDataScope({ level: levelFromPermissions(permissions), states: userStates, localities: userLocalities });
+    }, [user, permissionsLoading, permissions, userStates, userLocalities, setDataScope]);
 
     // The offline cache only holds what THIS device last read. Tests and scores
     // entered on another phone (or a cache that never held this course's tests,
@@ -2090,11 +2116,18 @@ export default function App() {
         const stats = computeHomeStats({
             level, unit: userHRProfile?.unit,
             states: userStates, localities: userLocalities,
-            courses: rawCourses, participants: rawParticipants, sessions: skillMentorshipSubmissions, facilitators: rawFacilitators,
+            // The server's slim copy (fetchHomeCopy) when there is one: it
+            // holds every record, while a state or locality user's device
+            // holds only their own places' courses and participants. Else the
+            // device's own lists.
+            courses: homeCopy?.lists?.courses?.items || rawCourses,
+            participants: homeCopy?.lists?.participants?.items || rawParticipants,
+            sessions: homeCopy?.lists?.sessions?.items || skillMentorshipSubmissions,
+            facilitators: homeCopy?.lists?.facilitators?.items || rawFacilitators,
         });
         const coverage = computeCoverage({ level, states: userStates, localities: userLocalities, facilities: dashboardCopy?.items || healthFacilities });
         return { ...stats, coverage };
-    }, [view, user, permissions, userHRProfile, userStates, userLocalities, rawCourses, rawParticipants, skillMentorshipSubmissions, rawFacilitators, healthFacilities, dashboardCopy]);
+    }, [view, user, permissions, userHRProfile, userStates, userLocalities, rawCourses, rawParticipants, skillMentorshipSubmissions, rawFacilitators, healthFacilities, dashboardCopy, homeCopy]);
     const homeStats = useMemo(() => {
         if (!freshHomeStats) return null;
         const merged = { ...freshHomeStats };
@@ -2103,12 +2136,12 @@ export default function App() {
         }
         // A number whose data failed to load shows a dash instead of a placeholder forever.
         const busy = {
-            courses: !!dataLoading?.courses, participants: !!dataLoading?.participants,
-            visits: !!dataLoading?.skillMentorshipSubmissions, facilitators: !!dataLoading?.facilitators,
+            courses: !!dataLoading?.courses && !homeCopy, participants: !!dataLoading?.participants && !homeCopy,
+            visits: !!dataLoading?.skillMentorshipSubmissions && !homeCopy, facilitators: !!dataLoading?.facilitators && !homeCopy,
             facilities: !dashboardCopy && !!dataLoading?.healthFacilities,
         };
         return { ...merged, busy };
-    }, [freshHomeStats, savedHomeStats, dataLoading, dashboardCopy]);
+    }, [freshHomeStats, savedHomeStats, dataLoading, dashboardCopy, homeCopy]);
     useEffect(() => {
         if (!homeStatsKey || !freshHomeStats) return;
         const known = Object.fromEntries(Object.entries(freshHomeStats).filter(([, v]) => v !== null && v !== undefined));

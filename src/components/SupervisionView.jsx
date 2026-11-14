@@ -524,7 +524,9 @@ function useFacilities() {
         asked.current = true;
         fetchHealthFacilities({}, false)?.catch?.((e) => console.error('Failed to load health facilities:', e));
     }, [healthFacilities, fetchHealthFacilities]);
-    const reload = () => fetchHealthFacilities?.({}, true);
+    // Only facilities changed since the last download (the list is saved on
+    // the device); a full re-download cost ~7,000 reads per press.
+    const reload = () => fetchHealthFacilities?.({}, 'sync');
     return { facilities: healthFacilities || [], loading: !!isLoading?.healthFacilities && !(healthFacilities && healthFacilities.length), reload };
 }
 
@@ -1406,10 +1408,10 @@ export default function SupervisionView({ permissions = {} }) {
     // Each page starts at its top.
     useEffect(() => { topRef.current?.scrollIntoView?.({ block: 'start' }); }, [service, checklistId, editing]);
 
-    const reload = useCallback(() => fetchSupervisionAssessments('full'), [fetchSupervisionAssessments]);
+    const reload = useCallback(() => fetchSupervisionAssessments('sync'), [fetchSupervisionAssessments]);
     const refresh = async () => {
         setRefreshing(true);
-        try { await fetchSupervisionAssessments('full'); } finally { setRefreshing(false); }
+        try { await fetchSupervisionAssessments('sync'); } finally { setRefreshing(false); }
     };
 
     // Android app: the top-bar arrow steps back one page: form → forms → services.

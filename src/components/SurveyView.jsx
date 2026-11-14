@@ -765,7 +765,7 @@ export default function SurveyView({ permissions = {} }) {
     const reload = useCallback(() => fetchSurveyResponses('sync'), [fetchSurveyResponses]);
     const refresh = async () => {
         setRefreshing(true);
-        try { await fetchSurveyResponses('full'); } finally { setRefreshing(false); }
+        try { await fetchSurveyResponses('sync'); } finally { setRefreshing(false); }
     };
 
     const survey = getSurvey(surveyId);
