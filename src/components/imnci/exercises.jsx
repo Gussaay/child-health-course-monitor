@@ -495,7 +495,7 @@ function ResultDetail({ result, exercise }) {
  * @param {function} onExit
  * @param {object}   readOnlyAttempt  a saved attempt, to render in review mode
  */
-export function CasePlayer({ exercise, participant, onSubmit, onExit, previousBest = null, readOnlyAttempt = null, attemptsSoFar = 0 }) {
+export function CasePlayer({ exercise, participant, onSubmit, onChecked, onExit, previousBest = null, readOnlyAttempt = null, attemptsSoFar = 0 }) {
     const { t } = useTranslation();
     const [lang, setLang] = useState('en');
     const [result, setResult] = useState(readOnlyAttempt?.result || null);
@@ -538,6 +538,7 @@ export function CasePlayer({ exercise, participant, onSubmit, onExit, previousBe
         setResult(graded);
         setAttemptNo(thisAttempt);
         setShowResult(true);
+        onChecked?.(graded);
         setTimeout(() => topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 
         if (!onSubmit || review) return;
@@ -824,7 +825,7 @@ function QuizQuestion({ q, index, value, onChange, detail, locked }) {
     );
 }
 
-export function QuizPlayer({ exercise, participant, onSubmit, onExit, previousBest = null, readOnlyAttempt = null }) {
+export function QuizPlayer({ exercise, participant, onSubmit, onChecked, onExit, previousBest = null, readOnlyAttempt = null }) {
     const { t } = useTranslation();
     const [lang, setLang] = useState('en');
     const [answers, setAnswers] = useState(readOnlyAttempt?.submitted?.answers || {});
@@ -842,6 +843,7 @@ export function QuizPlayer({ exercise, participant, onSubmit, onExit, previousBe
     const check = () => {
         const g = gradeQuiz(questions, answers);
         setResult(g); setSaved(false);
+        onChecked?.(g);
         setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     };
 

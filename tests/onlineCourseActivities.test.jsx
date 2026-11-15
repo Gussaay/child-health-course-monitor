@@ -10,6 +10,7 @@ import {
 import { ActivityContext, FlipBlock, SortBlock, RevealBlock } from '../src/components/imnci/onlineCourses/interactive';
 import { activityKeys } from '../src/components/imnci/onlineCourses/blocks';
 import { sectionContent, BLOCK_TYPES } from '../src/components/imnci/book';
+import { readingMinutes } from '../src/components/imnci/onlineCourses/search';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -54,11 +55,23 @@ describe('one page per section', () => {
     });
 
     it('counts activities, but not a video that has no link yet', () => {
-        const keys = activityKeys([
+        const blocks = [
             { type: 'paragraph', text: 'p' }, { type: 'flip', cards: [] }, { type: 'video', url: '', title: 'Coming' },
             { type: 'video', url: 'https://x/v.mp4' }, { type: 'exercise', exerciseId: 'e' },
-        ]);
-        expect(keys).toEqual(['1', '3', '4']);
+        ];
+        const keys = activityKeys(blocks);
+        expect(keys).toHaveLength(3);
+        // Keys follow the content, so inserting a block does not move "done" onto another activity.
+        const after = activityKeys([{ type: 'reveal', text: 'new', answer: 'a' }, ...blocks]);
+        keys.forEach((k) => expect(after).toContain(k));
+        expect(after).toHaveLength(4);
+        const twins = activityKeys([{ type: 'flip', cards: [] }, { type: 'flip', cards: [] }]);
+        expect(new Set(twins).size).toBe(2);
+    });
+
+    it('allows time for videos and cases on a one-page section', () => {
+        const s = { read: [{ type: 'paragraph', text: 'Short.' }, { type: 'exercise', exerciseId: 'e' }, { type: 'video', url: 'https://x/v.mp4' }], see: [], practise: [] };
+        expect(readingMinutes(s)).toBeGreaterThanOrEqual(4);
     });
 });
 

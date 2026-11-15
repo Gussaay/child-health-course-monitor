@@ -36,10 +36,27 @@ const QuizPlayer = lazy(() => import('../exercises.jsx').then((m) => ({ default:
 
 // An icon per tab. Practise is a stethoscope rather than a pencil: what is
 // being practised is examining a child, not writing.
+// An activity is known by its content, not its place in the section, so a
+// block an author inserts or moves later does not inherit another activity's
+// "done". Two identical blocks are told apart by a running count.
+const hash = (str) => {
+    let h = 5381;
+    for (let i = 0; i < str.length; i += 1) h = ((h * 33) ^ str.charCodeAt(i)) >>> 0;
+    return h.toString(36);
+};
+const counts = (b) => isActivity(b) && !(b.type === 'video' && !b.url);
+/** The key of every block (null for one that is not an activity), in order. */
+export function activityKeyList(blocks = []) {
+    const seen = {};
+    return blocks.map((b) => {
+        if (!counts(b)) return null;
+        const base = `${b.type}-${hash(JSON.stringify(b))}`;
+        seen[base] = (seen[base] || 0) + 1;
+        return seen[base] > 1 ? `${base}-${seen[base]}` : base;
+    });
+}
 /** Activities in a list of blocks, by the keys ContentBlocks gives them. */
-export const activityKeys = (blocks = []) => blocks
-    .map((b, i) => (isActivity(b) && !(b.type === 'video' && !b.url) ? String(i) : null))
-    .filter((k) => k !== null);
+export const activityKeys = (blocks = []) => activityKeyList(blocks).filter((k) => k !== null);
 
 export const TAB_ICONS = { read: BookOpenText, see: MonitorPlay, practise: Stethoscope };
 
@@ -244,8 +261,11 @@ export function VideoBlock({ block, activityKey }) {
         const v = videoRef.current;
         if (v) { v.currentTime = Number(sec) || 0; v.play?.().catch(() => {}); }
     };
+    // YouTube starts at ?start=; Vimeo takes a #t= timecode instead.
     const embedSrc = src.kind === 'embed' && startAt != null
-        ? `${src.src}${src.src.includes('?') ? '&' : '?'}start=${startAt}&autoplay=1`
+        ? (/vimeo\.com/.test(src.src)
+            ? `${src.src.split('#')[0]}${src.src.includes('?') ? '&' : '?'}autoplay=1#t=${startAt}s`
+            : `${src.src}${src.src.includes('?') ? '&' : '?'}start=${startAt}&autoplay=1`)
         : src.src;
     const onTime = (e) => {
         const now = e.currentTarget.currentTime;
@@ -351,7 +371,8 @@ export function ExerciseLinkBlock({ block, activityKey }) {
     }
     const isQuiz = ex.kind === 'quiz';
     const lines = isArabic && ex.narrativeAr?.length ? ex.narrativeAr : ex.narrative || [];
-    const open = () => { setPlaying(true); markDone(); };
+    // Done once the learner has had the case or quiz marked, not on opening it.
+    const open = () => setPlaying(true);
     const Player = isQuiz ? QuizPlayer : CasePlayer;
     return (
         <div className="not-prose border border-slate-200 rounded-xl overflow-hidden my-4 bg-white shadow-sm">
@@ -393,7 +414,7 @@ export function ExerciseLinkBlock({ block, activityKey }) {
             {playing && (
                 <Overlay title={ex.title} onClose={() => setPlaying(false)}>
                     <Suspense fallback={<div className="h-40 bg-slate-100 rounded-xl animate-pulse" />}>
-                        <Player exercise={ex} participant={null} onExit={() => setPlaying(false)} />
+                        <Player exercise={ex} participant={null} onExit={() => setPlaying(false)} onChecked={markDone} />
                     </Suspense>
                     <p className="text-xs text-slate-500 text-center mt-4">
                         {t('imnci_ui.courses.exlink.practice_note', 'Practice in the course is marked but not recorded. Scored attempts for a training course are taken in Online Exercises.')}
@@ -520,7 +541,8 @@ export function ContentBlocks({ blocks, scale = 1, activities = false }) {
     if (!blocks?.length) return null;
     // Activities are keyed by their place in the section, so the section can
     // count which have been done.
-    const key = (i) => (activities ? String(i) : null);
+    const keys = activities ? activityKeyList(blocks) : [];
+    const key = (i) => (activities ? keys[i] : null);
     // Questions are numbered among themselves, "Question 2 of 3".
     const questionTotal = blocks.filter((b) => b.type === 'question').length;
     let questionNo = 0;

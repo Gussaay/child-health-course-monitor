@@ -91,7 +91,8 @@ const WORDS_PER_MINUTE = 150;
 export function readingMinutes(section) {
     const text = sectionText(section);
     const words = (text.match(/[\p{L}\p{N}]+/gu) || []).length;
-    const extras = ['see', 'practise']
+    // A one-page section keeps its videos and cases in Read, so every list counts.
+    const extras = ['read', 'see', 'practise']
         .flatMap((tab) => tabContent(section, tab))
         .filter((b) => (b.type === 'video' && b.url) || b.type === 'exercise').length;
     const minutes = words / WORDS_PER_MINUTE + extras * 2;

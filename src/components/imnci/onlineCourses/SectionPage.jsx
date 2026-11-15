@@ -19,20 +19,21 @@ import { useCourseScreen } from './screen';
 import { Pill } from './ui';
 
 // Which activities of a section this learner has done, kept on the device: it
-// is the learner's own running tally, not a record anyone else reads.
-const storeKey = (id) => `oc-activities-${id}`;
-function readDone(id) {
-    try { return new Set(JSON.parse(localStorage.getItem(storeKey(id)) || '[]')); } catch { return new Set(); }
+// is the learner's own running tally, not a record anyone else reads. It is
+// kept per signed-in learner, so on a shared phone each sees only their own.
+const storeKey = (uid, id) => `oc-activities-${uid || 'guest'}-${id}`;
+function readDone(uid, id) {
+    try { return new Set(JSON.parse(localStorage.getItem(storeKey(uid, id)) || '[]')); } catch { return new Set(); }
 }
-function useSectionActivities(sectionId) {
-    const [done, setDone] = useState(() => readDone(sectionId));
-    useEffect(() => { setDone(readDone(sectionId)); }, [sectionId]);
+function useSectionActivities(uid, sectionId) {
+    const [done, setDone] = useState(() => readDone(uid, sectionId));
+    useEffect(() => { setDone(readDone(uid, sectionId)); }, [uid, sectionId]);
     const markDone = useCallback((key) => setDone((prev) => {
         if (prev.has(key)) return prev;
         const next = new Set(prev).add(key);
-        try { localStorage.setItem(storeKey(sectionId), JSON.stringify([...next])); } catch { /* private mode */ }
+        try { localStorage.setItem(storeKey(uid, sectionId), JSON.stringify([...next])); } catch { /* private mode */ }
         return next;
-    }), [sectionId]);
+    }), [uid, sectionId]);
     const value = useMemo(() => ({ isDone: (k) => done.has(k), markDone }), [done, markDone]);
     return [done, value];
 }
@@ -47,7 +48,7 @@ export function SectionPage() {
 
     const isDone = !!progress.completed?.[openSection.id];
     const content = sectionContent(openSection);
-    const [doneKeys, activityValue] = useSectionActivities(openSection.id);
+    const [doneKeys, activityValue] = useSectionActivities(user?.uid, openSection.id);
     const keys = activityKeys(content);
     const activitiesDone = keys.filter((k) => doneKeys.has(k)).length;
     // Revising the converted text means holding it against the page it came
@@ -164,7 +165,9 @@ export function SectionPage() {
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             <div className="lg:max-h-[38rem] lg:overflow-y-auto pe-1">
                                 <div className="text-xs font-semibold text-slate-500 mb-2">{t('imnci_ui.courses.main.converted_text', 'Converted text')}</div>
-                                <ContentBlocks blocks={content.filter((b) => b.type !== 'page')} scale={fontScale} />
+                                <ActivityContext.Provider value={activityValue}>
+                                    <ContentBlocks blocks={content.filter((b) => b.type !== 'page')} scale={fontScale} activities />
+                                </ActivityContext.Provider>
                             </div>
                             <div className="lg:max-h-[38rem] lg:overflow-y-auto ps-1 border-s">
                                 <div className="text-xs font-semibold text-slate-500 mb-2">{t('imnci_ui.courses.main.the_book', 'The book')}</div>
