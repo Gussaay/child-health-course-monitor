@@ -12,14 +12,23 @@ function blockText(b) {
     if (b.type === 'list') return (b.items || []).join('\n');
     if (b.type === 'table') return (b.rows || []).map((r) => (r.cells || []).join(' ')).join('\n');
     if (b.type === 'question') return [b.text, ...(b.options || []), b.explanation].filter(Boolean).join('\n');
-    if (b.type === 'image' || b.type === 'page' || b.type === 'video' || b.type === 'exercise') return b.caption || '';
+    if (b.type === 'image' || b.type === 'page' || b.type === 'video' || b.type === 'exercise') return b.caption || b.title || '';
+    // The activities hold their text in fields of their own: every string in
+    // them is searchable.
+    if (['reveal', 'flip', 'sort', 'steps', 'story'].includes(b.type)) {
+        const strings = [];
+        const walk = (v) => { if (typeof v === 'string') strings.push(v); else if (v && typeof v === 'object') Object.values(v).forEach(walk); };
+        const { type, ...rest } = b;
+        walk(rest);
+        return blockText({ type: 'rich', text: strings.join('\n') });
+    }
     return String(b.text || '')
         .replace(/<(br|\/p|\/li|\/h\d|\/tr)\s*\/?>/gi, '\n')
         .replace(/<[^>]*>/g, ' ')
         .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 }
 
-/** Everything readable in a section, Read then See then Practise. */
+/** Everything readable in a section, in the order it is shown. */
 export function sectionText(section) {
     return ['read', 'see', 'practise']
         .flatMap((tab) => tabContent(section, tab).map(blockText))
@@ -82,7 +91,8 @@ const WORDS_PER_MINUTE = 150;
 export function readingMinutes(section) {
     const text = sectionText(section);
     const words = (text.match(/[\p{L}\p{N}]+/gu) || []).length;
-    const extras = ['see', 'practise']
+    // A one-page section keeps its videos and cases in Read, so every list counts.
+    const extras = ['read', 'see', 'practise']
         .flatMap((tab) => tabContent(section, tab))
         .filter((b) => (b.type === 'video' && b.url) || b.type === 'exercise').length;
     const minutes = words / WORDS_PER_MINUTE + extras * 2;

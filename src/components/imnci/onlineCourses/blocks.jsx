@@ -2,11 +2,14 @@
 //
 // How a section's content is shown to the learner: text, figures, captured
 // book pages, videos, questions and links to practice cases.
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BookOpenText, MonitorPlay, Stethoscope, CheckCircle2, XCircle, GraduationCap, X, Lightbulb, ClipboardCheck } from 'lucide-react';
+import {
+    BookOpenText, MonitorPlay, Stethoscope, CheckCircle2, XCircle, GraduationCap, X, Lightbulb, ClipboardCheck,
+    Play, Pencil, Film, BookOpen, Syringe,
+} from 'lucide-react';
 import { severityById } from '../../constants';
-import { videoSource, blockHtml } from '../book';
+import { videoSource, blockHtml, isActivity } from '../book';
 import { RichText, useImnci } from '../shared';
 import { useInPageBack } from '../../CommonComponents';
 import { assetUrl } from './assets';
@@ -15,6 +18,13 @@ import { NATIONAL_PROTOCOLS } from '../nationalProtocol';
 import { NATIONAL_FORMS } from '../recordingForms';
 import { BookletProtocolView } from '../bookletView';
 import { RecordingFormView } from '../recordingFormView';
+import { useCourseScreen } from './screen';
+import { useActivity, RevealBlock, FlipBlock, SortBlock, StepsBlock, StoryBlock } from './interactive';
+
+// The exercise players are heavy (the whole recording form), so they load
+// only when a learner starts an exercise from a section.
+const CasePlayer = lazy(() => import('../exercises.jsx').then((m) => ({ default: m.CasePlayer })));
+const QuizPlayer = lazy(() => import('../exercises.jsx').then((m) => ({ default: m.QuizPlayer })));
 
 // =============================================================================
 // Readable content
@@ -26,6 +36,28 @@ import { RecordingFormView } from '../recordingFormView';
 
 // An icon per tab. Practise is a stethoscope rather than a pencil: what is
 // being practised is examining a child, not writing.
+// An activity is known by its content, not its place in the section, so a
+// block an author inserts or moves later does not inherit another activity's
+// "done". Two identical blocks are told apart by a running count.
+const hash = (str) => {
+    let h = 5381;
+    for (let i = 0; i < str.length; i += 1) h = ((h * 33) ^ str.charCodeAt(i)) >>> 0;
+    return h.toString(36);
+};
+const counts = (b) => isActivity(b) && !(b.type === 'video' && !b.url);
+/** The key of every block (null for one that is not an activity), in order. */
+export function activityKeyList(blocks = []) {
+    const seen = {};
+    return blocks.map((b) => {
+        if (!counts(b)) return null;
+        const base = `${b.type}-${hash(JSON.stringify(b))}`;
+        seen[base] = (seen[base] || 0) + 1;
+        return seen[base] > 1 ? `${base}-${seen[base]}` : base;
+    });
+}
+/** Activities in a list of blocks, by the keys ContentBlocks gives them. */
+export const activityKeys = (blocks = []) => activityKeyList(blocks).filter((k) => k !== null);
+
 export const TAB_ICONS = { read: BookOpenText, see: MonitorPlay, practise: Stethoscope };
 
 export function BookImage({ block }) {
@@ -114,9 +146,11 @@ function ImageViewer({ url, alt, onClose }) {
 // learner picks, sees straight away whether they were right, and reads why.
 // Nothing is scored or stored — this is self-assessment, and a health worker
 // checking themselves should not feel they are being marked.
-export function QuestionBlock({ block, number, total }) {
+export function QuestionBlock({ block, number, total, activityKey }) {
     const { t } = useTranslation();
-    const [picked, setPicked] = useState(null);
+    const [picked, setPickedState] = useState(null);
+    const [, markDone] = useActivity(activityKey);
+    const setPicked = (v) => { setPickedState(v); if (v !== null) markDone(); };
     const options = block.options || [];
     const answer = block.answer ?? 0;
     const show = picked !== null;
@@ -181,40 +215,151 @@ export function QuestionBlock({ block, number, total }) {
 // Video is embedded where the address is a YouTube or Vimeo link and played
 // directly otherwise, so a file in Storage and a link to a WHO recording both
 // work without the author having to know which is which.
-export function VideoBlock({ block }) {
+//
+// A video that has not been recorded yet keeps its place in the section: the
+// learner sees the player's frame and what it will show, and the narration
+// script lives in a separate file for whoever records it. Chapters jump to a
+// moment; stops pause a video file at a moment and ask a question before it
+// goes on.
+const clock = (sec) => `${Math.floor((Number(sec) || 0) / 60)}:${String(Math.floor((Number(sec) || 0) % 60)).padStart(2, '0')}`;
+
+export function VideoBlock({ block, activityKey }) {
     const { t } = useTranslation();
+    const screen = useCourseScreen();
     const src = videoSource(block.url);
+    const [done, markDone] = useActivity(activityKey);
+    const [startAt, setStartAt] = useState(null);
+    const [stop, setStop] = useState(null);       // index of the stop being asked
+    const [passed, setPassed] = useState(() => new Set());
+    const [picked, setPicked] = useState(null);
+    const videoRef = React.useRef(null);
+    const chapters = (block.chapters || []).filter((c) => c && c.label);
+    const stops = (block.stops || []).filter((q) => q && q.text);
+    const title = block.title || block.caption;
+
     if (!src) {
         return (
-            <div className="p-3 border border-dashed rounded text-xs text-slate-500 text-center not-prose">
-                {t('imnci_ui.courses.video.no_address', 'A video with no address.')}
-            </div>
+            <figure className="my-4 not-prose">
+                <div className="relative w-full rounded-xl overflow-hidden border border-slate-300 bg-gradient-to-br from-slate-800 to-slate-900 text-white shadow-sm grid place-items-center text-center p-6"
+                    style={{ aspectRatio: '16 / 9' }}>
+                    <div className="space-y-2 max-w-md">
+                        <span className="mx-auto w-14 h-14 rounded-full bg-white/10 grid place-items-center"><Film size={26} /></span>
+                        {title && <div className="font-bold text-base sm:text-lg leading-snug">{title}</div>}
+                        <div className="text-xs sm:text-sm text-slate-300">{t('imnci_ui.courses.video.coming', 'This video is being recorded. It will play here.')}</div>
+                        {screen?.isAdmin && block.script && (
+                            <div className="text-[11px] text-amber-300">{t('imnci_ui.courses.video.script_ref', 'Narration script {{id}} is in the video scripts file.', { id: block.script })}</div>
+                        )}
+                    </div>
+                </div>
+                {block.caption && block.caption !== title && <figcaption className="text-xs text-slate-500 text-center mt-1">{block.caption}</figcaption>}
+            </figure>
         );
     }
+
+    const seek = (sec) => {
+        if (src.kind === 'embed') { setStartAt(Math.floor(Number(sec) || 0)); return; }
+        const v = videoRef.current;
+        if (v) { v.currentTime = Number(sec) || 0; v.play?.().catch(() => {}); }
+    };
+    // YouTube starts at ?start=; Vimeo takes a #t= timecode instead.
+    const embedSrc = src.kind === 'embed' && startAt != null
+        ? (/vimeo\.com/.test(src.src)
+            ? `${src.src.split('#')[0]}${src.src.includes('?') ? '&' : '?'}autoplay=1#t=${startAt}s`
+            : `${src.src}${src.src.includes('?') ? '&' : '?'}start=${startAt}&autoplay=1`)
+        : src.src;
+    const onTime = (e) => {
+        const now = e.currentTarget.currentTime;
+        const i = stops.findIndex((q, k) => !passed.has(k) && now >= (Number(q.at) || 0));
+        if (i >= 0 && stop === null) { e.currentTarget.pause(); setStop(i); setPicked(null); }
+    };
+    const resume = () => {
+        setPassed((p) => new Set(p).add(stop));
+        setStop(null);
+        videoRef.current?.play?.().catch(() => {});
+    };
+    const q = stop !== null ? stops[stop] : null;
+
     return (
         <figure className="my-4 not-prose">
+            {title && (
+                <div className="flex items-center gap-2 mb-2 text-sm font-semibold text-slate-800">
+                    <Film size={16} className="text-sky-700" /> <span className="flex-1">{title}</span>
+                    {done && <CheckCircle2 size={16} className="text-emerald-600" />}
+                </div>
+            )}
             <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 bg-black shadow-sm"
                 style={{ aspectRatio: '16 / 9' }}>
                 {src.kind === 'embed' ? (
-                    <iframe src={src.src} title={block.caption || t('imnci_ui.courses.video.video', 'Video')} allowFullScreen
+                    <iframe key={embedSrc} src={embedSrc} title={title || t('imnci_ui.courses.video.video', 'Video')} allowFullScreen
                         className="absolute inset-0 w-full h-full"
-                        allow="accelerometer; encrypted-media; picture-in-picture" />
+                        allow="accelerometer; autoplay; encrypted-media; picture-in-picture" />
                 ) : (
-                    <video src={src.src} controls className="absolute inset-0 w-full h-full" />
+                    <video ref={videoRef} src={src.src} controls playsInline className="absolute inset-0 w-full h-full"
+                        onTimeUpdate={stops.length ? onTime : undefined} onEnded={markDone} />
+                )}
+                {q && (
+                    <div className="absolute inset-0 bg-slate-900/90 text-white p-4 overflow-y-auto">
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-sky-300 mb-1">{t('imnci_ui.courses.video.pause_question', 'Pause and answer')}</div>
+                        <div className="font-semibold text-sm sm:text-base mb-2">{q.text}</div>
+                        <div className="space-y-1.5">
+                            {(q.options || []).map((o, oi) => {
+                                const isAns = oi === (q.answer ?? 0);
+                                const tone = picked === null ? 'border-white/30 hover:border-sky-300'
+                                    : isAns ? 'border-sky-300 bg-sky-500/20' : picked === oi ? 'border-rose-300 bg-rose-500/20' : 'border-white/20 opacity-70';
+                                return (
+                                    <button key={oi} disabled={picked !== null} onClick={() => setPicked(oi)}
+                                        className={`w-full text-start px-3 py-2 rounded-lg border text-sm ${tone}`}>{o}</button>
+                                );
+                            })}
+                        </div>
+                        {picked !== null && (
+                            <div className="mt-2 text-sm">
+                                <span className="font-semibold">{picked === (q.answer ?? 0) ? t('imnci_ui.courses.question.correct', 'Correct.') : t('imnci_ui.courses.question.not_quite', 'Not quite.')}</span>{' '}
+                                {q.explanation}
+                                <div>
+                                    <button onClick={resume} className="mt-2 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-sky-600 text-white font-semibold text-sm">
+                                        <Play size={14} /> {t('imnci_ui.courses.video.continue', 'Continue watching')}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 )}
             </div>
-            {block.caption && <figcaption className="text-xs text-slate-500 text-center mt-1">{block.caption}</figcaption>}
+            {chapters.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                    {chapters.map((c, i) => (
+                        <button key={i} onClick={() => seek(c.at)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-200 bg-white text-xs text-slate-700 hover:border-sky-400 hover:text-sky-700">
+                            <span className="font-mono text-slate-400">{clock(c.at)}</span> {c.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+            <div className="flex flex-wrap items-center justify-between gap-2 mt-1">
+                {block.caption && block.caption !== title ? <figcaption className="text-xs text-slate-500">{block.caption}</figcaption> : <span />}
+                {activityKey != null && !done && src.kind === 'embed' && (
+                    <button onClick={markDone} className="text-xs text-sky-700 font-semibold hover:underline">
+                        {t('imnci_ui.courses.video.watched', 'I have watched it')}
+                    </button>
+                )}
+            </div>
         </figure>
     );
 }
 
-// A card for one of the graded exercises. The scenario and the learning points
-// are shown from the exercise's own definition; the grading itself stays in
-// Online Exercises, which is where attempts are recorded.
-export function ExerciseLinkBlock({ block }) {
+// A card for one of the exercises. The scenario is shown from the exercise's
+// own definition, and the learner works it here, in the same player Online
+// Exercises uses, without leaving the section. An author opens the same
+// exercise in the case builder from the card, so it is edited in one place
+// and the correction reaches every course that links to it.
+export function ExerciseLinkBlock({ block, activityKey }) {
     const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
     const { exercises } = useImnci();
+    const screen = useCourseScreen();
+    const [playing, setPlaying] = useState(false);
+    const [done, markDone] = useActivity(activityKey);
     if (!exercises) return <div className="not-prose h-28 bg-slate-100 rounded-xl animate-pulse my-4" />;
     const ex = exercises.find((x) => x.id === block.exerciseId);
     if (!ex) {
@@ -224,28 +369,82 @@ export function ExerciseLinkBlock({ block }) {
             </div>
         );
     }
+    const isQuiz = ex.kind === 'quiz';
+    const lines = isArabic && ex.narrativeAr?.length ? ex.narrativeAr : ex.narrative || [];
+    // Done once the learner has had the case or quiz marked, not on opening it.
+    const open = () => setPlaying(true);
+    const Player = isQuiz ? QuizPlayer : CasePlayer;
     return (
         <div className="not-prose border border-slate-200 rounded-xl overflow-hidden my-4 bg-white shadow-sm">
             <div className="px-4 py-2.5 bg-slate-800 text-white flex flex-wrap items-center gap-2">
                 <GraduationCap size={16} className="shrink-0" />
                 <span className="font-bold text-sm flex-1">{ex.title}</span>
+                {done && <CheckCircle2 size={16} className="text-emerald-300" />}
                 <span className="text-xs text-slate-300">
+                    {isQuiz ? t('imnci_ui.courses.exlink.questions', '{{n}} questions · ', { n: (ex.questions || []).length }) : ''}
                     {ex.estimatedMinutes ? t('imnci_ui.courses.exlink.minutes', '{{n}} min · ', { n: ex.estimatedMinutes }) : ''}{t('imnci_ui.courses.exlink.pass', 'pass {{n}}%', { n: ex.passMark ?? 80 })}
                 </span>
             </div>
             <div className="p-4 space-y-3">
                 {block.note && <p className="text-sm text-slate-600">{block.note}</p>}
-                <ul className="space-y-1.5 text-sm text-slate-700">
-                    {(isArabic && ex.narrativeAr?.length ? ex.narrativeAr : ex.narrative || []).map((line, i) => (
-                        <li key={i} className="flex gap-2">
-                            <span className="text-slate-400 mt-0.5">•</span><span>{line}</span>
-                        </li>
-                    ))}
-                </ul>
-                <div className="text-xs text-slate-500 border-t pt-2">
-                    {t('imnci_ui.courses.exlink.work_in', 'Work this case, with the assessment form and a score, in')}
-                    {' '}<strong>{t('imnci_ui.courses.exlink.online_exercises', 'Online Exercises')}</strong>.
+                {lines.length > 0 && (
+                    <ul className="space-y-1.5 text-sm text-slate-700">
+                        {lines.slice(0, 6).map((line, i) => (
+                            <li key={i} className="flex gap-2">
+                                <span className="text-slate-400 mt-0.5">•</span><span>{line}</span>
+                            </li>
+                        ))}
+                        {lines.length > 6 && <li className="text-slate-400 text-xs">…</li>}
+                    </ul>
+                )}
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button onClick={open}
+                        className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-lg bg-sky-700 text-white text-sm font-semibold hover:bg-sky-800">
+                        <Play size={16} /> {done ? t('imnci_ui.courses.exlink.again', 'Do it again') : isQuiz ? t('imnci_ui.courses.exlink.start_quiz', 'Start') : t('imnci_ui.courses.exlink.start_case', 'Work this case')}
+                    </button>
+                    {screen?.isAdmin && screen?.setBuilder && (
+                        <button onClick={() => screen.setBuilder({ kind: 'exercises', id: ex.id })}
+                            className="inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-lg border border-slate-300 text-sm font-semibold text-slate-700 hover:border-sky-400 hover:text-sky-700">
+                            <Pencil size={14} /> {t('imnci_ui.courses.exlink.edit', 'Edit in the case builder')}
+                        </button>
+                    )}
+                    {ex.draft && <span className="text-xs text-amber-700">{t('imnci_ui.courses.exlink.draft', 'Draft: only authors see it until it is published in the case builder.')}</span>}
                 </div>
+            </div>
+            {playing && (
+                <Overlay title={ex.title} onClose={() => setPlaying(false)}>
+                    <Suspense fallback={<div className="h-40 bg-slate-100 rounded-xl animate-pulse" />}>
+                        <Player exercise={ex} participant={null} onExit={() => setPlaying(false)} onChecked={markDone} />
+                    </Suspense>
+                    <p className="text-xs text-slate-500 text-center mt-4">
+                        {t('imnci_ui.courses.exlink.practice_note', 'Practice in the course is marked but not recorded. Scored attempts for a training course are taken in Online Exercises.')}
+                    </p>
+                </Overlay>
+            )}
+        </div>
+    );
+}
+
+// A full-screen pane over the section, with one scrolling area, closed by its
+// button, Escape or the phone's back step.
+export function Overlay({ title, onClose, children }) {
+    const { t } = useTranslation();
+    useInPageBack(onClose);
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [onClose]);
+    return (
+        <div className="fixed inset-0 z-50 bg-black/50 flex flex-col p-0 sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
+            <div className="mx-auto w-full max-w-6xl bg-white sm:rounded-xl flex flex-col min-h-0 flex-1 overflow-hidden">
+                <div className="flex items-center justify-between gap-2 px-4 py-3 border-b shrink-0">
+                    <h2 className="font-bold text-slate-800 truncate">{title}</h2>
+                    <button onClick={onClose} className="p-1.5 rounded hover:bg-slate-100 text-slate-500" title={t('imnci_ui.courses.main.close', 'Close')}>
+                        <X size={18} />
+                    </button>
+                </div>
+                <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4">{children}</div>
             </div>
         </div>
     );
@@ -278,12 +477,36 @@ export function BookletBlock({ block }) {
     const protocol = live[part]?.categories ? live[part] : NATIONAL_PROTOCOLS[part];
     const doses = live[`dosages_${part}`]?.drugs || NATIONAL_PROTOCOLS[`dosages_${part}`]?.drugs || [];
     const shown = { ...protocol, categories: pick(protocol?.categories, block.categories) };
+    const screen = useCourseScreen();
+    const [whole, setWhole] = useState(false);
+    const canEdit = screen?.isAdmin && screen?.permissions?.canManageProtocols && screen?.setBuilder;
     return (
         <figure className="not-prose my-4">
             <BookletProtocolView formType={part} protocol={shown} doses={doses} heading={false} />
             <figcaption className="text-xs text-slate-500 text-center mt-1">
                 {block.caption || t('imnci_ui.courses.booklet.caption', 'From the chart booklet')}
             </figcaption>
+            {/* The table is the Sudan protocol itself, read live; the learner
+                can open the whole booklet around it, and an author can correct
+                the protocol without leaving the section. */}
+            <div className="flex flex-wrap justify-center gap-2 mt-2">
+                <button onClick={() => setWhole(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:border-sky-400 hover:text-sky-700">
+                    <BookOpen size={14} /> {t('imnci_ui.courses.booklet.open_whole', 'Open the whole chart booklet')}
+                </button>
+                {canEdit && (
+                    <button onClick={() => screen.setBuilder('protocol')}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:border-sky-400 hover:text-sky-700">
+                        <Syringe size={14} /> {t('imnci_ui.courses.booklet.edit', 'Edit in the protocol builder')}
+                    </button>
+                )}
+            </div>
+            {whole && (
+                <Overlay title={part === 'infant' ? t('imnci_ui.courses.booklet.infant', 'Chart booklet: sick young infant') : t('imnci_ui.courses.booklet.child', 'Chart booklet: sick child')}
+                    onClose={() => setWhole(false)}>
+                    <BookletProtocolView formType={part} protocol={protocol} doses={doses} />
+                </Overlay>
+            )}
         </figure>
     );
 }
@@ -309,9 +532,17 @@ export function FormBlock({ block }) {
 // list, a line break), which is then shown as written rather than as tags.
 const MARKUP = /<\/?(b|strong|i|em|u|br|ul|ol|li|p|span)\b/i;
 
-export function ContentBlocks({ blocks, scale = 1 }) {
+// The app has no typography plugin, so lists written in rich text need their
+// bullets and numbers put back here.
+export const RICH_LISTS = '[&_ul]:list-disc [&_ol]:list-decimal [&_ul]:ps-6 [&_ol]:ps-6 [&_li]:my-1 [&_p]:my-2 [&_blockquote]:border-s-4 [&_blockquote]:border-slate-300 [&_blockquote]:ps-3 [&_blockquote]:text-slate-700';
+
+export function ContentBlocks({ blocks, scale = 1, activities = false }) {
     const { t } = useTranslation();
     if (!blocks?.length) return null;
+    // Activities are keyed by their place in the section, so the section can
+    // count which have been done.
+    const keys = activities ? activityKeyList(blocks) : [];
+    const key = (i) => (activities ? keys[i] : null);
     // Questions are numbered among themselves, "Question 2 of 3".
     const questionTotal = blocks.filter((b) => b.type === 'question').length;
     let questionNo = 0;
@@ -337,7 +568,7 @@ export function ContentBlocks({ blocks, scale = 1 }) {
                     );
                 }
                 if (b.type === 'rich') {
-                    return <RichText key={i} html={b.text} />;
+                    return <RichText key={i} html={b.text} className={RICH_LISTS} />;
                 }
                 if (b.type === 'image' || b.type === 'page') {
                     return <BookImage key={i} block={b} />;
@@ -366,14 +597,19 @@ export function ContentBlocks({ blocks, scale = 1 }) {
                 }
                 if (b.type === 'question') {
                     questionNo += 1;
-                    return <QuestionBlock key={i} block={b} number={questionNo} total={questionTotal} />;
+                    return <QuestionBlock key={i} block={b} number={questionNo} total={questionTotal} activityKey={key(i)} />;
                 }
                 if (b.type === 'video') {
-                    return <VideoBlock key={i} block={b} />;
+                    return <VideoBlock key={i} block={b} activityKey={b.url ? key(i) : null} />;
                 }
                 if (b.type === 'exercise') {
-                    return <ExerciseLinkBlock key={i} block={b} />;
+                    return <ExerciseLinkBlock key={i} block={b} activityKey={key(i)} />;
                 }
+                if (b.type === 'reveal') return <RevealBlock key={i} block={b} activityKey={key(i)} />;
+                if (b.type === 'flip') return <FlipBlock key={i} block={b} activityKey={key(i)} />;
+                if (b.type === 'sort') return <SortBlock key={i} block={b} activityKey={key(i)} />;
+                if (b.type === 'steps') return <StepsBlock key={i} block={b} activityKey={key(i)} />;
+                if (b.type === 'story') return <StoryBlock key={i} block={b} activityKey={key(i)} />;
                 if (b.type === 'booklet') {
                     return <BookletBlock key={i} block={b} />;
                 }

@@ -6,8 +6,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, ArrowLeft, CheckCircle2, Wand2, Lock, Clock, RefreshCw, FileDown } from 'lucide-react';
 import { Button } from '../../CommonComponents';
-import { SECTION_TABS, tabContent } from '../book';
-import { TAB_ICONS } from './blocks';
+import { sectionContent, isActivity } from '../book';
 import { ConvertBookModal } from './ConvertBookModal';
 import { ItemModal } from './ItemModals';
 import { OfflineSave } from './OfflineSave';
@@ -23,7 +22,7 @@ export function ModulePage() {
         back, convertOpen, duration, go, isAdmin, itemModal, minutesById,
         minutesLeft, modules, openCourse, openCourseId, openModule, progress, reload,
         removeItem, resync, sectionLocked, sectionsByModule, setConvertOpen, setEditingTab,
-        setItemModal, syncing, tabName,
+        setItemModal, syncing,
     } = useCourseScreen();
 
     const { exercises, loadExercises } = useImnci();
@@ -110,9 +109,8 @@ export function ModulePage() {
                         {secs.map((s, i) => {
                             const done = !!progress.completed?.[s.id];
                             const locked = sectionLocked(secs, i);
-                            const filled = SECTION_TABS
-                                .map((tb) => ({ tb, n: tabContent(s, tb.id).length }))
-                                .filter((x) => x.n > 0);
+                            const all = sectionContent(s);
+                            const activities = all.filter((b) => isActivity(b) && !(b.type === 'video' && !b.url)).length;
                             return (
                                 <li key={s.id} className={`flex items-center gap-3 px-4 sm:px-6 py-3.5 transition-colors ${
                                     locked ? 'bg-slate-50' : 'hover:bg-sky-50/60'}`}>
@@ -136,10 +134,8 @@ export function ModulePage() {
                                         <div className={`font-semibold truncate ${locked ? 'text-slate-400' : 'text-slate-800'}`}>{s.title}</div>
                                         <div className="text-xs text-slate-500 flex gap-2 flex-wrap mt-0.5">
                                             {locked ? <span>{t('imnci_ui.courses.main.finish_previous', 'Finish the previous section first')}</span> : (<>
-                                                {filled.map(({ tb, n }) => (
-                                                    <span key={tb.id}>{tabName(tb)} {n}</span>
-                                                ))}
-                                                {filled.length === 0 && <span>{t('imnci_ui.courses.main.empty', 'empty')}</span>}
+                                                {activities > 0 && <span>{t('imnci_ui.courses.activity.n_activities', '{{n}} activities', { n: activities })}</span>}
+                                                {all.length === 0 && <span>{t('imnci_ui.courses.main.empty', 'empty')}</span>}
                                             </>)}
                                             {minutesById[s.id] > 0 && (
                                                 <span className="inline-flex items-center gap-1"><Clock size={11} /> {duration(minutesById[s.id])}</span>
@@ -148,19 +144,14 @@ export function ModulePage() {
                                     </button>
                                     {isAdmin && (
                                         <span className="flex gap-1 shrink-0">
-                                            {SECTION_TABS.map((tb) => {
-                                                const Icon = TAB_ICONS[tb.id];
-                                                return (
-                                                    <button key={tb.id} title={t('imnci_ui.courses.main.edit_tab', 'Edit {{tab}}', { tab: tabName(tb) })}
-                                                        onClick={() => {
-                                                            go({ section: s.id, tab: tb.id });
-                                                            setEditingTab(tb.id, s.id);
-                                                        }}
-                                                        className="p-1.5 border rounded text-slate-500 hover:bg-slate-50 hover:text-sky-700">
-                                                        <Icon size={14} />
-                                                    </button>
-                                                );
-                                            })}
+                                            <button title={t('imnci_ui.courses.main.edit_section', 'Edit section')}
+                                                onClick={() => {
+                                                    go({ section: s.id, tab: 'read' });
+                                                    setEditingTab('all', s.id);
+                                                }}
+                                                className="p-1.5 border rounded text-slate-500 hover:bg-slate-50 hover:text-sky-700">
+                                                <Pencil size={14} />
+                                            </button>
                                             <Button variant="danger" className="px-2 py-1 h-auto"
                                                 onClick={() => removeItem(s)}><Trash2 size={13} /></Button>
                                         </span>

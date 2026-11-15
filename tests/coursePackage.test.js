@@ -144,6 +144,97 @@ describe('WHO distance learning Module 1', () => {
     });
 });
 
+const PKG2 = JSON.parse(fs.readFileSync(path.join(__dirname, '../course-packages/who-dimci-module2.imnci.json'), 'utf8'));
+const PKG12 = JSON.parse(fs.readFileSync(path.join(__dirname, '../course-packages/who-dimci-modules-1-2.imnci.json'), 'utf8'));
+const sections2 = PKG2.modules.flatMap((m) => m.sections);
+
+describe('every section is one page', () => {
+    it('keeps all of its content in read, with nothing left in see or practise', () => {
+        [...sections, ...sections2].forEach((s) => {
+            expect(s.read.length).toBeGreaterThan(0);
+            expect(s.see).toEqual([]);
+            expect(s.practise).toEqual([]);
+        });
+    });
+
+    it('has activities in every teaching section, and no video transcript inside a section', () => {
+        const ACT = ['question', 'reveal', 'flip', 'sort', 'steps', 'story', 'exercise'];
+        [...sections, ...sections2].forEach((s) => expect(s.read.some((b) => ACT.includes(b.type))).toBe(true));
+        [...sections, ...sections2].flatMap((s) => s.read).filter((b) => b.type === 'video').forEach((v) => {
+            expect(v.title).toBeTruthy();
+            expect(Object.keys(v)).not.toContain('transcript');
+        });
+    });
+});
+
+describe('WHO distance learning Module 2', () => {
+    it('is a valid course file with every exercise as a draft', () => {
+        const check = checkPackage(PKG2, []);
+        expect(check.errors).toEqual([]);
+        expect(check.warnings).toEqual([]);
+        expect(check.summary).toMatchObject({ modules: 1, sections: 14 });
+        PKG2.exercises.forEach((e) => expect(e.draft).toBe(true));
+        expect(PKG2.exercises.find((e) => e.id === 'dimci-m2-logbook').questions).toHaveLength(20);
+    });
+
+    it('opens the young infant form for its cases and marks them right when filled as in the key', () => {
+        const cases = PKG2.exercises.filter((e) => e.kind !== 'quiz');
+        expect(cases.map((e) => e.id)).toEqual(['dimci-m2-henri', 'dimci-m2-sashi', 'dimci-m2-mimi']);
+        cases.forEach((ex) => {
+            expect(ex.formType).toBe('infant');
+            const want = ex.expected;
+            Object.entries(want.classifications).forEach(([sec, ids]) => {
+                const offered = want.classifyOptions[sec].map((o) => o.id);
+                ids.forEach((id) => expect(offered).toContain(id));
+            });
+            const r = gradeCase(want, {
+                patientData: { ...want.patientData, date: '2026-11-15', problems: 'x' },
+                assessments: want.assessments,
+                chosenClassifications: want.classifications,
+            }, (k) => k, { requiredFields: REQUIRED_PATIENT_FIELDS.infant });
+            expect(r.percent).toBe(100);
+        });
+    });
+
+    it('names young infant chart tables and form rows the protocol has', () => {
+        const all = sections2.flatMap(blocks);
+        const rows = NATIONAL_FORMS.form_infant.sections.map((s) => s.id);
+        all.filter((b) => b.type === 'booklet').forEach((b) => {
+            expect(b.part).toBe('infant');
+            b.categories.forEach((c) => expect(NATIONAL_PROTOCOLS.infant.categories[c]).toBeTruthy());
+        });
+        all.filter((b) => b.type === 'form').forEach((b) => {
+            expect(b.part).toBe('infant');
+            b.sections.forEach((s) => expect(rows).toContain(s));
+        });
+    });
+
+    it('marks every Sudan difference with a hint', () => {
+        const hints = sections2.flatMap(blocks).filter((b) => b.type === 'note' && b.label === 'Sudan national protocol');
+        expect(hints.length).toBeGreaterThanOrEqual(8);
+    });
+
+    it('renders every section', async () => {
+        const React = (await import('react')).default;
+        const { renderToStaticMarkup } = await import('react-dom/server');
+        const { ContentBlocks } = await import('../src/components/imnci/onlineCourses/blocks');
+        sections2.forEach((s) => {
+            const html = renderToStaticMarkup(React.createElement(ContentBlocks, { blocks: s.read }));
+            expect(html.length).toBeGreaterThan(200);
+        });
+    });
+});
+
+describe('Modules 1 and 2 together', () => {
+    it('is one valid course file with both modules and all their exercises', () => {
+        const check = checkPackage(PKG12, []);
+        expect(check.errors).toEqual([]);
+        expect(check.warnings).toEqual([]);
+        expect(check.summary).toMatchObject({ modules: 2, sections: sections.length + sections2.length,
+            exercises: PKG.exercises.length + PKG2.exercises.length });
+    });
+});
+
 describe('Module 1 sections render', () => {
     it('draws the chart booklet and recording form blocks from the protocol', async () => {
         const React = (await import('react')).default;
@@ -158,7 +249,7 @@ describe('Module 1 sections render', () => {
         expect(html).toContain('Sudan national protocol');
         expect(html.toLowerCase()).toContain('dysentery');
         const s11 = sections.find((s) => s.title.startsWith('1.1'));
-        expect(renderToStaticMarkup(React.createElement(ContentBlocks, { blocks: s11.see }))).toContain('Vomits everything');
+        expect(renderToStaticMarkup(React.createElement(ContentBlocks, { blocks: s11.read }))).toContain('Vomits everything');
     });
 });
 

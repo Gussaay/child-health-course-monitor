@@ -42,6 +42,7 @@ import { SectionPage } from './onlineCourses/SectionPage';
 import { ModulePage } from './onlineCourses/ModulePage';
 import { CoursePage } from './onlineCourses/CoursePage';
 import { CourseList } from './onlineCourses/CourseList';
+import { BuilderPane } from './onlineCourses/BuilderPane';
 
 // Kept importable from here, where they used to live.
 export { ASSET_ROOT, assetPath } from './onlineCourses/assets';
@@ -362,6 +363,7 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [] }) 
     return (
         <CourseScreen.Provider value={screen}>
             <Screen />
+            <BuilderPane />
         </CourseScreen.Provider>
     );
 }
