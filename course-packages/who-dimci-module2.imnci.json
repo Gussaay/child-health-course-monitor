@@ -1,7 +1,7 @@
 {
  "format": "imnci-course-package",
  "version": 1,
- "about": "WHO IMCI distance learning course (2014), Module 2, in the Sudan national IMNCI wording. Each section is one page with the same information as the WHO module, laid out as activities: step-by-step cards, flip cards, sorting, case stories and questions. Where the Sudan national booklet differs from WHO, the Sudan wording is used and a \"Sudan national protocol\" note says what WHO wrote. Chart booklet and recording form blocks are read live from the protocol. Video slots without a link show a placeholder; their narration scripts are in a separate file. Exercises start as drafts and open in the exercise manager.",
+ "about": "WHO IMCI distance learning course (2014), Module 2, in the Sudan national IMNCI wording. Each WHO section is cut into short lessons of one topic, with the same information as the WHO module, laid out as activities: step-by-step cards, flip cards, sorting, case stories and questions. Where the Sudan national booklet differs from WHO, the Sudan wording is used and a \"Sudan national protocol\" note says what WHO wrote. Chart booklet and recording form blocks are read live from the protocol. Video slots without a link show a placeholder; their narration scripts are in a separate file. Exercises start as drafts and open in the exercise manager.",
  "course": {
   "title": "IMNCI distance learning modules",
   "description": "Self-study modules based on the WHO IMCI distance learning course (2014), in the wording of the Sudan national IMNCI protocol."
@@ -12,9 +12,18 @@
    "order": 2,
    "sections": [
     {
-     "title": "2.1 Module overview",
+     "see": [],
+     "practise": [],
+     "bookFromPage": 5,
+     "bookToPage": 8,
+     "title": "Module overview",
      "order": 1,
      "read": [
+      {
+       "type": "note",
+       "text": "See what Module 2 covers and the job aids you will use, then take the pre-test.",
+       "label": "In this lesson"
+      },
       {
        "type": "rich",
        "text": "<p>As you learned in your first face-to-face meeting, <strong>young infants up to 2 months of age</strong> have special characteristics that must be considered when classifying their health conditions.</p>"
@@ -41,11 +50,11 @@
        "cards": [
         {
          "front": "Part I: the young infant's common symptoms",
-         "back": "Special care for young infants; IMNCI tools for the sick young infant; assess and classify; treat; follow-up. Sections 2.2 to 2.8."
+         "back": "Special care for young infants; IMNCI tools for the sick young infant; assess and classify; treat; follow-up."
         },
         {
          "front": "Part II: feeding and counselling",
-         "back": "Infant feeding is such an important part of care that it has its own part: assess and classify feeding problems or low weight; counsel the caregiver on infant feeding; counsel the caregiver on infant care. Sections 2.9 to 2.12."
+         "back": "Infant feeding is such an important part of care that it has its own part: assess and classify feeding problems or low weight; counsel the caregiver on infant feeding; counsel the caregiver on infant care."
         }
        ]
       },
@@ -115,16 +124,21 @@
        "note": "Five questions. Your score is not recorded."
       }
      ],
-     "see": [],
-     "practise": [],
-     "bookFromPage": 5,
-     "bookToPage": 8,
      "isPublished": true
     },
     {
-     "title": "2.2 Introduction to the sick young infant",
+     "see": [],
+     "practise": [],
+     "bookFromPage": 10,
+     "bookToPage": 11,
+     "title": "Introduction to the sick young infant",
      "order": 2,
      "read": [
+      {
+       "type": "note",
+       "text": "Explain why young infants are special and what special care they need.",
+       "label": "In this lesson"
+      },
       {
        "type": "video",
        "url": "",
@@ -244,16 +258,21 @@
        "note": ""
       }
      ],
-     "see": [],
-     "practise": [],
-     "bookFromPage": 10,
-     "bookToPage": 11,
      "isPublished": true
     },
     {
-     "title": "2.3 Assess a sick young infant for signs of serious disease",
+     "see": [],
+     "practise": [],
+     "bookFromPage": 12,
+     "bookToPage": 21,
+     "title": "Meet Mimi: greet, then check for severe disease",
      "order": 3,
      "read": [
+      {
+       "type": "note",
+       "text": "Greet the caregiver of a young infant, and explain why every sick young infant is checked for signs of severe disease.",
+       "label": "In this lesson"
+      },
       {
        "type": "video",
        "url": "",
@@ -329,6 +348,22 @@
        "type": "note",
        "text": "Young infants can become sick and die very quickly from serious bacterial infections such as pneumonia, sepsis and meningitis. The signs of very severe disease also identify young infants with other serious conditions like severe birth asphyxia and complications of preterm birth. If you find a reason for urgent referral, complete the assessment quickly and refer the infant to the hospital.",
        "label": "Key point"
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 12,
+     "bookToPage": 21,
+     "title": "Assess for severe disease and local infection",
+     "order": 4,
+     "read": [
+      {
+       "type": "note",
+       "text": "Assess a young infant for very severe disease and local bacterial infection, one sign at a time.",
+       "label": "In this lesson"
       },
       {
        "type": "heading",
@@ -471,6 +506,22 @@
          "explanation": "Difficulty feeding, low body temperature, severe chest indrawing and reduced movements."
         }
        ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 12,
+     "bookToPage": 21,
+     "title": "Classify signs of serious illness",
+     "order": 5,
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify what you found as one of the three classifications, and say what action each one needs.",
+       "label": "In this lesson"
       },
       {
        "type": "heading",
@@ -548,16 +599,21 @@
        ]
       }
      ],
-     "see": [],
-     "practise": [],
-     "bookFromPage": 12,
-     "bookToPage": 21,
      "isPublished": true
     },
     {
-     "title": "2.4 Assess and classify jaundice",
-     "order": 4,
+     "see": [],
+     "practise": [],
+     "bookFromPage": 22,
+     "bookToPage": 26,
+     "title": "Jaundice: what it is and how to assess it",
+     "order": 6,
      "read": [
+      {
+       "type": "note",
+       "text": "Tell mild jaundice from jaundice that is a sign of a severe problem, and assess a young infant for jaundice.",
+       "label": "In this lesson"
+      },
       {
        "type": "video",
        "url": "",
@@ -611,6 +667,48 @@
          "text": "The timing of the jaundice, and the infant's age, are very important for the classification."
         }
        ]
+      },
+      {
+       "type": "heading",
+       "text": "Check yourself"
+      },
+      {
+       "type": "question",
+       "text": "A baby's skin turns yellow on the first day of life. What does this tell you?",
+       "options": [
+        "It is the mild jaundice that many normal babies have",
+        "It is always due to an underlying disease",
+        "It matters only if it is still there after 2 weeks"
+       ],
+       "answer": 1,
+       "explanation": "Jaundice that appears on the first day of life is always due to an underlying disease. The mild jaundice of normal babies usually appears on the third or fourth day of life."
+      },
+      {
+       "type": "question",
+       "text": "How do you look for jaundice?",
+       "options": [
+        "Ask the caregiver whether the infant looks yellow to her",
+        "Look at the infant's face only, in any light",
+        "In natural light, press the skin over the forehead to blanch it and look for yellow; then do the same on the palms and soles"
+       ],
+       "answer": 2,
+       "explanation": "Look in natural light. Press the skin over the forehead with your fingers to blanch it, remove your fingers and look for yellow discoloration. Repeat on the palms and the soles of the feet."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 22,
+     "bookToPage": 26,
+     "title": "Classify jaundice",
+     "order": 7,
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify jaundice as one of the three classifications, and classify Mimi.",
+       "label": "In this lesson"
       },
       {
        "type": "heading",
@@ -707,16 +805,21 @@
        ]
       }
      ],
-     "see": [],
-     "practise": [],
-     "bookFromPage": 22,
-     "bookToPage": 26,
      "isPublished": true
     },
     {
-     "title": "2.5 Assess and classify diarrhoea in the young infant",
-     "order": 5,
+     "see": [],
+     "practise": [],
+     "bookFromPage": 27,
+     "bookToPage": 29,
+     "title": "Diarrhoea in the young infant",
+     "order": 8,
      "read": [
+      {
+       "type": "note",
+       "text": "Say when a young infant has diarrhoea, and classify dehydration in a young infant.",
+       "label": "In this lesson"
+      },
       {
        "type": "paragraph",
        "text": "You will learn to assess and classify diarrhoea in Module 4. The process is similar to the sick child. You can look at it now so that you are familiar with the signs when you assess young infants in your clinic."
@@ -776,6 +879,47 @@
       },
       {
        "type": "heading",
+       "text": "Check yourself"
+      },
+      {
+       "type": "question",
+       "text": "A breastfed young infant passes frequent, semi-solid stools, as he usually does. Does he have diarrhoea?",
+       "options": [
+        "No",
+        "Yes"
+       ],
+       "answer": 0,
+       "explanation": "A young infant has diarrhoea if the stools have changed from the usual pattern and are many and watery. The normally frequent or semi-solid stools of a breastfed baby are not diarrhoea."
+      },
+      {
+       "type": "question",
+       "text": "A young infant with diarrhoea is restless and irritable, and his skin pinch goes back slowly. How do you classify the dehydration?",
+       "options": [
+        "SEVERE DEHYDRATION",
+        "SOME DEHYDRATION",
+        "NO DEHYDRATION"
+       ],
+       "answer": 1,
+       "explanation": "Two of these signs give SOME DEHYDRATION: restless and irritable; sunken eyes; skin pinch goes back slowly."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 27,
+     "bookToPage": 29,
+     "title": "Practise with three cases: Henri, Sashi and Mimi",
+     "order": 9,
+     "read": [
+      {
+       "type": "note",
+       "text": "Fill in the recording form for three young infants as you greet, ask, assess and classify.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "heading",
        "text": "Practise: Exercise D"
       },
       {
@@ -795,19 +939,24 @@
       {
        "type": "exercise",
        "exerciseId": "dimci-m2-mimi",
-       "note": "The module case: fill in Mimi's form from what you found in sections 2.3 and 2.4."
+       "note": "The module case: fill in Mimi's form from what you found when you assessed her for severe disease and jaundice."
       }
      ],
-     "see": [],
-     "practise": [],
-     "bookFromPage": 27,
-     "bookToPage": 29,
      "isPublished": true
     },
     {
-     "title": "2.6 Treat the young infant requiring urgent referral",
-     "order": 6,
+     "see": [],
+     "practise": [],
+     "bookFromPage": 30,
+     "bookToPage": 34,
+     "title": "Before referral: what the infant needs",
+     "order": 10,
      "read": [
+      {
+       "type": "note",
+       "text": "Say which classifications need urgent referral, what the infant needs before leaving, and how to prevent low blood sugar.",
+       "label": "In this lesson"
+      },
       {
        "type": "video",
        "url": "",
@@ -876,6 +1025,22 @@
          "text": "Give 20–50 ml (10 ml/kg) expressed breast milk or sugar water by nasogastric tube."
         }
        ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 30,
+     "bookToPage": 34,
+     "title": "First dose of antibiotics, warmth and referral",
+     "order": 11,
+     "read": [
+      {
+       "type": "note",
+       "text": "Give the first dose of intramuscular antibiotics, keep the infant warm, and refer the young infant.",
+       "label": "In this lesson"
       },
       {
        "type": "heading",
@@ -976,7 +1141,7 @@
           "Give it by nasogastric tube"
          ],
          "answer": 0,
-         "explanation": "10 ml/kg × 3.1 kg = 31 ml. If Biya cannot express breast milk, give the same amount of sugar water. Section 2.11 shows how to teach her to express."
+         "explanation": "10 ml/kg × 3.1 kg = 31 ml. If Biya cannot express breast milk, give the same amount of sugar water. The lesson on expressing breast milk shows how to teach her."
         },
         {
          "text": "You teach Biya to keep Mimi warm on the way: you ask her to put on Mimi's hat and socks and show her how to rewrap the blanket. You prepare a referral note and explain that Mimi needs to go to the hospital urgently for her severe signs, so that she can begin feeding again. Biya worries her family will be upset about the transport costs, but because Mimi stopped feeding today and looks so ill, she thinks they will support her."
@@ -989,16 +1154,21 @@
        "label": "Sudan national protocol"
       }
      ],
-     "see": [],
-     "practise": [],
-     "bookFromPage": 30,
-     "bookToPage": 34,
      "isPublished": true
     },
     {
-     "title": "2.7 Treat the young infant not requiring urgent referral",
-     "order": 7,
+     "see": [],
+     "practise": [],
+     "bookFromPage": 35,
+     "bookToPage": 38,
+     "title": "Treatment in the clinic: oral antibiotic and jaundice",
+     "order": 12,
      "read": [
+      {
+       "type": "note",
+       "text": "Decide the treatments for yellow and green classifications, give an oral antibiotic for local bacterial infection, and manage jaundice.",
+       "label": "In this lesson"
+      },
       {
        "type": "paragraph",
        "text": "Yellow and green classifications do not need referral. They are treated in the clinic or at home, following the TREAT charts of the young infant section of the chart booklet."
@@ -1053,6 +1223,47 @@
       {
        "type": "paragraph",
        "text": "Young infants with JAUNDICE need home care just like those without any problem. They need no medication. Counsel the caregiver to return immediately if the palms and soles become yellow, and follow up in 1 day to see whether the jaundice is worsening. If the infant is 14 days or older, refer to hospital for assessment."
+      },
+      {
+       "type": "heading",
+       "text": "Check yourself"
+      },
+      {
+       "type": "question",
+       "text": "An infant with LOCAL BACTERIAL INFECTION weighs 3.2 kg. Which dose of amoxicillin does he need, twice daily for 5 days?",
+       "options": [
+        "2.5 ml syrup (125 mg/5 ml) or ¼ tablet (250 mg)",
+        "5 ml syrup (125 mg/5 ml) or ½ tablet (250 mg)"
+       ],
+       "answer": 0,
+       "explanation": "Under 4 kg: 2.5 ml syrup (125 mg/5 ml) or ¼ tablet (250 mg). Give the first dose in the clinic."
+      },
+      {
+       "type": "question",
+       "text": "A young infant is classified JAUNDICE. Which medication does he need?",
+       "options": [
+        "An oral antibiotic for 5 days",
+        "A first dose of intramuscular antibiotics",
+        "No medication: home care, and follow up in 1 day"
+       ],
+       "answer": 2,
+       "explanation": "Young infants with JAUNDICE need no medication. Counsel the caregiver to return immediately if the palms and soles become yellow, and follow up in 1 day. If the infant is 14 days or older, refer to hospital for assessment."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 35,
+     "bookToPage": 38,
+     "title": "Local infections the caregiver can treat at home",
+     "order": 13,
+     "read": [
+      {
+       "type": "note",
+       "text": "Teach the caregiver to treat skin pustules, umbilical infection and thrush at home.",
+       "label": "In this lesson"
       },
       {
        "type": "heading",
@@ -1121,16 +1332,21 @@
        "note": ""
       }
      ],
-     "see": [],
-     "practise": [],
-     "bookFromPage": 35,
-     "bookToPage": 38,
      "isPublished": true
     },
     {
-     "title": "2.8 Provide follow-up care for the sick young infant",
-     "order": 8,
+     "see": [],
+     "practise": [],
+     "bookFromPage": 39,
+     "bookToPage": 41,
+     "title": "Provide follow-up care for the sick young infant",
+     "order": 14,
      "read": [
+      {
+       "type": "note",
+       "text": "Give follow-up care for local bacterial infection, jaundice and thrush.",
+       "label": "In this lesson"
+      },
       {
        "type": "paragraph",
        "text": "Follow-up visits are especially important for young infants because their illness progresses quickly. At a follow-up visit you do two things: reassess the conditions you classified and treated (improving, the same, or worse?), and reassess with IMNCI for any new problems, using a new recording form."
@@ -1270,16 +1486,21 @@
        "note": ""
       }
      ],
-     "see": [],
-     "practise": [],
-     "bookFromPage": 39,
-     "bookToPage": 41,
      "isPublished": true
     },
     {
-     "title": "2.9 Assess feeding problems or low weight",
-     "order": 9,
+     "see": [],
+     "practise": [],
+     "bookFromPage": 43,
+     "bookToPage": 53,
+     "title": "Feeding problems and feeding recommendations",
+     "order": 15,
      "read": [
+      {
+       "type": "note",
+       "text": "Explain why some young infants have feeding problems, and give the feeding recommendations for young infants.",
+       "label": "In this lesson"
+      },
       {
        "type": "paragraph",
        "text": "Part II of the module is about feeding. Adequate feeding is essential for the infant's health, growth and development. Poor feeding increases the risk of infection and death, impairs growth, and can have lifelong effects such as poor development or obesity."
@@ -1346,6 +1567,48 @@
       },
       {
        "type": "heading",
+       "text": "Check yourself"
+      },
+      {
+       "type": "question",
+       "text": "Which birth weight is low birth weight?",
+       "options": [
+        "Under 3500 g",
+        "Under 2500 g",
+        "Under 1500 g only"
+       ],
+       "answer": 1,
+       "explanation": "Low birth weight is under 2500 g (2.5 kg). Very low birth weight is under 1500 g (1.5 kg)."
+      },
+      {
+       "type": "question",
+       "text": "What does exclusive breastfeeding mean?",
+       "options": [
+        "Breast milk and a little water in hot weather",
+        "Breast milk in the day and other milk at night",
+        "Only breast milk: no other food, water or fluids"
+       ],
+       "answer": 2,
+       "explanation": "Exclusively means only breast milk: no other food, water or fluids (medicines and vitamins are exceptions). All infants up to 6 months should breastfeed exclusively, on demand, at least 8 times in 24 hours."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 43,
+     "bookToPage": 53,
+     "title": "Part A: assess for a feeding problem or low weight",
+     "order": 16,
+     "read": [
+      {
+       "type": "note",
+       "text": "Ask the Part A questions, determine weight for age and look for thrush.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "heading",
        "text": "Part A: assess for feeding problem or low weight"
       },
       {
@@ -1391,6 +1654,22 @@
        "type": "exercise",
        "exerciseId": "dimci-m2-ex-g",
        "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 43,
+     "bookToPage": 53,
+     "title": "Part B: assess breastfeeding",
+     "order": 17,
+     "read": [
+      {
+       "type": "note",
+       "text": "Watch a breastfeed and judge attachment and suckling.",
+       "label": "In this lesson"
       },
       {
        "type": "heading",
@@ -1518,6 +1797,22 @@
        "url": "",
        "title": "Demonstration: breastfeeding assessment",
        "caption": "WHO course DVD, disc 2. All the steps of the breastfeeding assessment, with examples of good attachment and suckling."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 43,
+     "bookToPage": 53,
+     "title": "Classify feeding problems and low weight",
+     "order": 18,
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify feeding, classify Mimi, and say what to do when an infant takes no breast milk at all.",
+       "label": "In this lesson"
       },
       {
        "type": "heading",
@@ -1579,16 +1874,21 @@
        "text": "Skip Parts A and B and use the chart for non-breastfed infants: ask what milk is given, how many times, how much, how it is prepared (let the mother show you), whether any breast milk is given, what other foods and fluids, cup or bottle, and how the utensils are cleaned. This chart is also used when an HIV-positive mother has chosen not to breastfeed. Module 8 covers it, with counselling HIV-positive women on infant feeding."
       }
      ],
-     "see": [],
-     "practise": [],
-     "bookFromPage": 43,
-     "bookToPage": 53,
      "isPublished": true
     },
     {
-     "title": "2.10 Check immunizations and other problems",
-     "order": 10,
+     "see": [],
+     "practise": [],
+     "bookFromPage": 54,
+     "bookToPage": 55,
+     "title": "Check immunizations and other problems",
+     "order": 19,
      "read": [
+      {
+       "type": "note",
+       "text": "Check a young infant's immunizations, other problems and the mother's health.",
+       "label": "In this lesson"
+      },
       {
        "type": "paragraph",
        "text": "Immunizations protect young infants from infections that are especially dangerous at their age. Check whether the infant has had all the immunizations recommended for his age, and whether any are needed today. Counsel caregivers on immunizing on schedule."
@@ -1652,16 +1952,21 @@
        "answer": "Do not immunize now: it would delay referral. Write the vaccines due on her referral note so the hospital staff can decide. Biya came for her own postnatal check: stabilize Mimi first, then assess Biya's health and note it on the form."
       }
      ],
-     "see": [],
-     "practise": [],
-     "bookFromPage": 54,
-     "bookToPage": 55,
      "isPublished": true
     },
     {
-     "title": "2.11 Counsel the caregiver on feeding",
-     "order": 11,
+     "see": [],
+     "practise": [],
+     "bookFromPage": 56,
+     "bookToPage": 64,
+     "title": "Counsel on feeding: positioning and attachment",
+     "order": 20,
      "read": [
+      {
+       "type": "note",
+       "text": "Give the most important messages about the young infant, and teach a mother correct positioning and attachment.",
+       "label": "In this lesson"
+      },
       {
        "type": "video",
        "url": "",
@@ -1701,7 +2006,7 @@
       },
       {
        "type": "paragraph",
-       "text": "This section covers four feeding topics: positioning and attachment, expressing breast milk, feeding by cup, and other feeding problems. Section 2.12 covers the other care."
+       "text": "The feeding lessons cover four topics: positioning and attachment, expressing breast milk, feeding by cup, and other feeding problems. The lesson on infant care covers the other care."
       },
       {
        "type": "heading",
@@ -1784,6 +2089,48 @@
        "url": "",
        "title": "Demonstration: teach correct positioning and attachment",
        "caption": "WHO course DVD, disc 2. Good and poor positioning, and how to show the caregiver how to position."
+      },
+      {
+       "type": "heading",
+       "text": "Check yourself"
+      },
+      {
+       "type": "question",
+       "text": "A mother's infant is poorly attached. What do you do first?",
+       "options": [
+        "Watch a breastfeed, so that you understand her situation",
+        "Take the infant and attach him yourself",
+        "Tell her to change the way she holds the infant"
+       ],
+       "answer": 0,
+       "explanation": "Always watch a breastfeed before helping. Do not rush to make her do something different, and do not take over: explain and demonstrate, then let her position and attach the infant herself."
+      },
+      {
+       "type": "question",
+       "text": "When the mother helps her infant attach, what does she wait for before moving him onto the breast?",
+       "options": [
+        "The infant to cry",
+        "A wide-open mouth",
+        "The infant to fall asleep"
+       ],
+       "answer": 1,
+       "explanation": "She touches the infant's lips with her nipple, waits for a wide-open mouth, then moves the infant quickly onto the breast, aiming his lower lip well below the nipple."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 56,
+     "bookToPage": 64,
+     "title": "Expressing breast milk and feeding by cup",
+     "order": 21,
+     "read": [
+      {
+       "type": "note",
+       "text": "Teach a mother to express breast milk and to feed her infant by cup.",
+       "label": "In this lesson"
       },
       {
        "type": "heading",
@@ -1934,6 +2281,22 @@
         }
        ],
        "explanation": "Feeding from a cup is safer than a bottle. Cups are usually easier than spoons, though spoons are safe; for a very ill infant with difficult breathing a spoon is sometimes easier for a short time."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 56,
+     "bookToPage": 64,
+     "title": "Other feeding problems and follow-up",
+     "order": 22,
+     "read": [
+      {
+       "type": "note",
+       "text": "Counsel on other feeding problems, and give follow-up care for feeding problems, thrush and low weight for age.",
+       "label": "In this lesson"
       },
       {
        "type": "heading",
@@ -2011,16 +2374,21 @@
        ]
       }
      ],
-     "see": [],
-     "practise": [],
-     "bookFromPage": 56,
-     "bookToPage": 64,
      "isPublished": true
     },
     {
-     "title": "2.12 Counsel the caregiver on infant care",
-     "order": 12,
+     "see": [],
+     "practise": [],
+     "bookFromPage": 65,
+     "bookToPage": 67,
+     "title": "Counsel the caregiver on infant care",
+     "order": 23,
      "read": [
+      {
+       "type": "note",
+       "text": "Counsel the caregiver on keeping the infant warm, good hygiene and when to come back.",
+       "label": "In this lesson"
+      },
       {
        "type": "paragraph",
        "text": "After feeding, advise the caregiver on three more topics: keeping the infant warm, good hygiene, and when to come back."
@@ -2122,16 +2490,21 @@
        "note": ""
       }
      ],
-     "see": [],
-     "practise": [],
-     "bookFromPage": 65,
-     "bookToPage": 67,
      "isPublished": true
     },
     {
-     "title": "2.13 Using this module in your clinic",
-     "order": 13,
+     "see": [],
+     "practise": [],
+     "bookFromPage": 68,
+     "bookToPage": 69,
+     "title": "Using this module in your clinic",
+     "order": 24,
      "read": [
+      {
+       "type": "note",
+       "text": "Plan how you will use what you learned in your own clinic.",
+       "label": "In this lesson"
+      },
       {
        "type": "paragraph",
        "text": "Use your chart booklet and the young infant recording forms as you practise in the clinic. In the coming days, focus on these skills."
@@ -2189,16 +2562,21 @@
        "text": "<p><strong>Logbook checklist of signs (young infant)</strong>: tick each sign when you see it at your clinic.</p><ul><li>Mild chest indrawing (normal)</li><li>Severe chest indrawing</li><li>Fast breathing</li><li>Low body temperature</li><li>Fever</li><li>Convulsions</li><li>Movement only when stimulated</li><li>No movement even when stimulated</li><li>Restless and irritable</li><li>Red umbilicus</li><li>Umbilicus draining pus</li><li>Skin pustules</li><li>Yellow palms and soles</li><li>Jaundice at any age</li><li>Sunken eyes</li><li>Skin pinch goes back very slowly</li><li>Skin pinch goes back slowly</li><li>Skin pinch normal</li><li>Thrush</li><li>No attachment at all</li><li>Not well attached</li><li>Good attachment</li><li>Not suckling at all</li><li>Not suckling effectively</li><li>Suckling effectively</li><li>Positive virological test</li><li>Positive serological test</li><li>Very low birth weight</li><li>Low birth weight</li></ul>"
       }
      ],
-     "see": [],
-     "practise": [],
-     "bookFromPage": 68,
-     "bookToPage": 69,
      "isPublished": true
     },
     {
-     "title": "2.14 Review questions and Module 2 test",
-     "order": 14,
+     "see": [],
+     "practise": [],
+     "bookFromPage": 70,
+     "bookToPage": 76,
+     "title": "Review questions and Module 2 test",
+     "order": 25,
      "read": [
+      {
+       "type": "note",
+       "text": "Test what you have learned in Module 2.",
+       "label": "In this lesson"
+      },
       {
        "type": "paragraph",
        "text": "You have finished Module 2. Answer the same questions as in the pre-test and compare your scores, then take the logbook test. If you miss a question, go back to its section and practise again."
@@ -2214,10 +2592,6 @@
        "note": "The 20 logbook questions. You may use your chart booklet."
       }
      ],
-     "see": [],
-     "practise": [],
-     "bookFromPage": 70,
-     "bookToPage": 76,
      "isPublished": true
     }
    ],
@@ -2251,7 +2625,7 @@
      "correct": [
       1
      ],
-     "explain": "Section 2.2: young infants are special."
+     "explain": "Introduction to the sick young infant: young infants are special."
     },
     {
      "id": "q2",
@@ -2265,7 +2639,7 @@
      "correct": [
       2
      ],
-     "explain": "Section 2.2 and 2.12: keep the infant warm; the cord is kept clean and dry."
+     "explain": "Introduction and infant care lessons: keep the infant warm; the cord is kept clean and dry."
     },
     {
      "id": "q3",
@@ -2279,7 +2653,7 @@
      "correct": [
       0
      ],
-     "explain": "Section 2.9: exclusive, on-demand breastfeeding. (The printed WHO answer key gives B, which contradicts the module text.)"
+     "explain": "Feeding lessons: exclusive, on-demand breastfeeding. (The printed WHO answer key gives B, which contradicts the module text.)"
     },
     {
      "id": "q4",
@@ -2293,7 +2667,7 @@
      "correct": [
       0
      ],
-     "explain": "Section 2.3: fast breathing (60 or more, counted twice) is a sign of very severe disease. A few pustules are a local infection."
+     "explain": "Signs of serious disease: fast breathing (60 or more, counted twice) is a sign of very severe disease. A few pustules are a local infection."
     },
     {
      "id": "q5",
@@ -2307,7 +2681,7 @@
      "correct": [
       1
      ],
-     "explain": "Sections 2.3 and 2.9: not able to feed is a severe sign."
+     "explain": "Signs of serious disease and feeding lessons: not able to feed is a severe sign."
     }
    ]
   },
@@ -3578,7 +3952,7 @@
      "correct": [
       1
      ],
-     "explain": "Section 2.2: young infants are special."
+     "explain": "Introduction to the sick young infant: young infants are special."
     },
     {
      "id": "q2",
@@ -3592,7 +3966,7 @@
      "correct": [
       2
      ],
-     "explain": "Section 2.2 and 2.12: keep the infant warm; the cord is kept clean and dry."
+     "explain": "Introduction and infant care lessons: keep the infant warm; the cord is kept clean and dry."
     },
     {
      "id": "q3",
@@ -3606,7 +3980,7 @@
      "correct": [
       0
      ],
-     "explain": "Section 2.9: exclusive, on-demand breastfeeding. (The printed WHO answer key gives B, which contradicts the module text.)"
+     "explain": "Feeding lessons: exclusive, on-demand breastfeeding. (The printed WHO answer key gives B, which contradicts the module text.)"
     },
     {
      "id": "q4",
@@ -3620,7 +3994,7 @@
      "correct": [
       0
      ],
-     "explain": "Section 2.3: fast breathing (60 or more, counted twice) is a sign of very severe disease. A few pustules are a local infection."
+     "explain": "Signs of serious disease: fast breathing (60 or more, counted twice) is a sign of very severe disease. A few pustules are a local infection."
     },
     {
      "id": "q5",
@@ -3634,7 +4008,7 @@
      "correct": [
       1
      ],
-     "explain": "Sections 2.3 and 2.9: not able to feed is a severe sign."
+     "explain": "Signs of serious disease and feeding lessons: not able to feed is a severe sign."
     }
    ]
   },

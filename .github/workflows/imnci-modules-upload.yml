@@ -1,6 +1,6 @@
 name: One-off - IMNCI distance learning modules upload
 # Runs scripts/imnci-modules-upload/upload-modules.cjs with the mode in mode.txt
-# (dry = read only, commit = write, undo = remove what commit wrote).
+# (dry = read only, commit = write, replace = swap the uploaded lessons for the file's, undo = remove what was written).
 on:
   push:
     branches: [claude/project-thread-v7irb4]
@@ -20,6 +20,6 @@ jobs:
         run: |
           printf '%s' "$SA" > "$RUNNER_TEMP/key.json"
           MODE=$(tr -d '[:space:]' < mode.txt)
-          FLAG=""; [ "$MODE" = commit ] && FLAG=--commit; [ "$MODE" = undo ] && FLAG=--undo
+          FLAG=""; [ "$MODE" = commit ] && FLAG=--commit; [ "$MODE" = undo ] && FLAG=--undo; [ "$MODE" = replace ] && FLAG=--replace
           echo "Mode: ${MODE}"
           KEY_FILE="$RUNNER_TEMP/key.json" node upload-modules.cjs $FLAG

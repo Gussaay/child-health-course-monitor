@@ -4,7 +4,11 @@
 // course, its modules and sections into onlineCourses / onlineCourseItems.
 //   node upload-modules.cjs            dry run (reads only, lists what would be written)
 //   node upload-modules.cjs --commit   writes
-//   node upload-modules.cjs --undo     removes what --commit wrote (by importBatch)
+//   node upload-modules.cjs --replace  the course is already uploaded: swaps its modules and sections for the
+//                                      file's, and brings the exercises this upload wrote up to date with the file.
+//                                      The course itself (its id, title, published or not) is left as it is.
+//   node upload-modules.cjs --undo     removes what --commit or --replace wrote (by importBatch)
+// A dry run says which of the two it would be.
 // KEY_FILE (or --key <file>) is the Firebase service-account JSON.
 const path = require('path'), fs = require('fs');
 const req = (m) => require(require.resolve(m, { paths: [process.cwd(), path.join(__dirname, '..', '..'), __dirname] }));
@@ -12,7 +16,7 @@ const admin = req('firebase-admin');
 const a = process.argv.slice(2);
 const keyPath = a.includes('--key') ? a[a.indexOf('--key') + 1] : process.env.KEY_FILE;
 if (!keyPath || !fs.existsSync(keyPath)) { console.error('Pass --key <service-account.json> or set KEY_FILE'); process.exit(1); }
-const COMMIT = a.includes('--commit'), UNDO = a.includes('--undo');
+const COMMIT = a.includes('--commit'), UNDO = a.includes('--undo'), REPLACE = a.includes('--replace');
 const BATCH = 'imnci-dimci-modules-1-2-2026-11-15';
 const FILE = path.join(__dirname, '..', '..', 'course-packages', 'who-dimci-modules-1-2.imnci.json');
 
@@ -58,7 +62,21 @@ async function undo() {
 
   // What is already there
   const already = await db.collection('onlineCourses').where('importBatch', '==', BATCH).get();
-  if (already.size) { console.error(`This upload was already written (course ${already.docs[0].id}). Run undo first to redo it.`); process.exit(1); }
+  const existing = already.docs[0] || null;
+  if (existing && COMMIT) { console.error(`This upload was already written (course ${existing.id}). Use replace to bring it up to date.`); process.exit(1); }
+  if (!existing && REPLACE) { console.error('Nothing to replace: this upload is not in the app. Use commit.'); process.exit(1); }
+  let oldItems = [];
+  if (existing) {
+    const c = existing.data();
+    oldItems = (await db.collection('onlineCourseItems').where('courseId', '==', existing.id).get()).docs;
+    const mine = oldItems.filter((d) => d.data().importBatch === BATCH);
+    const edited = mine.filter((d) => { const x = d.data(); return x.lastUpdatedAt && x.createdAt && x.lastUpdatedAt.toMillis() - x.createdAt.toMillis() > 60000; });
+    console.log(`\nALREADY UPLOADED: course ${existing.id} "${c.title}" (${c.isPublished ? 'PUBLISHED' : 'not published'}${c.isDeleted ? ', deleted' : ''}).`);
+    console.log(`  It has ${oldItems.length} modules/sections: ${mine.length} from this upload, ${oldItems.length - mine.length} added in the app since.`);
+    console.log(`  Edited in the app since the upload: ${edited.length}${edited.length ? ' — ' + edited.map((d) => `"${d.data().title}"`).join(', ') : ''}`);
+    console.log('  Replace removes the modules and sections from this upload and writes the ones below. Anything added in the app since is kept.');
+    oldItems = mine;
+  }
   const courses = await db.collection('onlineCourses').get();
   console.log(`\nOnline courses now in the app (${courses.size}):`);
   courses.docs.forEach((d) => { const c = d.data(); console.log(`  ${d.id}  "${c.title}"${c.isDeleted ? ' (deleted)' : ''}${c.isPublished ? ' (published)' : ''}`); });
@@ -66,21 +84,24 @@ async function undo() {
   if (same.length) console.log(`  NOTE: ${same.length} course(s) already called "${pkg.course.title}" — this upload adds a separate new course.`);
 
   // Exercises: new ones are written; ones already in the app are left as they are (same as the Import dialog without "replace").
-  const exNew = [], exSame = [], exDiff = [];
+  const exNew = [], exSame = [], exDiff = [], exUpdate = [];
   for (const e of pkg.exercises) {
     const d = await db.collection('exerciseDefinitions').doc(e.id).get();
     if (!d.exists || d.data().isDeleted) { exNew.push(e); continue; }
     const r = exerciseRecord(e), cur = d.data();
     const diff = CONTENT.filter((k) => JSON.stringify(cur[k] ?? '') !== JSON.stringify(r[k] ?? ''));
-    (diff.length ? exDiff : exSame).push({ e, diff });
+    // An exercise this upload wrote is brought up to date; one that was in the app before is never touched.
+    if (diff.length && existing && cur.importBatch === BATCH) exUpdate.push({ e, diff });
+    else (diff.length ? exDiff : exSame).push({ e, diff });
   }
-  console.log(`\nExercises: ${exNew.length} new to write, ${exSame.length} already in the app (identical), ${exDiff.length} already in the app but different (kept as they are):`);
+  console.log(`\nExercises: ${exNew.length} new to write, ${exUpdate.length} from this upload to bring up to date, ${exSame.length} already in the app (identical), ${exDiff.length} already in the app but different (kept as they are):`);
   exNew.forEach((e) => console.log(`  + ${e.id}  ${e.kind || 'case'}  "${e.title}"`));
+  exUpdate.forEach(({ e, diff }) => console.log(`  ^ ${e.id}  "${e.title}"  changes: ${diff.join(', ')}`));
   exSame.forEach(({ e }) => console.log(`  = ${e.id}  "${e.title}"`));
   exDiff.forEach(({ e, diff }) => console.log(`  ~ ${e.id}  "${e.title}"  differs in: ${diff.join(', ')}`));
 
   // Course, modules, sections (packagePlan + bulkUpsertOnlineCourseContent, new course)
-  const courseRef = db.collection('onlineCourses').doc();
+  const courseRef = existing ? existing.ref : db.collection('onlineCourses').doc();
   const course = { ...clean(pkg.course), title: pkg.course.title.trim(), isPublished: false, source: 'file' };
   const writes = [];
   [...pkg.modules].sort(byOrder).forEach((m, mi) => {
@@ -103,19 +124,25 @@ async function undo() {
     .filter((b) => b.type === 'exercise' && !pkg.exercises.some((e) => e.id === b.exerciseId));
   if (missing.length) throw new Error(`Sections link to exercises not in the file: ${missing.map((b) => b.exerciseId)}`);
 
-  console.log(`\nPlan: 1 new course "${course.title}" (unpublished until you publish it in Manage), ` +
+  if (existing) console.log(`\nPlan (replace): in course ${existing.id}, remove ${oldItems.length} modules/sections from this upload and write ` +
+    `${writes.filter((w) => w.data.kind === 'module').length} modules and ${writes.filter((w) => w.data.kind === 'section').length} sections; ` +
+    `update ${exUpdate.length} exercises, add ${exNew.length}. The course record is not changed. Lesson progress saved against the old sections does not carry over.`);
+  else console.log(`\nPlan: 1 new course "${course.title}" (unpublished until you publish it in Manage), ` +
     `${writes.filter((w) => w.data.kind === 'module').length} modules, ${writes.filter((w) => w.data.kind === 'section').length} sections, ` +
     `${exNew.length} new exercises. Every document is tagged importBatch=${BATCH}. Nothing already in the app is changed.`);
-  if (!COMMIT) return console.log('\nDry run: nothing written.');
+  if (!COMMIT && !REPLACE) return console.log('\nDry run: nothing written.');
 
-  for (const e of exNew) {
+  for (let i = 0; i < oldItems.length; i += 400) {
+    const b = db.batch(); oldItems.slice(i, i + 400).forEach((d) => b.delete(d.ref)); await b.commit();
+  }
+  for (const e of [...exNew, ...exUpdate.map((x) => x.e)]) {
     await db.collection('exerciseDefinitions').doc(e.id).set({ ...exerciseRecord(e), importBatch: BATCH, lastUpdatedAt: now(), lastUpdatedAtLocal: new Date().toISOString() }, { merge: true });
   }
-  await courseRef.set({ ...course, id: courseRef.id, isDeleted: false, importBatch: BATCH, createdAt: now(), lastUpdatedAt: now() });
+  if (!existing) await courseRef.set({ ...course, id: courseRef.id, isDeleted: false, importBatch: BATCH, createdAt: now(), lastUpdatedAt: now() });
   for (let i = 0; i < writes.length; i += 400) {
     const b = db.batch();
     writes.slice(i, i + 400).forEach((w) => b.set(w.ref, { ...w.data, isDeleted: false, importBatch: BATCH, createdAt: now(), lastUpdatedAt: now() }));
     await b.commit();
   }
-  console.log(`\nWrote course ${courseRef.id}, ${writes.length} modules/sections and ${exNew.length} exercises.`);
+  console.log(`\n${existing ? 'Replaced in' : 'Wrote'} course ${courseRef.id}: ${writes.length} modules/sections written, ${oldItems.length} removed, ${exNew.length} exercises added, ${exUpdate.length} updated.`);
 })().then(() => process.exit(0)).catch((e) => { console.error(e.message); process.exit(1); });

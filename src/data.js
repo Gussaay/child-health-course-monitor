@@ -3230,6 +3230,18 @@ export async function setOnlineSectionComplete(uid, sectionId, done) {
     return true;
 }
 
+// Which activities of a section the learner has done (the keys ContentBlocks
+// gives them). Kept beside `completed` so a lesson started on one phone can be
+// picked up on another, and so the module page can show how far each lesson is.
+export async function setOnlineSectionActivities(uid, sectionId, keys) {
+    if (!uid || !sectionId) return false;
+    await fbSetDoc(doc(db, "onlineProgress", uid), {
+        activities: { [sectionId]: [...keys] },
+        lastUpdatedAt: serverTimestamp(),
+    }, { merge: true });
+    return true;
+}
+
 // ============================================================================
 // --- IMNCI CLINICAL PROTOCOLS ---
 //

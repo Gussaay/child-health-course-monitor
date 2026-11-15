@@ -31,7 +31,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useImnci } from './shared';
 import { listBooks } from '../aiLibrary/aiLibraryData';
 import {
-    deleteOnlineCourse, deleteOnlineCourseItem, getOnlineProgress, setOnlineSectionComplete,
+    deleteOnlineCourse, deleteOnlineCourseItem, getOnlineProgress, setOnlineSectionComplete, setOnlineSectionActivities,
 } from '../../data';
 // The pieces of the course, one file each.
 import { useCoursePlace } from './onlineCourses/place';
@@ -289,6 +289,15 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [] }) 
         }
     };
 
+    // The activities done in a lesson follow the learner's account. A failed
+    // save is not reported: the tally is also kept on the device, and is sent
+    // again with the next activity.
+    const saveActivities = useCallback((sectionId, keys) => {
+        if (!user?.uid || !sectionId) return;
+        setProgress((p) => ({ ...p, activities: { ...(p.activities || {}), [sectionId]: keys } }));
+        setOnlineSectionActivities(user.uid, sectionId, keys).catch(() => {});
+    }, [user?.uid]);
+
     // The phone's back button and the app bar's arrow step out one level.
     useInPageBack(back, !!openCourseId && !editingTab);
 
@@ -353,7 +362,7 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [] }) 
         itemModal, items, loadBooks, minutesById, minutesLeft, mode, moduleComplete, moduleLocked,
         modules, nextUp, onlineCourseItems, onlineCourses, openBookId, openCourse, openCourseId,
         openModule, openModuleId, openSection, openSectionId, permissions, place, progress, query,
-        refreshExercises, reload, removeCourse, removeFromCache, removeItem, resync, sectionDone,
+        refreshExercises, reload, removeCourse, removeFromCache, removeItem, resync, saveActivities, sectionDone,
         sectionLocked, sectionTab, sectionsByModule, setAiBooks, setBookForm, setBuilder, setCompare,
         setConvertOpen, setCourseModal, setEditing, setEditingTab, setFontScale, setImportOpen,
         setItemModal, setMode, setProgress, setQuery, setScale, setSectionTab, setSyncing, setTopTab,
