@@ -342,8 +342,12 @@ export function ExerciseLinkBlock({ block, activityKey }) {
     const screen = useCourseScreen();
     const [playing, setPlaying] = useState(false);
     const [done, markDone] = useActivity(activityKey);
+    const ex = exercises?.find((x) => x.id === block.exerciseId);
+    // An exercise that is no longer there cannot be done, so it must not hold
+    // the lesson, and every lesson after it, closed.
+    const gone = !!exercises && !ex;
+    useEffect(() => { if (gone && !done) markDone(); }); // eslint-disable-line react-hooks/exhaustive-deps
     if (!exercises) return <div className="not-prose h-28 bg-slate-100 rounded-xl animate-pulse my-4" />;
-    const ex = exercises.find((x) => x.id === block.exerciseId);
     if (!ex) {
         return (
             <div className="not-prose p-3 border border-dashed border-amber-300 bg-amber-50 rounded text-xs text-amber-900">

@@ -3234,9 +3234,11 @@ export async function setOnlineSectionComplete(uid, sectionId, done) {
 // gives them). Kept beside `completed` so a lesson started on one phone can be
 // picked up on another, and so the module page can show how far each lesson is.
 export async function setOnlineSectionActivities(uid, sectionId, keys) {
-    if (!uid || !sectionId) return false;
+    if (!uid || !sectionId || !keys?.length) return false;
+    // Added to what is saved, never written over it: two devices used in turn
+    // (or one of them offline) must not undo each other's activities.
     await fbSetDoc(doc(db, "onlineProgress", uid), {
-        activities: { [sectionId]: [...keys] },
+        activities: { [sectionId]: arrayUnion(...keys) },
         lastUpdatedAt: serverTimestamp(),
     }, { merge: true });
     return true;

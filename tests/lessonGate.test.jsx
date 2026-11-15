@@ -5,6 +5,7 @@ import '../src/i18n';
 
 vi.mock('../src/components/imnci/onlineCourses/lazyParts', () => ({ SectionAiPanel: () => null }));
 vi.mock('../src/components/imnci/onlineCourses/SectionTabEditor', () => ({ SectionTabEditor: () => null }));
+vi.mock('../src/components/imnci/shared', async (orig) => ({ ...(await orig()), useImnci: () => ({ exercises: [] }) }));
 
 import { SectionPage } from '../src/components/imnci/onlineCourses/SectionPage';
 import { CourseScreen } from '../src/components/imnci/onlineCourses/screen';
@@ -71,5 +72,13 @@ describe('a lesson is completed by doing it', () => {
     it('lets a manager go on, and a course read in any order', async () => {
         expect(button((await open({ isAdmin: true })).host, 'Complete & continue')).toBeDefined();
         expect(button((await open({ inOrder: false })).host, 'Complete & continue')).toBeDefined();
+    });
+
+    it('an exercise that is no longer in the app does not hold the lesson closed', async () => {
+        const gone = { ...lesson, read: [{ type: 'exercise', exerciseId: 'gone' }] };
+        const { host, saved } = await open({ openSection: gone, sectionsByModule: { m1: [gone, nextLesson] } });
+        expect(host.textContent).toContain('no longer in Online Exercises');
+        expect(saved.at(-1)[1]).toHaveLength(1);
+        expect(button(host, 'Complete & continue')).toBeDefined();
     });
 });
