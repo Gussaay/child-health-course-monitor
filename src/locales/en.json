@@ -2459,6 +2459,7 @@
     "list": {
       "title": "Course Participants",
       "add_participant": "Add Participant",
+      "tab_participants": "Participants",
       "deleted_participants": "Deleted Participants",
       "readd_waiting": "Re-add requests waiting for approval",
       "stale_tooltip": "Name or sub-course changed after this course was approved",
@@ -2473,6 +2474,7 @@
       "last_edit": "Last Edit:"
     },
     "cert_mgmt": {
+      "download_title": "Download Certificates",
       "title": "Certificate Management",
       "held_count": "{{count}} certificate(s) need re-approval",
       "held_explain": "These participants' names or sub-courses changed after the course was approved, so their certificates are held until the Federal Program Manager approves them again.",

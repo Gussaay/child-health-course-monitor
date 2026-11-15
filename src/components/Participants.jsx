@@ -2,10 +2,9 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as XLSX from 'xlsx'; 
-import jsPDF from "jspdf"; 
 
 // --- Icons ---
-import { Mail, MessageCircle, Share2, Lock, RefreshCw, Search, Printer, ArrowLeft, Save, X, Building2, Users, CheckCircle, AlertTriangle } from 'lucide-react'; 
+import { Mail, MessageCircle, Share2, Lock, RefreshCw, Search, Printer, ArrowLeft, Save, X, Building2, Users, CheckCircle, AlertTriangle, UserPlus, Download } from 'lucide-react'; 
 
 // --- Firebase Imports ---
 import { db } from '../firebase';
@@ -33,12 +32,12 @@ import {
     listParticipantReaddRequests,
     submitFacilityDataForApproval
 } from '../data.js';
-import { ReaddRequestModal, DeletedParticipantsModal } from './ParticipantReadd';
+import { ReaddRequestModal, DeletedParticipantsPanel } from './ParticipantReadd';
 import { useDataCache } from '../DataContext';
 import { useAuth } from '../hooks/useAuth'; 
 
 // --- Import Certificate Generators ---
-import { generateBlankCertificatePdf, startCertificateDownload, certificatePdfBase64 } from './CertificateGenerator';
+import { startCertificateDownload, certificatePdfBase64 } from './CertificateGenerator';
 import { confirmDialog, alertDialog } from './dialogs';
 import { publicBaseUrl } from '../utils/publicLink';
 import { whatsappLink } from '../utils/whatsapp';
@@ -1977,7 +1976,8 @@ export function ParticipantsView({
 
     // A phone clash with a deleted participant opens the re-add popup.
     const [readdModal, setReaddModal] = useState({ isOpen: false, existing: null, participantData: null, facilityUpdateData: null });
-    const [isDeletedModalOpen, setIsDeletedModalOpen] = useState(false);
+    // 'active' = the participants list, 'deleted' = deleted participants and re-add requests.
+    const [listTab, setListTab] = useState('active');
     const [pendingReaddCount, setPendingReaddCount] = useState(0);
     
     const [expandedParticipantId, setExpandedParticipantId] = useState(null);
@@ -1987,8 +1987,7 @@ export function ParticipantsView({
     // The app's round "Add" button (bottom corner) adds a participant while the list is open.
     usePageAddButton(t('participants_page.list.add_participant', 'Add Participant'),
         () => { setEditingParticipant(null); setActiveScreen('form'); },
-        !!canAddParticipant && activeScreen === 'list' && !isBulkEditing && !isProcessing);
-    const [isGeneratingTemplate, setIsGeneratingTemplate] = useState(false);
+        !!canAddParticipant && activeScreen === 'list' && listTab === 'active' && !isBulkEditing && !isProcessing);
     
     const [certLangModal, setCertLangModal] = useState({ isOpen: false, actionType: null, data: null });
     const [certActionModal, setCertActionModal] = useState({ isOpen: false, data: null });
@@ -2525,25 +2524,6 @@ export function ParticipantsView({
         });
     };
 
-    const handleDesignCertificate = async (language) => {
-        setIsGeneratingTemplate(true);
-        setIsProcessing(true);
-        try {
-            const canvas = await generateBlankCertificatePdf(localCourseData, federalProgramManagerName, language, facilitators, federalCoordinators);
-            if (canvas) {
-                const doc = new jsPDF('landscape', 'mm', 'a4');
-                doc.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 297, 210);
-                doc.save(`Certificate_Template_${course.course_type}.pdf`);
-                setToast({ show: true, message: t('participants_page.cert.template_success', 'Template downloaded successfully!'), type: 'success' });
-            }
-        } catch (error) {
-            setToast({ show: true, message: t('participants_page.cert.template_failed', 'Failed to generate template.'), type: 'error' });
-        } finally {
-            setIsGeneratingTemplate(false);
-            setIsProcessing(false);
-        }
-    };
-
     const handleShareClick = (p) => {
         setShareTarget({ id: p.id, name: p.name });
         setShareModalOpen(true);
@@ -2625,8 +2605,6 @@ export function ParticipantsView({
         <Card>
             {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ show: false, message: '', type: '' })} />}
 
-            <PageHeader title={t('participants_page.list.title', 'Course Participants')} subtitle={`${course.state} / ${course.locality}`} />
-
             <CertificateLanguageModal 
                 isOpen={certLangModal.isOpen}
                 onClose={() => setCertLangModal({ isOpen: false, actionType: null, data: null })}
@@ -2635,12 +2613,10 @@ export function ParticipantsView({
                     setCertLangModal({ isOpen: false, actionType: null, data: null });
                     if (actionType === 'single') handleGenerateSingleCert(data.p, data.participantSubCourse, lang);
                     else if (actionType === 'bulk') handleBulkCertificateDownload(lang);
-                    else if (actionType === 'template') handleDesignCertificate(lang);
                 }}
                 title={
                     certLangModal.actionType === 'single' ? t('participants_page.cert.download_title', 'Download Certificate') :
-                    certLangModal.actionType === 'bulk' ? t('participants_page.cert.download_bulk_title', 'Download Bulk Certificates') :
-                    t('participants_page.cert.design_template', 'Design Certificate Template')
+                    t('participants_page.cert.download_bulk_title', 'Download Bulk Certificates')
                 }
             />
             
@@ -2762,16 +2738,6 @@ export function ParticipantsView({
                 </div>
             </Modal>
 
-            {finalFederalPerm && (
-                <DeletedParticipantsModal
-                    isOpen={isDeletedModalOpen}
-                    onClose={() => { setIsDeletedModalOpen(false); refreshPendingReaddCount(); }}
-                    course={course}
-                    currentUser={currentUserIdentifier}
-                    onChanged={applyParticipantCacheChange}
-                />
-            )}
-
             <Modal isOpen={isAdvancedActionsModalOpen} onClose={() => setIsAdvancedActionsModalOpen(false)} title={t('participants_page.advanced.title', 'Advanced User Actions')}>
                 <div className="p-4 flex flex-col gap-3">
                     <p className="text-sm text-gray-600 mb-2">{t('participants_page.advanced.intro', "Select an advanced action to perform on this course's data.")}</p>
@@ -2801,11 +2767,8 @@ export function ParticipantsView({
                 </div>
             </Modal>
 
-            <Modal isOpen={isCertManagementModalOpen} onClose={() => setIsCertManagementModalOpen(false)} title={t('participants_page.cert_mgmt.title', 'Certificate Management')}>
+            <Modal isOpen={isCertManagementModalOpen} onClose={() => setIsCertManagementModalOpen(false)} title={t('participants_page.cert_mgmt.download_title', 'Download Certificates')}>
                 <div className="p-4 flex flex-col gap-3">
-                    <Button onClick={() => { setIsCertManagementModalOpen(false); setCertLangModal({ isOpen: true, actionType: 'template' }); }} disabled={isProcessing || isGeneratingTemplate || isCacheLoading} className="w-full justify-start bg-green-600 hover:bg-green-700 text-white border-transparent focus:ring-green-500">
-                        {isGeneratingTemplate ? <Spinner size="sm" /> : t('participants_page.cert.design_template', 'Design Certificate Template')}
-                    </Button>
 
                     {/* Said here rather than discovered at the download: the
                         facilitator can see which names are held and get them
@@ -2852,21 +2815,43 @@ export function ParticipantsView({
                 </div>
             </Modal>
 
+            {/* Deleted participants live in their own tab, as on every other page. */}
+            {finalFederalPerm && (
+                <div className="flex gap-2 border-b border-gray-200 mb-4">
+                    {[
+                        { id: 'active', label: `${t('participants_page.list.tab_participants', 'Participants')} (${participants?.length || 0})` },
+                        { id: 'deleted', label: t('participants_page.list.deleted_participants', 'Deleted Participants'), count: pendingReaddCount },
+                    ].map(({ id, label, count }) => (
+                        <button key={id} type="button" onClick={() => setListTab(id)} disabled={isProcessing} className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px flex items-center gap-2 ${listTab === id ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                            {label}
+                            {count > 0 && (
+                                <span className="inline-flex items-center justify-center rounded-full bg-red-600 text-white text-xs font-bold px-2 py-0.5" title={t('participants_page.list.readd_waiting', 'Re-add requests waiting for approval')}>
+                                    {count}
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {finalFederalPerm && listTab === 'deleted' ? (
+                <DeletedParticipantsPanel
+                    course={course}
+                    currentUser={currentUserIdentifier}
+                    onChanged={async (change) => { await applyParticipantCacheChange(change); refreshPendingReaddCount(); }}
+                />
+            ) : (<>
             <div className="flex flex-col gap-4 mb-4">
-                <div className="flex flex-wrap justify-between items-center gap-4">
-                    <PageActions>
-
-                        {finalFederalPerm && (
-                            <Button variant="secondary" onClick={() => setIsDeletedModalOpen(true)} disabled={isProcessing}>
-                                {t('participants_page.list.deleted_participants', 'Deleted Participants')}
-                                {pendingReaddCount > 0 && (
-                                    <span className="ms-2 inline-flex items-center justify-center rounded-full bg-red-600 text-white text-xs font-bold px-2 py-0.5" title={t('participants_page.list.readd_waiting', 'Re-add requests waiting for approval')}>
-                                        {pendingReaddCount}
-                                    </span>
-                                )}
+                <div className="flex flex-wrap items-center gap-2">
+                    {/* On the web "Add Participant" is a plain button here; phones keep the round Add button. */}
+                    {canAddParticipant && (
+                        <div className="hidden md:block">
+                            <Button variant="primary" onClick={() => { setEditingParticipant(null); setActiveScreen('form'); }} disabled={isProcessing}>
+                                <UserPlus className="w-4 h-4 me-2" /> {t('participants_page.list.add_participant', 'Add Participant')}
                             </Button>
-                        )}
-
+                        </div>
+                    )}
+                    <PageActions>
                         {finalAdvancedPerm && (
                             <Button variant="secondary" onClick={() => setIsAdvancedActionsModalOpen(true)} disabled={isProcessing}>
                                 {t('participants_page.advanced.title', 'Advanced User Actions')}
@@ -2875,7 +2860,7 @@ export function ParticipantsView({
 
                         {finalCertPerm && (
                             <Button variant="secondary" onClick={() => setIsCertManagementModalOpen(true)} disabled={isProcessing} className="bg-slate-800 text-white hover:bg-slate-700 border-transparent">
-                                {t('participants_page.cert_mgmt.title', 'Certificate Management')}
+                                <Download className="w-4 h-4 me-2" /> {t('participants_page.cert_mgmt.download_title', 'Download Certificates')}
                             </Button>
                         )}
                     </PageActions>
@@ -3085,6 +3070,7 @@ export function ParticipantsView({
                     </div>
                 )}
             </div>
+            </>)}
         </Card>
     );
 }

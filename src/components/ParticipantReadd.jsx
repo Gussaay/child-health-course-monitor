@@ -9,9 +9,11 @@
 //                             federal manager (or, for a federal manager,
 //                             adds them straight away).
 //
-//   DeletedParticipantsModal  federal managers only: pending re-add requests to
-//                             approve or reject, and the deleted participants
-//                             of this course, which can be removed for good.
+//   DeletedParticipantsPanel  federal managers only (the "Deleted participants"
+//                             tab of the participants page): pending re-add
+//                             requests to approve or reject, and the deleted
+//                             participants of this course, which can be
+//                             removed for good.
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -108,7 +110,7 @@ export function ReaddRequestModal({ isOpen, onClose, existing, participantData, 
     );
 }
 
-export function DeletedParticipantsModal({ isOpen, onClose, course, currentUser, onChanged }) {
+export function DeletedParticipantsPanel({ course, currentUser, onChanged }) {
     const { t } = useTranslation();
     const [tab, setTab] = useState('requests');
     const [requests, setRequests] = useState([]);
@@ -140,7 +142,7 @@ export function DeletedParticipantsModal({ isOpen, onClose, course, currentUser,
         }
     }, [course?.id]); // eslint-disable-line react-hooks/exhaustive-deps -- t only changes with the language
 
-    useEffect(() => { if (isOpen) load(); }, [isOpen, load]);
+    useEffect(() => { load(); }, [load]);
 
     const handleHardDelete = async (p) => {
         const ok = await confirmDialog(
@@ -191,8 +193,7 @@ export function DeletedParticipantsModal({ isOpen, onClose, course, currentUser,
     const tabClass = (name) => `px-3 py-2 text-sm font-medium border-b-2 ${tab === name ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`;
 
     return (
-        <Modal isOpen={isOpen} onClose={busyId ? null : onClose} title={t('shared_ui.readd.modal_title', 'Deleted participants and re-add requests')}>
-            <div className="p-4 space-y-3">
+        <div className="space-y-3">
                 <div className="flex gap-2 border-b border-gray-200">
                     <button type="button" className={tabClass('requests')} onClick={() => setTab('requests')}>
                         {t('shared_ui.readd.tab_requests', 'Re-add requests ({{count}})', { count: requests.length })}
@@ -208,7 +209,7 @@ export function DeletedParticipantsModal({ isOpen, onClose, course, currentUser,
                     requests.length === 0 ? (
                         <p className="text-sm text-gray-500 p-4 text-center">{t('shared_ui.readd.no_requests', 'No pending re-add requests for this course.')}</p>
                     ) : (
-                        <ul className="space-y-3 max-h-96 overflow-y-auto">
+                        <ul className="space-y-3">
                             {requests.map((r) => (
                                 <li key={r.id} className="border border-gray-200 rounded-lg p-3 text-sm">
                                     <div className="font-semibold text-gray-900">{r.name} <span dir="ltr" className="text-gray-500 font-normal">{r.phone}</span></div>
@@ -232,7 +233,7 @@ export function DeletedParticipantsModal({ isOpen, onClose, course, currentUser,
                 ) : deleted.length === 0 ? (
                     <p className="text-sm text-gray-500 p-4 text-center">{t('shared_ui.readd.no_deleted', 'No deleted participants in this course.')}</p>
                 ) : (
-                    <ul className="space-y-2 max-h-96 overflow-y-auto">
+                    <ul className="space-y-2">
                         {deleted.map((p) => (
                             <li key={p.id} className="border border-gray-200 rounded-lg p-3 text-sm flex items-center justify-between gap-3">
                                 <div>
@@ -247,7 +248,6 @@ export function DeletedParticipantsModal({ isOpen, onClose, course, currentUser,
                         ))}
                     </ul>
                 )}
-            </div>
-        </Modal>
+        </div>
     );
 }
