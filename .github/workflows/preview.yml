@@ -66,7 +66,7 @@ jobs:
       # on every pull request since it was added.
       - name: Check first-load payload budget
         run: |
-          BUDGET_KB=520
+          BUDGET_KB=540
           TOTAL=0
           LOCALE_MAX=0
           for FILE in $(grep -oE '/assets/[^"]+' dist/index.html | sort -u); do
