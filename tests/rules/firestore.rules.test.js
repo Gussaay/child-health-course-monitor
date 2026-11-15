@@ -4,7 +4,7 @@ import {
     assertFails,
     assertSucceeds,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, writeBatch, Timestamp } from 'firebase/firestore';
 import fs from 'node:fs';
 
 // Run with:  npm run test:rules   (starts the Firestore emulator around them)
@@ -427,6 +427,39 @@ describe('supervisionAssessments — supervising managers write, staff read', ()
 });
 
 // =============================================================================
+// Survey responses (Community Midwives Mapping and later surveys).
+// =============================================================================
+describe('surveyResponses — managers write, staff read', () => {
+    const response = { surveyId: 'community_midwives_mapping', stateKey: 'Gezira', village: 'Test', hasMidwives: false };
+
+    it('lets the managers write a response', async () => {
+        await assertSucceeds(setDoc(doc(as('federalManager'), 'surveyResponses', 's1'), response));
+        await assertSucceeds(setDoc(doc(as('statesManager'), 'surveyResponses', 's2'), response));
+    });
+
+    it('lets staff read, but not write', async () => {
+        await assertSucceeds(getDocs(collection(as('facilitator'), 'surveyResponses')));
+        await assertFails(setDoc(doc(as('facilitator'), 'surveyResponses', 's3'), response));
+    });
+
+    it('does NOT let a self-registered account or a visitor in', async () => {
+        await assertFails(getDocs(collection(as('plainUser'), 'surveyResponses')));
+        await assertFails(setDoc(doc(as('plainUser'), 'surveyResponses', 's4'), response));
+        await assertFails(getDocs(collection(anonymous(), 'surveyResponses')));
+    });
+
+    it('lets anyone add a response through the public link, but not change one', async () => {
+        const viaLink = (uid) => ({ ...response, isDeleted: false, submittedVia: 'public_link', createdByUid: uid });
+        await assertSucceeds(setDoc(doc(anonymous(), 'surveyResponses', 'p1'), viaLink(null)));
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'surveyResponses', 'p2'), viaLink('plainUser')));
+        await assertFails(setDoc(doc(as('plainUser'), 'surveyResponses', 'p3'), viaLink('someoneElse')));
+        await assertFails(setDoc(doc(anonymous(), 'surveyResponses', 'p4'), viaLink('someoneElse')));
+        await assertFails(setDoc(doc(anonymous(), 'surveyResponses', 'p5'), { ...response, isDeleted: false }));
+        await assertFails(setDoc(doc(anonymous(), 'surveyResponses', 'p1'), { ...viaLink(null), village: 'changed' }));
+    });
+});
+
+// =============================================================================
 // Population targets. These are the denominators every coverage figure and
 // every supply forecast divides by, so a state needs to read its own while
 // only the federal level may publish them.
@@ -772,7 +805,7 @@ describe('Deleted Items: federal managers can delete every soft-deleted type', (
     const collections = [
         'courses', 'participants', 'participantTests', 'cases', 'observations', 'finalReports',
         'facilitators', 'federalCoordinators', 'stateCoordinators', 'localityCoordinators', 'coordinators', 'funders',
-        'skillMentorship', 'imnciVisitReports', 'eencVisitReports', 'imnciPatientRecords', 'supervisionAssessments',
+        'skillMentorship', 'imnciVisitReports', 'eencVisitReports', 'imnciPatientRecords', 'supervisionAssessments', 'surveyResponses',
         'projects', 'masterPlans', 'operationalPlans', 'unitMeetings', 'populationTargets', 'supplyItems',
         'exerciseAttempts', 'exerciseDefinitions',
     ];
@@ -923,5 +956,117 @@ describe('usageMonthly — each device adds to its own month, only a super user 
         await assertSucceeds(setDoc(doc(as('superUser'), 'usageBills', '2026-11'), { actualUsd: 8 }));
         await assertFails(setDoc(doc(as('federalManager'), 'usageBills', '2026-11'), { actualUsd: 8 }));
         await assertFails(getDoc(doc(as('plainUser'), 'usageBills', '2026-11')));
+    });
+});
+
+// =============================================================================
+// IMCI operational guide workshop: daily evaluation, filled from a public
+// link signed in or not.
+// =============================================================================
+describe('dailyEval — staff set up the form, anyone answers, staff read answers', () => {
+    const answer = (over = {}) => ({ formId: 'publicCourse_2026-11-10', courseId: 'publicCourse', date: '2026-11-10', dayNumber: 1, lectures: {}, general: {}, ...over });
+
+    it('lets staff set up the form and anyone read it', async () => {
+        await assertSucceeds(setDoc(doc(as('facilitator'), 'dailyEvalForms', 'publicCourse_2026-11-10'), { courseId: 'publicCourse', dayNumber: 1, lectures: [], general: [] }));
+        await assertFails(setDoc(doc(anonymous(), 'dailyEvalForms', 'x'), { courseId: 'publicCourse' }));
+        await assertSucceeds(getDoc(doc(anonymous(), 'dailyEvalForms', 'publicCourse_2026-11-10')));
+    });
+    it('lets anyone send one answer, nobody change it, only staff read it', async () => {
+        await assertSucceeds(setDoc(doc(anonymous(), 'dailyEvalResponses', 'r1'), answer()));
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'dailyEvalResponses', 'r2'), answer()));
+        await assertFails(setDoc(doc(anonymous(), 'dailyEvalResponses', 'r3'), answer({ formId: 'otherCourse_2026-11-10' })));
+        await assertFails(setDoc(doc(anonymous(), 'dailyEvalResponses', 'r1'), answer({ dayNumber: 2 })));
+        await assertFails(getDoc(doc(anonymous(), 'dailyEvalResponses', 'r1')));
+        await assertSucceeds(getDoc(doc(as('facilitator'), 'dailyEvalResponses', 'r1')));
+    });
+});
+
+// =============================================================================
+// Training links (src/training/): a practice copy of the app per course,
+// open only during the course's practice window.
+// =============================================================================
+describe('trainingSandboxes — practice data only while the course window is open', () => {
+    const HOUR = 60 * 60 * 1000;
+    const setCourse = (id, training) => testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'courses', id), { course_type: 'Program Management', ...(training ? { training } : {}) });
+    });
+    const window = (fromMs, toMs, enabled = true) => ({
+        enabled,
+        startsAt: Timestamp.fromMillis(Date.now() + fromMs),
+        endsAt: Timestamp.fromMillis(Date.now() + toMs),
+    });
+
+    it('lets a signed-in trainee read and write while the window is open', async () => {
+        await setCourse('openCourse', window(-HOUR, HOUR));
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'trainingSandboxes', 'openCourse', 'participants', 'p1'), { name: 'Practice' }));
+        await assertSucceeds(getDoc(doc(as('plainUser'), 'trainingSandboxes', 'openCourse', 'participants', 'p1')));
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'trainingSandboxes', 'openCourse'), { seededAt: 1 }));
+    });
+    it('refuses anyone not signed in', async () => {
+        await setCourse('openCourse', window(-HOUR, HOUR));
+        await assertFails(setDoc(doc(anonymous(), 'trainingSandboxes', 'openCourse', 'participants', 'p1'), { name: 'x' }));
+        await assertFails(getDoc(doc(anonymous(), 'trainingSandboxes', 'openCourse', 'participants', 'p1')));
+    });
+    it('refuses writes after the window, before it, when switched off, or never shared', async () => {
+        await setCourse('expired', window(-2 * HOUR, -HOUR));
+        await setCourse('future', window(HOUR, 2 * HOUR));
+        await setCourse('off', window(-HOUR, HOUR, false));
+        await setCourse('never', null);
+        for (const id of ['expired', 'future', 'off', 'never', 'noSuchCourse']) {
+            await assertFails(setDoc(doc(as('plainUser'), 'trainingSandboxes', id, 'courses', 'c1'), { course_type: 'IMNCI' }));
+            await assertFails(getDoc(doc(as('plainUser'), 'trainingSandboxes', id, 'courses', 'c1')));
+        }
+    });
+    it('lets staff review and prepare a sandbox outside the window, but not trainees', async () => {
+        await setCourse('future', window(HOUR, 2 * HOUR));
+        await assertSucceeds(getDoc(doc(as('facilitator'), 'trainingSandboxes', 'future', 'courses', 'c1')));
+        await assertSucceeds(setDoc(doc(as('facilitator'), 'trainingSandboxes', 'future', 'healthFacilities', 'f1'), { x: 1 }));
+        await assertFails(setDoc(doc(as('plainUser'), 'trainingSandboxes', 'future', 'healthFacilities', 'f1'), { x: 1 }));
+    });
+    it('does not let a plain user switch the window on', async () => {
+        await setCourse('never', null);
+        await assertFails(updateDoc(doc(as('plainUser'), 'courses', 'never'), { training: window(-HOUR, HOUR) }));
+        await assertSucceeds(updateDoc(doc(as('facilitator'), 'courses', 'never'), { training: window(-HOUR, HOUR) }));
+    });
+});
+
+describe('trainingProgress — trainees log their own practice, staff read it', () => {
+    const HOUR = 60 * 60 * 1000;
+    const setCourse = (id, fromMs, toMs) => testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'courses', id), {
+            course_type: 'Program Management',
+            training: { enabled: true, startsAt: Timestamp.fromMillis(Date.now() + fromMs), endsAt: Timestamp.fromMillis(Date.now() + toMs) },
+        });
+    });
+
+    it('lets a trainee write their own profile and activity while open', async () => {
+        await setCourse('open', -HOUR, HOUR);
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'trainees', 'plainUser'), { uid: 'plainUser', participantId: 'p1', saves: 0 }));
+        await assertSucceeds(updateDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'trainees', 'plainUser'), { saves: 1 }));
+        await assertSucceeds(getDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'trainees', 'plainUser')));
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'activity', 'a1'), { uid: 'plainUser', kind: 'view', view: 'courses' }));
+    });
+    it('refuses writing as someone else, editing activity, or reading others', async () => {
+        await setCourse('open', -HOUR, HOUR);
+        await assertFails(setDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'trainees', 'facilitator'), { uid: 'facilitator' }));
+        await assertFails(setDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'activity', 'a2'), { uid: 'facilitator', kind: 'view' }));
+        await assertSucceeds(setDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'activity', 'a3'), { uid: 'plainUser', kind: 'view' }));
+        await assertFails(updateDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'activity', 'a3'), { kind: 'save' }));
+        await assertFails(getDoc(doc(as('plainUser'), 'trainingProgress', 'open', 'activity', 'a3')));
+        await assertFails(getDocs(collection(as('plainUser'), 'trainingProgress', 'open', 'trainees')));
+    });
+    it('refuses trainee writes after the course and lets staff read', async () => {
+        await setCourse('done', -2 * HOUR, -HOUR);
+        await assertFails(setDoc(doc(as('plainUser'), 'trainingProgress', 'done', 'trainees', 'plainUser'), { uid: 'plainUser' }));
+        await assertFails(setDoc(doc(as('plainUser'), 'trainingProgress', 'done', 'activity', 'a1'), { uid: 'plainUser' }));
+        await assertSucceeds(getDocs(collection(as('facilitator'), 'trainingProgress', 'done', 'trainees')));
+        await assertSucceeds(getDocs(collection(as('facilitator'), 'trainingProgress', 'done', 'activity')));
+    });
+});
+
+describe('participants — the training link is saved on the course record', () => {
+    it('lets a signed-in trainee save and clear their link on a participant', async () => {
+        await assertSucceeds(updateDoc(doc(as('plainUser'), 'participants', 'p1'), { trainingLink: { uid: 'plainUser', courseId: 'publicCourse', method: 'email' } }));
+        await assertSucceeds(updateDoc(doc(as('plainUser'), 'participants', 'p1'), { trainingLink: null }));
     });
 });

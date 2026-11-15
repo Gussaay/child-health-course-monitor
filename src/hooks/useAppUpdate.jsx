@@ -36,26 +36,50 @@ import { RefreshCw, Download, X, Info, AlertTriangle, CheckCircle2, ArrowUp, Wif
 
 import {
   db,
+  auth,
   getConnectivity,
   subscribeConnectivity,
   useConnectivity,
   reportRequestFailure,
 } from '../firebase';
 import { downloadAndOpenFile } from '../utils/fileDownloader';
+import { buildNumberOf, versionLabel } from '../utils/appVersionLabel';
+import { onAuthStateChanged } from 'firebase/auth';
+import {
+  getApkInfo,
+  recordInstalledVersions,
+  recordUpdatePrompt,
+  recordUpdateDownloaded,
+  reportUpdateError,
+} from '../utils/updateTelemetry';
 import i18n from 'i18next';
 import { useTranslation } from 'react-i18next';
+import { NATIVE_APP, siteApkUrl } from '../siteMode';
 
 const IS_NATIVE = Capacitor.isNativePlatform();
 
 // Your self-hosted manifest: { version, url, checksum?, mandatory?, notes? }
-const UPDATE_MANIFEST_URL = 'https://imnci-courses-monitor.web.app/latest/update.json';
+// The EmONC app has its own (its web layer is the EmONC build, see siteMode.js).
+const UPDATE_MANIFEST_URL = `https://imnci-courses-monitor.web.app/${NATIVE_APP.updateManifest}`;
 
 // true = only download OTA bundles on Wi-Fi (Android can tell; iOS always allows)
 const WIFI_ONLY_DOWNLOADS = false;
 
 // What the screens show. Not the build number: that changes on every small
 // over-the-air update, which users should not notice (see vite.config.js).
-const SHOWN_VERSION = import.meta.env.VITE_RELEASE_VERSION || import.meta.env.VITE_APP_VERSION || '1.0.2';
+const RELEASE_VERSION = import.meta.env.VITE_RELEASE_VERSION || import.meta.env.VITE_APP_VERSION || '1.0.2';
+
+// The build number of the code running now (CI run number, see
+// utils/appVersionLabel.js).
+const RUNNING_BUILD = buildNumberOf(import.meta.env.VITE_APP_VERSION);
+
+// Shown version numbers per APK build, from meta/update_config.displayVersions
+// (set by Admin → Updates when an APK is sent to users). Kept in localStorage so
+// the right number shows at start-up, offline too.
+const DISPLAY_VERSIONS_KEY = 'display_versions_v1';
+function readCachedDisplayVersions() {
+  try { return JSON.parse(localStorage.getItem(DISPLAY_VERSIONS_KEY) || '{}') || {}; } catch { return {}; }
+}
 
 const STARTUP_DELAY_MS = 2000;
 const MANIFEST_TIMEOUT_MS = 12_000;
@@ -262,6 +286,10 @@ async function runOtaCheck(reason, { force = false } = {}) {
         : e?.message || i18n.t('admin_pages.app_update.download_failed_generic', 'The update could not be downloaded.');
     console.warn('[OTA] Update failed:', message);
     setOta({ downloading: false, progress: 0, lastError: message });
+    reportUpdateError(`Over-the-air update failed: ${e?.code === 'timeout' ? 'timed out' : e?.message || 'unknown error'}`, {
+      stage: `ota-${reason}`,
+      stack: e?.stack,
+    });
     reportRequestFailure();
     return { status: 'error', message };
   } finally {
@@ -287,6 +315,7 @@ async function installNow() {
     }
   } catch (e) {
     console.error('[Update] Install failed:', e);
+    reportUpdateError(`Update install failed: ${e?.message || 'unknown error'}`, { stage: `install-${otaState.source}`, stack: e?.stack });
     setOta({ installing: false, lastError: e?.message || i18n.t('admin_pages.app_update.install_failed', 'Install failed') });
   }
 }
@@ -302,7 +331,7 @@ function startEngine() {
   if (!IS_NATIVE || engineStarted) return;
   engineStarted = true;
 
-  readCurrentVersion();
+  readCurrentVersion().then((v) => recordInstalledVersions(v));
   cleanupOldBundles();
 
   // Progress for large bundles on slow networks
@@ -311,11 +340,13 @@ function startEngine() {
   });
   CapacitorUpdater.addListener('updateFailed', (info) => {
     console.error('[OTA] ❌ Bundle rolled back:', JSON.stringify(info));
+    reportUpdateError(`Over-the-air bundle ${info?.bundle?.version || ''} failed to start and was rolled back`, { stage: 'ota-rollback', stack: JSON.stringify(info) });
     setOta({ lastError: i18n.t('admin_pages.app_update.rolled_back', 'The new version failed to start, so the previous one was restored.') });
   });
-  CapacitorUpdater.addListener('downloadFailed', (info) =>
-    console.error('[OTA] ❌ Download failed:', JSON.stringify(info))
-  );
+  CapacitorUpdater.addListener('downloadFailed', (info) => {
+    console.error('[OTA] ❌ Download failed:', JSON.stringify(info));
+    reportUpdateError(`Over-the-air download failed (${info?.version || 'unknown version'})`, { stage: 'ota-download', stack: JSON.stringify(info) });
+  });
 
   // First check, after the app is already on screen
   setTimeout(() => runOtaCheck('startup'), STARTUP_DELAY_MS);
@@ -359,6 +390,15 @@ export function useAppUpdate() {
   const [apkDownloading, setApkDownloading] = useState(false);
   const [apkProgress, setApkProgress] = useState(0);
   const [manualModal, setManualModal] = useState({ isOpen: false, status: 'idle', message: '' });
+  const [apkInfo, setApkInfo] = useState(null);
+  useEffect(() => { getApkInfo().then(setApkInfo); }, []);
+  const [displayVersions, setDisplayVersions] = useState(readCachedDisplayVersions);
+  const shownVersion = useMemo(
+    () => versionLabel({ apkBuild: apkInfo?.build || null, runningBuild: RUNNING_BUILD, map: displayVersions, fallback: RELEASE_VERSION }),
+    [apkInfo, displayVersions],
+  );
+  const shownRef = useRef(shownVersion);
+  shownRef.current = shownVersion;
 
   const promptRef = useRef(null);
   promptRef.current = nativeUpdatePrompt;
@@ -383,26 +423,37 @@ export function useAppUpdate() {
         return;
       }
       setNativeUpdatePrompt({ ...serverConfig, serverBuild });
+      recordUpdatePrompt(serverBuild, !!serverConfig.mandatory);
     } catch (e) {
       console.warn('[Native update] Could not read app info:', e);
     }
   }, []);
 
   useEffect(() => {
-    if (!IS_NATIVE) return;
     let unsubscribeConfig = null;
 
     // onSnapshot works offline too: it serves the saved copy first, then
-    // updates when the server is reachable. The old code returned early when
-    // the device was offline at start-up, so the listener was never attached
-    // again for the rest of that session.
-    unsubscribeConfig = onSnapshot(
-      doc(db, 'meta', 'update_config'),
-      (snap) => { if (snap.exists()) evaluateConfig(snap.data()); },
-      (err) => console.warn('[Native update] Config listener error:', err?.code)
-    );
+    // updates when the server is reachable. meta/ needs a signed-in user, so
+    // the listener starts after sign-in.
+    const stopAuth = onAuthStateChanged(auth, (user) => {
+      unsubscribeConfig?.();
+      unsubscribeConfig = null;
+      if (!user) return;
+      unsubscribeConfig = onSnapshot(
+        doc(db, 'meta', 'update_config'),
+        (snap) => {
+          if (!snap.exists()) return;
+          const data = snap.data();
+          const map = data.displayVersions && typeof data.displayVersions === 'object' ? data.displayVersions : {};
+          setDisplayVersions(map);
+          try { localStorage.setItem(DISPLAY_VERSIONS_KEY, JSON.stringify(map)); } catch { /* storage blocked */ }
+          if (IS_NATIVE) evaluateConfig(data);
+        },
+        (err) => console.warn('[Native update] Config listener error:', err?.code)
+      );
+    });
 
-    return () => unsubscribeConfig?.();
+    return () => { stopAuth(); unsubscribeConfig?.(); };
   }, [evaluateConfig]);
 
   // --- MANUAL "Check for updates" BUTTON ---
@@ -454,7 +505,7 @@ export function useAppUpdate() {
       setManualModal({
         isOpen: true,
         status: 'success',
-        message: t('admin_pages.app_update.up_to_date_version', 'The app is up to date (version {{version}}).', { version: SHOWN_VERSION }),
+        message: t('admin_pages.app_update.up_to_date_version', 'The app is up to date (version {{version}}).', { version: shownRef.current }),
       });
       setTimeout(() => setManualModal({ isOpen: false, status: 'idle', message: '' }), 3000);
     } else if (result.status === 'blocked' || result.status === 'error') {
@@ -564,31 +615,49 @@ export function useAppUpdate() {
         } ${className}`}
       >
         {look.icon}
-        {showVersion && <span className="font-mono text-xs">v{SHOWN_VERSION}</span>}
+        {showVersion && <span className="font-mono text-xs">v{shownRef.current}</span>}
       </button>
     );
   }, [updateStatus, handleUpdateButton, ota.progress, ota.mandatory, nativeUpdatePrompt, apkDownloading, apkProgress, t]);
 
   const downloadApk = useCallback((config) => {
-    if (!config?.apkUrl) return;
-    downloadAndOpenFile(config.apkUrl, `NCHP-${config.latestNativeBuild || 'latest'}.apk`, {
+    // meta/update_config written by the Update manager only had `downloadUrl`
+    // (scripts/push-update.js writes both names), so the button did nothing.
+    // The EmONC app downloads the EmONC APK of the same release.
+    const url = siteApkUrl(config?.apkUrl || config?.downloadUrl);
+    const build = config?.serverBuild || parseInt(config?.latestNativeBuild, 10) || null;
+    if (!url) {
+      reportUpdateError('APK update has no download link in meta/update_config', { stage: 'apk-link', targetBuild: build });
+      setManualModal({
+        isOpen: true,
+        status: 'error',
+        message: t('admin_pages.app_update.no_link', 'The download link for this update is missing. Please tell the administrator.'),
+      });
+      return;
+    }
+    downloadAndOpenFile(url, `${NATIVE_APP.downloadName}-${build || 'latest'}.apk`, {
       isSystemFile: true,
       onStart: () => { setApkDownloading(true); setApkProgress(0); },
       onProgress: (p) => setApkProgress(Math.round(p)),
+      onSuccess: () => recordUpdateDownloaded(build),
       onFinally: () => setApkDownloading(false),
-      onError: (e) =>
+      onError: (e) => {
+        reportUpdateError(`APK download failed: ${e?.message || 'unknown error'}`, { stage: 'apk-download', targetBuild: build, url, stack: e?.stack });
         setManualModal({
           isOpen: true,
           status: 'error',
           message: t('admin_pages.app_update.download_failed', 'The download failed: {{message}}', { message: e?.message || t('admin_pages.app_update.unknown_error', 'unknown error') }),
-        }),
-      onOpenError: () =>
+        });
+      },
+      onOpenError: (e) => {
+        reportUpdateError(`APK installer did not open: ${e?.message || 'unknown error'}`, { stage: 'apk-open', targetBuild: build, stack: e?.stack });
         setManualModal({
           isOpen: true,
           status: 'info',
           message:
             t('admin_pages.app_update.open_from_downloads', 'The file was downloaded. Open it from your Downloads and allow installing from this app if asked.'),
-        }),
+        });
+      },
     });
   }, [t]);
 
@@ -627,8 +696,9 @@ export function useAppUpdate() {
                     {nativeUpdatePrompt.mandatory ? t('admin_pages.app_update.update_required', 'Update required') : t('admin_pages.app_update.new_app_version', 'New app version')}
                   </h2>
                   <p className="mt-1 text-sm text-gray-600">
-                    {nativeUpdatePrompt.message ||
-                      t('admin_pages.app_update.new_version_available', 'A new version of the app is available. Download and install it to keep receiving updates.')}
+                    {nativeUpdatePrompt.displayVersion
+                      ? t('admin_pages.app_update.new_version_named', 'Version {{version}} of the app is available. Download and install it to keep receiving updates.', { version: nativeUpdatePrompt.displayVersion })
+                      : t('admin_pages.app_update.new_version_available', 'A new version of the app is available. Download and install it to keep receiving updates.')}
                   </p>
                 </div>
               </div>
@@ -755,16 +825,22 @@ export function useAppUpdate() {
                   </button>
                 )}
               </div>
-              <p className="mt-3 text-xs text-gray-400">{t('admin_pages.app_update.current_version', 'Current version: {{version}}', { version: SHOWN_VERSION })}</p>
+              <p className="mt-3 text-xs text-gray-400">{t('admin_pages.app_update.current_version', 'Current version: {{version}}', { version: shownVersion })}</p>
+              {apkInfo?.version && (
+                <p className="text-xs text-gray-400">{t('admin_pages.app_update.installed_apk', 'Installed APK: {{version}} (build {{build}})', { version: apkInfo.version, build: apkInfo.build })}</p>
+              )}
             </div>
           </div>
         )}
       </>
     );
-  }, [ota, net, nativeUpdatePrompt, apkDownloading, apkProgress, manualModal, downloadApk, skipNativeBuild, t]);
+  }, [ota, net, nativeUpdatePrompt, apkDownloading, apkProgress, manualModal, downloadApk, skipNativeBuild, apkInfo, shownVersion, t]);
 
   return {
-    appVersion: SHOWN_VERSION,
+    appVersion: shownVersion,
+    releaseVersion: RELEASE_VERSION,
+    runningBuild: RUNNING_BUILD,
+    apkInfo,
     isDownloadingAppUpdate: ota.downloading || apkDownloading,
     appUpdateProgress: apkDownloading ? apkProgress : ota.progress,
     handleManualUpdateCheck,

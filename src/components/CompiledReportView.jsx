@@ -4,7 +4,7 @@ import autoTable from "jspdf-autotable";
 import html2canvas from '../utils/html2canvasLight';
 
 // Reusing components and styles from your ecosystem
-import { Card, Button, Table, EmptyState, Spinner, PdfIcon, Modal } from './CommonComponents'; 
+import { Card, Button, Table, EmptyState, Spinner, PdfIcon, Modal, FilterPanel } from './CommonComponents'; 
 import { amiriFontBase64 } from './AmiriFont.js'; 
 
 // Added Auth and Firebase imports for permissions
@@ -563,22 +563,16 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
 
     return (
         <div className="space-y-6 animate-fade-in pb-10">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-center border-b border-gray-200 pb-4">
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-800">{courseType ? t('compiled_reports.compiled.title_type', '{{type}} Courses Dashboard', { type: courseType }) : t('compiled_reports.compiled.title', 'Courses Dashboard')}</h2>
-                    <p className="text-sm text-gray-500">
-                        {t('compiled_reports.compiled.subtitle', 'Consolidated performance, coverage, and investment overview.')}
-                    </p>
-                </div>
+            {/* The tab bar already names this page, so only the export action stays. */}
+            <div className="flex justify-end">
                 <Button onClick={handlePdfExport} disabled={isGeneratingPdf || filteredCourses.length === 0} variant="secondary">
                     {isGeneratingPdf ? <Spinner size="sm" /> : <><PdfIcon className="w-4 h-4 me-2"/> {t('compiled_reports.compiled.export_report', 'Export Report')}</>}
                 </Button>
             </div>
 
             {/* Row 1: Filters */}
-            <Card className="bg-gray-50 border border-gray-200">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <FilterPanel activeCount={[courseType ? 'All' : filterType, filterSubType, filterState, yearFilter].filter(v => v && v !== 'All').length}>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                     {!courseType && (
                         <FormGroup label={t('compiled_reports.compiled.filters.course_type', 'Course Type')}>
                             <Select value={filterType} onChange={e => { setFilterType(e.target.value); setFilterSubType('All'); }}>
@@ -603,7 +597,7 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
                         </Select>
                     </FormGroup>
                 </div>
-            </Card>
+            </FilterPanel>
 
             {filteredCourses.length === 0 ? (
                 <EmptyState message={t('compiled_reports.compiled.empty', 'No data matches the selected filters.')} filtered />

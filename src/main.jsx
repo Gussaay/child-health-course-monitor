@@ -8,27 +8,38 @@ import { registerSW } from 'virtual:pwa-register';
 
 import App from './App';
 import { DataProvider } from './DataContext';
+import TrainingGate from './training/TrainingGate';
 import { AuthProvider } from './hooks/useAuth';
 import { DATA_ENTRY_PATH } from './hooks/useAppUpdate';
 import { applyWebUpdateQuietly } from './utils/quietWebUpdate';
 import { startUpdateHold } from './utils/updateHold';
 import { isOnline } from './firebase';
-import { IS_EMONC_SITE, EMONC_SITE_TITLE } from './siteMode';
+import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_LOGO_URL } from './siteMode';
 import { isChunkLoadError, recoverFromStaleBuild } from './utils/staleBuild';
 import { installErrorCapture } from './utils/errorCapture';
+import { i18nReady } from './i18n';
 import './index.css';
 import { applyTheme } from './utils/theme';
 applyTheme();
 
 window.Buffer = Buffer;
 
-if (IS_EMONC_SITE) document.title = EMONC_SITE_TITLE;
+// The live EmONC site already gets emonc.html (title, description, icon,
+// manifest; see vite.config.js). This covers `VITE_SITE=emonc npm run dev` and
+// any page that was still served the main index.html.
+if (IS_EMONC_SITE) {
+    document.title = EMONC_SITE_TITLE;
+    document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach((l) => { l.href = EMONC_LOGO_URL; });
+    document.querySelector('meta[name="description"]')?.setAttribute('content', `${EMONC_SITE_TITLE} - Course Monitoring System`);
+    document.querySelector('#boot-splash img')?.setAttribute('src', EMONC_LOGO_URL);
+}
 
 const IS_NATIVE = Capacitor.isNativePlatform();
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.2';
 window.APP_VERSION = APP_VERSION;
-// The version people see (package.json releaseVersion), stamped on problem reports.
-window.__APP_VERSION__ = import.meta.env.VITE_RELEASE_VERSION || APP_VERSION;
+// The running build's CI version ("36.4"), stamped on problem reports so a
+// report can be matched to its build in Admin → Updates.
+window.__APP_VERSION__ = APP_VERSION.replace(/^(\d+\.\d+)\.0$/, '$1');
 
 // -------------------------------------------------------------------------
 // VERSION LOG — the old "cache buster" is gone.
@@ -162,18 +173,25 @@ if (IS_NATIVE) {
 // =========================================================================
 // RENDER
 // =========================================================================
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <AuthProvider>
-    <DataProvider>
-      <App />
-    </DataProvider>
-  </AuthProvider>
-);
+// Waits for the translations of the language in use (i18n.js): English is
+// already here, Arabic is one small extra request. Rendering before that would
+// flash English to Arabic users. i18nReady never rejects.
+i18nReady.then(() => {
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <AuthProvider>
+      <TrainingGate>
+        <DataProvider>
+          <App />
+        </DataProvider>
+      </TrainingGate>
+    </AuthProvider>
+  );
 
-// Nothing above can reload the page any more, so this call is never cut off.
-// If Capgo does not receive it within appReadyTimeout, it rolls the update back.
-if (IS_NATIVE) {
-  CapacitorUpdater.notifyAppReady()
-    .then(() => console.log('✅ Capgo: app booted successfully.'))
-    .catch((err) => console.error('❌ Capgo: notifyAppReady failed:', err));
-}
+  // Nothing above can reload the page any more, so this call is never cut off.
+  // If Capgo does not receive it within appReadyTimeout, it rolls the update back.
+  if (IS_NATIVE) {
+    CapacitorUpdater.notifyAppReady()
+      .then(() => console.log('✅ Capgo: app booted successfully.'))
+      .catch((err) => console.error('❌ Capgo: notifyAppReady failed:', err));
+  }
+});

@@ -18,6 +18,33 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // One app per site, from one project, all signed with the same key:
+    //   nchp   the National Child Health Program app (com.nchp.monitoring.app),
+    //          imnci-courses-monitor.web.app
+    //   emonc  the EmONC app (com.nchp.monitoring.emonc), emonc-sudan.web.app:
+    //          its own name, MCH icon and splash (src/emonc/res)
+    //   ch     the ch-sudan app (com.nchp.monitoring.ch), ch-sudan.web.app:
+    //          the full app with the NCHP icon, named "Child Health Sudan"
+    // Each claims its own site's shared links (src/<flavor>/AndroidManifest.xml)
+    // and runs that site's web build (VITE_SITE=<flavor>, copied in by
+    // deploy.yml). Build one with ./gradlew assemble<Flavor>Release.
+    // Every app needs its own entry in google-services.json (Firebase console,
+    // Add app > Android); deploy.yml skips a site app until that is there.
+    flavorDimensions = ["site"]
+    productFlavors {
+        nchp {
+            dimension "site"
+            applicationId "com.nchp.monitoring.app"
+        }
+        emonc {
+            dimension "site"
+            applicationId "com.nchp.monitoring.emonc"
+        }
+        ch {
+            dimension "site"
+            applicationId "com.nchp.monitoring.ch"
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
@@ -38,6 +65,8 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    // BackgroundUpdateWorker (updates while the app is closed). Same version as the updater plugin uses.
+    implementation "androidx.work:work-runtime:2.10.5"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

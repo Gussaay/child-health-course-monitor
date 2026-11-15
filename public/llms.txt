@@ -1,0 +1,7 @@
+# National Child Health Program Monitoring System
+
+> Sudan's National Child Health Program uses this web app to plan, run and monitor child health training courses (IMNCI, ETAT, EENC and others), facility services, mentorship and supervision. Most of the app needs a signed-in programme account.
+
+## Public pages
+
+- [Home and sign-in](https://imnci-courses-monitor.web.app/): sign in to reach courses, reports and dashboards.

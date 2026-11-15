@@ -28,6 +28,8 @@ import { useDataCache } from '../DataContext';
 import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { ReportsView } from './ReportsView'; 
+import { isOperationalGuideCourse } from './ExerciseMonitoring.jsx';
+import { DailyEvaluationDashboard, ExerciseKpiCard } from './OperationalGuideReports.jsx';
 import { ExerciseCourseReport } from './imnci'; 
 import { FinalReportManager, ReportDocumentManager } from './FinalReportManager';
 import { notify } from './dialogs';
@@ -1822,6 +1824,7 @@ function CourseReportBody({
                 title={activeTab === 'full-course-report' ? t('course_report.tabs.full_course_report', 'Full Course Report')
                     : activeTab === 'final-report' ? t('course_report.tabs.final_course_report', 'Final Course Report')
                     : activeTab === 'exercise-report' ? t('course_report.tabs.interactive_exercise_report', 'Interactive Exercise Report')
+                    : activeTab === 'daily-evaluation' ? t('course_report.tabs.daily_evaluation', 'Daily Evaluation')
                     : t('course_report.tabs.individual_participant_report', 'Individual Participant Report')} 
                 subtitle={`${course.course_type} - ${course.state}`} 
                 actions={
@@ -1875,6 +1878,11 @@ function CourseReportBody({
             <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-4 print-hide">
                 <Button variant="tab" isActive={activeTab === 'full-course-report'} onClick={() => setActiveTab('full-course-report')}>{t('course_report.tabs.full_course_report', 'Full Course Report')}</Button>
                 <Button variant="tab" isActive={activeTab === 'individual-participant-report'} onClick={() => setActiveTab('individual-participant-report')}>{t('course_report.tabs.individual_participant_report', 'Individual Participant Report')}</Button>
+
+                {/* Operational guide course: anonymous daily evaluation results (staff only — answers are staff-read). */}
+                {isOperationalGuideCourse(course) && !isSharedView && (
+                    <Button variant="tab" isActive={activeTab === 'daily-evaluation'} onClick={() => setActiveTab('daily-evaluation')}>{t('course_report.tabs.daily_evaluation', 'Daily Evaluation')}</Button>
+                )}
 
                 {/* Online exercises only exist on IMNCI courses. */}
                 {course.course_type === 'IMNCI' && (
@@ -1961,6 +1969,7 @@ function CourseReportBody({
                         </div>
                     </div>
                 </Card>
+                {isOperationalGuideCourse(course) && <ExerciseKpiCard participants={reportParticipants} cases={allCases} />}
 
                 {availableSubTypes.length > 1 && (
                     <Card>
@@ -2624,6 +2633,12 @@ function CourseReportBody({
                         </div>
                     </Card>
                 )}
+                </div>
+            )}
+
+            {activeTab === 'daily-evaluation' && isOperationalGuideCourse(course) && !isSharedView && (
+                <div className="w-full max-w-full min-w-0">
+                    <DailyEvaluationDashboard course={course} />
                 </div>
             )}
 

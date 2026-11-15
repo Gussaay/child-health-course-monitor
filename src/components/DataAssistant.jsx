@@ -57,6 +57,8 @@ function examplesFor(view, t) {
             t('data_assistant.example_facilitators', 'How many facilitators are there for each course?'),
         ],
     };
+    // Asked from the main menu: about any page or data in the app, so no "this page" examples.
+    if (view === 'landing') return [...byView.landing, ...byView.childHealthServices.slice(0, 1), ...byView.skillsMentorship, ...byView.humanResources];
     return [page, plan, ...(byView[view] || byView.landing)];
 }
 
@@ -69,7 +71,9 @@ export function DataAssistantPanel({ open, onClose, view, pageTitle, uid = '', i
     useEffect(() => { saveChats(uid, chats); }, [uid, chats]);
     const [question, setQuestion] = useState('');
     const [busy, setBusy] = useState(false);
-    const [usePage, setUsePage] = useState(true);
+    // The main menu has nothing to read on screen; answers come from all the app's data.
+    const [usePage, setUsePage] = useState(view !== 'landing');
+    useEffect(() => { setUsePage(view !== 'landing'); }, [view]);
     const endRef = useRef(null);
     const inputRef = useRef(null);
     const lang = i18n.language?.startsWith('ar') ? 'ar' : 'en';

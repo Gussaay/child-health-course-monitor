@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronDown, Inbox, MoreHorizontal, RefreshCw, SearchX, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Inbox, MoreHorizontal, RefreshCw, SearchX, SlidersHorizontal } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { addInPageBack } from '../utils/inPageBack';
+import { useFormTitle } from '../utils/pageChrome';
 
 // The Android app shows every inner page's name and a back arrow in its slim
 // top bar, so in-page titles and back buttons are left out there.
@@ -25,15 +26,133 @@ import { useTranslation } from 'react-i18next';
 
 export const Card = ({ children, className = '' }) => <section className={`bg-white rounded-xl border border-slate-200 shadow-sm ${className}`}>{children}</section>;
 export const CardHeader = ({ children, className = '' }) => <div className={`p-4 md:p-6 border-b border-gray-200 ${className}`}><h3 className="text-lg font-semibold text-gray-800">{children}</h3></div>;
-// A form's Save / Cancel row. On phones it stays pinned just above the bottom
-// bar while the form is on screen, so there is no scrolling down to save.
+// A form's Save / Cancel (or Previous / Next) row. It stays pinned to the
+// bottom of the screen, just above the credit bar, while the form is on
+// screen, so there is no scrolling down to save or move on.
 // Put it as the last child of the form's own container (not inside a short
 // wrapper), or it has nothing to stick within.
-export const FormActions = ({ children, className = '' }) => (
-    <div className={`sticky bottom-[calc(var(--bottom-nav,0px)+8px)] [dialog_&]:bottom-2 z-20 -mx-1 mt-4 flex flex-wrap items-center justify-end gap-2 rounded-lg border border-gray-200 bg-white/95 p-2 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none ${className}`}>
+// `edge`: a full-width bar flush with the screen's bottom edge, for forms
+// whose container has the usual p-3 md:p-6 padding (the step forms).
+export const FormActions = ({ children, className = '', edge = false }) => (
+    <div className={edge
+        ? `sticky bottom-[var(--bottom-nav,0px)] z-20 -mx-3 md:-mx-6 -mb-5 md:-mb-8 mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-gray-200 bg-white/95 px-3 md:px-6 py-2.5 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] backdrop-blur ${className}`
+        : `sticky bottom-[calc(var(--bottom-nav,0px)+8px)] [dialog_&]:bottom-2 z-20 -mx-1 mt-4 flex flex-wrap items-center justify-end gap-2 rounded-lg border border-gray-200 bg-white/95 p-2 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] backdrop-blur ${className}`}>
         {children}
     </div>
 );
+
+/**
+ * A form section that folds. The header shows a ✓ when the section is complete,
+ * or how many required fields are still missing, and a one-line summary while
+ * it is closed, so a long form can be checked at a glance and edited one part
+ * at a time.
+ */
+export function FormSection({ title, tone = 'sky', open, onToggle, missing = 0, complete = false, summary = '', missingLabel, children, id, hidden = false, bare = false }) {
+    if (hidden) return null;
+    // Inside a step form the step bar already names the part, so no header.
+    if (bare) return <section id={id} className="mb-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">{children}</section>;
+    const tones = {
+        sky: 'border-s-sky-500', green: 'border-s-emerald-500', amber: 'border-s-amber-500', purple: 'border-s-violet-500', slate: 'border-s-slate-400'
+    };
+    return (
+        <section id={id} className={`mb-3 rounded-xl border border-slate-200 border-s-4 ${tones[tone] || tones.sky} bg-white shadow-sm overflow-hidden`}>
+            <button
+                type="button"
+                onClick={onToggle}
+                aria-expanded={open}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-start hover:bg-slate-50"
+            >
+                <div className="min-w-0 flex-1">
+                    <div className="text-base font-bold text-slate-900">{title}</div>
+                    {!open && summary && <div className="mt-0.5 truncate text-sm text-slate-500">{summary}</div>}
+                </div>
+                {missing > 0 ? (
+                    <span className="shrink-0 rounded-full bg-red-50 border border-red-200 px-2.5 py-1 text-xs font-bold text-red-700">{missingLabel || `${missing} missing`}</span>
+                ) : complete ? (
+                    <span className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold" aria-label="complete">✓</span>
+                ) : null}
+                <ChevronDown size={18} className={`shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
+            </button>
+            {open && <div className="border-t border-slate-100 p-4">{children}</div>}
+        </section>
+    );
+}
+
+// ---- Full-page forms ----
+// While an add/edit form is open the app header, the bar under it, the phone
+// bottom bar, the page tabs and floating buttons are hidden (see .form-focus in
+// index.css), so the form has the whole screen. The form keeps its own back
+// button and step bar.
+let formFocusCount = 0;
+export function useFullPageForm(active = true) {
+    useEffect(() => {
+        if (!active) return undefined;
+        const root = document.documentElement;
+        formFocusCount += 1;
+        root.classList.add('form-focus');
+        window.scrollTo(0, 0);
+        return () => {
+            formFocusCount = Math.max(0, formFocusCount - 1);
+            if (formFocusCount === 0) root.classList.remove('form-focus');
+        };
+    }, [active]);
+}
+
+/**
+ * A form split into steps: a top bar with back and title, a step bar you can
+ * tap to jump to any step, the current step, and the footer buttons.
+ * The bar sits flush against the top of the screen and stays there. In the
+ * Android app the app's own top bar already shows a back arrow, so the form's
+ * title moves into that bar and only the step bar is drawn here, pinned right
+ * under it, rather than repeating the title and back button.
+ * steps: [{ id, label, missing, complete }]
+ */
+export function StepForm({ title, subtitle, steps, current, onStepChange, onBack, backLabel = 'Back', children, footer, dir }) {
+    const idx = Math.max(0, steps.findIndex(st => st.id === current));
+    useInPageBack(onBack, IS_NATIVE);
+    useFormTitle(title, subtitle, IS_NATIVE);
+    const counter = <span dir="ltr" className="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold tabular-nums">{idx + 1} / {steps.length}</span>;
+    return (
+        <div dir={dir} className="pb-2">
+            {/* -mt cancels the card's top padding so the bar meets the top bar. */}
+            <div className={`sticky z-40 -mx-3 md:-mx-6 -mt-3 md:-mt-6 mb-3 bg-slate-800 text-white shadow-md ${IS_NATIVE ? 'top-[var(--app-topbar,0px)]' : 'top-0'}`}>
+                {!IS_NATIVE && (
+                    <div className="flex items-center gap-2 px-3 py-2.5">
+                        <button type="button" onClick={onBack} aria-label={backLabel} title={backLabel} className="shrink-0 rounded-full p-2 hover:bg-white/10 active:bg-white/20">
+                            <ArrowLeft size={22} className="rtl:rotate-180" />
+                        </button>
+                        <div className="min-w-0 flex-1">
+                            <div className="truncate text-base font-bold leading-tight">{title}</div>
+                            {subtitle && <div className="truncate text-xs text-slate-300">{subtitle}</div>}
+                        </div>
+                        {counter}
+                    </div>
+                )}
+                <div className={`flex items-start gap-1 px-3 pb-2.5 ${IS_NATIVE ? 'pt-1.5 border-t border-slate-700' : ''}`}>
+                    {steps.map((st, i) => {
+                        const state = i === idx ? 'current' : st.missing > 0 ? 'missing' : (st.complete && i < idx) || (st.complete && st.visited) ? 'done' : 'todo';
+                        const bar = { current: 'bg-sky-400', missing: 'bg-red-400', done: 'bg-emerald-400', todo: 'bg-white/20' }[state];
+                        const text = { current: 'text-white', missing: 'text-red-200', done: 'text-emerald-200', todo: 'text-slate-400' }[state];
+                        return (
+                            <button key={st.id} type="button" onClick={() => onStepChange(st.id)} aria-current={i === idx ? 'step' : undefined} className="min-w-0 flex-1 text-start">
+                                <span className={`block h-1.5 rounded-full ${bar}`} />
+                                <span className={`mt-1 block truncate text-[11px] font-semibold ${text}`}>
+                                    {state === 'done' ? '✓ ' : state === 'missing' ? '⚠ ' : ''}{st.label}
+                                </span>
+                            </button>
+                        );
+                    })}
+                    {IS_NATIVE && counter}
+                </div>
+            </div>
+            {children}
+            {footer}
+        </div>
+    );
+}
+
+/** Small red message under a field that still needs filling. */
+export const FieldError = ({ show, children }) => (show ? <p className="text-xs font-semibold text-red-600" role="alert">⚠ {children}</p> : null);
 
 export const CardBody = ({ children, className = '' }) => <div className={`p-3 md:p-6 ${className}`}>{children}</div>;
 export const CardFooter = ({ children, className = '' }) => <div className={`p-4 bg-gray-50 border-t border-gray-200 rounded-b-lg flex justify-end gap-2 ${className}`}>{children}</div>;
@@ -44,27 +163,39 @@ export const PageToolsContext = createContext(null);
 // Filters panel. Wider screens: always open, as before. Phones: one
 // "Filters (n)" row that opens the panel on tap, so the page's content shows
 // straight away.
-export function FilterPanel({ activeCount = 0, className = '', children }) {
+// `keep`: on phones the first `keep` filters stay in view even when the panel
+// is closed (for example State and Locality); the button then opens the rest.
+// The filters are the children of the panel's single grid element.
+export function FilterPanel({ activeCount = 0, keep = 0, className = '', children }) {
     const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     const tools = useContext(PageToolsContext);
+    const only = React.Children.toArray(children);
+    const total = only.length === 1 && React.isValidElement(only[0])
+        ? React.Children.toArray(only[0].props.children).filter(Boolean).length
+        : Infinity;
+    const pinned = keep > 0 ? Math.min(keep, 3) : 0;
+    const hasMore = !pinned || total > pinned;
+    const closedPhone = pinned ? `block mb-2 filter-keep-${pinned}` : 'hidden';
     return (
-        <div className={`ignore-for-export relative z-20 ${className}`}>
-            <div className="md:hidden flex items-center gap-2">
-                <button
-                    type="button"
-                    onClick={() => setOpen(o => !o)}
-                    aria-expanded={open}
-                    className="flex-1 min-w-0 flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm active:bg-slate-50"
-                >
-                    <SlidersHorizontal size={16} className="text-sky-600 shrink-0" />
-                    <span className="truncate">{t('ui.filters', 'Filters')}</span>
-                    {activeCount > 0 && <span className="rounded-full bg-sky-600 px-1.5 text-xs leading-5 text-white">{activeCount}</span>}
-                    <ChevronDown size={16} className={`ms-auto shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-                </button>
+        <div className={`ignore-for-export relative z-20 ${pinned ? 'flex flex-col md:block' : ''} ${className}`}>
+            <div className={`${pinned ? 'order-last' : ''} md:hidden flex items-center gap-2`}>
+                {hasMore ? (
+                    <button
+                        type="button"
+                        onClick={() => setOpen(o => !o)}
+                        aria-expanded={open}
+                        className="flex-1 min-w-0 flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm active:bg-slate-50"
+                    >
+                        <SlidersHorizontal size={16} className="text-sky-600 shrink-0" />
+                        <span className="truncate">{pinned ? t('ui.more_filters', 'More filters') : t('ui.filters', 'Filters')}</span>
+                        {activeCount > 0 && <span className="rounded-full bg-sky-600 px-1.5 text-xs leading-5 text-white">{activeCount}</span>}
+                        <ChevronDown size={16} className={`ms-auto shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+                    </button>
+                ) : <span className="flex-1" />}
                 {tools}
             </div>
-            <div className={`${open ? 'block mt-2 max-h-[60vh] overflow-y-auto shadow-lg' : 'hidden'} md:block md:mt-0 md:max-h-none md:overflow-visible md:shadow-sm bg-white rounded-xl border border-gray-200 p-3 md:p-4 shadow-sm`}>
+            <div className={`${open ? `block ${pinned ? 'mb-2' : 'mt-2'} max-h-[60vh] overflow-y-auto shadow-lg` : closedPhone} md:block md:mt-0 md:mb-0 md:max-h-none md:overflow-visible md:shadow-sm bg-white rounded-xl border border-gray-200 p-3 md:p-4 shadow-sm ${pinned ? '-order-1' : ''}`}>
                 {children}
             </div>
         </div>
@@ -98,6 +229,44 @@ export function PageActions({ children, keep = 1, className = '' }) {
             {extra > 1 && items.slice(keep).map((child, i) => (
                 <div key={child.key ?? i} className={`${open ? 'w-full [&>*]:w-full [&>*]:justify-start' : 'hidden'} md:contents`}>{child}</div>
             ))}
+        </div>
+    );
+}
+
+// A button that opens a short list of related actions (for example "Export"
+// holding Excel and the PDF choices), so a page's tool row stays one line.
+// Its children are ordinary Buttons; choosing one closes the list.
+export function MenuButton({ label, icon: Icon, children, className = '' }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+    useEffect(() => {
+        if (!open) return undefined;
+        const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('pointerdown', close);
+        return () => document.removeEventListener('pointerdown', close);
+    }, [open]);
+    const items = React.Children.toArray(children);
+    if (items.length === 0) return null;
+    return (
+        <div ref={ref} className={`relative ${className}`}>
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                aria-expanded={open}
+                className={`h-[38px] px-3 rounded-md border flex items-center gap-1.5 text-sm font-semibold transition-colors ${open ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}
+            >
+                {Icon && <Icon size={16} />}
+                {label}
+                <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+            </button>
+            {open && (
+                <div
+                    onClick={() => setOpen(false)}
+                    className="absolute start-0 top-full z-40 mt-1 flex w-max max-w-[85vw] min-w-full flex-col gap-1 rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg [&>*]:w-full [&>*]:justify-start [&>*]:shadow-none"
+                >
+                    {items}
+                </div>
+            )}
         </div>
     );
 }
@@ -157,16 +326,67 @@ export function PullToRefresh({ onRefresh, disabled = false }) {
     );
 }
 
-export const PageHeader = ({ title, subtitle, actions }) => {
+// The one menu tile used by every "choose where to go" screen: the main menu,
+// course packages, Child Health Services, Human Resources, mentorship and
+// supervision. One big icon in the app's colour, a short bold name and an
+// optional small line under it.
+export function MenuTile({ icon: Icon, iconNode, label, hint, title, onClick, disabled = false, active = false, className = '' }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            disabled={disabled}
+            title={title}
+            className={`flex w-full flex-col items-center justify-center gap-2 md:gap-3 rounded-lg border bg-white px-2 py-4 md:p-6 text-center shadow-sm transition-all duration-150 ${active ? 'border-sky-500 ring-2 ring-sky-500' : 'border-slate-200'} ${disabled ? 'opacity-60 cursor-not-allowed' : 'text-slate-700 hover:bg-slate-50 hover:text-sky-600 hover:shadow-md active:scale-[0.98]'} ${className}`}
+        >
+            {iconNode || (Icon && <Icon className="h-9 w-9 md:h-12 md:w-12 shrink-0 text-sky-500" strokeWidth={1.75} />)}
+            <span className="text-[15px] md:text-lg font-semibold leading-snug">{label}</span>
+            {hint && <span className="-mt-1 text-xs text-slate-500 leading-snug">{hint}</span>}
+        </button>
+    );
+}
+
+// Icon size and colour for a hand-drawn icon passed to MenuTile as `iconNode`.
+export const MENU_ICON_CLASS = 'h-9 w-9 md:h-12 md:w-12 shrink-0 text-sky-500';
+
+// The grid that holds MenuTiles: two per row on phones.
+export const MenuGrid = ({ children, columns = 'sm:grid-cols-3 lg:grid-cols-4', className = '' }) => (
+    <div className={`grid grid-cols-2 gap-3 md:gap-4 ${columns} ${className}`}>{children}</div>
+);
+
+// The back arrow at the start of a page's title row (web only: the Android app
+// has its own arrow in the slim top bar).
+export function BackArrow({ onClick, label, className = '' }) {
+    const { t } = useTranslation();
+    if (IS_NATIVE || !onClick) return null;
+    const text = label || t('ui.short.back', 'Back');
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            title={text}
+            aria-label={text}
+            className={`shrink-0 h-10 w-10 flex items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 hover:text-sky-700 ${className}`}
+        >
+            <ArrowLeft size={22} className="rtl:rotate-180" />
+        </button>
+    );
+}
+
+// A page's title row. `onBack` puts a back arrow before the title.
+export const PageHeader = ({ title, subtitle, actions, onBack, backLabel }) => {
     // Android app: the title is already in the top bar; keep only the buttons.
     if (IS_NATIVE) {
         return actions ? <div className="flex items-center gap-2 flex-wrap mb-3 md:mb-6">{actions}</div> : null;
     }
     return (
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <div>
-                <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
-                {subtitle && <p className="text-gray-500 mt-1">{subtitle}</p>}
+            <div className="flex items-center gap-2 min-w-0">
+                <BackArrow onClick={onBack} label={backLabel} className="-ms-2" />
+                <div className="min-w-0">
+                    <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
+                    {subtitle && <p className="text-gray-500 mt-1">{subtitle}</p>}
+                </div>
             </div>
             {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
         </div>
@@ -225,9 +445,17 @@ function usePinnedTabsHeight(ref) {
     }, [ref]);
 }
 
-// Page tabs. Phones: every tab in one row that never scrolls sideways, using
-// each tab's `short` name when it has one. Wider screens: the usual buttons.
+// Page tabs. Phones: every tab is on screen and nothing scrolls sideways. Up
+// to four tabs share one row; more wrap onto a second row so each name stays
+// readable (each tab's `short` name is used when it has one). Wider screens:
+// the usual buttons.
 // tabs: [{ id, label, short?, icon?, count?, disabled? }]
+// Tabs per row on a phone: one row up to four, two even rows after that.
+export function phoneTabColumns(count) {
+    if (count <= 4) return Math.max(count, 1);
+    return Math.min(4, Math.ceil(count / 2));
+}
+
 export function PageTabs({ tabs, active, onChange, className = '' }) {
     const visible = tabs.filter(Boolean);
     const navRef = useRef(null);
@@ -235,8 +463,12 @@ export function PageTabs({ tabs, active, onChange, className = '' }) {
     // Read by "Ask the data" (utils/pageSnapshot.js) to name the exact place an answer came from.
     const activeLabel = visible.find((tab) => tab.id === active)?.label;
     return (
-        <div data-active-tab={typeof activeLabel === 'string' ? activeLabel : undefined} className={`mb-3 md:mb-4 relative z-30 ${className}`}>
-            <nav ref={navRef} className="md:hidden flex gap-0.5 rounded-xl bg-white p-1 border border-slate-200 shadow-sm">
+        <div data-app-chrome="tabs" data-active-tab={typeof activeLabel === 'string' ? activeLabel : undefined} className={`mb-3 md:mb-4 relative z-30 ${className}`}>
+            <nav
+                ref={navRef}
+                className="md:hidden grid gap-1 rounded-xl bg-white p-1 border border-slate-200 shadow-sm"
+                style={{ gridTemplateColumns: `repeat(${phoneTabColumns(visible.length)}, minmax(0, 1fr))` }}
+            >
                 {visible.map(tab => {
                     const on = active === tab.id;
                     return (
@@ -246,10 +478,10 @@ export function PageTabs({ tabs, active, onChange, className = '' }) {
                             onClick={() => onChange(tab.id)}
                             disabled={tab.disabled}
                             title={typeof tab.label === 'string' ? tab.label : undefined}
-                            className={`relative min-w-0 disabled:opacity-40 rounded-lg px-1 py-1.5 text-xs font-bold leading-tight text-center transition-colors ${on ? 'shrink-0 bg-sky-600 text-white shadow-sm' : 'flex-auto text-slate-500 active:bg-sky-50'}`}
+                            className={`relative min-w-0 min-h-[36px] disabled:opacity-40 rounded-lg px-1.5 py-1.5 text-[13px] font-semibold leading-tight text-center transition-colors ${on ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 active:bg-sky-50'}`}
                         >
-                            <span className="block truncate">{tab.short || tab.label}</span>
-                            {tab.count > 0 && <span className="absolute -top-1.5 -end-0.5 min-w-[16px] h-4 rounded-full bg-red-500 px-1 text-xs leading-4 text-white">{tab.count}</span>}
+                            <span className="block break-words">{tab.short || tab.label}</span>
+                            {tab.count > 0 && <span className="absolute -top-1 end-0 min-w-[16px] h-4 rounded-full bg-red-500 px-1 text-xs leading-4 text-white">{tab.count}</span>}
                         </button>
                     );
                 })}

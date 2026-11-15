@@ -1,5 +1,10 @@
 // App.jsx
 import ThemeToggle from './components/ThemeToggle';
+// The logo is shown at 36 to 80 px. public/child.png is the 2362 px, 479 KB
+// source artwork (still used for the native and desktop app icons); this is a
+// 160 px copy, about 10 KB. Imported, so it gets a hashed name under /assets/
+// and the long cache lifetime that folder has.
+import mainLogoUrl from './assets/logo-160.webp';
 import { useTheme } from './utils/theme';
 import './i18n'; 
 import React, { useEffect, useMemo, useState, useRef, lazy, Suspense, useCallback } from "react";
@@ -8,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages, Sun, Moon, Monitor
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages, Sun, Moon, Monitor, MapPin
 } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
@@ -24,6 +29,10 @@ import { runInPageBack } from './utils/inPageBack';
 import { isFormGuarded, onGuardChange, setLeaveConfirmer } from './utils/leaveGuard';
 import { clearRememberedFilters } from './utils/rememberedState';
 import { usePushNotifications, usePushEvents } from './hooks/usePushNotifications';
+import { toggleLanguage, setPreferredLanguage, normalizeLanguage, currentLanguage, addressForcesLanguage } from './utils/languagePreference';
+import LanguagePickerModal from './components/LanguagePickerModal';
+import { isWorkProfileComplete, describeJob, describeWorkplace, optionLabel, HR_GROUPS } from './utils/workProfile';
+const WorkProfileModal = lazy(() => import('./components/WorkProfileModal'));
 
 // --- PRE-FLIGHT LANGUAGE CHECK ---
 if (typeof window !== 'undefined') {
@@ -61,8 +70,11 @@ const IMNCIRecordingForm = lazy(() => import('./components/imnci').then(m => ({ 
 const CertificateVerificationView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.CertificateVerificationView })));
 const PublicCertificateDownloadView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCertificateDownloadView })));
 const PublicCourseCertificatesView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCourseCertificatesView }))); 
-const CertificateDownloadBanner = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.CertificateDownloadBanner })));
+// Not lazy: it is small, and kept apart from CertificateGenerator so that
+// mounting it on every page no longer downloads jsPDF and html2canvas.
+import { CertificateDownloadBanner } from './components/CertificateDownloadBanner';
 
+const PublicDailyEvaluationView = lazy(() => import('./components/DailyEvaluation.jsx').then(module => ({ default: module.PublicDailyEvaluationView })));
 const PublicAttendanceView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicAttendanceView })));
 const AttendanceManagerView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.AttendanceManagerView })));
 const PublicParticipantRegistrationView = lazy(() => import('./components/Course.jsx').then(module => ({ default: module.PublicParticipantRegistrationView })));
@@ -78,6 +90,8 @@ const SkillsMentorshipView = lazy(() => import('./components/mentorship/SkillsMe
 const ProjectTrackerView = lazy(() => import('./components/ProjectTrackerView'));
 const SupplyManagementView = lazy(() => import('./components/SupplyManagementView'));
 const SupervisionView = lazy(() => import('./components/SupervisionView'));
+const SurveyView = lazy(() => import('./components/SurveyView'));
+const PublicSurveyForm = lazy(() => import('./components/SurveyView').then(module => ({ default: module.PublicSurveyForm })));
 const PublicSupervisionForm = lazy(() => import('./components/SupervisionView').then(module => ({ default: module.PublicSupervisionForm })));
 const OnlineCoursesView = lazy(() => import('./components/imnci').then(m => ({ default: m.OnlineCoursesView })));
 // The IMNCI screens share one load of the exercise definitions. Wrapping them
@@ -100,8 +114,11 @@ const CLAUDE_CHAT_ENABLED = false;
 // the aiAssistant Cloud Function (Gemini and Groq free tiers, no Anthropic key).
 // The panel loads the first time it is opened.
 const DataAssistantPanel = lazy(() => import('./components/DataAssistant').then(m => ({ default: m.DataAssistantPanel })));
+// The phone app's QR scanner (camera code loads the first time it is opened).
+const QrScanner = lazy(() => import('./components/QrScanner'));
+// QR scanning is offered in the Android app only.
+const QR_SCAN_ENABLED = Capacitor.isNativePlatform();
 // Pages where the round button would sit on top of a form's own Save row.
-const NO_ASSISTANT_BUTTON = new Set(['courseForm', 'participantForm', 'facilitatorForm', 'observe', 'imciForm', 'enter-test-scores', 'participantMigration']);
 
 // Reporting a problem from wherever it happened.
 const ReportProblemButton = lazy(() => import('./components/ProblemReports').then(m => ({ default: m.ReportProblemButton })));
@@ -121,6 +138,9 @@ import {
     DEFAULT_ROLE_PERMISSIONS, 
     applyDerivedPermissions 
 } from './components/permissions.js';
+import { isTrainingMode } from './training/trainingSession.js';
+import { recordTrainingView } from './training/trainingProgress.js';
+import TrainingInvite from './training/TrainingInvite.jsx';
 
 import {
     listAllDataForCourse, deleteFacilitator,
@@ -140,10 +160,12 @@ import {
     getPendingSyncQueue,
     clearPendingSyncQueue,
     getCachedCourse, getCachedParticipants,
+    recordHandledError,
 } from './data.js';
 import { setUsageView } from './utils/usageLedger';
 import { STATE_LOCALITIES } from './components/constants.js';
-import { Card, Button, Spinner, Toast, Modal, Input, PageSkeleton, Skeleton } from './components/CommonComponents';
+import SudanMiniMap from './components/SudanMiniMap';
+import { Card, Button, Spinner, Toast, Modal, Input, PageSkeleton, Skeleton, MenuTile, MenuGrid } from './components/CommonComponents';
 import { auth, db, isOnline, getConnectivity } from './firebase';
 import OfflinePill from './components/OfflinePill';
 
@@ -157,9 +179,15 @@ import NotificationBell from './components/NotificationBell.jsx';
 import { notify, confirmDialog, DialogHost } from './components/dialogs';
 import ErrorBoundary, { QuietBoundary } from './components/ErrorBoundary.jsx';
 import { publicBaseUrl } from './utils/publicLink';
-import SudanMiniMap from './components/SudanMiniMap';
-import { DataAssistantButton, DataAssistantCard } from './components/DataAssistantLauncher';
-import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_SITE_HIDDEN_VIEWS } from './siteMode';
+import { DataAssistantCard, PageAddButton } from './components/DataAssistantLauncher';
+import { ScanQrCard } from './components/QrScanLauncher';
+import { isPublicAppPath, parseScannedCode } from './utils/appLinks';
+import GetAppBanner from './components/GetAppBanner';
+import { findLinkedParticipant, rememberLinkedParticipant } from './utils/linkedParticipant';
+import { usePageAddAction, useFormTitleOverride } from './utils/pageChrome';
+import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_SITE_HIDDEN_VIEWS, EMONC_LOGO_URL, EMONC_LOGO_ALT, EMONC_SHORT_TITLE } from './siteMode';
+// The EmONC site shows its own logo, never the Child Health Program one.
+const logoUrl = IS_EMONC_SITE ? EMONC_LOGO_URL : mainLogoUrl;
 import { ASK_DATA_EVENT } from './utils/askDataAssistant';
 
 const ShareIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.368a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>;
@@ -369,29 +397,6 @@ const MODULE_GROUPS = [
     { id: 'general', tint: 'slate', label: 'App and team' },
 ];
 
-function ModuleTile({ label, tagline, icon: Icon, tint, onClick }) {
-    const { icon: iconCls, ring: ringCls } = TILE_TINTS[tint];
-    return (
-        <button
-            onClick={onClick}
-            className={`group relative text-start bg-white rounded-2xl border border-slate-100 p-4 shadow-sm ring-2 ring-transparent transition hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] ${ringCls}`}
-        >
-            <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${iconCls}`}>
-                <Icon size={24} />
-            </div>
-            <p className="font-bold text-slate-900 mt-3 leading-snug">{label}</p>
-            <p className="text-xs text-slate-500 mt-0.5 leading-snug">{tagline}</p>
-        </button>
-    );
-}
-
-// The greeting card's colour and label follow the person's programme level.
-const LEVEL_CARDS = {
-    federal: 'bg-sky-700',
-    state: 'bg-emerald-700',
-    locality: 'bg-violet-700',
-};
-
 // `value` null: still loading (`busy`) or could not be loaded.
 // The app's modules, for the main menu tiles and the side menu. 'downloads'
 // only exists on the native app.
@@ -403,7 +408,7 @@ function pageTitles(t) {
     skillsMentorship: t('landing.modules.mentorship', 'Skills Mentorship'), imciForm: t('landing.modules.imci', 'IMNCI Protocol'),
     projects: t('landing.modules.projects', 'Project Tracker'), meetings: t('landing.modules.meetings', 'Meeting Tracker'),
     planning: t('landing.modules.planning', 'Master Plan'), localityPlan: t('landing.modules.locality_plan', 'Bottom-up Planning'),
-    supplyManagement: t('landing.modules.supply', 'Supply Management'), supervision: t('landing.modules.supervision', 'Supervision'),
+    supplyManagement: t('landing.modules.supply', 'Supply Management'), supervision: t('landing.modules.supervision', 'Supervision'), survey: t('landing.modules.survey', 'Surveys'),
     onlineCourses: t('landing.modules.online_courses', 'Online Courses'), downloads: t('landing.modules.downloads', 'App Files & Downloads'),
     admin: t('landing.modules.admin', 'Admin'), about: t('landing.modules.about', 'About Team'),
     courseReport: t('landing.modules.course_report', 'Course Report'), participantReport: t('landing.modules.participant_report', 'Participant Report'),
@@ -427,13 +432,14 @@ function allModules(t, permissions) {
         { label: t('landing.modules.facilities', 'Child Health Services'), tagline: tile('facilities', 'Facilities and service coverage'), view: 'childHealthServices', group: 'services', icon: Hospital, permission: permissions.canViewFacilities },
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), tagline: tile('mentorship', 'Mentorship visits and skills'), view: 'skillsMentorship', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
         { label: t('landing.modules.imci', 'IMNCI Protocol'), tagline: tile('imci', 'Assess and classify a sick child'), view: 'imciForm', group: 'training', icon: Activity, permission: permissions.canViewCourse },
+        { label: t('landing.modules.online_courses', 'Online Courses'), tagline: tile('online_courses', 'Learn and practise online'), view: 'onlineCourses', group: 'training', icon: BookOpen, permission: permissions.canViewOnlineCourses },
+        { label: t('landing.modules.supervision', 'Supervision'), tagline: tile('supervision', 'Supervision checklists'), view: 'supervision', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSupervision },
+        { label: t('landing.modules.survey', 'Surveys'), tagline: tile('survey', 'Field surveys and mapping'), view: 'survey', group: 'services', icon: MapPin, permission: permissions.canViewSupervision },
+        { label: t('landing.modules.supply', 'Supply Management'), tagline: tile('supply', 'Stock and distribution'), view: 'supplyManagement', group: 'services', icon: Package, permission: permissions.canViewSupplyChain },
         { label: t('landing.modules.projects', 'Project Tracker'), tagline: tile('projects', 'Track project tasks'), view: 'projects', group: 'planning', icon: FolderKanban, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.meetings', 'Meeting Tracker'), tagline: tile('meetings', 'Meetings and attendance'), view: 'meetings', group: 'planning', icon: CalendarDays, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.planning', 'Master Plan'), tagline: tile('planning', 'The annual master plan'), view: 'planning', group: 'planning', icon: TrendingUp, permission: permissions.canUseFederalManagerAdvancedFeatures },
         { label: t('landing.modules.locality_plan', 'Bottom-up Planning'), tagline: tile('locality_plan', 'Plans from the localities'), view: 'localityPlan', group: 'planning', icon: Layers, permission: permissions.canViewLocalityPlan },
-        { label: t('landing.modules.supply', 'Supply Management'), tagline: tile('supply', 'Stock and distribution'), view: 'supplyManagement', group: 'services', icon: Package, permission: permissions.canViewSupplyChain },
-        { label: t('landing.modules.supervision', 'Supervision'), tagline: tile('supervision', 'Supervision checklists'), view: 'supervision', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSupervision },
-        { label: t('landing.modules.online_courses', 'Online Courses'), tagline: tile('online_courses', 'Learn and practise online'), view: 'onlineCourses', group: 'training', icon: BookOpen, permission: permissions.canViewOnlineCourses },
         { label: t('landing.modules.downloads', 'App Files & Downloads'), tagline: tile('downloads', 'Files saved on this device'), view: 'downloads', group: 'general', icon: HardDrive, permission: Capacitor.isNativePlatform() },
         { label: t('landing.modules.admin', 'Admin'), tagline: tile('admin', 'Users, roles and settings'), view: 'admin', group: 'general', icon: User, permission: permissions.canViewAdmin },
         { label: t('landing.modules.about', 'About Team'), tagline: tile('about', 'The programme team'), view: 'about', group: 'general', icon: Info, permission: true },
@@ -448,9 +454,8 @@ const COVERAGE_ITEMS = [
     { key: 'scnu', label: 'SCNU' },
 ];
 
-// Greeting card, the same on the phone app and the web: two lines. The
-// greeting, then one highlight from this year's numbers, picked at random
-// each time the main menu opens; tapping it shows another.
+// One highlight from this year's numbers for the main menu, picked at random
+// each time it opens; tapping it shows another.
 function homeFacts(t, stats, level) {
     if (!stats) return [];
     const n = (v) => Number(v).toLocaleString();
@@ -471,6 +476,13 @@ function homeFacts(t, stats, level) {
     });
     return facts;
 }
+
+// The greeting card's colour and label follow the person's programme level.
+const LEVEL_CARDS = {
+    federal: 'bg-sky-700',
+    state: 'bg-emerald-700',
+    locality: 'bg-violet-700',
+};
 
 function GreetingCard({ greeting, firstName, level, levelLabel, scope, stats, states = [] }) {
     const { t } = useTranslation();
@@ -507,9 +519,8 @@ function GreetingCard({ greeting, firstName, level, levelLabel, scope, stats, st
     );
 }
 
-function Landing({ navigate, permissions, user, userStates = [], userLocalities = [], stats = null, onAskData }) {
+function Landing({ navigate, permissions, user, userStates = [], userLocalities = [], stats = null, onAskData, onScanQr }) {
     const { t, i18n } = useTranslation();
-
     const hour = new Date().getHours();
     const greeting = hour < 12 ? t('landing.good_morning', 'Good morning') : hour < 18 ? t('landing.good_afternoon', 'Good afternoon') : t('landing.good_evening', 'Good evening');
     const firstName = String(user?.displayName || '').trim().split(/\s+/)[0];
@@ -524,101 +535,46 @@ function Landing({ navigate, permissions, user, userStates = [], userLocalities 
 
     const accessibleButtons = buildModules(t, permissions).filter(btn => btn.permission);
 
+    // The coloured welcome card, then one calm card with every module as the
+    // same tile (big icon in the app's colour, bold name), as in August.
     return (
-        <div className="flex flex-col min-h-full space-y-4">
+        <div className="flex flex-col min-h-full space-y-3 md:space-y-4">
             <GreetingCard greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} states={userStates} />
+            <Card>
+                <div className="p-3 md:p-6">
+                    {onScanQr && <div className={onAskData && accessibleButtons.length > 0 ? 'mb-2' : 'mb-3 md:mb-5'}><ScanQrCard onOpen={onScanQr} /></div>}
+                    {onAskData && accessibleButtons.length > 0 && <div className="mb-3 md:mb-5"><DataAssistantCard onOpen={onAskData} /></div>}
 
-            {onAskData && accessibleButtons.length > 0 && <DataAssistantCard onOpen={onAskData} />}
-
-            {accessibleButtons.length > 0 ? (
-                <div className="space-y-5">
-                    {MODULE_GROUPS.map(group => {
-                        const tiles = accessibleButtons.filter(btn => btn.group === group.id);
-                        if (!tiles.length) return null;
-                        return (
-                            <section key={group.id} aria-labelledby={`group-${group.id}`}>
-                                <h3 id={`group-${group.id}`} className="mb-2 text-sm font-semibold text-slate-500">{t(`landing.groups.${group.id}`, group.label)}</h3>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                                    {tiles.map(btn => (
-                                        <ModuleTile key={btn.view} label={btn.label} tagline={btn.tagline} icon={btn.icon} tint={group.tint} onClick={() => navigate(btn.view)} />
-                                    ))}
-                                </div>
-                            </section>
-                        );
-                    })}
+                    {accessibleButtons.length > 0 ? (
+                        <MenuGrid columns="sm:grid-cols-3 lg:grid-cols-5">
+                            {accessibleButtons.map(btn => (
+                                <MenuTile key={btn.view} icon={btn.icon} label={btn.label} onClick={() => navigate(btn.view)} />
+                            ))}
+                        </MenuGrid>
+                    ) : (
+                        <div className="p-8 text-center text-gray-500">{t('landing.no_permissions', 'You do not have permissions to view any modules. Please contact an administrator.')}</div>
+                    )}
                 </div>
-            ) : (
-                <Card><div className="p-8 text-center text-gray-500">{t('landing.no_permissions', 'You do not have permissions to view any modules. Please contact an administrator.')}</div></Card>
-            )}
+            </Card>
         </div>
     );
 }
 
-// Credit line shown at the foot of every page: inside the phone bottom bar,
-// and as a page footer on wider screens and on pages without the bar.
+// Credit line shown at the foot of every page, on one line: inside the phone
+// bottom bar, and as a page footer on wider screens and on pages without the bar.
 function AppCredit({ className = '' }) {
     return (
-        <div className={`text-center leading-snug ${className}`}>
-            <p className="font-semibold">{`© ${new Date().getFullYear()} National Child Health Program`}</p>
-            <p>
-                <span>Developed by <span className="font-semibold">Dr Qusay Mohamed</span></span>
-                <span className="mx-1.5 opacity-60">•</span>
-                <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:text-sky-300 underline-offset-2 hover:underline">Gussaay@gmail.com</a>
-            </p>
-        </div>
+        <p className={`text-center leading-snug ${className}`}>
+            <span>{`© ${new Date().getFullYear()} `}Developed by <span className="font-semibold">Dr Qusay Mohamed</span></span>
+            <span className="mx-1.5 opacity-60">•</span>
+            <a href="mailto:Gussaay@gmail.com" className="text-sky-400 hover:text-sky-300 underline-offset-2 hover:underline">Gussaay@gmail.com</a>
+        </p>
     );
 }
-
-const BottomNav = React.memo(function BottomNav({ navItems, navigate }) {
-    const icons = { 
-        'landing': Home, 'dashboard': Home, 'courses': Book, 'humanResources': Users, 'childHealthServices': Hospital, 
-        'skillsMentorship': ClipboardCheck, 'downloads': HardDrive
-    };
-    
-    // Publishes the bar's height as --bottom-nav so pinned Save rows sit above it.
-    const navRef = useRef(null);
-    useEffect(() => {
-        const el = navRef.current;
-        if (!el) return undefined;
-        const root = document.documentElement.style;
-        const set = () => root.setProperty('--bottom-nav', `${el.offsetHeight}px`);
-        set();
-        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(set) : null;
-        ro?.observe(el);
-        return () => { ro?.disconnect(); root.removeProperty('--bottom-nav'); };
-    }, []);
-
-    return (
-        <nav ref={navRef} className="md:hidden fixed bottom-0 inset-x-0 bg-slate-800 border-t border-slate-700 flex flex-col z-[60] shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
-            <div className="flex justify-between items-center px-2 w-full">
-                {navItems.map(item => {
-                    const Icon = icons[item.view] || Activity;
-                    return (
-                        <button 
-                            key={item.view} 
-                            onClick={() => navigate(item.view)} 
-                            className={`flex flex-col items-center justify-center p-1 w-full h-16 flex-1 min-w-0 transition-colors ${item.active ? 'text-sky-400' : 'text-slate-400 hover:text-white'}`}
-                            title={item.label} 
-                        >
-                            {Icon && <Icon className="w-6 h-6 mb-1 shrink-0" />}
-                            <span className="w-full text-center text-xs leading-tight truncate px-0.5 block">
-                                {item.label}
-                            </span>
-                        </button>
-                    )
-                })}
-            </div>
-            
-            <div className="bg-slate-900 text-slate-300 text-xs py-1.5 px-2 w-full border-t border-slate-700 pb-[max(0.375rem,env(safe-area-inset-bottom))]">
-                <AppCredit />
-            </div>
-        </nav>
-    );
-});
 
 // Slide-out side menu (☰): who you are, every module you can open, and the
 // app's settings in one place. The header keeps its own buttons as well.
-function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, currentView, onNavigate, onProfile, onSync, onLanguage, onUpdate, onLogout, appVersion, isOffline, languageLabel }) {
+function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, currentView, onNavigate, onProfile, onSync, onLanguage, onUpdate, onLogout, appVersion, apkInfo, isOffline, languageLabel }) {
     const { t } = useTranslation();
     const closeRef = useRef(onClose);
     closeRef.current = onClose;
@@ -658,7 +614,7 @@ function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, current
                         <X size={20} />
                     </button>
                     <div className="h-14 w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md mt-1">
-                        <img src="/child.png" alt="" className="h-12 w-12 object-contain" />
+                        <img src={logoUrl} alt="" width="48" height="48" className="h-12 w-12 object-contain" />
                     </div>
                     <p className="text-lg font-bold mt-3 truncate">{user?.displayName || user?.email}</p>
                     {user?.displayName && <p className="text-xs text-white/80 truncate">{user?.email}</p>}
@@ -703,6 +659,9 @@ function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, current
                         <LogOut size={18} /> {t('app.logout', 'Logout')}
                     </button>
                     <p className="text-center text-xs text-slate-400 mt-3">{t('menu.version', 'App version')}: {appVersion}</p>
+                    {apkInfo?.build && (
+                        <p className="text-center text-xs text-slate-400">{t('menu.apk_version', 'Installed APK: {{version}} (build {{build}})', { version: apkInfo.version, build: apkInfo.build })}</p>
+                    )}
                 </div>
             </aside>
         </div>,
@@ -714,7 +673,7 @@ function SplashScreen() {
     const { t } = useTranslation();
     return (
         <div className="fixed inset-0 bg-surface flex flex-col items-center justify-center gap-6 text-center p-4 z-[9999]">
-            <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src="/child.png" alt={t('app_extra.header.logo_alt', 'NCHP Logo')} className="h-20 w-20 object-contain" /></div>
+            <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src={logoUrl} alt={IS_EMONC_SITE ? EMONC_LOGO_ALT : t('app_extra.header.logo_alt', 'NCHP Logo')} width="80" height="80" className="h-20 w-20 object-contain" /></div>
             <div>
                 <h1 className="text-3xl font-bold text-slate-800">{IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program')}</h1>
                 <p className="text-lg text-slate-500 mt-1">{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : t('app.subtitle', 'Program & Course Monitoring System')}</p>
@@ -821,6 +780,7 @@ export default function App() {
 
     const {
         appVersion,
+        apkInfo,
         isDownloadingAppUpdate,
         appUpdateProgress,
         handleManualUpdateCheck,
@@ -839,11 +799,37 @@ export default function App() {
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
+    // users/{uid}.preferredLanguage: undefined until read, null when none saved.
+    const [savedLanguage, setSavedLanguage] = useState(undefined);
+    // users/{uid}.workProfile + hrRequest: undefined until the server answers.
+    const [workInfo, setWorkInfo] = useState(undefined);
+    const [workProfileOpen, setWorkProfileOpen] = useState(false);
+    const [workProfileLater, setWorkProfileLater] = useState(() => {
+        try { return sessionStorage.getItem('work_profile_later') === '1'; } catch { return false; }
+    });
     const [sideMenuOpen, setSideMenuOpen] = useState(false);
     // Nothing sticks to the top of a page any more (the header scrolls away
     // with the page), so --app-top is only the download banner's height: the
     // offline pill and the pull-to-refresh spinner sit just under it.
     const headerRef = useRef(null);
+    // Set by a full-page form (Android top bar title) and by pages that have an "Add" action.
+    const formTitle = useFormTitleOverride();
+    const pageAdd = usePageAddAction();
+    // The pinned credit bar's height, for the bottom bars that sit above it.
+    // A callback ref, so it follows the footer however often the screen re-renders.
+    const creditBarObserver = useRef(null);
+    const creditBarRef = useCallback((el) => {
+        creditBarObserver.current?.disconnect();
+        creditBarObserver.current = null;
+        const root = document.documentElement;
+        if (!el) { root.style.removeProperty('--credit-bar'); return; }
+        const set = () => root.style.setProperty('--credit-bar', `${el.offsetHeight}px`);
+        set();
+        if (typeof ResizeObserver !== 'undefined') {
+            creditBarObserver.current = new ResizeObserver(set);
+            creditBarObserver.current.observe(el);
+        }
+    }, []);
     const headerElRef = useRef(null);
     const headerObserverRef = useRef(null);
     useEffect(() => {
@@ -912,12 +898,37 @@ export default function App() {
 
         const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
             if (unsubscribeDoc) { unsubscribeDoc(); unsubscribeDoc = null; }
+            setSavedLanguage(undefined);
+            setWorkInfo(undefined);
             if (!user) return;
 
             const userRef = doc(db, 'users', user.uid);
-            unsubscribeDoc = onSnapshot(userRef, (docSnap) => {
+            // includeMetadataChanges: the language check below waits for the
+            // server's answer, which arrives as a metadata-only change when
+            // the cached copy was already up to date.
+            unsubscribeDoc = onSnapshot(userRef, { includeMetadataChanges: true }, (docSnap) => {
+                const data = docSnap.exists() ? docSnap.data() : {};
+
+                // Default language saved on the account: apply it on this
+                // device, or set null so the first-time picker is shown. A
+                // cached copy without one is not trusted as "nothing saved"
+                // (the choice may have been made on another device); wait for
+                // the server.
+                const savedLang = normalizeLanguage(data.preferredLanguage);
+                if (savedLang || !docSnap.metadata.fromCache) {
+                    setSavedLanguage(savedLang);
+                    if (savedLang && savedLang !== currentLanguage() && !addressForcesLanguage()) {
+                        i18n.changeLanguage(savedLang);
+                    }
+                }
+
+                // Work details asked for after sign in / sign up. Same rule as
+                // the language: a cached copy without them is not trusted.
+                if (data.workProfile || !docSnap.metadata.fromCache) {
+                    setWorkInfo({ profile: data.workProfile || null, hrRequest: data.hrRequest || null });
+                }
+
                 if (!docSnap.exists()) return;
-                const data = docSnap.data();
                 if (!data.forceCacheReset) return;
 
                 const remoteResetTime = data.forceCacheReset.toMillis();
@@ -979,7 +990,7 @@ export default function App() {
         fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators,
         fetchHealthFacilities, fetchSkillMentorshipSubmissions, fetchParticipantTests,
         mergeIntoCache, participants: rawParticipants, skillMentorshipSubmissions, isLoading: dataLoading,
-        syncLoaded
+        syncLoaded, dashboardCopy, fetchDashboardFacilities, homeCopy, fetchHomeCopy, setDataScope
     } = useDataCache();
 
     const allCourses = useMemo(() => (rawCourses || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"), [rawCourses]);
@@ -1023,6 +1034,8 @@ export default function App() {
     };
 
     const [view, setView] = useState("landing");
+    // Training link: count the screens a trainee opens (src/training/trainingProgress.js).
+    useEffect(() => { recordTrainingView(view); }, [view]);
     const [activeCourseType, setActiveCourseType] = useState(null);
     const [selectedCourseId, setSelectedCourseId] = useState(null);
     const [selectedParticipantId, setSelectedParticipantId] = useState(null);
@@ -1058,6 +1071,10 @@ export default function App() {
     // Automatic syncs are quiet and at most every 30 seconds.
     // Lists with a live listener are already current, so the quiet syncs skip them.
     const quietSync = useCallback(() => { syncLoaded({ minIntervalMs: 30 * 1000, skipLive: true }).catch(() => {}); }, [syncLoaded]);
+    // Page changes sync at most every 5 minutes: lists with a live listener are
+    // already current, and each query for the rest costs at least one read even
+    // when nothing changed (people change page many times a minute).
+    const pageChangeSync = useCallback(() => { syncLoaded({ minIntervalMs: 5 * 60 * 1000, skipLive: true }).catch(() => {}); }, [syncLoaded]);
     useEffect(() => {
         const onVisible = () => { if (document.visibilityState === 'visible') quietSync(); };
         document.addEventListener('visibilitychange', onVisible);
@@ -1080,9 +1097,9 @@ export default function App() {
     // a page shows are brought up to date with what changed on the server.
     useEffect(() => {
         if (!user) return undefined;
-        const timer = setTimeout(quietSync, 1500); // after the page's own first load
+        const timer = setTimeout(pageChangeSync, 1500); // after the page's own first load
         return () => clearTimeout(timer);
-    }, [user, view, quietSync]);
+    }, [user, view, pageChangeSync]);
     const [activeCoursesTab, setActiveCoursesTab] = useState('courses');
     const [activeHRTab, setActiveHRTab] = useState('facilitators');
 
@@ -1105,6 +1122,7 @@ export default function App() {
     const [publicServiceType, setPublicServiceType] = useState(null);
     const [publicMentorshipProps, setPublicMentorshipProps] = useState(null);
     const [publicSupervisionFormId, setPublicSupervisionFormId] = useState(null);
+    const [publicSurveyId, setPublicSurveyId] = useState(null);
     const [submissionType, setSubmissionType] = useState(null);
     const [sharedReportData, setSharedReportData] = useState(null);
     const [sharedViewError, setSharedViewError] = useState(null);
@@ -1175,6 +1193,39 @@ export default function App() {
     const applyPageRef = useRef(null);
     const formDirtyRef = useRef(false);
     const confirmLeaveRef = useRef(null);
+    // Reads the address again and opens the public page it names (set by the
+    // start-up effect below). A scanned QR code uses it to open a page in place.
+    const pathChangeRef = useRef(null);
+    // The history entry of a public page opened from the QR scanner, so Back
+    // returns to the app instead of closing it.
+    const scannedPublicRef = useRef(null);
+    const [scannedPublicOpen, setScannedPublicOpen] = useState(false);
+    const [qrScanner, setQrScanner] = useState({ loaded: false, open: false });
+    const openQrScanner = useCallback(() => setQrScanner({ loaded: true, open: true }), []);
+    const closeQrScanner = useCallback(() => setQrScanner((s) => ({ ...s, open: false })), []);
+    // A scanned app link opens here, in the app. Public pages (tests,
+    // evaluations, attendance, registration, certificates ...) open in place,
+    // signed in or not, on a history entry of their own so Back returns here.
+    // Any other page of the app is opened from its address, like a refresh,
+    // and asks for sign-in first when nobody is signed in.
+    const openScannedLink = useCallback((link) => {
+        setQrScanner((s) => ({ ...s, open: false }));
+        if (!link?.path) return;
+        if (link.public) {
+            const state = { chmIdx: (window.history.state?.chmIdx || 0) + 1, chmScan: true };
+            window.history.pushState(state, '', link.path);
+            scannedPublicRef.current = { state, url: link.path };
+            setScannedPublicOpen(true);
+            pathChangeRef.current?.();
+            window.scrollTo(0, 0);
+            return;
+        }
+        window.location.assign(link.path);
+    }, []);
+    // The arrow on a page opened from the scanner: back to where the scan began.
+    const leaveScannedPage = useCallback(() => {
+        if (scannedPublicRef.current) window.history.back();
+    }, []);
     const lastEntryRef = useRef(null);
     const viewRef = useRef('landing');
     const lastPageRef = useRef(null);
@@ -1287,6 +1338,7 @@ export default function App() {
             setIsPublicProjectsView(false);
 
             setPublicSupervisionFormId(null);
+            setPublicSurveyId(null);
 
             // Check if the current URL parameters match a generated shared Project Tracker link
             const searchParamsPath = new URLSearchParams(window.location.search);
@@ -1411,6 +1463,9 @@ export default function App() {
             const publicSupervisionMatch = path.match(/^\/public\/supervision\/([a-zA-Z0-9_]+)\/?$/);
             if (publicSupervisionMatch) { setPublicSupervisionFormId(publicSupervisionMatch[1]); return; }
 
+            const publicSurveyMatch = path.match(/^\/public\/survey\/([a-zA-Z0-9_]+)\/?$/);
+            if (publicSurveyMatch) { setPublicSurveyId(publicSurveyMatch[1]); return; }
+
             const publicMentorshipMatch = path.match(/^\/mentorship\/submit\/([a-zA-Z0-9_]+)\/?$/);
             if (publicMentorshipMatch && publicMentorshipMatch[1]) { setPublicMentorshipProps({ serviceType: publicMentorshipMatch[1] }); return; }
 
@@ -1457,6 +1512,9 @@ export default function App() {
             const courseCertPageMatch = path.match(/^\/public\/course\/certificates\/([a-zA-Z0-9_-]+)\/?$/);
             if (courseCertPageMatch && courseCertPageMatch[1]) { setPublicViewType('courseCertificatesPage'); setPublicViewData({ courseId: courseCertPageMatch[1] }); return; }
             
+            const dailyEvalMatch = path.match(/^\/public\/evaluation\/([a-zA-Z0-9_-]+)\/?$/);
+            if (dailyEvalMatch && dailyEvalMatch[1]) { setPublicViewType('dailyEvaluation'); setPublicViewData({ formId: dailyEvalMatch[1] }); return; }
+
             const publicAttendanceMatch = path.match(/^\/attendance\/course\/([a-zA-Z0-9]+)\/?$/);
             if (publicAttendanceMatch && publicAttendanceMatch[1]) { setPublicViewType('attendance'); setPublicViewData({ courseId: publicAttendanceMatch[1] }); return; }
 
@@ -1495,10 +1553,23 @@ export default function App() {
             }
         };
 
+        pathChangeRef.current = handlePathChange;
         handlePathChange();
     }, []); 
 
     const permissions = useMemo(() => {
+        // Training link: everyone gets the whole app to practise on, because
+        // everything they save goes to the course's sandbox. The few areas
+        // that only manage real reference data or accounts stay hidden.
+        if (isTrainingMode()) {
+            const TRAINING_OFF = ['canViewAdmin', 'canManageProtocols', 'canManageOnlineCourses', 'canManagePopulation', 'canEditLocalityPlan'];
+            const all = ALL_PERMISSION_KEYS.reduce((acc, key) => {
+                acc[key] = !TRAINING_OFF.includes(key);
+                return acc;
+            }, {});
+            return { ...all, manageScope: 'federal', manageLocation: 'federal_level', manageTimePeriod: 'anytime', role: userRole };
+        }
+
         let derivedPermissions = { ...userPermissions };
         
         if (userRole?.toLowerCase() === 'super_user') {
@@ -1547,6 +1618,12 @@ export default function App() {
         // profile; nothing slower may then clear the role it set.
         let lastAppliedProfile = null;
 
+        // Sends one line to Admin > Problems; never throws, never blocks.
+        const noteRoleEvent = (what) => {
+            console.warn('[profile]', what);
+            recordHandledError({ kind: 'permission', what: what.slice(0, 300), context: 'role-sync', source: 'App.jsx role sync' }).catch(() => {});
+        };
+
         // A profile is only believable when it names a role. The FCM token
         // save is a setDoc(users/{uid}, { fcmToken }, { merge: true }); when
         // this device has no copy of the profile cached (a fresh sign-in, a
@@ -1556,9 +1633,16 @@ export default function App() {
         const hasRole = (data) => !!(data && (data.role || data.Role || (Array.isArray(data.roles) && data.roles.length > 0)));
 
         // Applies a profile document to state and refreshes the local backup.
-        const applyProfile = (data, fromCache) => {
+        const applyProfile = (data, fromCache, source = 'server read') => {
             const rawRole = data.role || data.Role || (data.roles && data.roles[0]) || 'user';
             const newRole = typeof rawRole === 'string' ? rawRole.toLowerCase() : 'user';
+            // Diagnostic: a role that differs from the one this device saved is
+            // logged to Admin > Problems, with where it came from, so a
+            // reported "my modules disappeared" can be traced.
+            const savedRole = (() => { try { return localStorage.getItem(`backup_role_${user.uid}`); } catch { return null; } })();
+            if (savedRole && savedRole !== newRole) {
+                noteRoleEvent(`Role changed on this device from ${savedRole} to ${newRole} (${source}${fromCache ? ', cached copy' : ''})`);
+            }
             const newRoles = data.roles && Array.isArray(data.roles) && data.roles.length > 0 ? data.roles : [newRole];
 
             const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
@@ -1642,6 +1726,9 @@ export default function App() {
                         await user.getIdToken(true);
                     } catch (tokenErr) {
                         console.warn("Manual token refresh skipped or failed:", tokenErr);
+                        // Kept for the lost-session report (hooks/useAuth.js): a refused
+                        // refresh is what makes Firebase sign the person out.
+                        try { localStorage.setItem('last_auth_error', `${new Date().toISOString()} ${tokenErr?.code || ''} ${String(tokenErr?.message || '').slice(0, 150)}`); } catch { /* storage full */ }
                     }
                 }
 
@@ -1706,6 +1793,8 @@ export default function App() {
                     // role, roles and permissions server-side for every device.
                     if (!readFromServer || userSnap.metadata?.fromCache) {
                         console.warn("Profile read was not server-confirmed. Keeping existing role, not creating a default profile.");
+                        // Nothing saved to fall back on: say so instead of an unexplained empty menu.
+                        if (!backupRole && !lastAppliedProfile) setPermissionsError(true);
                         return;
                     }
 
@@ -1722,7 +1811,14 @@ export default function App() {
                     if (!isMounted) return;
 
                     if (profile) {
-                        applyProfile(profile);
+                        applyProfile(profile, false, 'profile created after sign-in');
+                    } else if (backupRole) {
+                        // This device has a role the server confirmed before. A read
+                        // that finds no profile is far likelier to be a glitch (a
+                        // token or connection hiccup) than a deleted account, and
+                        // clearing the role here silently emptied the main menu for
+                        // a super user. Keep it; the live listener corrects it.
+                        noteRoleEvent(`Profile read found no document; kept the saved role ${backupRole}`);
                     } else if (!lastAppliedProfile) {
                         console.warn("Profile has not appeared yet. Not assuming a role.");
                         setUserRole(null); setUserRoles([]); setUserPermissions({});
@@ -1765,7 +1861,7 @@ export default function App() {
             const key = JSON.stringify([data.role, data.Role, data.roles, data.permissions, data.assignedState, data.assignedLocality]);
             if (key === lastAppliedProfile) return;
             lastAppliedProfile = key;
-            applyProfile(data, false);
+            applyProfile(data, false, 'live listener');
             setPermissionsError(false);
             setPermissionsLoading(false);
         }, (err) => console.warn('[profile] live listener stopped:', err?.message)) : null;
@@ -1778,6 +1874,23 @@ export default function App() {
     // Browser back/forward: reopen the page that history entry was written for.
     useEffect(() => {
         const handlePopState = (event) => {
+            // Leaving a public page opened from the QR scanner (signed in or not).
+            if (scannedPublicRef.current) {
+                if (formDirtyRef.current) {
+                    const entry = scannedPublicRef.current;
+                    window.history.pushState(entry.state, '', entry.url);
+                    confirmLeaveRef.current?.().then((leave) => { if (leave) window.history.back(); });
+                    return;
+                }
+                pathChangeRef.current?.();
+                if (isPublicAppPath(window.location.pathname)) {
+                    scannedPublicRef.current = { state: window.history.state, url: `${window.location.pathname}${window.location.search}` };
+                    return;
+                }
+                scannedPublicRef.current = null;
+                setScannedPublicOpen(false);
+                window.scrollTo(0, 0);
+            }
             if (!hasWrittenPageRef.current) return;
             // Leaving a half-filled form: put the form's history entry back,
             // then ask, and step back again only if they choose to leave.
@@ -1802,19 +1915,69 @@ export default function App() {
 
     useEffect(() => {
         if (isSharedView || isPublicMentorshipDashboardView || (!user && !isPublicMentorshipDashboardView)) return;
-        if (view === 'dashboard') { fetchCourses(); fetchParticipants(); fetchFacilitators(); fetchHealthFacilities(); }
-        if (['humanResources', 'facilitatorForm', 'facilitatorReport', 'courseForm', 'dashboard', 'landing'].includes(view)) fetchFacilitators();
+        // The Dashboard loads its own facilities (the slim Dashboard copy, or
+        // the full list if no copy can be had): see DashboardView.
+        if (['humanResources', 'facilitatorForm', 'facilitatorReport', 'courseForm'].includes(view)) fetchFacilitators();
         if (['courseForm', 'humanResources'].includes(view)) fetchFunders();
         if (['courseForm'].includes(view)) fetchCoordinators();
         if (view === 'courses' || view === 'facilitatorReport') fetchCourses();
         if (view === 'skillsMentorship') { fetchHealthFacilities(); fetchSkillMentorshipSubmissions(); }
         if (view === 'childHealthServices') fetchHealthFacilities();
         if (view === 'courseReport') fetchHealthFacilities();
-        // The main menu's greeting card counts courses, participants and mentorship visits.
-        // Coordinators tell us the person's unit (IMNCI, newborn...), which narrows the numbers.
-        // Facilities give the coverage card.
-        if (view === 'landing') { fetchCourses(); fetchParticipants(); fetchSkillMentorshipSubmissions(); fetchCoordinators(); fetchHealthFacilities(); }
-    }, [view, isSharedView, user, fetchCourses, fetchParticipants, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities, fetchSkillMentorshipSubmissions, isPublicMentorshipDashboardView]);
+    }, [view, isSharedView, user, fetchCourses, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities, fetchSkillMentorshipSubmissions, isPublicMentorshipDashboardView]);
+
+    // The main menu's highlight counts courses, participants, mentorship visits
+    // and facilitators; coordinators give the person's unit (IMNCI, newborn...)
+    // and facilities the coverage. These used to be requested all at once on
+    // the main menu, so on a new device (or after the cache expired) the page
+    // the person opened next waited behind thousands of records it did not
+    // need. Now they load one after another, smallest first, and the chain
+    // stops as soon as the person leaves the main menu, so the next page gets
+    // the connection to itself. The menu shows the last saved numbers meanwhile.
+    useEffect(() => {
+        if (isSharedView || isPublicMentorshipDashboardView || !user || view !== 'landing') return undefined;
+        let cancelled = false;
+        const stillHere = () => !cancelled && viewRef.current === 'landing';
+        // One slow list must not hold the rest back for the full 60 s timeout:
+        // after a few seconds the next one starts while the slow one finishes.
+        const step = (load) => Promise.race([
+            Promise.resolve().then(load).catch(() => {}),
+            new Promise((resolve) => setTimeout(resolve, 8000)),
+        ]);
+        (async () => {
+            // Coverage comes from the slim Dashboard copy, checked with the
+            // server at most every 30 minutes from here. The full facility list
+            // (~7,000 records) is no longer downloaded for one number on the
+            // main menu when the copy cannot be had: the last saved coverage
+            // (or the facilities this device already holds) is shown instead.
+            const facilitiesForCoverage = () => fetchDashboardFacilities({ maxAgeMs: 30 * 60 * 1000 });
+            // Participants, mentorship visits and facilitators come from the
+            // server's slim copy (functions/homeCopy.js): one call, checked at
+            // most every 30 minutes, instead of every record downloaded to
+            // each phone. Only if no copy can be had at all are the lists
+            // downloaded as before, so the numbers never go missing.
+            const menuLists = async () => {
+                if (await fetchHomeCopy({ maxAgeMs: 30 * 60 * 1000 })) return;
+                for (const load of [fetchFacilitators, fetchParticipants, fetchSkillMentorshipSubmissions]) {
+                    if (!stillHere()) return;
+                    await step(load);
+                }
+            };
+            const queue = [fetchCourses, fetchCoordinators, menuLists, facilitiesForCoverage];
+            for (const load of queue) {
+                if (!stillHere()) return;
+                await step(load);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [view, isSharedView, user, isPublicMentorshipDashboardView, fetchCourses, fetchCoordinators, fetchFacilitators, fetchParticipants, fetchSkillMentorshipSubmissions, fetchDashboardFacilities, fetchHomeCopy]);
+
+    // Which participants this device downloads: a state or locality user only
+    // their own places' (DataContext DOWNLOAD SCOPE). Set once permissions load.
+    useEffect(() => {
+        if (!user || permissionsLoading) return;
+        setDataScope({ level: levelFromPermissions(permissions), states: userStates, localities: userLocalities });
+    }, [user, permissionsLoading, permissions, userStates, userLocalities, setDataScope]);
 
     // The offline cache only holds what THIS device last read. Tests and scores
     // entered on another phone (or a cache that never held this course's tests,
@@ -1953,11 +2116,18 @@ export default function App() {
         const stats = computeHomeStats({
             level, unit: userHRProfile?.unit,
             states: userStates, localities: userLocalities,
-            courses: rawCourses, participants: rawParticipants, sessions: skillMentorshipSubmissions, facilitators: rawFacilitators,
+            // The server's slim copy (fetchHomeCopy) when there is one: it
+            // holds every record, while a state or locality user's device
+            // holds only their own places' courses and participants. Else the
+            // device's own lists.
+            courses: homeCopy?.lists?.courses?.items || rawCourses,
+            participants: homeCopy?.lists?.participants?.items || rawParticipants,
+            sessions: homeCopy?.lists?.sessions?.items || skillMentorshipSubmissions,
+            facilitators: homeCopy?.lists?.facilitators?.items || rawFacilitators,
         });
-        const coverage = computeCoverage({ level, states: userStates, localities: userLocalities, facilities: healthFacilities });
+        const coverage = computeCoverage({ level, states: userStates, localities: userLocalities, facilities: dashboardCopy?.items || healthFacilities });
         return { ...stats, coverage };
-    }, [view, user, permissions, userHRProfile, userStates, userLocalities, rawCourses, rawParticipants, skillMentorshipSubmissions, rawFacilitators, healthFacilities]);
+    }, [view, user, permissions, userHRProfile, userStates, userLocalities, rawCourses, rawParticipants, skillMentorshipSubmissions, rawFacilitators, healthFacilities, dashboardCopy, homeCopy]);
     const homeStats = useMemo(() => {
         if (!freshHomeStats) return null;
         const merged = { ...freshHomeStats };
@@ -1966,12 +2136,12 @@ export default function App() {
         }
         // A number whose data failed to load shows a dash instead of a placeholder forever.
         const busy = {
-            courses: !!dataLoading?.courses, participants: !!dataLoading?.participants,
-            visits: !!dataLoading?.skillMentorshipSubmissions, facilitators: !!dataLoading?.facilitators,
-            facilities: !!dataLoading?.healthFacilities,
+            courses: !!dataLoading?.courses && !homeCopy, participants: !!dataLoading?.participants && !homeCopy,
+            visits: !!dataLoading?.skillMentorshipSubmissions && !homeCopy, facilitators: !!dataLoading?.facilitators && !homeCopy,
+            facilities: !dashboardCopy && !!dataLoading?.healthFacilities,
         };
         return { ...merged, busy };
-    }, [freshHomeStats, savedHomeStats, dataLoading]);
+    }, [freshHomeStats, savedHomeStats, dataLoading, dashboardCopy, homeCopy]);
     useEffect(() => {
         if (!homeStatsKey || !freshHomeStats) return;
         const known = Object.fromEntries(Object.entries(freshHomeStats).filter(([, v]) => v !== null && v !== undefined));
@@ -2017,6 +2187,7 @@ export default function App() {
  'planning': permissions.canUseFederalManagerAdvancedFeatures, 'localityPlan': permissions.canViewLocalityPlan,
             'supplyManagement': permissions.canViewSupplyChain,
             'supervision': permissions.canViewSupervision,
+            'survey': permissions.canViewSupervision,
             'onlineCourses': permissions.canViewOnlineCourses,
             'downloads': Capacitor.isNativePlatform(), 'about': true, 
         };
@@ -2046,9 +2217,9 @@ export default function App() {
         if (state.openParticipantReport) { setSelectedParticipantId(state.openParticipantReport); setSelectedCourseId(state.openCourseReport); }
         if (state.caseToEdit) setEditingCaseFromReport(state.caseToEdit);
 
-        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'onlineCourses', 'downloads', 'about'].includes(newView)) {
+        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey', 'onlineCourses', 'downloads', 'about'].includes(newView)) {
             setSelectedCourseId(null); setSelectedParticipantId(null); setFinalReportCourse(null);
-            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'onlineCourses', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
+            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey', 'onlineCourses', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
         }
         if ((view === 'observe' || view === 'participantReport') && !['observe', 'participantReport'].includes(newView)) setSelectedParticipantId(null);
         return true;
@@ -2196,6 +2367,37 @@ export default function App() {
         });
         return () => { sub.then((h) => h.remove()).catch(() => {}); };
     }, []);
+
+    // A shared link tapped in WhatsApp, SMS or e-mail opens in the app when it
+    // is installed (Android App Links, see AndroidManifest.xml). It opens like a
+    // scanned QR code: public pages in place with a Back arrow to the app. When
+    // the link started the app, the page may not be ready to switch in place
+    // yet, so the address is loaded the way a refresh would.
+    useEffect(() => {
+        if (!Capacitor.isNativePlatform()) return undefined;
+        let last = { url: '', at: 0 };
+        const openLink = (url) => {
+            if (!url) return;
+            // The start-up link can arrive twice (launch URL and the event).
+            if (url === last.url && Date.now() - last.at < 5000) return;
+            last = { url, at: Date.now() };
+            const link = parseScannedCode(url);
+            if (link.type !== 'app' || !link.path) return;
+            if (link.path === `${window.location.pathname}${window.location.search}`) return;
+            if (!pathChangeRef.current) { window.location.replace(link.path); return; }
+            openScannedLink(link);
+        };
+        // The launch link stays the same after an in-app reload (an update), so
+        // it is opened once per app start, not again on every reload.
+        Promise.resolve(CapacitorApp.getLaunchUrl?.()).then((res) => {
+            const url = res?.url;
+            if (!url) return;
+            try { if (sessionStorage.getItem('chm.launchLinkOpened') === url) return; sessionStorage.setItem('chm.launchLinkOpened', url); } catch { /* storage off: open it anyway */ }
+            openLink(url);
+        }).catch(() => {});
+        const sub = CapacitorApp.addListener('appUrlOpen', ({ url }) => openLink(url));
+        return () => { Promise.resolve(sub).then((h) => h?.remove()).catch(() => {}); };
+    }, [openScannedLink]);
 
 
     const handleOpenCourse = useCallback((courseId) => { setSelectedCourseId(courseId); setLoading(false); navigate('participants', { courseId }); }, [navigate]);
@@ -2424,6 +2626,8 @@ export default function App() {
                     localStorage.removeItem(`backup_localities_${user.uid}`);
                 }
                 clearRememberedFilters();
+                // Marks this as a real log-out, so it is not reported as a lost session.
+                try { sessionStorage.setItem('intentional_signout', '1'); localStorage.removeItem('last_uid'); } catch { /* storage blocked */ }
                 await signOut(auth); 
             } catch (error) { 
                 console.error("Error signing out:", error); 
@@ -2441,7 +2645,7 @@ export default function App() {
         const viewToRender = view;
 
         switch (viewToRender) {
-            case 'landing': return <Landing navigate={navigate} permissions={permissions} user={user} roles={userRoles} userStates={userStates} userLocalities={userLocalities} stats={IS_EMONC_SITE ? null : homeStats} onAskData={IS_EMONC_SITE ? null : openDataAssistant} />;
+            case 'landing': return <Landing navigate={navigate} permissions={permissions} user={user} roles={userRoles} userStates={userStates} userLocalities={userLocalities} stats={IS_EMONC_SITE ? null : homeStats} onAskData={IS_EMONC_SITE ? null : openDataAssistant} onScanQr={QR_SCAN_ENABLED ? openQrScanner : null} />;
             case 'admin': return <AdminDashboard appRoles={userRoles} />;
             case 'about': return <AboutDeveloperPage permissions={permissions} />;
             case 'imciForm': 
@@ -2498,6 +2702,8 @@ export default function App() {
 
            case 'supervision':
     return permissions.canViewSupervision ? ( <Suspense fallback={<PageSkeleton />}><SupervisionView permissions={permissions} /></Suspense> ) : null;
+           case 'survey':
+    return permissions.canViewSupervision ? ( <Suspense fallback={<PageSkeleton />}><SurveyView permissions={permissions} /></Suspense> ) : null;
 
            case 'onlineCourses':
     return permissions.canViewOnlineCourses ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><OnlineCoursesView permissions={permissions} userRoles={userRoles} /></ImnciProvider></Suspense> ) : null;
@@ -2585,11 +2791,12 @@ case 'meetings':
     // window. Drawn with the full app chrome — header, navigation, bottom bar —
     // the consent card is pushed below the fold of a 600px popup and the window
     // looks empty, which is exactly how it was reported.
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || publicViewType === 'onlineExercises' || isPublicRegistrationView || isPublicMeetingView || isPublicProjectsView || !!publicSupervisionFormId || !!connectClaudeId;
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || publicViewType === 'dailyEvaluation' || publicViewType === 'onlineExercises' || isPublicRegistrationView || isPublicMeetingView || isPublicProjectsView || !!publicSupervisionFormId || !!publicSurveyId || !!connectClaudeId;
 
     let mainContent;
 
-    if ((authLoading || permissionsLoading) && !isMinimalUILayout) {
+    const showSplash = (authLoading || permissionsLoading) && !isMinimalUILayout;
+    if (showSplash) {
         mainContent = <SplashScreen />;
     }
     // Approving the claude.ai connector. Deliberately NOT a minimal-UI public
@@ -2716,7 +2923,7 @@ case 'meetings':
         }
     }
 
-    else if (isPublicReportView || isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || publicViewType === 'attendance' || publicViewType === 'onlineExercises') { 
+    else if (isPublicReportView || isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || publicViewType === 'attendance' || publicViewType === 'dailyEvaluation' || publicViewType === 'onlineExercises') { 
         if (publicViewLoading || ((isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage') && !publicViewData && !sharedViewError)) {
             mainContent = <PageSkeleton />;
         }
@@ -2745,11 +2952,14 @@ case 'meetings':
                 case 'courseCertificatesPage':
                     mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicCourseCertificatesView courseId={publicViewData.courseId} /></Suspense> );
                     break;
+                case 'dailyEvaluation':
+                    mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicDailyEvaluationView formId={publicViewData.formId} /></Suspense> );
+                    break;
                 case 'attendance':
-                    mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicAttendanceView courseId={publicViewData.courseId} /></Suspense> );
+                    mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicAttendanceView courseId={publicViewData.courseId} user={user} /></Suspense> );
                     break;
                 case 'onlineExercises':
-                    mainContent = ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><PublicExerciseView courseId={publicViewData.courseId} /></ImnciProvider></Suspense> );
+                    mainContent = ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><PublicExerciseView courseId={publicViewData.courseId} user={user} /></ImnciProvider></Suspense> );
                     break;
                 default:
                     mainContent = <Card><div className="p-4 text-center text-red-600 font-semibold">{t('app_extra.errors.invalid_report_type', 'Invalid report type.')}</div></Card>;
@@ -2776,6 +2986,12 @@ case 'meetings':
         }
     }
 
+    else if (publicSurveyId) {
+        // Open to everyone: signed-in people get their name filled in, others type it once.
+        mainContent = authLoading
+            ? <PageSkeleton />
+            : <Suspense fallback={<PageSkeleton />}><PublicSurveyForm key={user?.uid || 'guest'} surveyId={publicSurveyId} /></Suspense>;
+    }
     else if (publicSupervisionFormId) {
         if (authLoading) {
             mainContent = <PageSkeleton />;
@@ -2812,7 +3028,11 @@ case 'meetings':
                 <Suspense fallback={<PageSkeleton />}>
                     <CourseTestForm
                         course={publicTestData.course} participants={publicTestData.participants} participantTests={publicTestData.tests}
-                        onSaveTest={upsertParticipantTest} 
+                        onSaveTest={async (payload) => {
+                            const saved = await upsertParticipantTest(payload);
+                            rememberLinkedParticipant(publicTestData.course.id, payload?.participantId, user);
+                            return saved;
+                        }}
                         onSaveParticipant={async (participantData, facilityUpdateData) => {
                             const currentUserIdentifier = user?.displayName || user?.email || 'Public User';
                             const savedParticipant = await saveParticipantAndSubmitFacilityUpdate(participantData, facilityUpdateData, currentUserIdentifier);
@@ -2833,7 +3053,8 @@ case 'meetings':
                             };
                             refetchData();
                         }}
-                        initialParticipantId={''} isPublicView={true} canManageTests={permissions.canUseFederalManagerAdvancedFeatures} testType={publicTestType}
+                        initialParticipantId={findLinkedParticipant(publicTestData.participants, publicTestData.course.id, user)?.id || ''}
+                        isPublicView={true} canManageTests={permissions.canUseFederalManagerAdvancedFeatures} testType={publicTestType}
                     />
                 </Suspense>
             );
@@ -2843,7 +3064,9 @@ case 'meetings':
     }
 
     else if (!user && !authLoading) {
-        mainContent = <SignInBox />;
+        // The phone app offers the QR scanner before sign-in too: a
+        // participant opening their pre-test needs no account.
+        mainContent = <SignInBox above={QR_SCAN_ENABLED ? <ScanQrCard onOpen={openQrScanner} /> : null} />;
     }
     else if (user && isProfileIncomplete) {
         mainContent = <SignInBox />;
@@ -2938,10 +3161,7 @@ case 'meetings':
 
                 <ThemeToggle className="!bg-slate-600 !border-slate-500 hover:!bg-slate-500" />
                 <button
-                    onClick={() => {
-                        const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
-                        i18n.changeLanguage(newLang);
-                    }}
+                    onClick={toggleLanguage}
                     className="p-1 sm:p-1.5 text-sky-400 bg-slate-600 border border-slate-500 rounded hover:bg-slate-500 hover:text-sky-300 transition-colors flex items-center justify-center min-w-[32px] sm:min-w-[36px]"
                     title={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
                 >
@@ -2950,8 +3170,18 @@ case 'meetings':
         </>
     );
 
+    // The loading screen is drawn ALONE, not inside the header/main/footer.
+    // It covers the whole window anyway, but the page underneath it still had
+    // a footer pinned to the bottom of an empty <main>; when sign-in finished
+    // and the real screen filled <main>, that footer jumped down, which is the
+    // layout shift PageSpeed scored on desktop (CLS 0.128). With nothing laid
+    // out underneath, the first real screen only adds elements, never moves them.
+    if (showSplash) return <SplashScreen />;
+
     return (
         <div className="min-h-screen bg-surface flex flex-col pt-0 relative">
+            {/* A shared link opened in a phone browser: offer the Android app. */}
+            <GetAppBanner />
             
             <style>{`
                 @media (max-width: 768px) {
@@ -2972,7 +3202,7 @@ case 'meetings':
                 it, so it has to live somewhere that navigation does not unmount.
                 Lazy, because nothing on the sign-in screen needs the certificate
                 code and it pulls in jsPDF and html2canvas. */}
-            <Suspense fallback={null}><CertificateDownloadBanner /></Suspense>
+            <CertificateDownloadBanner />
 
             {/* Offline is a small floating pill, not a bar: it takes no space
                 and blocks no taps, so open forms and quizzes carry on. */}
@@ -2993,10 +3223,10 @@ case 'meetings':
                 )}
             </div>
 
-            <header ref={headerRef} className={`bg-slate-800 shadow-lg relative z-40 transition-all ${(isFileDownloading || isDownloadingAppUpdate) ? 'top-10 mb-10' : 'top-0'}`}>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            <header data-app-chrome="header" ref={headerRef} className={`bg-slate-800 shadow-lg relative z-40 transition-all ${(isFileDownloading || isDownloadingAppUpdate) ? 'top-10 mb-10' : 'top-0'}`}>
+                <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
                         {user && !isMinimalUILayout && (
                             <button
                                 onClick={() => setSideMenuOpen(true)}
@@ -3007,17 +3237,30 @@ case 'meetings':
                                 <Menu size={24} />
                             </button>
                         )}
-                        <div className="flex items-center gap-3 sm:gap-4 cursor-pointer min-w-0" onClick={() => !isSharedView && navigate('landing')}>
-                            <div className="h-11 w-11 sm:h-14 sm:w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md shrink-0">
-                                <img src="/child.png" alt={t('app_extra.header.logo_alt', 'NCHP Logo')} className="h-9 w-9 sm:h-12 sm:w-12 object-contain" />
+                        {scannedPublicOpen && isMinimalUILayout && (
+                            <button
+                                onClick={leaveScannedPage}
+                                aria-label={t('qr_scanner.back_to_app', 'Back to the app')}
+                                title={t('qr_scanner.back_to_app', 'Back to the app')}
+                                className="p-2 -ms-2 rounded-full text-white hover:bg-white/10 active:bg-white/20 shrink-0"
+                            >
+                                <ArrowLeft size={22} className="rtl:-scale-x-100" />
+                            </button>
+                        )}
+                        <div className="flex items-center gap-3 sm:gap-4 cursor-pointer min-w-0" onClick={() => { if (scannedPublicOpen) leaveScannedPage(); else if (!isSharedView) navigate('landing'); }}>
+                            <div className="h-10 w-10 sm:h-14 sm:w-14 bg-white rounded-full flex items-center justify-center p-1 shadow-md shrink-0">
+                                <img src={logoUrl} alt={IS_EMONC_SITE ? EMONC_LOGO_ALT : t('app_extra.header.logo_alt', 'NCHP Logo')} width="48" height="48" className="h-8 w-8 sm:h-12 sm:w-12 object-contain" />
                             </div>
                             <div className="min-w-0">
-                                <h1 className="text-lg sm:text-2xl font-bold text-white leading-tight">{IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program')}</h1>
-                                <p className="text-xs sm:text-sm text-slate-300 flex items-center flex-wrap gap-2 mt-1 sm:mt-0">
+                                <h1 className="text-[clamp(13px,4.3vw,17px)] sm:text-2xl font-bold text-white leading-tight whitespace-nowrap">{IS_EMONC_SITE ? (
+                                    // The full EmONC name does not fit phone or tablet headers; they show the short name.
+                                    <><span className="lg:hidden">{EMONC_SHORT_TITLE}</span><span className="hidden lg:inline">{EMONC_SITE_TITLE}</span></>
+                                ) : t('app.title', 'National Child Health Program')}</h1>
+                                <p className="text-[11px] sm:text-sm text-slate-300 flex items-center flex-wrap gap-1.5 sm:gap-2 mt-0.5 sm:mt-0">
                                     <span>{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : t('app.subtitle', 'Program & Course Monitoring System')}</span>
                                     <span
                                         onClick={(e) => { e.stopPropagation(); handleManualUpdateCheck(); }}
-                                        className="bg-slate-700 text-sky-300 text-xs px-1.5 py-0.5 rounded border border-slate-600 font-mono shadow-sm cursor-pointer hover:bg-slate-600 hover:text-sky-200 transition-colors"
+                                        className="bg-slate-700 text-sky-300 text-[10px] sm:text-xs leading-tight px-1 sm:px-1.5 py-0 sm:py-0.5 rounded border border-slate-600 font-mono shadow-sm cursor-pointer hover:bg-slate-600 hover:text-sky-200 transition-colors"
                                         title={t('app_extra.header.check_updates', 'Tap to check for updates')}
                                     >
                                         v{appVersion}
@@ -3027,7 +3270,7 @@ case 'meetings':
                         </div>
                         </div>
                         
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 shrink-0">
                             {!isMinimalUILayout && user && (
                                 <nav className="hidden md:flex items-center gap-1">
                                     {visibleNavItems.map(item => (
@@ -3037,18 +3280,19 @@ case 'meetings':
                                     ))} 
                                 </nav>
                             )}
-                            {(!user || isMinimalUILayout) && <ThemeToggle />}
+                            {/* Phones: theme and language sit one above the other in a slim
+                                column, so the programme name keeps the width of the header. */}
                             {(!user || isMinimalUILayout) && (
-                                <button
-                                    onClick={() => {
-                                        const newLang = i18n.language?.startsWith('en') ? 'ar' : 'en';
-                                        i18n.changeLanguage(newLang);
-                                    }}
-                                    className="p-1.5 text-sky-400 bg-slate-700 border border-slate-600 rounded hover:bg-slate-600 hover:text-sky-300 transition-colors flex items-center justify-center min-w-[36px]"
-                                    title={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
-                                >
-                                    <span className="font-bold text-sm">E/ع</span>
-                                </button>
+                                <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
+                                    <ThemeToggle className="h-6 w-7 !p-0 !min-w-0 sm:h-auto sm:w-auto sm:!p-1.5 sm:!min-w-[36px]" iconSize={14} />
+                                    <button
+                                        onClick={toggleLanguage}
+                                        className="h-6 w-7 sm:h-auto sm:w-auto p-0 sm:p-1.5 text-sky-400 bg-slate-700 border border-slate-600 rounded hover:bg-slate-600 hover:text-sky-300 transition-colors flex items-center justify-center sm:min-w-[36px]"
+                                        title={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
+                                    >
+                                        <span className="font-bold text-[11px] sm:text-sm whitespace-nowrap leading-none">E/ع</span>
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -3056,7 +3300,7 @@ case 'meetings':
             </header>
 
             {user && !isMinimalUILayout && (
-                <div className="bg-slate-700 text-slate-200 px-2 sm:px-3 py-2 flex items-center justify-between w-full shadow-inner min-h-[48px] gap-2">
+                <div data-app-chrome="subbar" className="bg-slate-700 text-slate-200 px-2 sm:px-3 py-2 flex items-center justify-between w-full shadow-inner min-h-[48px] gap-2">
 
                     <div className="flex-1 flex items-center justify-start overflow-hidden min-w-0">
                         {/* Phones: the side menu sits here; the greeting already names the user. */}
@@ -3108,7 +3352,7 @@ case 'meetings':
             )}
 
             {showBackBar && (
-                <div className="bg-slate-800 text-white border-t border-slate-700 shadow">
+                <div className="app-backbar bg-slate-800 text-white border-t border-slate-700 shadow">
                     <div className="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 h-12 px-1 sm:px-4">
                         <button
                             onClick={goBack}
@@ -3119,8 +3363,9 @@ case 'meetings':
                             <ArrowLeft size={22} className="rtl:-scale-x-100" />
                         </button>
                         <div className="flex-1 min-w-0 px-1">
-                            <h2 className="text-base font-bold leading-tight truncate">{pageTitle}</h2>
-                            {pageSubtitle && <p className="text-xs text-slate-300 truncate">{pageSubtitle}</p>}
+                            {/* A full-page form (e.g. Add course) names itself here instead of repeating it in its own bar. */}
+                            <h2 className="text-base font-bold leading-tight truncate">{formTitle ? formTitle.title : pageTitle}</h2>
+                            {(formTitle ? formTitle.subtitle : pageSubtitle) && <p className="text-xs text-slate-300 truncate">{formTitle ? formTitle.subtitle : pageSubtitle}</p>}
                         </div>
                     </div>
                 </div>
@@ -3131,7 +3376,17 @@ case 'meetings':
             {/* in-app replacements for alert()/confirm(); see components/dialogs.jsx */}
             <DialogHost />
 
+            {/* A participant of a course whose training link is open: send them to it. */}
+            {user && !isSharedView && <TrainingInvite user={user} />}
+
             <main className="max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 w-full flex-grow pb-32 md:pb-8 overflow-x-clip">
+                {/* The role could not be loaded: say so, rather than showing an empty menu as if it were the person's real access. */}
+                {user && permissionsError && !userRole && (
+                    <div role="alert" className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                        <span className="flex-1 min-w-[12rem]">{t('app_extra.role_not_loaded', "Your access could not be loaded, so some modules are hidden. Check your connection and try again.")}</span>
+                        <Button size="sm" onClick={() => window.location.reload()}>{t('app_extra.retry', 'Try again')}</Button>
+                    </div>
+                )}
                 {/* keyed on `view` so navigating away from a crashed screen clears the error */}
                 <ErrorBoundary key={view} screen={view} onGoHome={() => navigate('landing')}>
                     <Suspense fallback={<PageSkeleton />}>
@@ -3140,8 +3395,10 @@ case 'meetings':
                 </ErrorBoundary>
             </main>
 
-            {/* On phones the credit sits in the bottom bar; everywhere else it is the page footer. */}
-            <footer className={`${user && !isMinimalUILayout ? 'hidden md:block' : 'block'} bg-slate-800 text-slate-300 text-xs py-3 px-4 border-t border-slate-700`}>
+            {/* The credit bar is pinned to the bottom of every screen. Its height
+                is measured into --credit-bar so the other pinned bottom bars
+                (Save, Next module, ...) sit just above it. */}
+            <footer ref={creditBarRef} data-app-chrome="footer" className="print-hide sticky bottom-0 z-30 block bg-slate-800 text-slate-300 text-xs pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] px-4 border-t border-slate-700">
                 <AppCredit />
             </footer>
 
@@ -3157,16 +3414,17 @@ case 'meetings':
                     onNavigate={guardedNavigate}
                     onProfile={() => setIsUserProfileModalOpen(true)}
                     onSync={() => setIsSyncModalOpen(true)}
-                    onLanguage={() => i18n.changeLanguage(i18n.language?.startsWith('en') ? 'ar' : 'en')}
+                    onLanguage={toggleLanguage}
                     languageLabel={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
                     onUpdate={handleManualUpdateCheck}
                     onLogout={handleLogout}
                     appVersion={appVersion}
+                    apkInfo={apkInfo}
                     isOffline={isOffline}
                 />
             )}
 
-            { user && !isMinimalUILayout && <BottomNav navItems={visibleNavItems} navigate={guardedNavigate} /> }
+            {/* No bottom navigation bar: modules open from the main menu and the ☰ side menu. */}
 
             <Suspense fallback={null}>
                 {isShareModalOpen && user && (
@@ -3286,6 +3544,46 @@ case 'meetings':
                                     </div>
                                 </div>
                                 
+                                <div className="border border-gray-200 p-3 rounded-lg bg-white shadow-sm md:col-span-2 flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <span className="block text-xs text-gray-500 font-bold mb-1">{t('work_profile.card_title', 'Work details')}</span>
+                                        {isWorkProfileComplete(workInfo?.profile) ? (
+                                            <span className="block text-sm text-gray-800 font-medium">
+                                                {[describeJob(workInfo.profile, currentLanguage()), describeWorkplace(workInfo.profile, currentLanguage()), [workInfo.profile.state, workInfo.profile.state === 'Federal' ? '' : workInfo.profile.locality].filter(Boolean).join(' / ')].filter(Boolean).join(' · ')}
+                                            </span>
+                                        ) : (
+                                            <span className="block text-sm text-amber-700">{t('work_profile.card_missing', 'Not filled yet.')}</span>
+                                        )}
+                                        {workInfo?.hrRequest?.group && workInfo.hrRequest.status !== 'cancelled' && (
+                                            <span className="block text-xs text-gray-500 mt-1">
+                                                {t('work_profile.card_request', 'Team request')}: {optionLabel(HR_GROUPS, workInfo.hrRequest.group, currentLanguage())} · {t(`work_profile.status_${workInfo.hrRequest.status}`, workInfo.hrRequest.status)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <Button variant="secondary" onClick={() => setWorkProfileOpen(true)} className="shrink-0">
+                                        {t('work_profile.edit', 'Edit')}
+                                    </Button>
+                                </div>
+
+                                <div className="border border-gray-200 p-3 rounded-lg bg-white shadow-sm md:col-span-2 flex items-center justify-between gap-3">
+                                    <div>
+                                        <span className="block text-xs text-gray-500 font-bold mb-1">{t('app_extra.profile.default_language', 'Default language')}</span>
+                                        <span className="text-xs text-gray-500">{t('app_extra.profile.default_language_hint', 'Saved on your account and used on all your devices.')}</span>
+                                    </div>
+                                    <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden shrink-0">
+                                        {[{ code: 'en', label: 'English' }, { code: 'ar', label: 'العربية' }].map(opt => (
+                                            <button
+                                                key={opt.code}
+                                                type="button"
+                                                onClick={() => setPreferredLanguage(opt.code)}
+                                                className={`px-3 py-1.5 text-sm font-semibold ${currentLanguage() === opt.code ? 'bg-sky-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
                                 <div className="border border-gray-200 p-3 rounded-lg bg-gray-50 shadow-sm">
                                     <span className="block text-xs text-gray-500 font-bold mb-1">{t('app_extra.profile.states', 'Assigned States')}</span>
                                     <span className="text-gray-800 font-medium">
@@ -3310,6 +3608,39 @@ case 'meetings':
                     </Modal>
                 )}
             </Suspense>
+
+            {/* First sign-in: ask once for the default language and save it on the account. */}
+            {user && !authLoading && !isProfileIncomplete && !isMinimalUILayout && savedLanguage === null && !addressForcesLanguage() && (
+                <LanguagePickerModal onDone={(code) => setSavedLanguage(code)} />
+            )}
+
+            {/* After sign in / sign up (once the language is chosen): job, place of
+                work, workplace and an optional request to join an HR group. Old
+                accounts are asked too, the next time they open the app. Also
+                opened from My Profile to edit. */}
+            {user && !authLoading && !isProfileIncomplete && !isMinimalUILayout && workInfo !== undefined && (
+                workProfileOpen || (
+                    !workProfileLater && !isWorkProfileComplete(workInfo.profile)
+                    && savedLanguage !== undefined && (savedLanguage !== null || addressForcesLanguage())
+                )
+            ) && (
+                <Suspense fallback={null}>
+                    <WorkProfileModal
+                        uid={user.uid}
+                        displayName={user.displayName}
+                        initial={workInfo.profile}
+                        hrRequest={workInfo.hrRequest}
+                        onDone={(profile) => { setWorkInfo((w) => ({ ...(w || {}), profile })); setWorkProfileOpen(false); }}
+                        onLater={() => {
+                            if (!workProfileOpen) {
+                                setWorkProfileLater(true);
+                                try { sessionStorage.setItem('work_profile_later', '1'); } catch { /* storage blocked */ }
+                            }
+                            setWorkProfileOpen(false);
+                        }}
+                    />
+                </Suspense>
+            )}
 
             <Suspense fallback={null}>
                 {isSyncModalOpen && (
@@ -3416,8 +3747,16 @@ case 'meetings':
                 </Suspense>
             )}
 
-            {user && !isMinimalUILayout && !IS_EMONC_SITE && !dataAssistant.open && !NO_ASSISTANT_BUTTON.has(view) && (
-                <DataAssistantButton onClick={openDataAssistant} />
+            {/* "Ask the data" opens from the main menu only, where it answers
+                questions about any page. Other pages show the page's own
+                "Add" button in that corner when the page has one. */}
+            {user && !isMinimalUILayout && !dataAssistant.open && view !== 'landing' && pageAdd && (
+                <PageAddButton label={pageAdd.label} onClick={pageAdd.run} />
+            )}
+            {QR_SCAN_ENABLED && qrScanner.loaded && (
+                <Suspense fallback={null}>
+                    <QrScanner open={qrScanner.open} onClose={closeQrScanner} onOpenLink={openScannedLink} />
+                </Suspense>
             )}
             {dataAssistant.loaded && (
                 <Suspense fallback={null}>

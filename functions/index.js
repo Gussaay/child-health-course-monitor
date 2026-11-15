@@ -2,6 +2,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const functionsV1 = require("firebase-functions/v1");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { tally, queryReads, flushUsage } = require("./usageTally");
 const { getMessaging } = require("firebase-admin/messaging");
 const { getAuth } = require("firebase-admin/auth");
 
@@ -116,6 +117,8 @@ exports.sendFCMNotification = onCall(async (request) => {
     // Scenario A: Notify all Federal Managers and Super Users
     if (targetUserId === "managers_and_super_users") {
       const usersSnapshot = await db.collection("users").get();
+      tally("sendFCMNotification", "users", queryReads(usersSnapshot));
+      await flushUsage(db);
       usersSnapshot.forEach((doc) => {
         // EXCLUDE THE SENDER FROM THE NOTIFICATION LIST
         if (doc.id === senderUid) return;
@@ -133,6 +136,8 @@ exports.sendFCMNotification = onCall(async (request) => {
     // Scenario B: Broadcast to every single system user
     else if (targetUserId === "all") {
       const usersSnapshot = await db.collection("users").get();
+      tally("sendFCMNotification", "users", queryReads(usersSnapshot));
+      await flushUsage(db);
       usersSnapshot.forEach((doc) => {
         // EXCLUDE THE SENDER
         if (doc.id === senderUid) return;
@@ -363,3 +368,11 @@ exports.onlineProgressReport = require("./onlineProgress").onlineProgressReport;
 // users' Usage tab (googleUsage.js). Runs as the function's service account,
 // which needs the Monitoring Viewer role.
 exports.googleFirestoreUsage = require("./googleUsage").googleFirestoreUsage;
+
+// The Dashboard's slim copy of the health facilities, kept current by delta
+// reads, so the Dashboard does not download every full facility document
+// (facilityDashboardCopy.js).
+exports.facilityDashboardCopy = require("./facilityDashboardCopy").facilityDashboardCopy;
+// The main menu's lists as slim copies, so phones do not download every
+// course, participant, visit and facilitator for the greeting numbers.
+exports.homeCopy = require("./homeCopy").homeCopy;

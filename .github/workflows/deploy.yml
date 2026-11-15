@@ -16,6 +16,12 @@ env:
   # the version from it independently rather than passing it between them, so
   # the jobs need no shared state to agree on what they are shipping.
   NATIVE_BUILD_ID: ${{ github.run_number }}
+  # The site apps built next to the NCHP app (android/app/build.gradle
+  # flavors, src/siteMode.js NATIVE_APP): name:package:APK file prefix.
+  # Each one runs its site's web build (VITE_SITE=<name>) and is built only
+  # once google-services.json has its package (Firebase console, Add app >
+  # Android); until then it is skipped and the NCHP app ships as before.
+  SITE_APPS: "emonc:com.nchp.monitoring.emonc:EmONC_APP_v ch:com.nchp.monitoring.ch:CH_Sudan_APP_v"
 
 # =============================================================================
 # The pipeline is split so one broken thing stops only what depends on it.
@@ -147,6 +153,64 @@ jobs:
       - name: Build Web Assets
         run: npm run build
 
+      # Each site app's web layer: the same code built for that site
+      # (EmONC: Courses and Surveys only, its own name and logo; ch: links
+      # point at ch-sudan.web.app). Never published as a site; it goes into
+      # that app's APK and its live updates. Apps not yet in
+      # google-services.json are listed as skipped.
+      - name: Build site app web layers
+        run: |
+          mkdir -p dist-apps
+          : > site-apps-ready.txt
+          for APP in $SITE_APPS; do
+            IFS=: read -r NAME PKG PREFIX <<< "$APP"
+            VITE_SITE=$NAME npx vite build --outDir dist-apps/$NAME
+            if jq -e --arg p "$PKG" '.client[] | select(.client_info.android_client_info.package_name == $p)' android/app/google-services.json > /dev/null; then
+              echo "$NAME" >> site-apps-ready.txt
+            else
+              echo "::warning::google-services.json has no $PKG app yet, so the $NAME APK is not built."
+            fi
+          done
+          echo "Site apps to build: $(tr '\n' ' ' < site-apps-ready.txt)"
+          cp site-apps-ready.txt dist-apps/
+
+      # Android App Links: lets a shared link (WhatsApp, SMS, e-mail) open in
+      # the installed app instead of the browser. Android checks that each site
+      # names the app's signing certificate in /.well-known/assetlinks.json.
+      # Hosting skips dot-folders, so the file goes to /app-links/ and
+      # firebase.json serves it at /.well-known/assetlinks.json on every site.
+      # Only the certificate's public fingerprint is written; the keystore is
+      # read from a temp file that is deleted straight away. Secrets go through
+      # env: so they are never pasted into the script text.
+      - name: Write Android App Links file
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::No signing keystore, so shared links will open in the browser, not the app."
+            exit 0
+          fi
+          KS="$RUNNER_TEMP/applinks.keystore"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KS"
+          FINGERPRINT=$(keytool -list -v -keystore "$KS" -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" 2>/dev/null \
+            | grep -m1 -E '^\s*SHA256:' | sed -E 's/^\s*SHA256:\s*//' | tr -d '[:space:]')
+          rm -f "$KS"
+          if ! printf '%s' "$FINGERPRINT" | grep -qE '^([0-9A-F]{2}:){31}[0-9A-F]{2}$'; then
+            echo "::warning::Could not read the signing certificate, so shared links will open in the browser, not the app."
+            exit 0
+          fi
+          mkdir -p dist/app-links
+          # All the apps are signed with the same key. Each claims only its own
+          # site's links (android/app/src/<flavor>/AndroidManifest.xml).
+          jq -n --arg fp "$FINGERPRINT" '[("com.nchp.monitoring.app", "com.nchp.monitoring.emonc", "com.nchp.monitoring.ch") | {
+              relation: ["delegate_permission/common.handle_all_urls"],
+              target: { namespace: "android_app", package_name: .,
+                        sha256_cert_fingerprints: [$fp] } }]' \
+            > dist/app-links/assetlinks.json
+          cat dist/app-links/assetlinks.json
+
       - name: Create Web Update Manifests
         run: |
           FIREBASE_URL="https://imnci-courses-monitor.web.app"
@@ -178,6 +242,24 @@ jobs:
             > dist/latest/update.json
           cat dist/latest/update.json
 
+          # Each site app's live updates: its web layer, at /latest-<name>/
+          # (android/app/src/<name>/res/values/strings.xml, src/siteMode.js).
+          for APP in $SITE_APPS; do
+            IFS=: read -r NAME PKG PREFIX <<< "$APP"
+            APP_ZIP="update-${NAME}-${{ env.BUILD_VERSION }}.zip"
+            (cd dist-apps/$NAME && zip -qr ../../${APP_ZIP} .)
+            mkdir -p dist/latest-$NAME
+            mv ${APP_ZIP} dist/latest-$NAME/
+            jq -n \
+              --arg version "$BUILD_VERSION" \
+              --arg url "${FIREBASE_URL}/latest-${NAME}/${APP_ZIP}" \
+              --arg checksum "$(sha256sum dist/latest-$NAME/${APP_ZIP} | cut -d ' ' -f1)" \
+              '{version: $version, url: $url, checksum: $checksum,
+                mandatory: false, notes: "", minNativeBuild: 1}' \
+              > dist/latest-$NAME/update.json
+            cat dist/latest-$NAME/update.json
+          done
+
       # The APK URL is built from the version, not from the upload result, so
       # this manifest can be written before the APK exists. AdminDashboard.jsx
       # fetches it to show which native build is current.
@@ -200,12 +282,28 @@ jobs:
             > public/native-version.json
           cp public/native-version.json dist/native-version.json
           cat public/native-version.json
+          # Each site's "Get the app" button reads native-version-<name>.json
+          # (GetAppBanner.jsx). Written only for the apps built this release.
+          for APP in $SITE_APPS; do
+            IFS=: read -r NAME PKG PREFIX <<< "$APP"
+            grep -qx "$NAME" site-apps-ready.txt || continue
+            jq --arg url "${STORAGE_URL//National_Child_Health_Program_APP_v/$PREFIX}" \
+              '.apkUrl = $url | .downloadUrl = $url' public/native-version.json > dist/native-version-$NAME.json
+            cat dist/native-version-$NAME.json
+          done
 
       - name: Upload web build
         uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist
+          retention-days: 3
+
+      - name: Upload site app web layers
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-apps
+          path: dist-apps
           retention-days: 3
 
   # ---------------------------------------------------------------------------
@@ -229,7 +327,7 @@ jobs:
       # open is running the previous release, and the next screen it opens asks
       # for a file name that the deploy has just removed — that failure is what
       # made the app hang and then reload itself after each update. The files of
-      # the last two weeks of releases are now published alongside the new ones,
+      # the last week of releases are now published alongside the new ones,
       # so an open app carries on and simply starts on the new release the next
       # time it is opened. Only the web site gets them: the APK and the
       # over-the-air zip were made from dist/ before this step.
@@ -243,8 +341,10 @@ jobs:
       - name: Add earlier releases' files to this deploy
         run: |
           mkdir -p previous-assets
-          # Older than 14 days: no open app can still need them.
-          find previous-assets -type f -mtime +14 -delete
+          # Older than 7 days: no open app can still need them. (It was 14,
+          # but with several releases a day those old files made every
+          # Hosting version much bigger, see the storage note below.)
+          find previous-assets -type f -mtime +7 -delete
           KEPT=$(find previous-assets -type f | wc -l)
           # -n: never replace a file of this release.
           cp -rp --update=none previous-assets/. dist/assets/
@@ -262,6 +362,38 @@ jobs:
           firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}"
           channelId: live
           projectId: "imnci-courses-monitor"
+
+      # HOSTING STORAGE. Firebase keeps every deployed version of every site
+      # until told otherwise, and the no-cost quota is 10 GB for the whole
+      # project. Each release adds about 20 MB of web files plus the
+      # over-the-air zips to each of the three sites, so a busy week of pushes
+      # went past 10 GB. maxVersions makes Firebase delete versions older
+      # than the newest 5 on each site by itself (the live one is never
+      # deleted); rolling back is still possible to any of those 5.
+      # A warning, not a failure: the site is already live.
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}'
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Keep only the newest Hosting versions
+        env:
+          KEEP_VERSIONS: 5
+        run: |
+          TOKEN=$(gcloud auth print-access-token)
+          for SITE in imnci-courses-monitor ch-sudan emonc-sudan; do
+            if curl -fsS -X PATCH \
+                -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+                -d "{\"maxVersions\": $KEEP_VERSIONS}" \
+                "https://firebasehosting.googleapis.com/v1beta1/sites/$SITE/config?updateMask=maxVersions"; then
+              echo " <- $SITE keeps its newest $KEEP_VERSIONS versions."
+            else
+              echo "::warning::Could not set the version limit on $SITE. Set it in Firebase console > Hosting > $SITE > Release history > Settings."
+            fi
+          done
 
       # Saved only after a successful deploy, for the next release to keep.
       - name: Save this release's files for the next deploy
@@ -390,6 +522,12 @@ jobs:
           name: dist
           path: dist
 
+      - name: Download site app web layers
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-apps
+          path: dist-apps
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -419,20 +557,30 @@ jobs:
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/nchp-release.keystore
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease
           BUILD_TOOLS_DIR=$(ls -d ${ANDROID_HOME}/build-tools/* | sort -V | tail -1)
           echo "Using build tools: $BUILD_TOOLS_DIR"
-          $BUILD_TOOLS_DIR/zipalign -v -p 4 \
-            app/build/outputs/apk/release/app-release-unsigned.apk \
-            app/build/outputs/apk/release/app-release-aligned.apk
-          $BUILD_TOOLS_DIR/apksigner sign --ks app/nchp-release.keystore \
-            --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
-            --ks-pass "pass:${{ secrets.KEYSTORE_PASSWORD }}" \
-            --key-pass "pass:${{ secrets.KEY_PASSWORD }}" \
-            app/build/outputs/apk/release/app-release-aligned.apk
-          # Proves the signature is valid before anyone downloads it.
-          $BUILD_TOOLS_DIR/apksigner verify --verbose \
-            app/build/outputs/apk/release/app-release-aligned.apk
+          # Aligns and signs one app's APK (android/app/build.gradle flavors).
+          sign_apk() {
+            local OUT=app/build/outputs/apk/$1/release
+            $BUILD_TOOLS_DIR/zipalign -v -p 4 $OUT/app-$1-release-unsigned.apk $OUT/app-$1-release-aligned.apk > /dev/null
+            $BUILD_TOOLS_DIR/apksigner sign --ks app/nchp-release.keystore \
+              --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
+              --ks-pass "pass:${{ secrets.KEYSTORE_PASSWORD }}" \
+              --key-pass "pass:${{ secrets.KEY_PASSWORD }}" \
+              $OUT/app-$1-release-aligned.apk
+            # Proves the signature is valid before anyone downloads it.
+            $BUILD_TOOLS_DIR/apksigner verify --verbose $OUT/app-$1-release-aligned.apk
+          }
+          # The NCHP app, with the main web build that cap sync copied in.
+          ./gradlew assembleNchpRelease
+          sign_apk nchp
+          # The site apps: same project, each with its site's web layer.
+          for NAME in $(cat ../dist-apps/site-apps-ready.txt); do
+            rm -rf app/src/main/assets/public
+            cp -r ../dist-apps/$NAME app/src/main/assets/public
+            ./gradlew assemble${NAME^}Release
+            sign_apk $NAME
+          done
           # The keystore must never stay on disk after signing.
           rm -f app/nchp-release.keystore
           cd ..
@@ -442,12 +590,18 @@ jobs:
           BUILD_VERSION: ${{ needs.build.outputs.build_version }}
         run: |
           gcloud storage cp \
-            android/app/build/outputs/apk/release/app-release-aligned.apk \
+            android/app/build/outputs/apk/nchp/release/app-nchp-release-aligned.apk \
             gs://imnci-courses-monitor.firebasestorage.app/apks/National_Child_Health_Program_APP_v${BUILD_VERSION}.apk \
             --cache-control="public, max-age=31536000, immutable"
-          # The ?alt=media link only works if the file can be read without a
-          # login. If your Storage rules require authentication, users get a
-          # 403 and the Download button appears to do nothing.
+          # Same version, each app's file name (src/siteMode.js siteApkUrl).
+          for APP in $SITE_APPS; do
+            IFS=: read -r NAME PKG PREFIX <<< "$APP"
+            grep -qx "$NAME" dist-apps/site-apps-ready.txt || continue
+            gcloud storage cp \
+              android/app/build/outputs/apk/$NAME/release/app-$NAME-release-aligned.apk \
+              gs://imnci-courses-monitor.firebasestorage.app/apks/${PREFIX}${BUILD_VERSION}.apk \
+              --cache-control="public, max-age=31536000, immutable"
+          done
 
   # ---------------------------------------------------------------------------
   # Release history and old-APK cleanup. Waits for BOTH the site and the APK:

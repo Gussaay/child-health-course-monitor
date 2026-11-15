@@ -9,14 +9,20 @@ import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { STATE_LOCALITIES } from './constants';
 
 // --- Icons & Data Imports ---
-import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History, Bell, Trash2, Download, MessageSquareWarning, AlertTriangle, Sparkles } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History, Bell, Trash2, Download, MessageSquareWarning, AlertTriangle, Sparkles, UserPlus } from 'lucide-react';
 
 // Lazy: the reports carry screenshots, and nobody opening Manage User Roles
 // should pay to download a screen they are not looking at.
 const ProblemReportsTab = lazy(() => import('./ProblemReports').then(m => ({ default: m.ProblemReportsTab })));
 const AiActivityTab = lazy(() => import('./AiActivityTab'));
 const UsageCostPanel = lazy(() => import('./UsageCostPanel'));
+const RegistrationsTab = lazy(() => import('./RegistrationsTab'));
 import { listFederalCoordinators } from '../data';
+import { downloadAndOpenFile } from '../utils/fileDownloader';
+import { nextDisplayVersion, displayVersionFor } from '../utils/appVersionLabel';
+
+// The shown version before the first APK gets its own number (package.json releaseVersion).
+const BASE_SHOWN_VERSION = import.meta.env.VITE_RELEASE_VERSION || '3.2';
 
 // --- NEW COMPONENT IMPORT ---
 import AdminNotificationSender from './AdminNotificationSender';
@@ -53,6 +59,8 @@ const AdminTabs = ({ activeTab, setActiveTab, currentUserRoles = [] }) => {
     const { t } = useTranslation();
     const tabs = [
         { key: 'roles', label: 'Manage User Roles', short: 'Roles', icon: Users },
+        // Who signed up, their work details and requests to join a team.
+        { key: 'registrations', label: 'Registrations', short: 'Sign-ups', icon: UserPlus },
         { key: 'permissions', label: 'Manage Role Permissions', short: 'Permissions', icon: Shield },
         { key: 'notifications', label: 'Push Notifications', short: 'Notify', icon: Bell }, 
         // What people reported, and what the app caught crashing by itself.
@@ -246,7 +254,8 @@ export function AdminDashboard({ appRoles = [] }) {
         isOpen: false,
         versionData: null,
         mandatory: true,
-        notify: false
+        notify: false,
+        displayVersion: ''
     });
 
     const [updateConfig, setUpdateConfig] = useState({
@@ -440,25 +449,38 @@ export function AdminDashboard({ appRoles = [] }) {
     const handlePushHistoryVersion = async () => {
         const { versionData, mandatory, notify } = historyPushModal;
         if (!versionData) return;
+        const shownVersion = String(historyPushModal.displayVersion || '').trim();
+        if (!/^\d+\.\d+$/.test(shownVersion)) {
+            setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.bad_shown_version', 'Write the version users will see as two numbers, like 3.3.'), type: 'error' });
+            return;
+        }
     
-        if (!await confirmDialog(t('admin_pages.admin_dashboard.confirm.deploy', 'Are you sure you want to deploy v{{version}} to users?', { version: versionData.versionString }))) return;
+        if (!await confirmDialog(t('admin_pages.admin_dashboard.confirm.deploy', 'Are you sure you want to deploy v{{version}} to users?', { version: shownVersion }))) return;
         
         setLoading(true);
         try {
             const newBuildId = parseInt(versionData.latestNativeBuild, 10);
-            let updatedStack = updateConfig.mandatoryStack || [];
+            const updatedStack = (updateConfig.mandatoryStack || []).map((id) => parseInt(id, 10)).filter(Number.isFinite);
             
             if (!updatedStack.includes(newBuildId)) {
                 updatedStack.push(newBuildId);
             }
     
+            // The app reads apkUrl (downloadUrl kept for older readers).
+            // Without apkUrl the phone's "Download and install" did nothing.
+            const apkLink = versionData.apkUrl || versionData.downloadUrl;
             const newConfig = {
                 latestNativeBuild: newBuildId,
                 versionString: versionData.versionString,
-                downloadUrl: versionData.downloadUrl,
+                apkUrl: apkLink,
+                downloadUrl: apkLink,
                 mandatory: mandatory,
-                releaseNotes: versionData.releaseNotes || `Update to version ${versionData.versionString}.`,
-                mandatoryStack: updatedStack
+                releaseNotes: versionData.releaseNotes || `Update to version ${shownVersion}.`,
+                mandatoryStack: updatedStack,
+                // What users see: "3.3", then "3.3 (update 2)" after
+                // over-the-air updates (utils/appVersionLabel.js).
+                displayVersion: shownVersion,
+                displayVersions: { ...(updateConfig.displayVersions || {}), [newBuildId]: shownVersion },
             };
     
             await setDoc(doc(db, "meta", "update_config"), newConfig);
@@ -469,8 +491,8 @@ export function AdminDashboard({ appRoles = [] }) {
                 try {
                     const notifTitle = "App Update Available";
                     const notifMessage = mandatory 
-                        ? `A mandatory update to version ${newConfig.versionString} is required. ${newConfig.releaseNotes}`
-                        : `Version ${newConfig.versionString} is now available. ${newConfig.releaseNotes}`;
+                        ? `A mandatory update to version ${shownVersion} is required. ${newConfig.releaseNotes}`
+                        : `Version ${shownVersion} is now available. ${newConfig.releaseNotes}`;
     
                     await addDoc(collection(db, 'notifications'), {
                         title: notifTitle,
@@ -495,8 +517,8 @@ export function AdminDashboard({ appRoles = [] }) {
                 }
             }
     
-            setToast({show: true, message: t('admin_pages.admin_dashboard.toast.pushed', 'Version {{version}} successfully pushed!', { version: versionData.versionString }), type: 'success'});
-            setHistoryPushModal({ isOpen: false, versionData: null, mandatory: true, notify: false });
+            setToast({show: true, message: t('admin_pages.admin_dashboard.toast.pushed', 'Version {{version}} successfully pushed!', { version: shownVersion }), type: 'success'});
+            setHistoryPushModal({ isOpen: false, versionData: null, mandatory: true, notify: false, displayVersion: '' });
         } catch(e) {
             console.error("Failed to push history version", e);
             setToast({show: true, message: t('admin_pages.admin_dashboard.toast.deploy_failed', 'Failed to deploy historical version.'), type: 'error'});
@@ -506,9 +528,11 @@ export function AdminDashboard({ appRoles = [] }) {
 
     const handleStopUpdate = async () => {
         const currentBuildId = parseInt(updateConfig.latestNativeBuild, 10) || 0;
-        let currentStack = updateConfig.mandatoryStack || [];
+        // Old configs may hold the stack as strings or as a non-array; a
+        // non-array is what made "Cancel" fail before.
+        let currentStack = Array.isArray(updateConfig.mandatoryStack) ? updateConfig.mandatoryStack : [];
         
-        currentStack = currentStack.filter(id => id !== currentBuildId);
+        currentStack = currentStack.map((id) => parseInt(id, 10)).filter((id) => Number.isFinite(id) && id !== currentBuildId);
     
         let fallbackVersion = null;
         let validStack = [...currentStack];
@@ -539,10 +563,13 @@ export function AdminDashboard({ appRoles = [] }) {
                 newConfig = {
                     latestNativeBuild: fallbackVersion.latestNativeBuild,
                     versionString: fallbackVersion.versionString,
-                    downloadUrl: fallbackVersion.downloadUrl,
+                    apkUrl: fallbackVersion.apkUrl || fallbackVersion.downloadUrl,
+                    downloadUrl: fallbackVersion.apkUrl || fallbackVersion.downloadUrl,
                     mandatory: fallbackVersion.mandatory !== undefined ? fallbackVersion.mandatory : true, 
                     releaseNotes: fallbackVersion.releaseNotes || `Fallback to version ${fallbackVersion.versionString}.`,
-                    mandatoryStack: validStack 
+                    mandatoryStack: validStack,
+                    displayVersion: displayVersionFor(fallbackVersion.latestNativeBuild, updateConfig.displayVersions, BASE_SHOWN_VERSION).version,
+                    displayVersions: updateConfig.displayVersions || {},
                 };
                 setToast({show: true, message: t('admin_pages.admin_dashboard.toast.reverted', 'Update cancelled. Reverted to alternative active version v{{version}}.', { version: fallbackVersion.versionString }), type: 'success'});
                 setIsUpdateActive(true);
@@ -861,6 +888,23 @@ export function AdminDashboard({ appRoles = [] }) {
     }, [usageStats]);
 
     const renderUpdatesTab = () => {
+        // How far the active APK update has reached, from what each phone
+        // writes to its own userUsageStats doc (utils/updateTelemetry.js).
+        const reachBuild = parseInt(updateConfig?.latestNativeBuild, 10) || 0;
+        const updateReach = reachBuild > 1 ? usageStats.reduce((acc, u) => {
+            const installed = parseInt(u.nativeBuild, 10) || 0;
+            const prompted = (parseInt(u.updatePromptBuild, 10) || 0) >= reachBuild;
+            const downloaded = (parseInt(u.updateDownloadBuild, 10) || 0) >= reachBuild;
+            const updated = installed >= reachBuild;
+            if (installed) acc.seen += 1;
+            if (installed && !updated) acc.older += 1;
+            if (prompted) acc.received += 1;
+            if (downloaded) acc.downloaded += 1;
+            if (updated) acc.updated += 1;
+            if (prompted && !updated) acc.pending += 1;
+            return acc;
+        }, { build: reachBuild, seen: 0, older: 0, received: 0, downloaded: 0, updated: 0, pending: 0 }) : null;
+
         const isNewApkAvailable = serverNativeConfig && serverNativeConfig.latestNativeBuild > (updateConfig?.latestNativeBuild || 0);
 
         return (
@@ -901,7 +945,8 @@ export function AdminDashboard({ appRoles = [] }) {
                                         releaseNotes: `Update to version ${serverNativeConfig.versionString}. Includes latest bug fixes and improvements.`,
                                     },
                                     mandatory: true,
-                                    notify: true
+                                    notify: true,
+                                    displayVersion: nextDisplayVersion(updateConfig.displayVersions, BASE_SHOWN_VERSION)
                                 });
                             }}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md border border-emerald-700 whitespace-nowrap"
@@ -915,9 +960,32 @@ export function AdminDashboard({ appRoles = [] }) {
                     <div className="bg-green-50 border border-green-200 p-4 rounded-xl shadow-inner flex items-center gap-3">
                         <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
                         <div className="text-sm text-green-800 font-medium">
-                            <strong>{t('admin_pages.admin_dashboard.updates.system_status', 'System Status:')}</strong> {t('admin_pages.admin_dashboard.updates.version', 'Version')} <span className="font-mono font-bold bg-green-100 text-green-900 px-1.5 py-0.5 rounded">v{updateConfig.versionString}</span> ({t('admin_pages.admin_dashboard.updates.build_id', 'Build ID:')} {updateConfig.latestNativeBuild}) {t('admin_pages.admin_dashboard.updates.running_as', 'is currently running as the **Active Update**')} ({updateConfig.mandatory ? t('admin_pages.admin_dashboard.updates.mandatory_lock', 'Mandatory Lock') : t('admin_pages.admin_dashboard.updates.optional_prompt', 'Optional Prompt')}).
+                            <strong>{t('admin_pages.admin_dashboard.updates.system_status', 'System Status:')}</strong> {t('admin_pages.admin_dashboard.updates.version', 'Version')} <span className="font-mono font-bold bg-green-100 text-green-900 px-1.5 py-0.5 rounded">v{updateConfig.displayVersion || updateConfig.versionString}</span> ({t('admin_pages.admin_dashboard.updates.build_id', 'Build ID:')} {updateConfig.latestNativeBuild}) {t('admin_pages.admin_dashboard.updates.running_as', 'is currently running as the **Active Update**')} ({updateConfig.mandatory ? t('admin_pages.admin_dashboard.updates.mandatory_lock', 'Mandatory Lock') : t('admin_pages.admin_dashboard.updates.optional_prompt', 'Optional Prompt')}).
                         </div>
                     </div>
+                )}
+
+                {isUpdateActive && updateReach && (
+                    <Card className="shadow-sm border border-gray-100 p-5">
+                        <h3 className="text-md font-bold text-gray-800">{t('admin_pages.admin_dashboard.updates.reach_title', 'Who got build {{build}}', { build: updateReach.build })}</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">{t('admin_pages.admin_dashboard.updates.reach_desc', 'Counted per user account. Users who have not opened the app since this counter was added are not included yet.')}</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                            {[
+                                ['received', t('admin_pages.admin_dashboard.updates.reach_received', 'Got the update message'), 'text-sky-700 bg-sky-50 border-sky-100'],
+                                ['downloaded', t('admin_pages.admin_dashboard.updates.reach_downloaded', 'Downloaded the APK'), 'text-indigo-700 bg-indigo-50 border-indigo-100'],
+                                ['updated', t('admin_pages.admin_dashboard.updates.reach_updated', 'Actually updated'), 'text-emerald-700 bg-emerald-50 border-emerald-100'],
+                                ['pending', t('admin_pages.admin_dashboard.updates.reach_pending', 'Got the message, not updated yet'), 'text-amber-700 bg-amber-50 border-amber-100'],
+                            ].map(([key, label, tone]) => (
+                                <div key={key} className={`rounded-xl border p-3 ${tone}`}>
+                                    <div className="text-2xl font-black">{updateReach[key]}</div>
+                                    <div className="text-xs font-semibold mt-0.5">{label}</div>
+                                </div>
+                            ))}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-3">
+                            {t('admin_pages.admin_dashboard.updates.reach_total', '{{seen}} users reported their APK build; {{older}} are still on an older build. Update errors go to the Problems tab.', { seen: updateReach.seen, older: updateReach.older })}
+                        </p>
+                    </Card>
                 )}
 
                 <Card className="shadow-sm border border-gray-100 overflow-hidden">
@@ -937,9 +1005,18 @@ export function AdminDashboard({ appRoles = [] }) {
                                     return (
                                         <tr key={stat.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="py-3">
-                                                <div className="font-bold text-sky-700 bg-sky-50 px-2 py-1 rounded inline-block border border-sky-100 shadow-sm">
-                                                    v{stat.versionString}
-                                                </div>
+                                                {(updateConfig.displayVersions || {})[parseInt(stat.latestNativeBuild, 10)] ? (
+                                                    <div className="flex flex-col items-start gap-0.5">
+                                                        <div className="font-bold text-sky-700 bg-sky-50 px-2 py-1 rounded inline-block border border-sky-100 shadow-sm">
+                                                            v{updateConfig.displayVersions[parseInt(stat.latestNativeBuild, 10)]}
+                                                        </div>
+                                                        <span className="text-[11px] text-gray-400 font-mono">{stat.versionString}</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="font-bold text-sky-700 bg-sky-50 px-2 py-1 rounded inline-block border border-sky-100 shadow-sm">
+                                                        v{stat.versionString}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="py-3 text-gray-600 font-mono font-medium">{stat.latestNativeBuild}</td>
                                             <td className="py-3 text-sm text-gray-500 font-medium">
@@ -960,7 +1037,7 @@ export function AdminDashboard({ appRoles = [] }) {
                                                     ) : (
                                                         <Button 
                                                             size="sm"
-                                                            onClick={() => setHistoryPushModal({ isOpen: true, versionData: stat, mandatory: true, notify: false })}
+                                                            onClick={() => setHistoryPushModal({ isOpen: true, versionData: stat, mandatory: true, notify: false, displayVersion: (updateConfig.displayVersions || {})[parseInt(stat.latestNativeBuild, 10)] || nextDisplayVersion(updateConfig.displayVersions, BASE_SHOWN_VERSION) })}
                                                             className="bg-sky-600 border-sky-700 hover:bg-sky-700 text-xs px-2 py-1 shadow-sm text-white border"
                                                         >
                                                             {t('admin_pages.admin_dashboard.updates.push_apk', 'Push APK Update')}
@@ -970,7 +1047,7 @@ export function AdminDashboard({ appRoles = [] }) {
                                                     <Button 
                                                         size="sm"
                                                         variant="secondary"
-                                                        onClick={isActiveUpdate ? handleForceCacheReset : undefined}
+                                                        onClick={isActiveUpdate ? handleStopUpdate : undefined}
                                                         disabled={!isActiveUpdate}
                                                         className={`border-red-200 text-red-700 text-xs px-2 py-1 shadow-sm bg-white ${
                                                             isActiveUpdate 
@@ -981,15 +1058,27 @@ export function AdminDashboard({ appRoles = [] }) {
                                                         {t('admin_pages.admin_dashboard.updates.cancel_apk', 'Cancel APK Update')}
                                                     </Button>
 
-                                                    <a 
-                                                        href={stat.downloadUrl} 
-                                                        target="_blank" 
-                                                        rel="noopener noreferrer"
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const link = stat.apkUrl || stat.downloadUrl;
+                                                            if (!link) {
+                                                                setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.no_apk_link', 'This version has no APK link.'), type: 'error' });
+                                                                return;
+                                                            }
+                                                            // Inside the Android app a plain link does nothing, so
+                                                            // the file is downloaded and handed to the installer.
+                                                            downloadAndOpenFile(link, `NCHP-${stat.latestNativeBuild || stat.versionString}.apk`, {
+                                                                isSystemFile: true,
+                                                                onStart: () => setToast({ show: true, message: t('admin_pages.admin_dashboard.toast.apk_downloading', 'Downloading the APK…'), type: 'info' }),
+                                                                onError: (e) => setToast({ show: true, message: t('admin_pages.app_update.download_failed', 'The download failed: {{message}}', { message: e?.message || '' }), type: 'error' }),
+                                                            });
+                                                        }}
                                                         className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium text-sky-600 bg-sky-50 border border-sky-200 rounded hover:bg-sky-100 transition-colors"
                                                         title={t('admin_pages.admin_dashboard.updates.download_apk', 'Download APK')}
                                                     >
                                                         {t('admin_pages.admin_dashboard.updates.download', 'Download')}
-                                                    </a>
+                                                    </button>
                                                     
                                                     <button 
                                                         onClick={() => handleDeleteHistoryRecord(stat)}
@@ -1345,6 +1434,15 @@ export function AdminDashboard({ appRoles = [] }) {
 
             <div className="mt-4">
                 {activeTab === 'roles' && renderUserRolesTab()}
+                {activeTab === 'registrations' && (
+                    <Suspense fallback={<Spinner />}>
+                        <RegistrationsTab
+                            users={users}
+                            approverEmail={currentUser?.email}
+                            onUserUpdated={(id, patch) => setUsers(list => list.map(u => (u.id === id ? { ...u, ...patch } : u)))}
+                        />
+                    </Suspense>
+                )}
                 {activeTab === 'permissions' && renderRolePermissionsTab()}
                 {activeTab === 'usage' && currentUserRoles.includes('super_user') && renderUsageTab()}
                 {activeTab === 'updates' && currentUserRoles.includes('super_user') && renderUpdatesTab()}
@@ -1373,6 +1471,18 @@ export function AdminDashboard({ appRoles = [] }) {
                                 </p>
                             )}
                         </div>
+                    </div>
+
+                    <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+                        <label className="block font-bold text-gray-800 text-sm" htmlFor="shown-version">{t('admin_pages.admin_dashboard.push_modal.shown_version', 'Version users will see')}</label>
+                        <input
+                            id="shown-version"
+                            inputMode="decimal"
+                            value={historyPushModal.displayVersion || ''}
+                            onChange={(e) => setHistoryPushModal({ ...historyPushModal, displayVersion: e.target.value })}
+                            className="mt-2 w-32 rounded-lg border border-gray-300 px-3 py-2 font-mono text-lg font-bold"
+                        />
+                        <span className="block text-xs text-gray-500 mt-1">{t('admin_pages.admin_dashboard.push_modal.shown_version_desc', 'Filled in as the next number. Over-the-air updates after this APK show as "{{version}} (update 1)", "(update 2)"… Type a bigger number (like 4.0) for a big release.', { version: historyPushModal.displayVersion || '3.3' })}</span>
                     </div>
 
                     <div className="space-y-3">

@@ -1,0 +1,30 @@
+name: Deploy Firestore rules
+
+# One-off: deploys firestore.rules after the rules tests pass. Runs only for
+# pushes to this branch, so it never touches the main deploy.
+on:
+  push:
+    branches:
+      - claude/project-thread-fjukxi
+
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      - run: npm ci --ignore-scripts
+      - name: Firestore rules tests
+        run: npx --yes firebase-tools@13 emulators:exec --only firestore --project imnci-courses-monitor-test "npx vitest run --config vitest.rules.config.js"
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}'
+      - name: Deploy Firestore rules
+        run: npx --yes firebase-tools@13 deploy --only firestore:rules --project imnci-courses-monitor --non-interactive

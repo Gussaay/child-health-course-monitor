@@ -1,7 +1,7 @@
 // src/components/imnci/onlineCourses/SectionTabEditor.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, Stethoscope, Film } from 'lucide-react';
+import { Plus, Trash2, Stethoscope, Film, BookOpen, ClipboardList, Flag } from 'lucide-react';
 import { ref as storageRef, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { Button, Modal, Input, Select, Textarea } from '../../CommonComponents';
 import { notify } from '../../dialogs';
@@ -10,10 +10,12 @@ import { upsertOnlineCourseItem } from '../../../data';
 import { IMNCI_SEVERITIES } from '../../constants';
 import { signOptions, classificationOptions, treatmentSuggestions } from '../standardLists';
 import { liveProtocol, SEVERITY_OF_COLOR } from '../vocabulary';
-import { SECTION_TABS, tabContent, newQuestion, newExerciseLink, blockHtml } from '../book';
+import { SECTION_TABS, tabContent, newQuestion, newExerciseLink, splitForEditor, joinFromEditor, cardMarker } from '../book';
+import { NATIONAL_PROTOCOLS } from '../nationalProtocol';
+import { NATIONAL_FORMS } from '../recordingForms';
 import { RichTextEditor, useImnci } from '../shared';
 import { ASSET_ROOT } from './assets';
-import { BookImage, VideoBlock } from './blocks';
+import { BookImage, VideoBlock, BookletBlock, FormBlock } from './blocks';
 
 // =============================================================================
 // Book manager
@@ -44,8 +46,25 @@ import { BookImage, VideoBlock } from './blocks';
 //
 // So the flowing content — text, lists, pictures, charts — is one document, and
 // only the things that are not prose keep a card of their own: a video, a
-// question, a link to a case, a captured book page.
-const STRUCTURED = ['video', 'question', 'exercise', 'page'];
+// question, a link to a case, a captured book page, a chart booklet table or
+// recording form from the protocol, a labelled note. Each card sits in the
+// text at its marker (see splitForEditor in book.js).
+
+// What a new card starts as.
+const newCard = (type) => (
+    type === 'question' ? newQuestion()
+        : type === 'exercise' ? newExerciseLink()
+            : type === 'booklet' ? { type: 'booklet', part: 'child', categories: [], caption: '' }
+                : type === 'form' ? { type: 'form', part: 'child', sections: [], caption: '' }
+                    : type === 'sudan' ? { type: 'note', label: 'Sudan national protocol', text: '' }
+                        : { type: 'video', url: '', caption: '' });
+
+const CARD_NAMES = {
+    booklet: 'Chart booklet table', form: 'Recording form', note: 'Note', video: 'Video',
+    question: 'Question', exercise: 'Case or exercise', page: 'Book page',
+};
+
+const toggle = (list = [], id) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
 
 export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
     const { t, i18n } = useTranslation();
@@ -58,30 +77,29 @@ export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
     const tabLabel = i18n.language === 'ar' && meta.labelAr ? meta.labelAr : meta.label;
     const { exercises } = useImnci();
     const insertRef = useRef(null);
+    const nextKey = useRef(1);
 
     useEffect(() => {
         if (!section) return;
-        const content = tabContent(section, tab);
         // Everything that can be expressed as text becomes one document; the
-        // rest keeps its card. Joined in the order it was already in, so a
-        // figure that sat between two paragraphs stays between them.
-        const doc = content
-            .filter((b) => !STRUCTURED.includes(b.type))
-            .map((b) => blockHtml(b))
-            .filter(Boolean)
-            .join('\n');
+        // rest keeps its card, held in place in the text by a marker.
+        const { html: doc, cards } = splitForEditor(tabContent(section, tab));
+        nextKey.current = cards.length + 1;
         setHtml(doc);
-        setExtras(JSON.parse(JSON.stringify(content.filter((b) => STRUCTURED.includes(b.type)))));
+        setExtras(cards);
         setTitle(section.title || '');
     }, [section, tab]);
 
     const updateExtra = (i, patch) => setExtras((p) => p.map((b, j) => (j === i ? { ...b, ...patch } : b)));
     const removeExtra = (i) => setExtras((p) => p.filter((_, j) => j !== i));
-    const addExtra = (type) => setExtras((p) => [...p, (
-        type === 'question' ? newQuestion()
-            : type === 'exercise' ? newExerciseLink()
-                : { type: 'video', url: '', caption: '' }
-    )]);
+    // A new card is placed where the cursor is in the text; with no cursor it
+    // goes after the text.
+    const addExtra = (type) => {
+        let key = `c${nextKey.current++}`;
+        while (extras.some((x) => x._k === key)) key = `c${nextKey.current++}`;
+        setExtras((p) => [...p, { ...newCard(type), _k: key }]);
+        insertRef.current?.(`<p>${cardMarker(key)}</p>`);
+    };
 
     // Uploads and hands back a URL, because a picture in the text goes straight
     // into an <img> rather than resolving a storage path when it renders.
@@ -103,13 +121,9 @@ export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
     const save = async () => {
         setSaving(true);
         try {
-            const words = String(html).replace(/<[^>]*>/g, '').trim();
-            const body = words || /<img|<table/i.test(html)
-                ? [{ type: 'rich', text: html }]
-                : [];
-
             const kept = extras.filter((b) => (
-                b.type === 'video' ? String(b.url || '').trim() : true
+                b.type === 'video' ? String(b.url || '').trim()
+                    : b.type === 'note' ? String(b.text || '').trim() : true
             ));
 
             // Caught here rather than saved and met by a learner: a question
@@ -118,12 +132,15 @@ export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
             const problem = kept.find((b) => (
                 b.type === 'question'
                     ? (b.options || []).filter((o) => String(o).trim()).length < 2
-                    : b.type === 'exercise' ? !b.exerciseId : false
+                    : b.type === 'exercise' ? !b.exerciseId
+                        : b.type === 'booklet' ? !(b.categories || []).length : false
             ));
             if (problem) {
                 notify(problem.type === 'exercise'
                     ? t('imnci_ui.courses.editor.choose_case', 'Choose which case the card points at.')
-                    : t('imnci_ui.courses.editor.two_answers', 'Each question needs at least two answers to choose from.'), 'error');
+                    : problem.type === 'booklet'
+                        ? t('imnci_ui.courses.editor.choose_tables', 'Tick at least one chart booklet table.')
+                        : t('imnci_ui.courses.editor.two_answers', 'Each question needs at least two answers to choose from.'), 'error');
                 setSaving(false);
                 return;
             }
@@ -132,7 +149,7 @@ export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
             // `blocks`. Saving the Read tab moves it across and empties the old
             // field, so a section is migrated the first time someone edits it
             // and nothing has to be rewritten in bulk.
-            const patch = { ...section, title: title.trim(), [tab]: [...body, ...kept] };
+            const patch = { ...section, title: title.trim(), [tab]: joinFromEditor(html, kept) };
             if (tab === 'read' && section.blocks?.length) patch.blocks = [];
             await upsertOnlineCourseItem(patch);
             notify(t('imnci_ui.courses.editor.tab_saved', '{{tab}} saved.', { tab: tabLabel }), 'success');
@@ -184,10 +201,16 @@ export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
                 a paragraph, so it keeps a card rather than being typed into the
                 text as markup nobody can see. */}
             <div className="space-y-2">
+                {extras.length > 0 && (
+                    <p className="text-xs text-slate-500">
+                        {t('imnci_ui.courses.editor.cards_hint', 'Each card shows in the text where its marker is, for example [[card c1]]. Move the marker line to move the card.')}
+                    </p>
+                )}
                 {extras.map((b, i) => (
-                    <div key={i} className="border rounded-lg p-3 bg-white space-y-2">
+                    <div key={b._k || i} className="border rounded-lg p-3 bg-white space-y-2">
                         <div className="flex items-center gap-2 text-xs">
-                            <span className="font-mono text-slate-500 flex-1">{b.type}</span>
+                            <span className="font-semibold text-slate-700">{b.label || CARD_NAMES[b.type] || b.type}</span>
+                            <span className="font-mono text-slate-400 flex-1">{b._k ? cardMarker(b._k) : ''}</span>
                             <button onClick={() => removeExtra(i)}
                                 className="px-1.5 py-0.5 border rounded text-red-600 hover:bg-red-50">
                                 <Trash2 size={12} />
@@ -231,6 +254,62 @@ export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
                             </div>
                         )}
 
+                        {b.type === 'booklet' && (
+                            <div className="space-y-2">
+                                <Select label={t('imnci_ui.courses.editor.booklet_part', 'Chart booklet')} value={b.part || 'child'}
+                                    onChange={(e) => updateExtra(i, { part: e.target.value, categories: [] })}>
+                                    <option value="child">{t('clinical_ui.protocol.parts.child', 'Sick child (2 months – 5 years)')}</option>
+                                    <option value="infant">{t('clinical_ui.protocol.parts.infant', 'Young infant (up to 2 months)')}</option>
+                                </Select>
+                                <div className="text-xs text-slate-500">{t('imnci_ui.courses.editor.booklet_tables', 'Tables to show. They are read from the saved protocol, so a change in Protocol management shows here too.')}</div>
+                                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                    {Object.entries(NATIONAL_PROTOCOLS[b.part === 'infant' ? 'infant' : 'child']?.categories || {}).map(([id, cat]) => (
+                                        <label key={id} className="inline-flex items-center gap-1.5 text-sm">
+                                            <input type="checkbox" checked={(b.categories || []).includes(id)}
+                                                onChange={() => updateExtra(i, { categories: toggle(b.categories, id) })} />
+                                            {cat.title || id}
+                                        </label>
+                                    ))}
+                                </div>
+                                <Input label={t('imnci_ui.courses.editor.caption', 'Caption')} value={b.caption || ''}
+                                    onChange={(e) => updateExtra(i, { caption: e.target.value })} />
+                                {(b.categories || []).length > 0 && <BookletBlock block={b} />}
+                            </div>
+                        )}
+
+                        {b.type === 'form' && (
+                            <div className="space-y-2">
+                                <Select label={t('imnci_ui.courses.editor.form_part', 'Recording form')} value={b.part || 'child'}
+                                    onChange={(e) => updateExtra(i, { part: e.target.value, sections: [] })}>
+                                    <option value="child">{t('clinical_ui.protocol.parts.child', 'Sick child (2 months – 5 years)')}</option>
+                                    <option value="infant">{t('clinical_ui.protocol.parts.infant', 'Young infant (up to 2 months)')}</option>
+                                </Select>
+                                <div className="text-xs text-slate-500">{t('imnci_ui.courses.editor.form_rows', 'Rows to show (none ticked shows the whole form).')}</div>
+                                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                    {(NATIONAL_FORMS[b.part === 'infant' ? 'form_infant' : 'form_child']?.sections || []).map((s) => (
+                                        <label key={s.id} className="inline-flex items-center gap-1.5 text-sm">
+                                            <input type="checkbox" checked={(b.sections || []).includes(s.id)}
+                                                onChange={() => updateExtra(i, { sections: toggle(b.sections, s.id) })} />
+                                            {s.en?.title || s.id}
+                                        </label>
+                                    ))}
+                                </div>
+                                <Input label={t('imnci_ui.courses.editor.caption', 'Caption')} value={b.caption || ''}
+                                    onChange={(e) => updateExtra(i, { caption: e.target.value })} />
+                                <FormBlock block={b} />
+                            </div>
+                        )}
+
+                        {b.type === 'note' && (
+                            <div className="space-y-2">
+                                <Input label={t('imnci_ui.courses.editor.note_label', 'Label')} value={b.label || ''}
+                                    onChange={(e) => updateExtra(i, { label: e.target.value })} />
+                                <Textarea rows={4} value={b.text || ''} dir="auto"
+                                    placeholder={t('imnci_ui.courses.editor.sudan_placeholder', 'What the Sudan national protocol says, then what the WHO module says.')}
+                                    onChange={(e) => updateExtra(i, { text: e.target.value })} />
+                            </div>
+                        )}
+
                         {b.type === 'question' && (
                             <div className="space-y-2">
                                 <Textarea rows={2} value={b.text || ''} placeholder={t('imnci_ui.courses.editor.the_question', 'The question')}
@@ -262,7 +341,7 @@ export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
             </div>
 
             <div className="flex flex-wrap gap-2 pt-2 border-t">
-                <span className="text-xs text-slate-500 self-center">{t('imnci_ui.courses.editor.add_below', 'Add below the text:')}</span>
+                <span className="text-xs text-slate-500 self-center">{t('imnci_ui.courses.editor.add_at_cursor', 'Add at the cursor:')}</span>
                 {tab === 'practise' && (
                     <>
                         <button onClick={() => addExtra('question')}
@@ -279,6 +358,20 @@ export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
                     <button onClick={() => addExtra('video')}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
                         <Film size={13} /> {t('imnci_ui.courses.video.video', 'Video')}
+                    </button>
+                )}
+                <button onClick={() => addExtra('booklet')}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
+                    <BookOpen size={13} /> {t('imnci_ui.courses.editor.add_booklet', 'Chart booklet table')}
+                </button>
+                <button onClick={() => addExtra('form')}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
+                    <ClipboardList size={13} /> {t('imnci_ui.courses.editor.add_form', 'Recording form')}
+                </button>
+                {tab === 'read' && (
+                    <button onClick={() => addExtra('sudan')}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
+                        <Flag size={13} /> {t('imnci_ui.courses.editor.add_sudan', 'Sudan protocol note')}
                     </button>
                 )}
             </div>

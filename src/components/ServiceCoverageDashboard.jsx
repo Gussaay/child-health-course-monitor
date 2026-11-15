@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import html2canvas from '../utils/html2canvasLight';
 import * as XLSX from 'xlsx';
 import { Card, FormGroup, Select, FilterPanel, SkeletonTable, Skeleton } from './CommonComponents';
-import { useDataCache } from '../DataContext';
+import { useDashboardFacilities } from '../hooks/useDashboardFacilities';
 import { STATE_LOCALITIES, getLocalizedStateName, getLocalizedLocalityName } from "./constants.js";
 import SudanMap from '../SudanMap';
 
@@ -180,8 +180,7 @@ const NEONATAL_EQUIPMENT_KEYS = Object.keys(NEONATAL_EQUIPMENT_SPEC);
 
 export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
     const { t, i18n } = useTranslation();
-    const { healthFacilities: allFacilities, isLoading } = useDataCache();
-    const loading = isLoading.healthFacilities || allFacilities === null;
+    const { facilities: allFacilities, loading } = useDashboardFacilities();
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
     const [stateFilter, setStateFilter] = useRememberedState('coverage.neonatal.stateFilter', userStates?.length === 1 ? userStates[0] : ''); 
@@ -654,7 +653,7 @@ export const NeonatalCoverageDashboard = ({ userStates, userLocalities }) => {
 
     return (
         <div onMouseMove={handleMouseMove}>
-            <FilterPanel activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter, neonatalLevelFilter, showPlanningMap].filter(Boolean).length} className="mb-3 md:mb-6">
+            <FilterPanel keep={2} activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter, neonatalLevelFilter, showPlanningMap].filter(Boolean).length} className="mb-3 md:mb-6">
                 <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
                     <FormGroup label={t('dashboard.filters.state', 'State')}>
                         <Select value={stateFilter} onChange={handleStateChange}>
@@ -928,8 +927,7 @@ const EENC_EQUIPMENT_KEYS = Object.keys(EENC_EQUIPMENT_SPEC);
 
 export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
     const { t, i18n } = useTranslation();
-    const { healthFacilities: allFacilities, isLoading } = useDataCache();
-    const loading = isLoading.healthFacilities || allFacilities === null;
+    const { facilities: allFacilities, loading } = useDashboardFacilities();
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
     const [stateFilter, setStateFilter] = useRememberedState('coverage.eenc.stateFilter', userStates?.length === 1 ? userStates[0] : ''); 
@@ -1086,7 +1084,7 @@ export const EENCCoverageDashboard = ({ userStates, userLocalities }) => {
     return (
         <div onMouseMove={handleMouseMove}>
             
-            <FilterPanel activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter].filter(Boolean).length} className="mb-3 md:mb-6 md:mt-4">
+            <FilterPanel keep={2} activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter].filter(Boolean).length} className="mb-3 md:mb-6 md:mt-4">
                 <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-5">
                     <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{getLocalizedStateName(sKey, i18n.language)}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{getLocalizedLocalityName(stateFilter, l.en, i18n.language)}</option>)}</Select></FormGroup>
@@ -1223,8 +1221,7 @@ const IMNCI_FILTER_SPEC = {
 
 export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
     const { t, i18n } = useTranslation();
-    const { healthFacilities: allFacilities, isLoading, fetchHealthFacilities } = useDataCache();
-    const loading = isLoading.healthFacilities || allFacilities === null;
+    const { facilities: allFacilities, loading, refresh: refreshFacilities } = useDashboardFacilities();
     
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
@@ -1248,10 +1245,12 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
     
     useEffect(() => {
         if (activeFacilities !== null && activeFacilities.length > 0) {
-            const intervalId = setInterval(() => { fetchHealthFacilities({}, true); }, 15 * 60 * 1000); 
+            // Every 15 minutes while open. This used to re-download every
+            // facility in full; now it asks only for what changed.
+            const intervalId = setInterval(() => { refreshFacilities(); }, 15 * 60 * 1000); 
             return () => clearInterval(intervalId);
         }
-    }, [activeFacilities, fetchHealthFacilities]);
+    }, [activeFacilities, refreshFacilities]);
 
     // Projects by their standard names, so spelling variants are one option.
     const observedProjects = useMemo(() => activeFacilities.map(f => f.project_name).filter(Boolean), [activeFacilities]);
@@ -1410,7 +1409,7 @@ export const IMNCICoverageDashboard = ({ userStates, userLocalities }) => {
     return (
         <div onMouseMove={handleMouseMove}>
             
-            <FilterPanel activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter].filter(Boolean).length} className="mb-3 md:mb-6 md:mt-4">
+            <FilterPanel keep={2} activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter, equipmentFilter].filter(Boolean).length} className="mb-3 md:mb-6 md:mt-4">
                 <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-5">
                     <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{getLocalizedStateName(sKey, i18n.language)}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{getLocalizedLocalityName(stateFilter, l.en, i18n.language)}</option>)}</Select></FormGroup>
@@ -1589,8 +1588,7 @@ const CRITICAL_EQUIPMENT_KEYS = Object.keys(CRITICAL_EQUIPMENT_SPEC);
 
 export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) => {
     const { t, i18n } = useTranslation();
-    const { healthFacilities: allFacilities, isLoading } = useDataCache();
-    const loading = isLoading.healthFacilities || allFacilities === null;
+    const { facilities: allFacilities, loading } = useDashboardFacilities();
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
     const [stateFilter, setStateFilter] = useRememberedState('coverage.criticalCare.stateFilter', userStates?.length === 1 ? userStates[0] : ''); 
@@ -1728,7 +1726,7 @@ export const CriticalCareCoverageDashboard = ({ userStates, userLocalities }) =>
 
     return (
         <div onMouseMove={handleMouseMove}>
-            <FilterPanel activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter].filter(Boolean).length} className="mb-3 md:mb-6 md:mt-4">
+            <FilterPanel keep={2} activeCount={[stateFilter, localityFilter, ownershipFilter, projectFilter].filter(Boolean).length} className="mb-3 md:mb-6 md:mt-4">
                 <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4">
                     <FormGroup label={t('dashboard.filters.state', 'State')}><Select value={stateFilter} onChange={handleStateChange}><option value="">{t('dashboard.filters.all_states', 'All States')}</option>{Object.keys(STATE_LOCALITIES).filter(s => s !== 'إتحادي').sort().map(sKey => <option key={sKey} value={sKey}>{getLocalizedStateName(sKey, i18n.language)}</option>)}</Select></FormGroup>
                     <FormGroup label={t('dashboard.filters.locality', 'Locality')}><Select value={localityFilter} onChange={(e) => setLocalityFilter(e.target.value)} disabled={!stateFilter}><option value="">{t('dashboard.filters.all_localities', 'All Localities')}</option>{stateFilter && STATE_LOCALITIES[stateFilter]?.localities.sort((a,b) => a.en.localeCompare(b.en)).map(l => <option key={l.en} value={l.en}>{getLocalizedLocalityName(stateFilter, l.en, i18n.language)}</option>)}</Select></FormGroup>
@@ -1912,8 +1910,7 @@ const CombinedMapTooltip = ({ data }) => {
 // --- COMBINED SERVICES DASHBOARD ---
 export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
     const { t, i18n } = useTranslation();
-    const { healthFacilities: allFacilities, isLoading } = useDataCache();
-    const loading = isLoading?.healthFacilities || allFacilities === null;
+    const { facilities: allFacilities, loading } = useDashboardFacilities();
     
     const activeFacilities = useMemo(() => (allFacilities || []).filter(f => f.isDeleted !== true && f.isDeleted !== "true"), [allFacilities]);
 
@@ -2086,7 +2083,7 @@ export const CombinedServiceDashboard = ({ userStates, userLocalities }) => {
     return (
         <div className="flex flex-col gap-3 md:gap-6" onMouseMove={handleMouseMove}>
             
-            <FilterPanel activeCount={[stateFilter, localityFilter].filter(Boolean).length} className="md:mb-6 md:mt-4">
+            <FilterPanel keep={2} activeCount={[stateFilter, localityFilter].filter(Boolean).length} className="md:mb-6 md:mt-4">
                 <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-2 max-w-2xl">
                     <FormGroup label={t('dashboard.filters.state', 'Filter by State')}>
                         <Select value={stateFilter} onChange={(e) => {setStateFilter(e.target.value); setLocalityFilter('');}}>

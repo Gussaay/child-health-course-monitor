@@ -18,26 +18,35 @@ import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspens
 import { useTranslation } from 'react-i18next';
 import { QRCodeCanvas } from 'qrcode.react';
 import {
-    Plus, Pencil, Trash2, ArrowLeft, Baby, ShieldCheck, Stethoscope, Siren, HeartPulse, ChevronRight,
-    ChevronDown, X, Hospital, Thermometer, ClipboardList, Share2, Copy, ExternalLink, CheckCircle2, Search,
+    Plus, Trash2, ArrowLeft, RefreshCw, Baby, ShieldCheck, Stethoscope, Siren, HeartPulse, ChevronRight,
+    ChevronDown, X, Hospital, Thermometer, ClipboardList, Share2, Copy, ExternalLink, CheckCircle2, Search, Pill,
 } from 'lucide-react';
 
 import {
-    Card, CardBody, PageHeader, Button, Tabs, Table, EmptyState, Modal,
-    Input, Select, Textarea, IS_NATIVE, useInPageBack, SkeletonTable,
+    Card, CardBody, PageHeader, Button, EmptyState, Modal, PageTabs, FilterPanel, PageActions, PhoneCards,
+    PullToRefresh, FormGroup, Spinner,
+    Input, Select, Textarea, IS_NATIVE, useInPageBack, SkeletonTable, MenuTile, MenuGrid, BackArrow,
 } from './CommonComponents';
 import { notify, confirmDialog } from './dialogs';
 import { useDataCache } from '../DataContext';
-import { upsertSupervisionAssessment, deleteSupervisionAssessment } from '../data';
+import {
+    upsertSupervisionAssessment, deleteSupervisionAssessment,
+    saveFacilitySnapshot, submitFacilityDataForApproval, getHealthFacilityById,
+} from '../data';
+import { auth } from '../firebase';
 import { STATE_LOCALITIES } from './constants';
 import { useLeaveGuard, leaveForm, formSaved } from '../utils/leaveGuard';
 import { publicBaseUrl } from '../utils/publicLink';
+import { isDateInRange, DATE_RANGE_OPTIONS } from '../utils/dateRange';
+import FormPdfButton from './FormPdfButton';
+import { PrintModeProvider, usePrintMode, usePrintAll, ConditionNote } from './pdfPrint';
 import {
     SUPERVISION_SERVICES, getChecklist, checklistsForService, pickLabel,
     scoreSection, scoreAssessment, pctText, toneFor, toNum,
     defaultPeriodStart, periodMonths, cascadeMonths, monthLabel,
     serviceDataCalc, warmerResults, estimateNeed, assessmentProgress,
 } from './supervision/checklists';
+import { imnciFacilityPatch } from './supervision/imnciChecklists';
 
 const SupervisionDashboard = lazy(() => import('./supervision/SupervisionDashboard.jsx'));
 
@@ -142,7 +151,7 @@ function AnswerTable({ itemLabel, columns, rows, cell, labelWidth = 'w-[38%] md:
                                     <td key={c.id} className={`px-1 py-1.5 ${c.below ? 'hidden md:table-cell' : ''}`}>{cell(row, c)}</td>
                                 ))}
                             </tr>
-                            {below.length > 0 && (
+                            {below.length > 0 && !row.strong && (
                                 <tr className="md:hidden">
                                     <td colSpan={span} className="px-2 pb-2">
                                         <div className="grid grid-cols-2 gap-2">
@@ -243,18 +252,102 @@ function GridSection({ section, values, onChange, readOnly }) {
         below: c.kind === 'text' || c.kind === 'date' || c.kind === 'select',
         full: c.wide,
     }));
-    const rows = section.items.map((item, i) => ({
-        id: item.id, item, label: pickLabel(item, isArabic),
-        groupTitle: item.group === 'location' && section.items[i - 1]?.group !== 'location'
-            ? t('trackers.supervision.warmer.location', 'Where they are') : null,
+    // Rows behind a gate question ("does the facility offer immunization?")
+    // are hidden while the gate is answered no.
+    const items = section.items.filter((item) => !(item.dependsOn && values[item.dependsOn]?.answer === false));
+    const groupTitle = (item, prev) => {
+        if (!item.group || prev?.group === item.group) return null;
+        if (section.groups?.[item.group]) return pickLabel(section.groups[item.group], isArabic);
+        return item.group === 'location' ? t('trackers.supervision.warmer.location', 'Where they are') : null;
+    };
+    const rows = items.map((item, i) => ({
+        id: item.id, item, code: item.code, label: pickLabel(item, isArabic),
+        hint: isArabic ? item.hintAr || item.hint : item.hint,
+        groupTitle: groupTitle(item, items[i - 1]),
     }));
+    // A total row under count tables (the staff table): the sum of each number column.
+    const totalId = '__total';
+    if (section.totalRow) {
+        rows.push({ id: totalId, label: t('trackers.supervision.warmer.total', 'Total'), strong: true });
+    }
+    const colTotal = (colId) => {
+        const known = section.items.map((i) => toNum(values[i.id]?.[colId])).filter((v) => v != null);
+        return known.length ? known.reduce((a, b) => a + b, 0) : null;
+    };
     return (
         <AnswerTable itemLabel={t('trackers.supervision.cols.item', 'Item')} columns={columns} rows={rows}
-            cell={(row, c) => (
-                <CellInput kind={c.id === 'answer' && row.item.answerKind ? row.item.answerKind : c.kind}
-                    options={c.options} isArabic={isArabic} readOnly={readOnly}
-                    value={values[row.id]?.[c.id]} onChange={(v) => set(row.id, c.id, v)} />
-            )} />
+            cell={(row, c) => {
+                if (row.id === totalId) {
+                    return c.kind === 'number' ? <span className="block text-center font-semibold tabular-nums">{fmt(colTotal(c.id))}</span> : null;
+                }
+                const kind = (c.id === 'answer' || c.id === section.presenceColumn) && row.item.answerKind ? row.item.answerKind : c.kind;
+                return (
+                    <CellInput kind={kind}
+                        options={row.item.options || c.options} isArabic={isArabic} readOnly={readOnly}
+                        value={values[row.id]?.[c.id]} onChange={(v) => set(row.id, c.id, v)} />
+                );
+            }} />
+    );
+}
+
+// A few labelled answers one under the other; with showMetrics, the form's
+// worked-out results first (the drugs form's summary).
+function FieldsSection({ section, values, onChange, readOnly, checklist, form }) {
+    const { i18n } = useTranslation();
+    const isArabic = i18n.language === 'ar';
+    const printAll = usePrintAll();
+    // In the PDF a conditional answer is printed after a note of when it shows.
+    const shown = section.items
+        .filter((f) => !f.showIf || values[f.showIf] === true || printAll)
+        .flatMap((f) => (f.showIf && printAll ? [{ noteFor: f }, f] : [f]));
+    return (
+        <div className="space-y-3">
+            {section.showMetrics && checklist.metrics && <MetricList checklist={checklist} form={form} />}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {shown.map((f) => {
+                    if (f.noteFor) {
+                        const source = section.items.find((x) => x.id === f.noteFor.showIf);
+                        return (
+                            <ConditionNote key={`${f.noteFor.id}-condition`} lang={isArabic ? 'ar' : 'en'} className="sm:col-span-2">
+                                {isArabic ? `الإجابة «نعم» على: ${pickLabel(source || {}, true) || f.noteFor.showIf}` : `Answer "Yes" to: ${pickLabel(source || {}, false) || f.noteFor.showIf}`}
+                            </ConditionNote>
+                        );
+                    }
+                    const label = pickLabel(f, isArabic);
+                    const wide = f.kind === 'textarea' ? 'sm:col-span-2' : '';
+                    if (f.kind === 'textarea') {
+                        return (
+                            <div key={f.id} className={wide}>
+                                <Textarea label={label} rows={3} disabled={readOnly} value={values[f.id] || ''}
+                                    onChange={(e) => onChange(f.id, e.target.value)} />
+                            </div>
+                        );
+                    }
+                    if (f.kind === 'yesno') {
+                        return (
+                            <div key={f.id} className="flex flex-col gap-1">
+                                <span className="text-sm font-medium text-gray-700">{label}</span>
+                                <div className="max-w-[12rem]"><YesNo value={values[f.id]} readOnly={readOnly} onChange={(v) => onChange(f.id, v)} /></div>
+                            </div>
+                        );
+                    }
+                    if (f.kind === 'select') {
+                        return (
+                            <Select key={f.id} label={label} value={values[f.id] || ''} disabled={readOnly}
+                                onChange={(e) => onChange(f.id, e.target.value)}>
+                                <option value="">—</option>
+                                {f.options.map((o) => <option key={o.value} value={o.value}>{pickLabel(o, isArabic)}</option>)}
+                            </Select>
+                        );
+                    }
+                    return (
+                        <Input key={f.id} label={label} type={f.kind || 'text'} value={values[f.id] ?? ''} disabled={readOnly}
+                            inputMode={f.kind === 'number' ? 'numeric' : undefined} min={f.kind === 'number' ? '0' : undefined}
+                            onChange={(e) => onChange(f.id, e.target.value)} />
+                    );
+                })}
+            </div>
+        </div>
     );
 }
 
@@ -357,11 +450,16 @@ function CascadeSection({ section, values, onChange, readOnly, periodStart, resp
 
 const EMPTY_ACTIONS = [{}, {}, {}];
 
-function FindingsSection({ values, onSet, readOnly }) {
-    const { t } = useTranslation();
+function FindingsSection({ section = {}, values, onSet, readOnly }) {
+    const { t, i18n } = useTranslation();
+    const isArabic = i18n.language === 'ar';
     const actions = values.actions?.length ? values.actions : EMPTY_ACTIONS;
     const setAction = (index, field, value) => onSet('actions', actions.map((a, i) => (i === index ? { ...a, [field]: value } : a)));
+    // A form can ask more of each action (the IMNCI form's problem and the
+    // level that solves it); they sit before the responsible person.
+    const extra = (section.extraActionColumns || []).map((c) => ({ ...c, label: pickLabel(c, isArabic), below: true }));
     const columns = [
+        ...extra,
         { id: 'responsible', label: t('trackers.supervision.warmer.responsible', 'Responsible'), kind: 'text', below: true },
         { id: 'deadline', label: t('trackers.supervision.warmer.deadline', 'Deadline'), kind: 'date', below: true },
         ...(!readOnly ? [{ id: 'remove', label: '', width: 'w-9' }] : []),
@@ -371,9 +469,9 @@ function FindingsSection({ values, onSet, readOnly }) {
         <div className="space-y-3">
             <Textarea label={t('trackers.supervision.warmer.strengths', 'Main strengths')} rows={3} disabled={readOnly}
                 value={values.strengths || ''} onChange={(e) => onSet('strengths', e.target.value)} />
-            <Textarea label={t('trackers.supervision.warmer.gaps', 'Main gaps / challenges')} rows={3} disabled={readOnly}
+            <Textarea label={section.gapsLabel ? pickLabel(section.gapsLabel, isArabic) : t('trackers.supervision.warmer.gaps', 'Main gaps / challenges')} rows={3} disabled={readOnly}
                 value={values.gaps || ''} onChange={(e) => onSet('gaps', e.target.value)} />
-            <AnswerTable itemLabel={t('trackers.supervision.warmer.action', 'Action')} labelWidth="w-auto"
+            <AnswerTable itemLabel={section.actionLabel ? pickLabel(section.actionLabel, isArabic) : t('trackers.supervision.warmer.action', 'Action')} labelWidth="w-auto"
                 columns={columns.map((c) => (c.id === 'remove' ? { ...c, label: <span className="sr-only">{t('trackers.supervision.warmer.remove_action', 'Remove action')}</span> } : c))}
                 rows={actions.map((a, i) => ({ id: String(i), index: i, label: (
                     <span className="flex items-center gap-1">
@@ -388,7 +486,7 @@ function FindingsSection({ values, onSet, readOnly }) {
                         <X size={16} />
                     </button>
                 ) : (
-                    <CellInput kind={c.kind} readOnly={readOnly} value={actions[row.index]?.[c.id]} onChange={(v) => setAction(row.index, c.id, v)} />
+                    <CellInput kind={c.kind} options={c.options} isArabic={isArabic} readOnly={readOnly} value={actions[row.index]?.[c.id]} onChange={(v) => setAction(row.index, c.id, v)} />
                 ))} />
             {!readOnly && (
                 <Button variant="secondary" onClick={() => onSet('actions', [...actions, {}])}>
@@ -412,6 +510,7 @@ const FACILITY_TYPE = 'نوع_المؤسسةالصحية';
 const facilityTypeChoice = (registryType = '') => {
     if (registryType.includes('مستشفى')) return 'hospital';
     if (registryType.includes('مركز')) return 'health_centre';
+    if (registryType.includes('وحدة')) return 'health_unit';
     return registryType ? 'other' : '';
 };
 
@@ -425,7 +524,9 @@ function useFacilities() {
         asked.current = true;
         fetchHealthFacilities({}, false)?.catch?.((e) => console.error('Failed to load health facilities:', e));
     }, [healthFacilities, fetchHealthFacilities]);
-    const reload = () => fetchHealthFacilities?.({}, true);
+    // Only facilities changed since the last download (the list is saved on
+    // the device); a full re-download cost ~7,000 reads per press.
+    const reload = () => fetchHealthFacilities?.({}, 'sync');
     return { facilities: healthFacilities || [], loading: !!isLoading?.healthFacilities && !(healthFacilities && healthFacilities.length), reload };
 }
 
@@ -567,9 +668,59 @@ function SectionPanel({ index, section, progress, open, onToggle, children, isAr
 // Results and summary
 // =============================================================================
 
+// Figures of a checklist with its own metrics (the IMNCI forms): a
+// percentage, a count, or a yes / no.
+function metricText(m, t) {
+    if (m.value == null) return '—';
+    if (m.kind === 'pct') return pctText(m.value);
+    if (m.kind === 'bool') return m.value ? t('trackers.supervision.yes', 'Yes') : t('trackers.supervision.no', 'No');
+    return Math.round(m.value).toLocaleString();
+}
+
+function metricTone(m) {
+    if (m.value == null) return 'bg-gray-100 text-gray-600';
+    if (m.kind === 'pct') return toneFor(m.value);
+    if (m.kind === 'bool') return m.value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+    // Counts on these forms are problems (stock-outs): none is good.
+    return m.value === 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800';
+}
+
+export function MetricChip({ metric, label }) {
+    const { t } = useTranslation();
+    return (
+        <span className={`px-2 py-1 rounded ${metricTone(metric)}`}>
+            {label ? `${label}: ` : ''}{metricText(metric, t)}{metric.detail ? ` (${metric.detail})` : ''}
+        </span>
+    );
+}
+
+function MetricList({ checklist, form }) {
+    const { i18n } = useTranslation();
+    const isArabic = i18n.language === 'ar';
+    const metrics = checklist.metrics(form);
+    return (
+        <div className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+            {metrics.map((m) => (
+                <div key={m.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                    <span className="text-slate-700">{pickLabel(m, isArabic)}</span>
+                    <span className="shrink-0 text-xs"><MetricChip metric={m} /></span>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 // The headline figures shown at the top of the form while it is filled in.
 function ScoreChips({ checklist, form }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const isArabic = i18n.language === 'ar';
+    if (checklist.metrics) {
+        return (
+            <div className="flex flex-wrap gap-2 text-xs">
+                {checklist.metrics(form).map((m) => <MetricChip key={m.id} metric={m} label={pickLabel(m, isArabic)} />)}
+            </div>
+        );
+    }
     if (checklist.id === 'infant_warmer') {
         const r = warmerResults(form.responses, form.periodStart);
         const chips = [
@@ -597,6 +748,12 @@ function ScoreChips({ checklist, form }) {
 // What the list and the dashboard read without re-scoring every record.
 function buildSummary(checklist, form) {
     const progress = assessmentProgress(checklist, form).percent;
+    if (checklist.metrics) {
+        return {
+            completionPercent: progress,
+            metrics: Object.fromEntries(checklist.metrics(form).map((m) => [m.id, m.value ?? null])),
+        };
+    }
     if (checklist.id === 'infant_warmer') {
         const r = warmerResults(form.responses, form.periodStart);
         return {
@@ -624,8 +781,37 @@ const withoutUndefined = (value) => JSON.parse(JSON.stringify(value));
 // The assessment form
 // =============================================================================
 
-function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMode = false }) {
+// The IMNCI readiness form also updates the facility's IMNCI information in
+// the registry: written straight away for people who can approve facility
+// updates, otherwise sent for approval like the "Update IMNCI facility
+// information" form. Returns what happened, for the message after saving.
+async function syncFacilityFromAssessment({ form, cachedFacilities, direct, publicMode }) {
+    if (!form.facilityId) return 'no_facility';
+    const patch = imnciFacilityPatch(form);
+    if (!Object.keys(patch).length) return 'nothing';
+    let facility = null;
+    try { facility = await getHealthFacilityById(form.facilityId); } catch (e) { console.warn('Facility read failed, using the cached copy:', e); }
+    if (!facility) facility = (cachedFacilities || []).find((f) => f.id === form.facilityId) || null;
+    if (!facility) return 'not_found';
+    const who = auth.currentUser?.email || (publicMode ? 'PublicSupervisionForm' : 'SupervisionForm');
+    const payload = {
+        ...facility, ...patch,
+        date_of_visit: form.assessmentDate || new Date().toISOString().slice(0, 10),
+        updated_by: who,
+        'اخر تحديث': new Date().toISOString(),
+    };
+    Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
+    if (direct) {
+        await saveFacilitySnapshot(payload);
+        return 'saved';
+    }
+    await submitFacilityDataForApproval(payload, who);
+    return 'pending';
+}
+
+function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, canApproveFacility = false, publicMode = false }) {
     const { t, i18n } = useTranslation();
+    const { healthFacilities } = useDataCache();
     const isArabic = i18n.language === 'ar';
     useLeaveGuard(canEdit);
     const back = () => leaveForm(onBack);
@@ -687,6 +873,20 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMo
             });
             const id = await upsertSupervisionAssessment(payload);
             notify(status === 'submitted' ? t('trackers.supervision.form.submitted', 'Assessment submitted.') : t('trackers.supervision.form.draft_saved', 'Draft saved.'), 'success');
+            if (status === 'submitted' && checklist.syncsFacility) {
+                // The assessment is already saved; a failed facility update only warns.
+                try {
+                    const result = await syncFacilityFromAssessment({
+                        form, cachedFacilities: healthFacilities, direct: canApproveFacility && !publicMode, publicMode,
+                    });
+                    if (result === 'saved') notify(t('trackers.supervision.facility_sync.saved', 'The facility\'s IMNCI information was updated.'), 'success');
+                    else if (result === 'pending') notify(t('trackers.supervision.facility_sync.pending', 'The facility\'s IMNCI information update was sent for approval.'), 'success');
+                    else if (result === 'no_facility' || result === 'not_found') notify(t('trackers.supervision.facility_sync.no_facility', 'The facility is not in the registry, so its IMNCI information was not updated.'), 'info');
+                } catch (syncError) {
+                    console.error('Failed to update the facility from the assessment:', syncError);
+                    notify(t('trackers.supervision.facility_sync.failed', 'The assessment was saved, but the facility\'s IMNCI information could not be updated. {{error}}', { error: String(syncError?.message || syncError) }), 'error');
+                }
+            }
             formSaved();
             if (!form.id && id) setForm((p) => ({ ...p, id }));
             onSaved?.(status);
@@ -712,7 +912,8 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMo
             case 'grid': return <GridSection {...shared} />;
             case 'monthly': return <MonthlySection {...shared} periodStart={form.periodStart} responses={form.responses || {}} />;
             case 'cascade': return <CascadeSection {...shared} periodStart={form.periodStart} responses={form.responses || {}} />;
-            case 'findings': return <FindingsSection values={values} onSet={onChange} readOnly={readOnly} />;
+            case 'findings': return <FindingsSection section={section} values={values} onSet={onChange} readOnly={readOnly} />;
+            case 'fields': return <FieldsSection {...shared} checklist={checklist} form={form} />;
             default: return <ClassicSection {...shared} />;
         }
     };
@@ -722,13 +923,31 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMo
     const draftLabel = saving ? t('trackers.supervision.form.saving', 'Saving…') : t('trackers.supervision.form.save_draft', 'Save draft');
     const submitLabel = saving ? t('trackers.supervision.form.saving', 'Saving…') : t('trackers.supervision.form.submit', 'Submit assessment');
 
+    // For the PDF every section is opened, then folded back as it was.
+    const openAllForPdf = () => {
+        const before = openSections;
+        setOpenSections(new Set(checklist.sections.map((s) => s.id)));
+        return () => setOpenSections(before);
+    };
+    // While the PDF is made, answers that show only after a "Yes" are printed too, with a note.
+    const { printAll, beforeExport: beforePdfExport } = usePrintMode(openAllForPdf);
+
     return (
-        <div className={`space-y-3 ${canEdit ? 'pb-24 sm:pb-0' : ''}`}>
+        <PrintModeProvider value={printAll}>
+        <div data-pdf-root="" className={`space-y-3 ${canEdit ? 'pb-24 sm:pb-0' : ''}`}>
             {!IS_NATIVE && !publicMode && (
+                <span data-pdf-hide="">
                 <Button variant="secondary" onClick={back}>
                     <ArrowLeft size={16} /> {t('trackers.supervision.form.back', 'Back to assessments')}
                 </Button>
+                </span>
             )}
+            <div className="flex justify-end" data-pdf-hide="">
+                <FormPdfButton
+                    formName={checklist.title}
+                    subtitle={checklist.titleAr && checklist.titleAr !== checklist.title ? checklist.titleAr : ''}
+                    beforeExport={beforePdfExport} />
+            </div>
 
             <Card>
                 <CardBody className="space-y-4">
@@ -756,8 +975,11 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMo
                             label={isHospital ? t('trackers.supervision.form.hospital_name', 'Hospital name') : t('trackers.supervision.form.facility_name', 'Facility name')}
                             onTypeName={(name) => setForm((p) => ({ ...p, facilityId: null, facilityName: name }))}
                             onPick={(f) => setForm((p) => {
-                                const type = facilityTypeChoice(f[FACILITY_TYPE]);
-                                const wantsType = (checklist.headerFields || []).some((h) => h.id === 'facilityType');
+                                const typeField = (checklist.headerFields || []).find((h) => h.id === 'facilityType');
+                                const choice = facilityTypeChoice(f[FACILITY_TYPE]);
+                                // A type this form does not offer (a hospital on the health-centre form) is "other".
+                                const type = choice && typeField && !typeField.options.some((o) => o.value === choice) ? 'other' : choice;
+                                const wantsType = !!typeField;
                                 return {
                                     ...p, facilityId: f.id, facilityName: f[FACILITY_NAME] || '',
                                     ...(wantsType && type && !p.details?.facilityType ? { details: { ...(p.details || {}), facilityType: type } } : {}),
@@ -790,6 +1012,14 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMo
                 </CardBody>
             </Card>
 
+            {checklist.syncsFacility && canEdit && (
+                <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+                    {canApproveFacility && !publicMode
+                        ? t('trackers.supervision.facility_sync.note_direct', 'Submitting also updates this facility\'s IMNCI information (equipment, chart booklet, register, ORT corner, immunization, nutrition services and trained staff).')
+                        : t('trackers.supervision.facility_sync.note_approval', 'Submitting also sends an update of this facility\'s IMNCI information (equipment, chart booklet, register, ORT corner, immunization, nutrition services and trained staff) for approval.')}
+                </p>
+            )}
+
             {/* Overall progress and headline results; pinned under the top bar while scrolling. */}
             <div className="relative z-20 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur">
                 <div className="flex items-center gap-3">
@@ -797,7 +1027,7 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMo
                         {t('trackers.supervision.form.progress', 'Completed {{pct}}', { pct: `${Math.round(progress.percent)}%` })}
                     </span>
                     <ProgressBar percent={progress.percent} className="flex-1" />
-                    <button type="button" className="shrink-0 text-xs font-medium text-sky-700 hover:underline"
+                    <button type="button" data-pdf-hide="" className="shrink-0 text-xs font-medium text-sky-700 hover:underline"
                         onClick={() => setOpenSections(allOpen ? new Set() : new Set(checklist.sections.map((s) => s.id)))}>
                         {allOpen ? t('trackers.supervision.form.collapse_all', 'Collapse all') : t('trackers.supervision.form.expand_all', 'Expand all')}
                     </button>
@@ -822,7 +1052,7 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMo
                         <Button onClick={() => save('submitted')} disabled={saving}>{submitLabel}</Button>
                     </div>
                     {/* Phones: a bar fixed above the bottom navigation, as in the mentorship forms. */}
-                    <div className="sm:hidden fixed inset-x-0 bottom-[var(--bottom-nav,0px)] z-30 flex h-16 items-center justify-around gap-2 border-t border-slate-700 bg-slate-900 px-3 shadow-lg">
+                    <div className="sm:hidden fixed inset-x-0 bottom-[var(--bottom-nav,0px)] z-40 flex h-16 items-center justify-around gap-2 border-t border-slate-700 bg-slate-900 px-3 shadow-lg">
                         {cancelLabel && <Button variant="secondary" onClick={back} disabled={saving}>{cancelLabel}</Button>}
                         {!publicMode && <Button variant="secondary" onClick={() => save('draft')} disabled={saving}>{draftLabel}</Button>}
                         <Button onClick={() => save('submitted')} disabled={saving} className="flex-1">{submitLabel}</Button>
@@ -830,6 +1060,7 @@ function AssessmentForm({ checklist, initial, onBack, onSaved, canEdit, publicMo
                 </>
             )}
         </div>
+        </PrintModeProvider>
     );
 }
 
@@ -912,8 +1143,10 @@ export function PublicSupervisionForm({ checklistId }) {
 // =============================================================================
 
 const SERVICE_ICONS = { SSNC: Baby, IMNCI: Stethoscope, EENC: HeartPulse, ETAT: Siren, IPC: ShieldCheck };
-const FORM_ICONS = { hospital: Hospital, thermometer: Thermometer };
+const FORM_ICONS = { hospital: Hospital, thermometer: Thermometer, stethoscope: Stethoscope, pill: Pill };
 const FORM_TONES = {
+    stethoscope: 'bg-sky-100 text-sky-700',
+    pill: 'bg-emerald-100 text-emerald-700',
     hospital: 'bg-violet-100 text-violet-700',
     thermometer: 'bg-orange-100 text-orange-700',
 };
@@ -951,22 +1184,22 @@ function ServicePicker({ onSelect }) {
                 title={t('trackers.supervision.title', 'Supervision')}
                 subtitle={t('trackers.supervision.choose_service', 'Choose the service to supervise')}
             />
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <MenuGrid columns="lg:grid-cols-4">
                 {SUPERVISION_SERVICES.map((s) => {
                     const forms = checklistsForService(s.key);
                     const enabled = forms.length > 0;
                     const Icon = SERVICE_ICONS[s.key] || Baby;
                     return (
-                        <PickerTile key={s.key} disabled={!enabled} onClick={() => onSelect(s.key)}
-                            icon={<Icon size={34} />}
-                            tone={enabled ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-500'}
-                            title={`${isArabic ? s.titleAr : s.title} (${s.key})`}
-                            subtitle={enabled
+                        <MenuTile key={s.key} disabled={!enabled} onClick={() => onSelect(s.key)}
+                            icon={Icon}
+                            label={s.key}
+                            title={isArabic ? s.titleAr : s.title}
+                            hint={enabled
                                 ? t('trackers.supervision.form_count', '{{count}} forms', { count: forms.length })
                                 : t('trackers.supervision.no_forms', 'No checklists yet')} />
                     );
                 })}
-            </div>
+            </MenuGrid>
         </div>
     );
 }
@@ -977,12 +1210,9 @@ function FormPicker({ service, assessments, onSelect, onBack }) {
     const info = SUPERVISION_SERVICES.find((s) => s.key === service);
     return (
         <div className="space-y-4">
-            {!IS_NATIVE && (
-                <Button variant="secondary" onClick={onBack}>
-                    <ArrowLeft size={16} /> {t('trackers.supervision.back_to_services', 'All services')}
-                </Button>
-            )}
             <PageHeader
+                onBack={onBack}
+                backLabel={t('trackers.supervision.back_to_services', 'All services')}
                 title={isArabic ? info?.titleAr : info?.title}
                 subtitle={t('trackers.supervision.choose_form', 'Choose a supervision form')}
             />
@@ -1017,6 +1247,141 @@ const DELETED_TAB = 'deleted';
 // Older records were saved before the service split and may lack `service`.
 const serviceOf = (a) => a.service || getChecklist(a.checklistId)?.service;
 
+// Who filled the assessment: the assessor's name, else the account that saved it.
+const supervisorOf = (a) => (a.assessorName || '').trim() || a.createdByEmail || '';
+
+const EMPTY_FILTERS = { start: '', end: '', range: '', state: '', locality: '', facility: '', supervisor: '', status: '' };
+
+const localityLabel = (stateKey, localityKey, isArabic) => {
+    const loc = (STATE_LOCALITIES[stateKey]?.localities || []).find((l) => l.en === localityKey);
+    return loc ? (isArabic ? loc.ar || loc.en : loc.en) : localityKey || '';
+};
+
+// The assessments of one form, laid out like the mentorship lists: a numbered,
+// bordered table with tick boxes, coloured status, the result and
+// View / Edit / Del on every row; cards on a phone.
+function AssessmentsTable({ rows, checklist, canEdit, selectedIds, onSelectionChange, onView, onEdit, onDelete, isLoading, filtered, onClearFilters, onNew }) {
+    const { t, i18n } = useTranslation();
+    const isArabic = i18n.language === 'ar';
+    const isWarmer = checklist.id === 'infant_warmer';
+    const headline = (row) => {
+        if (!checklist.metrics) return null;
+        const all = checklist.metrics(row);
+        return all.find((m) => m.id === checklist.headline) || all[0];
+    };
+    const resultLabel = checklist.metrics
+        ? pickLabel(checklist.metrics({}).find((m) => m.id === checklist.headline) || {}, isArabic)
+        : isWarmer ? t('trackers.supervision.warmer.coverage', 'Coverage of portable warming') : t('trackers.supervision.table.present', 'Present');
+    const resultCell = (row) => {
+        const h = headline(row);
+        if (h) return <MetricChip metric={h} />;
+        const s = row.summary || {};
+        const value = isWarmer
+            ? (s.coveragePercent !== undefined ? s.coveragePercent : warmerResults(row.responses, row.periodStart).service.total.coverage)
+            : s.presencePercent;
+        return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${toneFor(value)}`}>{pctText(value)}</span>;
+    };
+    const completed = (row) => (row.summary?.completionPercent !== undefined
+        ? row.summary.completionPercent
+        : assessmentProgress(checklist, row).percent);
+
+    const ids = rows.map((r) => r.id);
+    const allSelected = rows.length > 0 && ids.every((id) => selectedIds.includes(id));
+    const someSelected = ids.some((id) => selectedIds.includes(id));
+    const toggleAll = (e) => onSelectionChange(e.target.checked
+        ? Array.from(new Set([...selectedIds, ...ids]))
+        : selectedIds.filter((id) => !ids.includes(id)));
+    const toggleRow = (id) => onSelectionChange(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id]);
+
+    const th = 'px-2 py-3 text-start text-xs font-medium text-gray-500 border border-gray-300';
+    const td = 'px-2 py-2 text-xs text-gray-600 text-start border border-gray-300 break-words whitespace-normal';
+    const columns = 9 + (canEdit ? 1 : 0);
+
+    if (isLoading) return <SkeletonTable rows={8} columns={6} />;
+
+    return (
+        <PhoneCards className="w-full overflow-x-auto border border-gray-300 rounded-lg shadow-sm">
+            <table className="w-full border-collapse">
+                <thead className="bg-gray-50">
+                    <tr>
+                        {canEdit && (
+                            <th className="px-3 py-3 text-center w-10 border border-gray-300">
+                                <input type="checkbox" checked={allSelected}
+                                    ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                                    onChange={toggleAll} aria-label={t('trackers.supervision.list.select_all', 'Select all')}
+                                    className="w-4 h-4 text-sky-600 rounded focus:ring-sky-500 cursor-pointer" />
+                            </th>
+                        )}
+                        <th className={th}>#</th>
+                        <th className={th}>{checklist.scope === 'hospital' ? t('trackers.supervision.table.hospital', 'Hospital') : t('trackers.supervision.table.facility', 'Facility')}</th>
+                        <th className={th}>{t('trackers.supervision.state', 'State')}</th>
+                        <th className={th}>{t('trackers.supervision.list.supervisor', 'Supervisor')}</th>
+                        <th className={th}>{t('trackers.supervision.table.date', 'Date')}</th>
+                        <th className={th}>{t('trackers.supervision.table.status', 'Status')}</th>
+                        <th className={th}>{t('trackers.supervision.table.completed', 'Completed')}</th>
+                        <th className={th}>{resultLabel}</th>
+                        <th className={th}>{t('trackers.supervision.table.actions', 'Actions')}</th>
+                    </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                    {rows.length === 0 ? (
+                        <tr><td colSpan={columns} className="border border-gray-300">
+                            <EmptyState filtered={filtered} onClearFilters={filtered ? onClearFilters : undefined}
+                                title={filtered ? t('mentorship_page.empty.no_records', 'No Records Found') : undefined}
+                                message={filtered
+                                    ? t('trackers.supervision.list.no_match', 'No assessments matched the current filters.')
+                                    : t('trackers.supervision.empty', 'No assessments yet. Use New assessment to start one.')}
+                                action={!filtered && canEdit ? { label: t('trackers.supervision.new', 'New assessment'), onClick: onNew } : undefined} />
+                        </td></tr>
+                    ) : rows.map((row, index) => {
+                        const selected = selectedIds.includes(row.id);
+                        const draft = row.status !== 'submitted';
+                        const locality = localityLabel(row.stateKey, row.localityKey, isArabic);
+                        return (
+                            <tr key={row.id} className={selected ? 'bg-sky-50' : draft ? 'bg-yellow-50' : 'bg-white'}>
+                                {canEdit && (
+                                    <td className="px-3 py-2 text-center border border-gray-300">
+                                        <input type="checkbox" checked={selected} onChange={() => toggleRow(row.id)}
+                                            aria-label={row.facilityName}
+                                            className="w-4 h-4 text-sky-600 rounded focus:ring-sky-500 cursor-pointer" />
+                                    </td>
+                                )}
+                                <td className="px-2 py-2 text-sm font-medium text-gray-900 text-start border border-gray-300">{index + 1}</td>
+                                <td className={td}>
+                                    <div>
+                                        <span className="block font-semibold text-gray-800">{row.facilityName}</span>
+                                        {locality && <span className="block text-gray-500">{locality}</span>}
+                                    </div>
+                                </td>
+                                <td className={td}>{STATE_LOCALITIES[row.stateKey]?.[isArabic ? 'ar' : 'en'] || row.stateKey || '—'}</td>
+                                <td className={td}>{supervisorOf(row) || '—'}</td>
+                                <td className={`${td} whitespace-nowrap`}>{row.assessmentDate || '—'}</td>
+                                <td className={`${td} whitespace-nowrap`}>
+                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${draft ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                                        {draft ? t('trackers.supervision.status.draft', 'Draft') : t('trackers.supervision.status.submitted', 'Submitted')}
+                                    </span>
+                                    {row.submittedVia === 'public_link' && (
+                                        <span className="ms-1 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-sky-100 text-sky-800">{t('trackers.supervision.status.via_link', 'Via link')}</span>
+                                    )}
+                                </td>
+                                <td className={`${td} whitespace-nowrap font-medium text-gray-800`}>{pctText(completed(row))}</td>
+                                <td className={td}>{resultCell(row)}</td>
+                                <td className={`${td} whitespace-nowrap`}>
+                                    <div className="flex flex-wrap gap-1">
+                                        <Button size="sm" variant="info" onClick={() => onView(row)} className="text-xs px-2 py-1">{t('mentorship_page.buttons.view', 'View')}</Button>
+                                        {canEdit && <Button size="sm" variant="warning" onClick={() => onEdit(row)} className="text-xs px-2 py-1">{t('mentorship_page.buttons.edit', 'Edit')}</Button>}
+                                        {canEdit && <Button size="sm" variant="danger" onClick={() => onDelete(row)} className="text-xs px-2 py-1">{t('mentorship_page.buttons.del', 'Del')}</Button>}
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </PhoneCards>
+    );
+}
+
 export default function SupervisionView({ permissions = {} }) {
     const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
@@ -1028,8 +1393,11 @@ export default function SupervisionView({ permissions = {} }) {
     const [checklistId, setChecklistId] = useState(null);
     const [tab, setTab] = useState(LIST_TAB);
     const [editing, setEditing] = useState(null);
+    const [viewOnly, setViewOnly] = useState(false);
     const [sharing, setSharing] = useState(false);
-    const [stateFilter, setStateFilter] = useState('all');
+    const [filters, setFilters] = useState(EMPTY_FILTERS);
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [refreshing, setRefreshing] = useState(false);
     const canEmptyBin = !!permissions.canUseFederalManagerAdvancedFeatures;
     const topRef = useRef(null);
 
@@ -1040,7 +1408,11 @@ export default function SupervisionView({ permissions = {} }) {
     // Each page starts at its top.
     useEffect(() => { topRef.current?.scrollIntoView?.({ block: 'start' }); }, [service, checklistId, editing]);
 
-    const reload = useCallback(() => fetchSupervisionAssessments('full'), [fetchSupervisionAssessments]);
+    const reload = useCallback(() => fetchSupervisionAssessments('sync'), [fetchSupervisionAssessments]);
+    const refresh = async () => {
+        setRefreshing(true);
+        try { await fetchSupervisionAssessments('sync'); } finally { setRefreshing(false); }
+    };
 
     // Android app: the top-bar arrow steps back one page: form → forms → services.
     useInPageBack(() => (checklistId ? setChecklistId(null) : setService(null)), !!service && editing === null);
@@ -1053,10 +1425,43 @@ export default function SupervisionView({ permissions = {} }) {
     const formAssessments = useMemo(() => serviceAssessments.filter((a) => a.checklistId === checklistId),
         [serviceAssessments, checklistId]);
 
+    const setFilter = (name, value) => {
+        setFilters((f) => {
+            const next = { ...f, [name]: value };
+            // A wider place clears the narrower choices under it.
+            if (name === 'state') { next.locality = ''; next.facility = ''; }
+            if (name === 'locality') next.facility = '';
+            return next;
+        });
+        setSelectedIds([]);
+    };
+    const clearFilters = () => { setFilters(EMPTY_FILTERS); setSelectedIds([]); };
+    const activeFilters = Object.values(filters).filter(Boolean).length;
+
+    // Choices offered by each filter come from the records of this form.
+    const options = useMemo(() => {
+        const inState = formAssessments.filter((a) => !filters.state || a.stateKey === filters.state);
+        const inLocality = inState.filter((a) => !filters.locality || a.localityKey === filters.locality);
+        const uniq = (list) => Array.from(new Set(list.filter(Boolean))).sort((a, b) => a.localeCompare(b));
+        return {
+            states: uniq(formAssessments.map((a) => a.stateKey)),
+            localities: uniq(inState.map((a) => a.localityKey)),
+            facilities: uniq(inLocality.map((a) => a.facilityName)),
+            supervisors: uniq(formAssessments.map(supervisorOf)),
+        };
+    }, [formAssessments, filters.state, filters.locality]);
+
     const rows = useMemo(() => formAssessments
-        .filter((a) => stateFilter === 'all' || a.stateKey === stateFilter)
+        .filter((a) => !filters.state || a.stateKey === filters.state)
+        .filter((a) => !filters.locality || a.localityKey === filters.locality)
+        .filter((a) => !filters.facility || a.facilityName === filters.facility)
+        .filter((a) => !filters.supervisor || supervisorOf(a) === filters.supervisor)
+        .filter((a) => !filters.status || (filters.status === 'submitted') === (a.status === 'submitted'))
+        .filter((a) => (!filters.range && !filters.start && !filters.end) || isDateInRange(a.assessmentDate, filters.range, filters.start, filters.end))
         .sort((a, b) => String(b.assessmentDate || '').localeCompare(String(a.assessmentDate || ''))),
-    [formAssessments, stateFilter]);
+    [formAssessments, filters]);
+
+    const draftCount = formAssessments.filter((a) => a.status !== 'submitted').length;
 
     const handleDelete = async (row) => {
         const ok = await confirmDialog(
@@ -1067,6 +1472,7 @@ export default function SupervisionView({ permissions = {} }) {
         try {
             await deleteSupervisionAssessment(row.id);
             notify(t('trackers.supervision.deleted', 'Assessment deleted.'), 'success');
+            setSelectedIds((ids) => ids.filter((id) => id !== row.id));
             // A soft delete stamps lastUpdatedAt, so the delta sync is enough.
             fetchSupervisionAssessments('sync');
         } catch (error) {
@@ -1074,6 +1480,27 @@ export default function SupervisionView({ permissions = {} }) {
             notify(t('trackers.supervision.delete_failed', 'Could not delete the assessment.'), 'error');
         }
     };
+
+    const handleBulkDelete = async () => {
+        const count = selectedIds.length;
+        const ok = await confirmDialog(
+            t('trackers.supervision.list.delete_selected_confirm', 'Delete {{count}} selected assessments?', { count }),
+            { title: t('trackers.supervision.delete_title', 'Delete assessment'), confirmLabel: t('trackers.supervision.delete', 'Delete'), danger: true }
+        );
+        if (!ok) return;
+        let failed = 0;
+        for (const id of selectedIds) {
+            try { await deleteSupervisionAssessment(id); } catch (error) { failed += 1; console.error('Failed to delete assessment:', id, error); }
+        }
+        setSelectedIds([]);
+        notify(failed
+            ? t('trackers.supervision.list.delete_some_failed', '{{failed}} of {{count}} could not be deleted.', { failed, count })
+            : t('trackers.supervision.list.deleted_n', '{{count}} assessments deleted.', { count }), failed ? 'error' : 'success');
+        fetchSupervisionAssessments('sync');
+    };
+
+    const openRecord = (row, readOnlyView) => { setViewOnly(readOnlyView); setEditing(row); };
+    const startNew = () => { setViewOnly(false); setEditing({ checklistId: checklist.id }); };
 
     const page = (() => {
         if (!service) {
@@ -1083,7 +1510,7 @@ export default function SupervisionView({ permissions = {} }) {
             return (
                 <FormPicker service={service} assessments={serviceAssessments}
                     onBack={() => setService(null)}
-                    onSelect={(id) => { setChecklistId(id); setTab(LIST_TAB); setStateFilter('all'); }} />
+                    onSelect={(id) => { setChecklistId(id); setTab(LIST_TAB); setFilters(EMPTY_FILTERS); setSelectedIds([]); }} />
             );
         }
         if (editing !== null) {
@@ -1091,7 +1518,8 @@ export default function SupervisionView({ permissions = {} }) {
                 <AssessmentForm
                     checklist={getChecklist(editing.checklistId) || checklist}
                     initial={editing.id ? editing : null}
-                    canEdit={canEdit}
+                    canEdit={canEdit && !viewOnly}
+                    canApproveFacility={!!permissions.canApproveSubmissions}
                     onBack={() => setEditing(null)}
                     onSaved={reload}
                 />
@@ -1102,65 +1530,42 @@ export default function SupervisionView({ permissions = {} }) {
 
     if (page) return <div ref={topRef}>{page}</div>;
 
-    const isWarmer = checklist.id === 'infant_warmer';
-    const headers = [
-        t('trackers.supervision.table.date', 'Date'),
-        isWarmer ? t('trackers.supervision.table.facility', 'Facility') : t('trackers.supervision.table.hospital', 'Hospital'),
-        t('trackers.supervision.state', 'State'),
-        t('trackers.supervision.table.status', 'Status'),
-        t('trackers.supervision.table.completed', 'Completed'),
-        ...(isWarmer
-            ? [t('trackers.supervision.warmer.coverage', 'Coverage of portable warming')]
-            : [t('trackers.supervision.table.present', 'Present')]),
-        ...(canEdit ? [t('trackers.supervision.table.actions', 'Actions')] : []),
-    ];
-    const resultCell = (row) => {
-        const s = row.summary || {};
-        if (isWarmer) {
-            const coverage = s.coveragePercent !== undefined ? s.coveragePercent : warmerResults(row.responses, row.periodStart).service.total.coverage;
-            return <td><span className={`px-2 py-0.5 rounded text-xs ${toneFor(coverage)}`}>{pctText(coverage)}</span></td>;
-        }
-        return <td><span className={`px-2 py-0.5 rounded text-xs ${toneFor(s.presencePercent)}`}>{pctText(s.presencePercent)}</span></td>;
-    };
-    const completed = (row) => (row.summary?.completionPercent !== undefined
-        ? row.summary.completionPercent
-        : assessmentProgress(checklist, row).percent);
+    const serviceInfo = SUPERVISION_SERVICES.find((s) => s.key === service);
+    const loadingList = isLoading?.supervisionAssessments && !supervisionAssessments;
+    const stateName = (k) => STATE_LOCALITIES[k]?.[isArabic ? 'ar' : 'en'] || k;
 
     return (
-        <div ref={topRef} className="space-y-4">
-            {!IS_NATIVE && (
-                <Button variant="secondary" onClick={() => setChecklistId(null)}>
-                    <ArrowLeft size={16} /> {t('trackers.supervision.back_to_forms', 'All forms')}
-                </Button>
-            )}
-            <div className="flex flex-wrap items-center gap-3">
-                <FormIcon checklist={checklist} large />
-                <div className="min-w-0 flex-1">
-                    <h2 className="text-xl font-semibold text-slate-800">{isArabic ? checklist.titleAr : checklist.title}</h2>
-                    <p className="text-sm text-slate-500">{isArabic ? SUPERVISION_SERVICES.find((s) => s.key === service)?.titleAr : SUPERVISION_SERVICES.find((s) => s.key === service)?.title}</p>
-                </div>
-                {canEdit && (
-                    <div className="flex w-full gap-2 sm:w-auto">
-                        <Button variant="secondary" onClick={() => setSharing(true)} className="flex-1 sm:flex-none">
-                            <Share2 size={16} /> {t('trackers.supervision.share.button', 'Public link')}
-                        </Button>
-                        <Button onClick={() => setEditing({ checklistId: checklist.id })} className="flex-1 sm:flex-none">
-                            <Plus size={16} /> {t('trackers.supervision.new', 'New assessment')}
-                        </Button>
-                    </div>
-                )}
-            </div>
-
+        <div ref={topRef}>
             <Card>
-                <CardBody className="space-y-4">
-                    <Tabs
+                <div className="p-3 md:p-6">
+                    {/* Title row, as in the mentorship lists: back, the form, refresh. */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3 mb-3 md:mb-6 border-b border-gray-200 pb-2">
+                        <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                            <BackArrow onClick={() => setChecklistId(null)} label={t('trackers.supervision.back_to_forms', 'All forms')} className="-ms-2" />
+                            <FormIcon checklist={checklist} />
+                            <div className="min-w-0">
+                                <h2 className="text-lg md:text-xl font-semibold text-slate-800">{isArabic ? checklist.titleAr : checklist.title}</h2>
+                                <p className="text-xs md:text-sm text-slate-500">{isArabic ? serviceInfo?.titleAr : serviceInfo?.title}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <PullToRefresh onRefresh={refresh} disabled={refreshing} />
+                            <Button variant="secondary" onClick={refresh} disabled={refreshing} className="flex items-center gap-2">
+                                {refreshing ? <Spinner size="sm" /> : <RefreshCw size={16} />}
+                                <span className="hidden sm:inline">{refreshing ? t('mentorship_page.buttons.refreshing', 'Refreshing...') : t('mentorship_page.buttons.refresh', 'Refresh')}</span>
+                            </Button>
+                        </div>
+                    </div>
+
+                    <PageTabs
+                        className="md:!mb-6"
+                        active={tab}
+                        onChange={(id) => { setTab(id); setSelectedIds([]); }}
                         tabs={[
-                            { id: LIST_TAB, label: t('trackers.supervision.tabs.assessments', 'Assessments'), short: t('trackers.supervision.tabs.assessments_short', 'Forms') },
+                            { id: LIST_TAB, label: t('trackers.supervision.tabs.assessments', 'Assessments'), short: t('trackers.supervision.tabs.assessments_short', 'Forms'), count: formAssessments.length },
                             { id: DASHBOARD_TAB, label: t('trackers.supervision.tabs.dashboard', 'Dashboard'), short: t('trackers.supervision.tabs.dashboard', 'Dashboard') },
-                            ...(canEmptyBin ? [{ id: DELETED_TAB, label: t('trackers.supervision.deleted_items', 'Deleted Items'), short: t('ui.short.deleted', 'Deleted') }] : []),
+                            canEmptyBin && { id: DELETED_TAB, label: t('trackers.supervision.deleted_items', 'Deleted Items'), short: t('ui.short.deleted', 'Deleted') },
                         ]}
-                        activeTab={tab}
-                        onTabChange={setTab}
                     />
 
                     {tab === DELETED_TAB && canEmptyBin && (
@@ -1170,7 +1575,7 @@ export default function SupervisionView({ permissions = {} }) {
                     )}
 
                     {tab === DASHBOARD_TAB && (
-                        isLoading?.supervisionAssessments && !supervisionAssessments ? <SkeletonTable /> : (
+                        loadingList ? <SkeletonTable /> : (
                             <Suspense fallback={<SkeletonTable />}>
                                 <SupervisionDashboard checklist={checklist} assessments={formAssessments} />
                             </Suspense>
@@ -1178,58 +1583,93 @@ export default function SupervisionView({ permissions = {} }) {
                     )}
 
                     {tab === LIST_TAB && (<>
-                        <div className="w-full md:w-56">
-                            <Select label={t('trackers.supervision.state', 'State')} value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
-                                <option value="all">{t('trackers.supervision.all_states', 'All states')}</option>
-                                {Object.keys(STATE_LOCALITIES).filter((k) => k !== 'Federal')
-                                    .map((k) => <option key={k} value={k}>{isArabic ? STATE_LOCALITIES[k].ar || STATE_LOCALITIES[k].en : STATE_LOCALITIES[k].en}</option>)}
-                            </Select>
+                        <FilterPanel className="mb-4 md:mb-6" activeCount={activeFilters}>
+                            <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4">
+                                <FormGroup label={t('mentorship_page.filters.start_date', 'Start Date')}>
+                                    <Input type="date" value={filters.start} onChange={(e) => setFilter('start', e.target.value)} className="w-full" />
+                                </FormGroup>
+                                <FormGroup label={t('mentorship_page.filters.end_date', 'End Date')}>
+                                    <Input type="date" value={filters.end} onChange={(e) => setFilter('end', e.target.value)} className="w-full" />
+                                </FormGroup>
+                                <FormGroup label={t('mentorship_page.filters.date_range', 'Date Range')}>
+                                    <Select value={filters.range} onChange={(e) => setFilter('range', e.target.value)}>
+                                        <option value="">{t('mentorship_page.filters.all_time', 'All Time')}</option>
+                                        {DATE_RANGE_OPTIONS.map((r) => <option key={r} value={r}>{t(`mentorship_page.filters.${r}`, r)}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label={t('mentorship_page.filters.state', 'State')}>
+                                    <Select value={filters.state} onChange={(e) => setFilter('state', e.target.value)}>
+                                        <option value="">{t('trackers.supervision.all_states', 'All states')}</option>
+                                        {options.states.map((k) => <option key={k} value={k}>{stateName(k)}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label={t('mentorship_page.filters.locality', 'Locality')}>
+                                    <Select value={filters.locality} onChange={(e) => setFilter('locality', e.target.value)} disabled={!filters.state}>
+                                        <option value="">{t('trackers.supervision.list.all_localities', 'All localities')}</option>
+                                        {options.localities.map((k) => <option key={k} value={k}>{localityLabel(filters.state, k, isArabic)}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label={checklist.scope === 'hospital' ? t('trackers.supervision.table.hospital', 'Hospital') : t('mentorship_page.filters.facility', 'Facility')}>
+                                    <Select value={filters.facility} onChange={(e) => setFilter('facility', e.target.value)}>
+                                        <option value="">{t('mentorship_page.filters.all_facilities', 'All Facilities')}</option>
+                                        {options.facilities.map((f) => <option key={f} value={f}>{f}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label={t('mentorship_page.filters.supervisor', 'Supervisor')}>
+                                    <Select value={filters.supervisor} onChange={(e) => setFilter('supervisor', e.target.value)}>
+                                        <option value="">{t('mentorship_page.filters.all_supervisors', 'All Supervisors')}</option>
+                                        {options.supervisors.map((s) => <option key={s} value={s}>{s}</option>)}
+                                    </Select>
+                                </FormGroup>
+                                <FormGroup label={t('mentorship_page.filters.status', 'Status')}>
+                                    <Select value={filters.status} onChange={(e) => setFilter('status', e.target.value)}>
+                                        <option value="">{t('mentorship_page.filters.all_statuses', 'All Statuses')}</option>
+                                        <option value="submitted">{t('trackers.supervision.status.submitted', 'Submitted')}</option>
+                                        <option value="draft">{t('trackers.supervision.status.draft', 'Draft')}</option>
+                                    </Select>
+                                </FormGroup>
+                            </div>
+                        </FilterPanel>
+
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                            <PageActions keep={1}>
+                                {canEdit && selectedIds.length === 0 && (
+                                    <Button onClick={startNew}><Plus size={16} /> {t('trackers.supervision.new', 'New assessment')}</Button>
+                                )}
+                                {canEdit && selectedIds.length > 0 && (
+                                    <Button variant="danger" onClick={handleBulkDelete}>
+                                        <Trash2 size={16} /> {t('mentorship_page.buttons.delete_selected', 'Delete Selected ({{count}})', { count: selectedIds.length })}
+                                    </Button>
+                                )}
+                                {canEdit && (
+                                    <Button variant="secondary" onClick={() => setSharing(true)}>
+                                        <Share2 size={16} /> {t('trackers.supervision.share.button', 'Public link')}
+                                    </Button>
+                                )}
+                            </PageActions>
+                            {!loadingList && (
+                                <p className="text-xs text-slate-500">
+                                    {t('trackers.supervision.list.count', '{{shown}} of {{total}} assessments · {{drafts}} drafts', { shown: rows.length, total: formAssessments.length, drafts: draftCount })}
+                                </p>
+                            )}
                         </div>
 
-                        {isLoading?.supervisionAssessments && !supervisionAssessments ? <SkeletonTable /> : (
-                            <Table headers={headers} cardsOnPhone>
-                                {rows.length === 0 ? (
-                                    <EmptyState colSpan={headers.length}
-                                        message={t('trackers.supervision.empty', 'No assessments yet. Use New assessment to start one.')}
-                                        action={canEdit ? { label: t('trackers.supervision.new', 'New assessment'), onClick: () => setEditing({ checklistId: checklist.id }) } : undefined} />
-                                ) : rows.map((row) => (
-                                    <tr key={row.id} onClick={canEdit ? undefined : () => setEditing(row)} className={canEdit ? '' : 'cursor-pointer'}>
-                                        <td className="text-gray-600">{row.assessmentDate || '—'}</td>
-                                        <td className="font-medium">{row.facilityName}</td>
-                                        <td className="text-gray-600">
-                                            {STATE_LOCALITIES[row.stateKey]?.[isArabic ? 'ar' : 'en'] || row.stateKey}
-                                        </td>
-                                        <td>
-                                            <span className={`px-2 py-0.5 rounded text-xs ${
-                                                row.status === 'submitted'
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : 'bg-amber-100 text-amber-800'}`}>
-                                                {row.status === 'submitted' ? t('trackers.supervision.status.submitted', 'Submitted') : t('trackers.supervision.status.draft', 'Draft')}
-                                            </span>
-                                            {row.submittedVia === 'public_link' && (
-                                                <span className="ms-1 px-2 py-0.5 rounded text-xs bg-sky-100 text-sky-800">{t('trackers.supervision.status.via_link', 'Via link')}</span>
-                                            )}
-                                        </td>
-                                        <td className="text-gray-600">{pctText(completed(row))}</td>
-                                        {resultCell(row)}
-                                        {canEdit && (
-                                            <td>
-                                                <div className="flex gap-2">
-                                                    <Button variant="secondary" onClick={() => setEditing(row)}>
-                                                        <Pencil size={14} />
-                                                    </Button>
-                                                    <Button variant="danger" onClick={() => handleDelete(row)}>
-                                                        <Trash2 size={14} />
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                        )}
-                                    </tr>
-                                ))}
-                            </Table>
-                        )}
+                        <AssessmentsTable
+                            rows={rows}
+                            checklist={checklist}
+                            canEdit={canEdit}
+                            selectedIds={selectedIds}
+                            onSelectionChange={setSelectedIds}
+                            onView={(row) => openRecord(row, true)}
+                            onEdit={(row) => openRecord(row, false)}
+                            onDelete={handleDelete}
+                            isLoading={loadingList}
+                            filtered={activeFilters > 0}
+                            onClearFilters={clearFilters}
+                            onNew={startNew}
+                        />
                     </>)}
-                </CardBody>
+                </div>
             </Card>
 
             {sharing && <ShareLinkModal checklist={checklist} onClose={() => setSharing(false)} />}

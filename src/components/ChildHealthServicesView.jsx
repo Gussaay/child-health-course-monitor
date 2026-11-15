@@ -1,5 +1,7 @@
 // ChildHealthServicesView.jsx
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
+
+const DeletedItemsPanel = lazy(() => import('./DeletedItemsPanel.jsx'));
 import * as XLSX from 'xlsx';
 import { getAuth } from "firebase/auth";
 import { writeBatch, collection, getDocs, doc, addDoc, serverTimestamp } from "firebase/firestore"; 
@@ -11,8 +13,8 @@ import { Capacitor } from '@capacitor/core';
 import { useTranslation } from 'react-i18next';
 
 // --- ICONS ---
-import { PdfIcon, PageActions } from './CommonComponents';
-import { List, FileText, Users, Building, PlusCircle, ArrowLeft, Search, LineChart, Activity } from 'lucide-react';
+import { PdfIcon } from './CommonComponents';
+import { List, FileText, Users, Building, PlusCircle, ArrowLeft, Search, LineChart, Activity, Baby, Siren, BarChart3, Pencil, Link2, MapPin, History, Trash2, Download, Wrench } from 'lucide-react';
 
 import NameStandardizationModal from './NameStandardizationModal.jsx';
 import { useStandardNames } from '../hooks/useNameRegistry';
@@ -27,7 +29,7 @@ import { point } from '@turf/helpers';
 import {
     Card, PageHeader, Button, FormGroup, Select, Table,
     Modal, Spinner, EmptyState, Checkbox, Input, SkeletonTable,
-    IS_NATIVE, PageTabs, FilterPanel, useInPageBack, PullToRefresh
+    IS_NATIVE, PageTabs, FilterPanel, useInPageBack, PullToRefresh, MenuTile, MenuGrid, MenuButton
 } from './CommonComponents';
 import {
     saveFacilitySnapshot,
@@ -69,6 +71,7 @@ async function generateFacilityListPdf(_facilities, _activeTab, _serviceTypeFilt
 const TABS = {
     PENDING: 'Pending Submissions',
     ALL: 'All Facilities',
+    DELETED: 'Deleted Facilities',
 };
 
 // --- HELPER FUNCTIONS ---
@@ -196,8 +199,8 @@ const getServiceConfig = (serviceType) => {
         headers: ["ID", "الولاية", "المحلية", "اسم المؤسسة", "ملكية المؤسسة", "نوع المؤسسةالصحية", "نوع الخدمات", "Date of Visit"], 
         dataKeys: ["id", "الولاية", "المحلية", "اسم_المؤسسة", "facility_ownership", "نوع_المؤسسةالصحية", "eenc_service_type", "date_of_visit"] 
     };
-    const baseImnciHeaders = ["هل المؤسسة تعمل", "هل توجد حوافز للاستاف", "ما هي المنظمة المقدم للحوافز", "هل تشارك المؤسسة في أي مشروع", "ما هو اسم المشروع", "رقم هاتف المسئول من المؤسسة", "وجود العلاج المتكامل لامراض الطفولة", "العدد الكلي للكوادر الطبية العاملة (أطباء ومساعدين)", "العدد الكلي للكودار المدربة على العلاج المتكامل", "وجود سجل علاج متكامل", "وجود كتيب لوحات", "ميزان وزن", "ميزان طول", "ميزان حرارة", "ساعة مؤقت", "غرفة إرواء", "وجود الدعم المادي", "_الإحداثيات_latitude", "_الإحداثيات_longitude", "هل يوجد مكتب تحصين", "اين يقع اقرب مركز تحصين", "هل يوجد مركز تغذية خارجي", "اين يقع اقرب مركز تغذية خارجي", "هل يوجد خدمة متابعة النمو"];
-    const baseImnciDataKeys = ["هل_المؤسسة_تعمل", "staff_incentives", "staff_incentives_organization", "project_participation", "project_name", "person_in_charge_phone", "وجود_العلاج_المتكامل_لامراض_الطفولة", "العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين", "العدد_Kلي_للكودار_ المدربة_على_العلاج_المتكامل", "وجود_سجل_علاج_متكامل", "وجود_كتيب_لوحات", "ميزان_وزن", "ميزان_طول", "ميزان_حرارة", "ساعة_ مؤقت", "غرفة_إرواء", "وجود_الدعمادي", "_الإحداثيات_latitude", "_الإحداثيات_longitude", "immunization_office_exists", "nearest_immunization_center", "nutrition_center_exists", "nearest_nutrition_center", "growth_monitoring_service_exists"];
+    const baseImnciHeaders = ["هل المؤسسة تعمل", "هل توجد حوافز للاستاف", "ما هي المنظمة المقدم للحوافز", "هل تشارك المؤسسة في أي مشروع", "ما هو اسم المشروع", "رقم هاتف المسئول من المؤسسة", "وجود العلاج المتكامل لامراض الطفولة", "العدد الكلي للكوادر الطبية العاملة (أطباء ومساعدين)", "العدد الكلي للكودار المدربة على العلاج المتكامل", "وجود سجل علاج متكامل", "وجود كتيب لوحات", "ميزان وزن", "ميزان طول", "ميزان حرارة", "ساعة مؤقت", "غرفة إرواء", "وجود الدعم المادي", "_الإحداثيات_latitude", "_الإحداثيات_longitude", "هل يوجد مكتب تحصين", "اين يقع اقرب مركز تحصين", "هل يوجد مركز تغذية خارجي", "اين يقع اقرب مركز تغذية خارجي", "هل يوجد خدمة متابعة النمو", "تفاصيل الإرواء: المعدات مكتملة", "تفاصيل الإرواء: مصدر ماء آمن", "تفاصيل الإرواء: سجل محلول الإرواء", "تفاصيل الإرواء: جلسات تثقيف صحي", "التحصين: استراتيجية ثابتة", "التحصين: أيام التحصين الثابت في الأسبوع", "التحصين: استراتيجية فرعي", "التحصين: استراتيجية جوال", "التحصين: جلسات الفرعي / الجوال في الشهر", "التحصين: كروت الطريق إلى الصحة", "التحصين: كل اللقاحات متوفرة", "التحصين: ثلاجة اللقاحات تعمل", "التحصين: حفظ اللقاحات صحيح", "التغذية: OTP مع RUTF", "التغذية: OTP مع TSFP", "التغذية: IYCF"];
+    const baseImnciDataKeys = ["هل_المؤسسة_تعمل", "staff_incentives", "staff_incentives_organization", "project_participation", "project_name", "person_in_charge_phone", "وجود_العلاج_المتكامل_لامراض_الطفولة", "العدد_الكلي_لكوادر_طبية_العاملة_أطباء_ومساعدين", "العدد_Kلي_للكودار_ المدربة_على_العلاج_المتكامل", "وجود_سجل_علاج_متكامل", "وجود_كتيب_لوحات", "ميزان_وزن", "ميزان_طول", "ميزان_حرارة", "ساعة_ مؤقت", "غرفة_إرواء", "وجود_الدعمادي", "_الإحداثيات_latitude", "_الإحداثيات_longitude", "immunization_office_exists", "nearest_immunization_center", "nutrition_center_exists", "nearest_nutrition_center", "growth_monitoring_service_exists", "ort_equipment_complete", "ort_safe_water", "ort_register", "ort_health_education", "immunization_strategy_fixed", "immunization_fixed_days_per_week", "immunization_strategy_outreach", "immunization_strategy_mobile", "immunization_outreach_sessions_per_month", "road_to_health_cards", "vaccines_available", "vaccine_fridge_working", "vaccines_stored_correctly", "otp_rutf_exists", "otp_tsfp_exists", "iycf_service_exists"];
     const MAX_STAFF = 5;
     for (let i = 1; i <= MAX_STAFF; i++) { baseImnciHeaders.push(`اسم الكادر ${i}`, `الوصف الوظيفي للكادر ${i}`, `هل الكادر ${i} مدرب`, `تاريخ تدريب الكادر ${i}`, `رقم هاتف الكادر ${i}`); baseImnciDataKeys.push(`imnci_staff_${i}_name`, `imnci_staff_${i}_job_title`, `imnci_staff_${i}_is_trained`, `imnci_staff_${i}_training_date`, `imnci_staff_${i}_phone`); }
     const imnciConfig = { headers: baseImnciHeaders, dataKeys: baseImnciDataKeys };
@@ -290,51 +293,30 @@ const getLocalityName = (stateKey, localityKey) => { if (!stateKey || !localityK
 // --- SUB-COMPONENTS ---
 
 const ActionMenu = ({ onAction, isSuperUserOrFed }) => {
+    // Each tile: a short name, with what it does in small text under it.
     const items = [
-        { id: 'show_list', label: 'عرض قائمة المنشآت', icon: List, color: 'text-blue-600', bg: 'bg-blue-100', border: 'hover:border-blue-400', shadow: 'hover:shadow-blue-100' },
-        { id: 'share_imnci', label: 'تحديث معلومات العلاج المتكامل', icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'hover:border-emerald-400', shadow: 'hover:shadow-emerald-100' },
-        { id: 'share_eenc', label: 'تحديث معلومات الرعاية الضرورية (غرفة الولادة)', icon: Users, color: 'text-teal-600', bg: 'bg-teal-100', border: 'hover:border-teal-400', shadow: 'hover:shadow-teal-100' },
-        { id: 'share_neonatal', label: 'تحديث معلومات الرعاية الخاصة (الحضانة)', icon: Building, color: 'text-indigo-600', bg: 'bg-indigo-100', border: 'hover:border-indigo-400', shadow: 'hover:shadow-indigo-100' },
-        { id: 'share_etat', label: 'تحديث معلومات الرعاية الحرجة (الحوادث والعناية المكثفة)', icon: PlusCircle, color: 'text-red-600', bg: 'bg-red-100', border: 'hover:border-red-400', shadow: 'hover:shadow-red-100' },
-        { id: 'show_update_dashboard', label: 'لوحة متابعة تحديثات المنشآت (Update Dashboard)', icon: Activity, color: 'text-orange-600', bg: 'bg-orange-100', border: 'hover:border-orange-400', shadow: 'hover:shadow-orange-100' },
+        { id: 'show_list', label: 'قائمة المنشآت', hint: 'عرض وبحث', icon: List },
+        { id: 'share_imnci', label: 'العلاج المتكامل', hint: 'تحديث المعلومات', icon: Activity },
+        { id: 'share_eenc', label: 'الرعاية الضرورية', hint: 'تحديث معلومات غرفة الولادة', icon: Baby },
+        { id: 'share_neonatal', label: 'الرعاية الخاصة', hint: 'تحديث معلومات الحضانة', icon: Building },
+        { id: 'share_etat', label: 'الرعاية الحرجة', hint: 'تحديث معلومات الحوادث والعناية المكثفة', icon: Siren },
+        { id: 'show_update_dashboard', label: 'لوحة المتابعة', hint: 'تحديثات المنشآت', icon: BarChart3 },
     ];
 
     if (isSuperUserOrFed) {
-        items.push({ 
-            id: 'show_history', 
-            label: 'مؤشرات التغطية التاريخية (KPI)', 
-            icon: LineChart, 
-            color: 'text-purple-600', 
-            bg: 'bg-purple-100', 
-            border: 'hover:border-purple-400', 
-            shadow: 'hover:shadow-purple-100' 
-        });
+        items.push({ id: 'show_history', label: 'مؤشرات التغطية', hint: 'التغطية التاريخية (KPI)', icon: LineChart });
     }
 
     return (
-        <div className="max-w-7xl mx-auto mt-4 md:mt-8 p-0 md:p-4 space-y-12" dir="rtl">
-            <section>
-                <h3 className="text-xl font-bold text-gray-800 mb-6 border-b border-gray-200 pb-2">خدمات صحة الطفل</h3>
-                <div className="grid grid-cols-2 gap-3 md:gap-6 lg:grid-cols-3 xl:grid-cols-6">
-                    {items.map(item => {
-                        const Icon = item.icon;
-                        return (
-                            <button
-                                key={item.id}
-                                onClick={() => onAction(item.id)}
-                                className={`flex flex-col items-center justify-center p-4 md:p-8 border border-gray-100 rounded-2xl bg-white shadow-sm hover:shadow-lg transition-all duration-300 group ${item.border} ${item.shadow} transform hover:-translate-y-1`}
-                            >
-                                <div className={`p-3 md:p-5 rounded-2xl mb-3 md:mb-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${item.bg}`}>
-                                    <Icon className={`w-7 h-7 md:w-8 md:h-8 ${item.color}`} strokeWidth={1.5} />
-                                </div>
-                                <div className="font-semibold text-gray-700 text-sm md:text-lg group-hover:text-gray-900 transition-colors text-center">
-                                    {item.label}
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-            </section>
+        <div className="max-w-7xl mx-auto mt-2 md:mt-6" dir="rtl">
+            <Card className="p-3 md:p-6">
+                <h3 className="text-xl md:text-2xl font-bold text-slate-800 mb-3 md:mb-5">خدمات صحة الطفل</h3>
+                <MenuGrid columns="sm:grid-cols-3 lg:grid-cols-4">
+                    {items.map(item => (
+                        <MenuTile key={item.id} icon={item.icon} label={item.label} hint={item.hint} onClick={() => onAction(item.id)} />
+                    ))}
+                </MenuGrid>
+            </Card>
         </div>
     );
 };
@@ -351,7 +333,56 @@ const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpen
         return <div className="flex flex-wrap gap-1">{services.map(s => <span key={s.name} className={`px-2 py-1 text-xs font-medium rounded-full ${s.color}`}>{s.label || s.name}</span>)}</div>;
     };
 
+    // Phones: one card per facility. The name is the title, the place sits on
+    // one line under it, the status is at the corner and services are chips.
+    const functioningBadge = (f) => {
+        const v = f['هل_المؤسسة_تعمل'];
+        if (v !== 'Yes' && v !== 'No') return null;
+        return (
+            <span className={`shrink-0 px-2 py-0.5 text-xs font-semibold rounded-full ${v === 'Yes' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {v === 'Yes' ? t('facilities_page.services.card.functioning', 'Functioning') : t('facilities_page.services.card.not_functioning', 'Not functioning')}
+            </span>
+        );
+    };
+    const phoneCards = (
+        <div className="md:hidden grid gap-3 my-3">
+            {facilities.length > 0 ? facilities.map((f) => (
+                <div key={f.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                            <h4 className="font-bold text-base text-slate-900 leading-snug break-words">{f['اسم_المؤسسة']}</h4>
+                            <p className="mt-0.5 text-sm text-slate-500">
+                                {[getStateName(f['الولاية']), getLocalityName(f['الولاية'], f['المحلية']), f.facility_ownership].filter(Boolean).join(' • ')}
+                            </p>
+                        </div>
+                        {functioningBadge(f)}
+                    </div>
+                    <div className="mt-2">{getServiceBadges(f)}</div>
+                    <p className="mt-2 text-xs text-slate-500">
+                        {t('facilities_page.services.col.last_update', 'Last Update')}: {f.lastSnapshotAt?.toDate ? f.lastSnapshotAt.toDate().toLocaleDateString() : t('facilities_page.common.na', 'N/A')}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2 border-t border-slate-100 pt-2">
+                        {canManageFacilities && (
+                            <Button variant="ghost" size="sm" className="bg-white px-3 py-1.5" onClick={() => onEdit(f.id)}><Pencil size={14} /> {t('facilities_page.common.edit', 'Edit')}</Button>
+                        )}
+                        <Button variant="ghost" size="sm" className="bg-white px-3 py-1.5" onClick={() => onGenerateLink(f.id)}><Link2 size={14} /> {t('facilities_page.services.card.link', 'Link')}</Button>
+                        <Button variant="ghost" size="sm" className="bg-white px-3 py-1.5" onClick={() => onOpenMap(f)}><MapPin size={14} /> {t('facilities_page.services.map', 'Map')}</Button>
+                        <Button variant="ghost" size="sm" className="bg-white px-3 py-1.5" onClick={() => onOpenHistory(f)}><History size={14} /> {t('facilities_page.services.history', 'History')}</Button>
+                        {canManageFacilities && (
+                            <Button variant="ghost" size="sm" className="ms-auto bg-white px-3 py-1.5 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700" onClick={() => onDelete(f.id)}><Trash2 size={14} /><span className="sr-only">{t('facilities_page.common.delete', 'Delete')}</span></Button>
+                        )}
+                    </div>
+                </div>
+            )) : (
+                <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">{emptyMessage}</div>
+            )}
+        </div>
+    );
+
     return (
+        <>
+        {phoneCards}
+        <div className="hidden md:block">
         <Table cardsOnPhone headers={[t('facilities_page.services.col.state', 'State'), t('facilities_page.services.col.locality', 'Locality'), t('facilities_page.services.col.facility_name', 'Facility Name'), t('facilities_page.services.col.ownership', 'Ownership'), t('facilities_page.services.col.functioning', 'Functioning'), t('facilities_page.services.col.services_available', 'Services Available'), t('facilities_page.services.col.last_update', 'Last Update'), t('facilities_page.common.actions', 'Actions')]}>
             {facilities.length > 0 ? (
                 facilities.map((f, index) => (
@@ -390,6 +421,8 @@ const AllFacilitiesTab = ({ facilities, onEdit, onDelete, onGenerateLink, onOpen
                 <EmptyState message={emptyMessage} colSpan={8} />
               )}
         </Table>
+        </div>
+        </>
     );
 };
 
@@ -701,7 +734,7 @@ const BulkUploadModal = ({ isOpen, onClose, onImport, uploadStatus, activeTab, f
             if (payloadsByDate.size === 0) { const defaultDate = facilityFromRow['date_of_visit'] || new Date().toISOString().split('T')[0]; payloadsByDate.set(defaultDate, { ...facilityFromRow, date_of_visit: defaultDate }); }
             allPayloads.push(...Array.from(payloadsByDate.values()));
         });
-        const booleanFields = ['هل_المؤسسة_تعمل', 'staff_incentives', 'project_participation', 'وجود_العلاج_المتكامل_لامراض_الطفولة', 'وجود_سجل_علاج_متكامل', 'وجود_كتيب_لوحات', 'ميزان_وزن', 'ميزان_طول', 'ميزان_حرارة', 'ساعة_مؤقت', 'غرفة_إرواء', 'eenc_provides_essential_care', 'eenc_steam_sterilizer', 'eenc_wall_clock', 'etat_has_service', 'hdu_has_service', 'picu_has_service', 'neonatal_level_of_care_primary', 'neonatal_level_of_care_secondary', 'neonatal_level_of_care_tertiary', 'neonatal_kmc_unit', 'neonatal_breastfeeding_unit', 'neonatal_sterilization_unit', 'immunization_office_exists', 'nutrition_center_exists', 'growth_monitoring_service_exists', 'neonatal_sepsis_surveillance'];
+        const booleanFields = ['هل_المؤسسة_تعمل', 'staff_incentives', 'project_participation', 'وجود_العلاج_المتكامل_لامراض_الطفولة', 'وجود_سجل_علاج_متكامل', 'وجود_كتيب_لوحات', 'ميزان_وزن', 'ميزان_طول', 'ميزان_حرارة', 'ساعة_مؤقت', 'غرفة_إرواء', 'eenc_provides_essential_care', 'eenc_steam_sterilizer', 'eenc_wall_clock', 'etat_has_service', 'hdu_has_service', 'picu_has_service', 'neonatal_level_of_care_primary', 'neonatal_level_of_care_secondary', 'neonatal_level_of_care_tertiary', 'neonatal_kmc_unit', 'neonatal_breastfeeding_unit', 'neonatal_sterilization_unit', 'immunization_office_exists', 'nutrition_center_exists', 'growth_monitoring_service_exists', 'neonatal_sepsis_surveillance', 'ort_equipment_complete', 'ort_safe_water', 'ort_register', 'ort_health_education', 'immunization_strategy_fixed', 'immunization_strategy_outreach', 'immunization_strategy_mobile', 'road_to_health_cards', 'vaccines_available', 'vaccine_fridge_working', 'vaccines_stored_correctly', 'otp_rutf_exists', 'otp_tsfp_exists', 'iycf_service_exists'];
         const serviceTypeNormalizationMap = { 'comprehensive emonc': 'CEmONC', 'cemonc': 'CEmONC', 'basic emonc pediatric': 'BEmONC', 'bemoc': 'BEmONC', 'general': 'general', 'pediatric': 'pediatric' };
         const auth = getAuth(); const user = auth.currentUser; const uploadTimestamp = new Date().toISOString(); let uploaderIdentifier = user ? (user.displayName || user.email) : 'Unknown Uploader';
         const processedFacilities = allPayloads.map(payload => {
@@ -1608,7 +1641,7 @@ const ChildHealthServicesView = ({
     const handleRefresh = async () => {
         setIsRefreshing(true);
         try {
-            if (activeTab === TABS.PENDING) { await refreshSubmissions(true); } else { const currentFilters = getCurrentFilters(); if (currentFilters) { await fetchHealthFacilities(currentFilters, true); } }
+            if (activeTab === TABS.PENDING) { await refreshSubmissions(true); } else { const currentFilters = getCurrentFilters(); if (currentFilters) { await fetchHealthFacilities(currentFilters, 'sync'); } }
             setToast({ show: true, message: t('facilities_page.services.refreshed', 'Data refreshed successfully.'), type: "success" });
         } catch (error) {
             setToast({ show: true, message: t('facilities_page.services.refresh_failed', 'Failed to refresh: {{message}}', { message: error.message }), type: "error" });
@@ -1735,7 +1768,8 @@ const ChildHealthServicesView = ({
             let message = t('facilities_page.services.import_success', '{{count}} facilities imported/updated successfully.', { count: successCount });
             if (errorCount > 0) { message += '\n' + t('facilities_page.services.import_rows_failed', '{{count}} rows failed to import.', { count: errorCount }); }
              setUploadStatus(prev => ({ ...prev, inProgress: false, message, errors: failedRowsData }));
-             await fetchHealthFacilities({}, true);
+             // Imported rows carry a new lastSnapshotAt, so the changes are enough.
+             await fetchHealthFacilities({}, 'sync');
         } catch (error) {
              setUploadStatus({ inProgress: false, processed: 0, total: 0, errors: [{ message: error.message }], message: t('facilities_page.services.import_failed', 'Import failed: {{message}}', { message: error.message }) });
         }
@@ -2057,6 +2091,7 @@ const ChildHealthServicesView = ({
         const TAB_LABELS = {
             [TABS.PENDING]: t('facilities_page.services.tabs.pending', 'Pending Submissions'),
             [TABS.ALL]: t('facilities_page.services.tabs.all', 'All Facilities'),
+            [TABS.DELETED]: t('facilities_page.services.tabs.deleted', 'Deleted Facilities'),
         };
         
         const isLocalityManager = permissions.manageScope === 'locality';
@@ -2101,8 +2136,8 @@ const ChildHealthServicesView = ({
             ),
             [TABS.ALL]: <AllFacilitiesTab facilities={paginatedFacilities || []} onEdit={handleEditFacility} onDelete={handleDeleteFacility} onGenerateLink={handleGenerateLink} onOpenMap={handleOpenMapModal} onOpenHistory={handleOpenHistoryModal} emptyMessage={emptyStateMessage} canApproveSubmissions={permissions.canApproveSubmissions} canManageFacilities={permissions.canManageFacilities} />,
         };
-        const availableTabs = Object.values(TABS).filter(tab => tab === TABS.PENDING ? permissions.canManageFacilities : true);
-        const showFiltersAndActions = activeTab !== TABS.PENDING;
+        const availableTabs = Object.values(TABS).filter(tab => (tab === TABS.PENDING || tab === TABS.DELETED) ? permissions.canManageFacilities : true);
+        const showFiltersAndActions = activeTab !== TABS.PENDING && activeTab !== TABS.DELETED;
 
         const isStateFilterDisabled = userStates && userStates.length === 1;
         const isLocalityFilterDisabled = isLocalityManager || !stateFilter || stateFilter === 'NOT_ASSIGNED' || stateFilter === 'ALL_STATES';
@@ -2114,12 +2149,9 @@ const ChildHealthServicesView = ({
             <div className="p-3 md:p-6">
                 <div className="flex flex-wrap justify-between items-center gap-3">
                     <div className="flex flex-wrap items-center gap-2 md:gap-4 min-w-0">
-                        {!IS_NATIVE && (
-                        <Button variant="secondary" onClick={() => setView('action_menu')} className="me-4">
-                            <ArrowLeft className="w-4 h-4 me-1 inline" /> {t('facilities_page.common.back', 'Back')}
-                        </Button>
-                        )}
                         <PageHeader 
+                            onBack={() => setView('action_menu')}
+                            backLabel={t('facilities_page.common.back', 'Back')}
                             title={t('facilities_page.services.page_title', 'Child Health Services Management')} 
                             subtitle={t('facilities_page.services.page_subtitle', 'Manage health facilities and their pediatric services.')}
                         />
@@ -2151,7 +2183,7 @@ const ChildHealthServicesView = ({
                     tabs={availableTabs.map(tabName => ({
                         id: tabName,
                         label: TAB_LABELS[tabName] || tabName,
-                        short: tabName === TABS.PENDING ? t('ui.short.pending', 'Pending') : t('ui.short.all_facilities', 'Facilities'),
+                        short: tabName === TABS.PENDING ? t('ui.short.pending', 'Pending') : tabName === TABS.DELETED ? t('ui.short.deleted', 'Deleted') : t('ui.short.all_facilities', 'Facilities'),
                         count: tabName === TABS.PENDING ? (uniquePendingSubmissions?.length || 0) : 0,
                     }))}
                 />
@@ -2212,34 +2244,33 @@ const ChildHealthServicesView = ({
                     </div>
                     </FilterPanel>
 
-                    <div className="flex flex-col items-start gap-2 md:flex-row md:justify-between md:items-center my-4">
-                        <PageActions keep={1}>
-                            {permissions.canManageFacilities && ( <Button onClick={() => { setEditingFacility(null); setUpdateSelectionService(null); setView('form'); }}>{t('facilities_page.services.add_new', 'Add New')}</Button> )}
-                            {canBulkUploadFacilities && ( <Button onClick={() => setIsBulkUploadModalOpen(true)}>{t('facilities_page.services.bulk_upload', 'Bulk Upload')}</Button> )}
-                            
-                            <Button variant="info" onClick={handleShareBulkUpdateLink}>{t('facilities_page.services.share_bulk_link', 'Share Bulk Update Link')}</Button>
-                            
+                    {/* One tool row: Add, then the exports and the clean-up tools as two short menus. */}
+                    <div className="flex flex-wrap items-center gap-2 my-4">
+                        {permissions.canManageFacilities && ( <Button onClick={() => { setEditingFacility(null); setUpdateSelectionService(null); setView('form'); }}>{t('facilities_page.services.add_new', 'Add New')}</Button> )}
+
+                        <MenuButton label={t('facilities_page.services.export_menu', 'Export')} icon={Download}>
                             <Button variant="secondary" onClick={handleExportExcel} disabled={!filteredFacilities || filteredFacilities.length === 0}>{t('facilities_page.services.export_excel', 'Export Excel')}</Button>
-                            
                             {isPdfGenerating ? (
                                 <Button disabled variant="secondary"><Spinner size="sm" /> {t('facilities_page.services.generating_pdf', 'Generating PDF...')}</Button>
                             ) : (
-                                <>
-                                    <Button onClick={() => handlePdfListGeneration('print')} variant="secondary" className="flex items-center gap-1" disabled={!filteredFacilities || filteredFacilities.length === 0}>
-                                        <PdfIcon /> {t('facilities_page.services.export_pdf_print', 'Export PDF (Print)')}
-                                    </Button>
-                                    <Button onClick={() => handlePdfListGeneration('screen')} variant="secondary" className="flex items-center gap-1" disabled={!filteredFacilities || filteredFacilities.length === 0}>
-                                        <PdfIcon /> {t('facilities_page.services.export_pdf_share', 'Export PDF (Share)')}
-                                    </Button>
-                                </>
+                                <Button onClick={() => handlePdfListGeneration('print')} variant="secondary" className="flex items-center gap-1" disabled={!filteredFacilities || filteredFacilities.length === 0}>
+                                    <PdfIcon /> {t('facilities_page.services.export_pdf_print', 'Export PDF (Print)')}
+                                </Button>
                             )}
-                        </PageActions>
-                         
-                        <div className="flex flex-wrap gap-2">
-                             {canFindFacilityDuplicates && ( <Button variant="secondary" onClick={() => setIsDuplicateModalOpen(true)}>{t('facilities_page.services.find_duplicates', 'Find Duplicates')}</Button> )}
-                             {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsCleanupModalOpen(true)}>{t('facilities_page.services.clean_data', 'Clean Data')}</Button> )}
-                             {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsNameStandardizationOpen(true)}>{t('facilities_page.services.standardize_names', 'Standardize Projects & Organizations')}</Button> )}
-                        </div>
+                            {!isPdfGenerating && (
+                                <Button onClick={() => handlePdfListGeneration('screen')} variant="secondary" className="flex items-center gap-1" disabled={!filteredFacilities || filteredFacilities.length === 0}>
+                                    <PdfIcon /> {t('facilities_page.services.export_pdf_share', 'Export PDF (Share)')}
+                                </Button>
+                            )}
+                        </MenuButton>
+
+                        <MenuButton label={t('facilities_page.services.tools_menu', 'Tools')} icon={Wrench}>
+                            {canBulkUploadFacilities && ( <Button variant="secondary" onClick={() => setIsBulkUploadModalOpen(true)}>{t('facilities_page.services.bulk_upload', 'Bulk Upload')}</Button> )}
+                            <Button variant="secondary" onClick={handleShareBulkUpdateLink}>{t('facilities_page.services.share_bulk_link', 'Share Bulk Update Link')}</Button>
+                            {canFindFacilityDuplicates && ( <Button variant="secondary" onClick={() => setIsDuplicateModalOpen(true)}>{t('facilities_page.services.find_duplicates', 'Find Duplicates')}</Button> )}
+                            {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsCleanupModalOpen(true)}>{t('facilities_page.services.clean_data', 'Clean Data')}</Button> )}
+                            {canCleanFacilityData && ( <Button variant="secondary" onClick={() => setIsNameStandardizationOpen(true)}>{t('facilities_page.services.standardize_names', 'Standardize Projects & Organizations')}</Button> )}
+                        </MenuButton>
                     </div>
 
                     <p className="text-sm text-gray-600 mb-2">
@@ -2250,7 +2281,13 @@ const ChildHealthServicesView = ({
                     </div>
                 </>)}
 
-                {isFacilitiesLoading || isReviewLoading || (activeTab === TABS.PENDING && isSubmissionsLoading) ? (
+                {activeTab === TABS.DELETED && (
+                    <Suspense fallback={<div className="mt-4"><SkeletonTable rows={4} columns={3} /></div>}>
+                        <DeletedItemsPanel types={['healthFacilities']} />
+                    </Suspense>
+                )}
+
+                {activeTab === TABS.DELETED ? null : isFacilitiesLoading || isReviewLoading || (activeTab === TABS.PENDING && isSubmissionsLoading) ? (
                     <div className="mt-4"><SkeletonTable rows={8} columns={5} /></div>
                 ) : (
                     <div className="mt-4" id="facility-list-content">

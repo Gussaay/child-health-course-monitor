@@ -152,16 +152,18 @@ describe('usage cost panel', () => {
         Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
     });
 
-    it('puts Google\'s own counts beside the app\'s, with the share the app saw', async () => {
+    it('loads Google\'s own counts beside the app\'s by itself, with the share the app saw and what it missed', async () => {
         store.google = {
             totals: { reads: 500000, writes: 2000, deletes: 10 },
             costAfterFreeQuota: 0.42, costBeforeFreeQuota: 0.31,
             days: [{ date: '2026-11-01', reads: 200000, writes: 1000, deletes: 5 }, { date: '2026-11-02', reads: 300000, writes: 1000, deletes: 5 }],
         };
+        // Fetched by itself when the tab opens: no button to press.
         await act(async () => { root.render(<UsageCostPanel />); });
-        await act(async () => { [...host.querySelectorAll('button')].find((b) => b.textContent.includes('Compare with Google')).click(); });
         const text = host.textContent;
         expect(text).toContain('500,000');
+        expect(text).toContain('250,000 reads were not counted by the app');
+        expect(text).toContain('Google\'s database cost after the free quota: $0.42');
         expect(text).toContain('$0.42');
         expect(text).toContain('the app counted 50%');   // 250,000 of 500,000 reads
         expect(text).toContain('2026-11-02');

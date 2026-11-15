@@ -1,5 +1,7 @@
 // src/components/ReportsView.jsx
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { isOperationalGuideCourse } from './ExerciseMonitoring.jsx';
+import { ExerciseParticipantReport } from './OperationalGuideReports.jsx';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable"; 
 import html2canvas from '../utils/html2canvasLight';
@@ -195,7 +197,9 @@ export function ReportsView({ course, participants, allObs: propAllObs, allCases
     if (loading) { return <PageSkeleton />; }
 
     // A mentorship sub-course reports on its own skill set, not the course type's.
-    const StandardReportComponent = hasMentorshipForm(course)
+    const StandardReportComponent = isOperationalGuideCourse(course)
+        ? ExerciseParticipantReport
+        : hasMentorshipForm(course)
         ? MentorshipReports
         : { 'IMNCI': ImnciReports, 'ETAT': EtatReports, 'EENC': EencReports, 'EmONC': EencReports, 'ICCM': IccmReports, 'Comprehensive Package For Community Midwives': IccmReports }[course.course_type];
     const hasTestReports = (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC' || course.course_type === 'EmONC');

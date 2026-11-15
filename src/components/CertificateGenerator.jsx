@@ -12,14 +12,16 @@ import { FileOpener } from '@capacitor-community/file-opener';
 // Common Components & Icons
 import { 
     Button, Card, EmptyState, PageHeader, 
-    Spinner, Table, Modal, CardBody, CardFooter, FormGroup, Select, Input
+    Spinner, Table, Modal, CardBody, CardFooter, FormGroup, Select, Input, FilterPanel
 } from './CommonComponents'; 
-import { Award, FileSignature, Stamp, CheckCircle, Settings, Upload, ArrowLeft, Plus, Trash2, Layers, Eye, Download, RefreshCw, X, AlertTriangle } from 'lucide-react'; 
+import { Award, FileSignature, Stamp, CheckCircle, Settings, Upload, ArrowLeft, Plus, Trash2, Layers, Eye, Download, RefreshCw, X, ChevronDown } from 'lucide-react'; 
 
 // Data & Firebase
 import {
     STATE_LOCALITIES, certificateApprovalState, certificateSubCourseOf,
-    staleCertificateParticipants
+    staleCertificateParticipants,
+    certificateDirectorName,
+    certificateDirectorSignature,
 } from './constants'; 
 import { db } from '../firebase'; 
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc, deleteDoc, serverTimestamp, deleteField } from 'firebase/firestore'; 
@@ -39,6 +41,11 @@ import { notify, confirmDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import { publicBaseUrl } from '../utils/publicLink';
+import {
+    downloadJobs, announceJobs, nextCertificateJobId,
+    subscribeCertificateDownloads, cancelCertificateDownload, dismissCertificateDownload,
+} from '../utils/certificateDownloads';
+export { subscribeCertificateDownloads, cancelCertificateDownload, dismissCertificateDownload };
 
 // -----------------------------------------------------------------------------
 // HELPER FUNCTIONS
@@ -305,8 +312,8 @@ const imageUrlToBase64 = async (url) => {
 
 // Keep well under the 1 MiB document limit: several signatures, a stamp and the
 // rest of the course data all share one document.
-const MAX_SIGNATURE_BYTES = 90 * 1024;
-const SIGNATURE_MAX_DIM = 600;
+const MAX_SIGNATURE_BYTES = 150 * 1024;
+const SIGNATURE_MAX_DIM = 1000;
 // Firestore hard-limits a document to 1 MiB; stop well short of it.
 const MAX_CUSTOM_CERT_BYTES = 700 * 1024;
 
@@ -325,30 +332,65 @@ export const fileToSignatureDataUrl = (file, maxDim = SIGNATURE_MAX_DIM) => new 
         const img = new Image();
         img.onerror = () => reject(new Error('That file is not a readable image.'));
         img.onload = () => {
-            const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-            const w = Math.max(1, Math.round(img.width * scale));
-            const h = Math.max(1, Math.round(img.height * scale));
+            const sizeOf = (url) => Math.ceil((url.length - (url.indexOf(',') + 1)) * 0.75);
+            // Draw at a given max dimension; optionally posterize colours and make
+            // near-white pixels transparent so the PNG compresses far better.
+            const render = (dim, simplify, mime = 'image/png', quality = 1) => {
+                const scale = Math.min(1, dim / Math.max(img.width, img.height));
+                const w = Math.max(1, Math.round(img.width * scale));
+                const h = Math.max(1, Math.round(img.height * scale));
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, w, h);
+                if (simplify) {
+                    // Soft white-background removal: near-white becomes transparent,
+                    // ink keeps its exact colour, edges fade smoothly (no jagged halo).
+                    const data = ctx.getImageData(0, 0, w, h);
+                    const px = data.data;
+                    for (let i = 0; i < px.length; i += 4) {
+                        const lum = Math.min(px[i], px[i + 1], px[i + 2]);
+                        const keep = lum >= 238 ? 0 : lum <= 195 ? 1 : (238 - lum) / 43;
+                        px[i + 3] = Math.round(px[i + 3] * keep);
+                        if (simplify === 2) {
+                            px[i] = px[i] & 0xC0;
+                            px[i + 1] = px[i + 1] & 0xC0;
+                            px[i + 2] = px[i + 2] & 0xC0;
+                        }
+                    }
+                    ctx.putImageData(data, 0, 0);
+                }
+                const out = canvas.toDataURL(mime, quality);
+                return out.startsWith('data:' + mime) ? out : null;
+            };
 
-            const canvas = document.createElement('canvas');
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, 0, 0, w, h);
-
-            let dataUrl;
+            // Shrink automatically until it fits instead of rejecting the upload.
+            // Order matters: keep full resolution and lossless PNG when it fits, then
+            // high-quality WebP (keeps transparency, far smaller), and only then
+            // reduce the size or simplify colours.
+            const attempts = [];
+            const dims = [maxDim, 800, 640, 500, 400].filter((d, i, arr) => d <= maxDim && arr.indexOf(d) === i);
+            // 1) white background removed (lossless PNG), full resolution first
+            for (const dim of dims) attempts.push([dim, 1, 'image/png', 1]);
+            // 2) background removed + high-quality WebP
+            for (const dim of dims) for (const q of [0.98, 0.92]) attempts.push([dim, 1, 'image/webp', q]);
+            // 3) last resort: also reduce colours
+            for (const dim of dims) attempts.push([dim, 2, 'image/png', 1]);
+            let dataUrl = null;
             try {
-                dataUrl = canvas.toDataURL('image/png');
+                for (const [dim, simplify, mime, q] of attempts) {
+                    const candidate = render(dim, simplify, mime, q);
+                    if (candidate && sizeOf(candidate) <= MAX_SIGNATURE_BYTES) { dataUrl = candidate; break; }
+                }
             } catch (err) {
                 return reject(new Error('Could not process that image.'));
             }
-
-            // Approximate decoded size of the base64 payload.
-            const bytes = Math.ceil((dataUrl.length - (dataUrl.indexOf(',') + 1)) * 0.75);
-            if (bytes > MAX_SIGNATURE_BYTES) {
+            if (!dataUrl) {
                 return reject(new Error(
-                    `That image is too large to store securely (${Math.round(bytes / 1024)} KB after compression, limit ${Math.round(MAX_SIGNATURE_BYTES / 1024)} KB). ` +
-                    `Please crop it tightly around the signature and remove any background before uploading.`
+                    'That image could not be reduced enough to store securely. ' +
+                    'Please crop it tightly around the signature before uploading.'
                 ));
             }
             resolve(dataUrl);
@@ -357,6 +399,41 @@ export const fileToSignatureDataUrl = (file, maxDim = SIGNATURE_MAX_DIM) => new 
     };
     reader.readAsDataURL(file);
 });
+
+// Logos are decorative and go to Storage, but a phone photo of a logo can be
+// several MB, which slows every certificate render and can hit the upload
+// limit. Anything larger than LOGO_MAX_DIM is scaled down (lossless PNG, so
+// transparency and sharp edges survive); smaller files are uploaded untouched.
+const LOGO_MAX_DIM = 1600;
+export const shrinkLogoFile = (file) => new Promise((resolve) => {
+    if (!file || !/^image\/(png|jpe?g|webp)$/i.test(file.type)) return resolve(file);
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.onload = () => {
+        URL.revokeObjectURL(url);
+        const scale = Math.min(1, LOGO_MAX_DIM / Math.max(img.width, img.height));
+        if (scale >= 1) return resolve(file);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+            if (!blob || blob.size >= file.size) return resolve(file);
+            resolve(new File([blob], (file.name || 'logo').replace(/\.[^.]+$/, '') + '.png', { type: 'image/png' }));
+        }, 'image/png');
+    };
+    img.src = url;
+});
+
+// Firestore refuses a document over 1 MiB. Signature images are stored inside
+// the course record, so check the record's size before writing one more.
+const COURSE_DOC_SAFE_BYTES = 950 * 1024;
+const approxDocBytes = (obj) => {
+    try { return new Blob([JSON.stringify(obj)]).size; } catch { return 0; }
+};
 
 /** Every field that can hold a signature or stamp image, across both storage shapes. */
 export const SIGNATURE_FIELDS = {
@@ -756,7 +833,7 @@ export const resolveCertificateSignatories = (course = {}, fallbackManagerName =
     const cfg = course.customCertificate || {};
     const { directorNameAr = null, programManagerNameAr = null } = extra;
 
-    const courseDirector = firstFilled(course.approvedDirectorName, course.director);
+    const courseDirector = certificateDirectorName(course);
     const courseManager = firstFilled(course.approvedByManagerName, fallbackManagerName);
 
     const honorificEn = cfg.hideHonorific ? '' : firstFilled(cfg.honorificEn, CERT_DEFAULTS.honorificEn);
@@ -1103,11 +1180,14 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
 
     const containerStyle = { width: '297mm', height: '210mm', boxSizing: 'border-box', fontFamily: isArabic ? 'Arial, sans-serif' : 'Times New Roman, serif', color: 'black', backgroundColor: 'white', position: 'relative', direction: isArabic ? 'rtl' : 'ltr' };
     const qrContainerStyle = { position: 'absolute', top: '60mm', width: '45mm', height: 'auto', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', left: isArabic ? '15mm' : 'auto', right: isArabic ? 'auto' : '15mm' };
-    const finalDirectorName = directorName || course.director;
+    const finalDirectorName = directorName || certificateDirectorName(course);
+    // Drop a signature left behind by a previous course director.
+    const currentDirectorSignatureUrl = (directorSignatureUrl && course && !certificateDirectorSignature({ ...course, approvedDirectorSignatureUrl: directorSignatureUrl }))
+        ? null : directorSignatureUrl;
 
     // --- SIGNATORIES (director / manager / optional third party) ---
     const signatories = resolveCertificateSignatories(
-        { ...course, approvedDirectorName: finalDirectorName, approvedByManagerName: federalProgramManagerName },
+        { ...course, director: finalDirectorName, approvedDirectorName: finalDirectorName, approvedByManagerName: federalProgramManagerName },
         federalProgramManagerName,
         { directorNameAr, programManagerNameAr }
     );
@@ -1307,10 +1387,10 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     // In RTL the manager sits on the right, the director on the left (unchanged behaviour).
     const rightSignatory = isArabic
         ? { url: programManagerSignatureUrl, name: managerDisplayName, role: managerRole, hidden: signatories.hideManager, block: 'manager' }
-        : { url: directorSignatureUrl, name: directorDisplayName, role: directorRole, hidden: signatories.hideDirector, block: 'director' };
+        : { url: currentDirectorSignatureUrl, name: directorDisplayName, role: directorRole, hidden: signatories.hideDirector, block: 'director' };
 
     const leftSignatory = isArabic
-        ? { url: directorSignatureUrl, name: directorDisplayName, role: directorRole, hidden: signatories.hideDirector, block: 'director' }
+        ? { url: currentDirectorSignatureUrl, name: directorDisplayName, role: directorRole, hidden: signatories.hideDirector, block: 'director' }
         : { url: programManagerSignatureUrl, name: managerDisplayName, role: managerRole, hidden: signatories.hideManager, block: 'manager' };
 
     return (
@@ -1535,8 +1615,8 @@ export const generateCertificatePdf = async (inputCourse, participant, federalPr
     const finalManagerName = (course.approvedByManagerName || federalProgramManagerName || '').trim();
     const rawManagerSignature = course.approvedByManagerSignatureUrl || null;
 
-    const finalDirectorName = (course.approvedDirectorName || course.director || '').trim();
-    const rawDirectorSignature = course.approvedDirectorSignatureUrl || null;
+    const finalDirectorName = certificateDirectorName(course);
+    const rawDirectorSignature = certificateDirectorSignature(course);
     const rawProgramStamp = course.approvedProgramStampUrl || null;
     const rawThirdPartySignature = course.approvedThirdPartySignatureUrl || null;
     const rawFourthPartySignature = course.approvedFourthPartySignatureUrl || null;
@@ -1624,8 +1704,8 @@ export const generateBlankCertificatePdf = async (inputCourse, federalProgramMan
     const finalManagerName = (course.approvedByManagerName || federalProgramManagerName || '').trim();
     const rawManagerSignature = course.approvedByManagerSignatureUrl || null;
 
-    const finalDirectorName = (course.approvedDirectorName || course.director || '').trim();
-    const rawDirectorSignature = course.approvedDirectorSignatureUrl || null;
+    const finalDirectorName = certificateDirectorName(course);
+    const rawDirectorSignature = certificateDirectorSignature(course);
     const rawProgramStamp = course.approvedProgramStampUrl || null;
     const rawThirdPartySignature = course.approvedThirdPartySignatureUrl || null;
     const rawFourthPartySignature = course.approvedFourthPartySignatureUrl || null;
@@ -1747,38 +1827,9 @@ export const generateAllCertificatesPdf = async (inputCourse, participants, fede
 // app no longer does.
 // =============================================================================
 
-let jobCounter = 0;
-const downloadJobs = new Map();
-const downloadListeners = new Set();
-
-const announceJobs = () => {
-    const snapshot = [...downloadJobs.values()].map((j) => ({ ...j }));
-    downloadListeners.forEach((fn) => { try { fn(snapshot); } catch (e) { console.warn(e); } });
-};
-
-/** Watch the queue. Called immediately with the current state. */
-export const subscribeCertificateDownloads = (fn) => {
-    downloadListeners.add(fn);
-    fn([...downloadJobs.values()].map((j) => ({ ...j })));
-    return () => downloadListeners.delete(fn);
-};
-
-/** Ask a job to stop. It stops between certificates, not mid-render. */
-export const cancelCertificateDownload = (id) => {
-    const job = downloadJobs.get(id);
-    if (!job || job.status !== 'running') return;
-    job.cancelled = true;
-    job.status = 'stopping';
-    announceJobs();
-};
-
-/** Clear a finished job from the banner. */
-export const dismissCertificateDownload = (id) => {
-    const job = downloadJobs.get(id);
-    if (job && job.status === 'running') return;
-    downloadJobs.delete(id);
-    announceJobs();
-};
+// The queue itself (jobs, subscribers, stop and dismiss) lives in
+// utils/certificateDownloads.js, so the banner can watch it without loading
+// this file, jsPDF and html2canvas on every page.
 
 const CANCELLED = 'CANCELLED_BY_USER';
 
@@ -1802,7 +1853,7 @@ const CANCELLED = 'CANCELLED_BY_USER';
  * @returns {string} the job id
  */
 export const startCertificateDownload = (spec) => {
-    const id = `cert-${++jobCounter}`;
+    const id = nextCertificateJobId();
     const isBulk = spec.kind === 'bulk';
 
     const job = {
@@ -1876,64 +1927,8 @@ export const startCertificateDownload = (spec) => {
     return id;
 };
 
-/**
- * The progress banner. App.jsx mounts exactly one, outside the routed views, so
- * it survives navigation — which is the only reason it is a separate component
- * rather than part of the participants screen.
- */
-export const CertificateDownloadBanner = () => {
-    const { t } = useTranslation();
-    const [jobs, setJobs] = useState([]);
-    useEffect(() => subscribeCertificateDownloads(setJobs), []);
-
-    if (jobs.length === 0) return null;
-
-    return (
-        <div className="fixed bottom-[calc(var(--bottom-nav,0px)+1rem)] inset-x-3 sm:inset-x-auto sm:end-4 sm:w-80 z-[70] space-y-2 print-hide">
-            {jobs.map((job) => {
-                const pct = job.total > 0 ? Math.round((job.current / job.total) * 100) : 0;
-                const done = job.status === 'done';
-                const failed = job.status === 'failed';
-                const stopped = job.status === 'cancelled';
-                return (
-                    <div key={job.id} className={`rounded-lg shadow-lg border p-3 text-sm bg-white ${
-                        failed ? 'border-red-300' : done ? 'border-green-300' : 'border-slate-300'}`}>
-                        <div className="flex items-start gap-2">
-                            {done ? <CheckCircle size={16} className="text-green-600 shrink-0 mt-0.5" />
-                                : failed ? <AlertTriangle size={16} className="text-red-600 shrink-0 mt-0.5" />
-                                    : <Download size={16} className="text-sky-600 shrink-0 mt-0.5" />}
-                            <div className="min-w-0 flex-1">
-                                <div className="font-semibold text-slate-800 break-words">{job.label}</div>
-                                <div className="text-xs text-slate-500">
-                                    {done ? t('certificates.banner.downloaded', 'Downloaded')
-                                        : failed ? job.error
-                                            : stopped ? t('certificates.banner.stopped', 'Stopped')
-                                                : job.status === 'stopping' ? t('certificates.banner.stopping', 'Stopping…')
-                                                    : job.kind === 'bulk'
-                                                        ? t('certificates.banner.preparing_n', 'Preparing {{current}} of {{total}}', { current: job.current, total: job.total })
-                                                        : t('certificates.banner.preparing_one', 'Preparing the certificate…')}
-                                </div>
-                            </div>
-                            {job.status === 'running' ? (
-                                <button type="button" onClick={() => cancelCertificateDownload(job.id)}
-                                    className="text-xs text-red-600 hover:underline shrink-0">{t('certificates.banner.stop', 'Stop')}</button>
-                            ) : (
-                                <button type="button" onClick={() => dismissCertificateDownload(job.id)}
-                                    className="text-slate-400 hover:text-slate-600 shrink-0"><X size={14} /></button>
-                            )}
-                        </div>
-
-                        {job.kind === 'bulk' && !done && !failed && !stopped && (
-                            <div className="mt-2 h-1.5 bg-slate-200 rounded overflow-hidden">
-                                <div className="h-full bg-sky-600 transition-all" style={{ width: `${pct}%` }} />
-                            </div>
-                        )}
-                    </div>
-                );
-            })}
-        </div>
-    );
-};
+// The progress banner moved to components/CertificateDownloadBanner.jsx.
+export { CertificateDownloadBanner } from './CertificateDownloadBanner';
 
 const AssetUploader = ({ label, fieldKey, value, uploading, onPick, onClear, height = 'h-12' }) => {
     const { t } = useTranslation();
@@ -2067,8 +2062,8 @@ const LiveCertificatePreview = ({ course, data, language }) => {
                     participantSubCourse={course?.director_imci_sub_type || null}
                     language={language}
                     programManagerSignatureUrl={course?.approvedByManagerSignatureUrl || null}
-                    directorName={course?.approvedDirectorName || course?.director || ''}
-                    directorSignatureUrl={course?.approvedDirectorSignatureUrl || null}
+                    directorName={certificateDirectorName(course)}
+                    directorSignatureUrl={certificateDirectorSignature(course)}
                     programStampUrl={course?.approvedProgramStampUrl || null}
                     thirdPartySignatureUrl={course?.approvedThirdPartySignatureUrl || null}
                                 fourthPartySignatureUrl={course?.approvedFourthPartySignatureUrl || null}
@@ -2941,7 +2936,7 @@ export function CertificateDesigner({
     // images live on the course document; the third/fourth may also be sitting in
     // the unsaved form state.
     const managerImg = !!liveCourse.approvedByManagerSignatureUrl;
-    const directorImg = !!liveCourse.approvedDirectorSignatureUrl;
+    const directorImg = !!certificateDirectorSignature(liveCourse);
     const thirdImg = !!(data.thirdPartySignatureUrl || liveCourse.approvedThirdPartySignatureUrl);
     const fourthImg = !!(data.fourthPartySignatureUrl || liveCourse.approvedFourthPartySignatureUrl);
 
@@ -2981,7 +2976,7 @@ export function CertificateDesigner({
         const base = key.replace(/(En|Ar)$/, '');
         if (base === 'courseTitle') return liveCourse.course_type ? getCertificateCourseTitle(liveCourse.course_type, lang, autoSubCourse) : '';
         if (base === 'managerTitle') return stripHonorific(firstFilled(liveCourse.approvedByManagerName, federalProgramManagerName));
-        if (base === 'directorTitle') return stripHonorific(firstFilled(liveCourse.approvedDirectorName, liveCourse.director));
+        if (base === 'directorTitle') return stripHonorific(certificateDirectorName(liveCourse));
         if (base === 'place') {
             if (isTemplateScope) return '';
             const st = lang === 'ar'
@@ -3271,7 +3266,7 @@ export function CertificateDesigner({
             const url = isSignature
                 ? await fileToSignatureDataUrl(file)
                 : await uploadFile(
-                    file,
+                    await shrinkLogoFile(file),
                     isTemplateScope
                         ? `certificate_templates/${templateDocId}/${activeUploadKey}_${Date.now()}`
                         : `courses/${course.id}/certificate_assets/${activeUploadKey}_${Date.now()}`
@@ -3279,7 +3274,7 @@ export function CertificateDesigner({
             set(activeUploadKey, url);
         } catch (err) {
             console.error(err);
-            notify(t('certificates.designer.upload_failed', 'Upload failed. Please try again.'));
+            notify(t('certificates.designer.upload_failed_reason', 'Upload failed: {{error}}', { error: err?.message || '' }));
         } finally {
             setUploadingAsset(null);
             setActiveUploadKey(null);
@@ -3506,7 +3501,7 @@ export function CertificateDesigner({
 
     return (
         <div className="fixed inset-0 z-[65] bg-gray-100 flex flex-col">
-            <input type="file" ref={fileRef} onChange={handleFileChange} accept="image/png, image/jpeg" className="hidden" />
+            <input type="file" ref={fileRef} onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" className="hidden" />
 
             {/* ---- Site brand bar ---- */}
             <div className="bg-sky-800 text-white shrink-0 max-lg:landscape:hidden">
@@ -4053,8 +4048,8 @@ export function CertificateDesigner({
                                 participantSubCourse={autoSubCourse || null}
                                 language={language}
                                 programManagerSignatureUrl={liveCourse.approvedByManagerSignatureUrl || null}
-                                directorName={liveCourse.approvedDirectorName || liveCourse.director || ''}
-                                directorSignatureUrl={liveCourse.approvedDirectorSignatureUrl || null}
+                                directorName={certificateDirectorName(liveCourse)}
+                                directorSignatureUrl={certificateDirectorSignature(liveCourse)}
                                 programStampUrl={liveCourse.approvedProgramStampUrl || null}
                                 thirdPartySignatureUrl={liveCourse.approvedThirdPartySignatureUrl || null}
                                 fourthPartySignatureUrl={liveCourse.approvedFourthPartySignatureUrl || null}
@@ -4248,7 +4243,7 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
             const isSignature = /Signature/i.test(key);
             const url = isSignature
                 ? await fileToSignatureDataUrl(file)
-                : await uploadFile(file, `courses/${course.id}/logos/${key}_${Date.now()}`);
+                : await uploadFile(await shrinkLogoFile(file), `courses/${course.id}/logos/${key}_${Date.now()}`);
             setData(prev => ({ ...prev, [key]: url }));
         } catch (err) {
             notify(t('certificates.customizer.upload_failed', 'Upload failed: {{error}}', { error: err.message }));
@@ -4290,7 +4285,7 @@ export function CertificateCustomizerModal({ isOpen, onClose, course, onSaveSucc
 
     return (
         <Modal isOpen={isOpen} onClose={isSaving ? null : onClose} title={t('certificates.customizer.title', 'Customize Certificate Template')} size="2xl">
-            <input type="file" ref={fileRef} onChange={handleFileChange} accept="image/png, image/jpeg" className="hidden" />
+            <input type="file" ref={fileRef} onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" className="hidden" />
             <CardBody className="p-6 max-h-[70vh] overflow-y-auto space-y-6">
 
                 <div className="flex items-center gap-1 border-b border-gray-200 -mx-6 px-6 -mt-6 pt-4 pb-0 sticky top-0 z-30 bg-white">
@@ -5004,11 +4999,12 @@ const templateSummary = (tpl, t) => {
     return `${settings}${logos ? ` · ${extra}` : ''}`;
 };
 
-const CertificateTemplatesPanel = ({ templateDocs, courseTypes, canEdit, onEdit, onClear, busy }) => {
+const CertificateTemplatesPanel = ({ templateDocs, courseTypes, activeType = null, canEdit, onEdit, onClear, busy }) => {
     const { t } = useTranslation();
     const [newType, setNewType] = useState('');
     const general = templateDocs[GENERAL_TEMPLATE_ID];
-    const rows = courseTypes.map(ct => ({ type: ct, tpl: templateDocs[courseTypeTemplateId(ct)] }));
+    // Inside a course package only that package's template is relevant.
+    const rows = (activeType ? [activeType] : courseTypes).map(ct => ({ type: ct, tpl: templateDocs[courseTypeTemplateId(ct)] }));
 
     return (
         <div className="mb-6 rounded-xl border border-violet-200 bg-violet-50/40">
@@ -5079,7 +5075,7 @@ const CertificateTemplatesPanel = ({ templateDocs, courseTypes, canEdit, onEdit,
                     </table>
                 </div>
 
-                {canEdit && (
+                {canEdit && !activeType && (
                     <div className="flex flex-wrap items-end gap-2">
                         <FormGroup label={t('certificates.templates.another_type', 'Template for another course type')}>
                             <Input value={newType} onChange={e => setNewType(e.target.value)} placeholder={t('certificates.templates.type_ph', 'Course type exactly as stored, e.g. ETAT')} />
@@ -5233,8 +5229,14 @@ const CertificateChangesModal = ({ course, managerName, onClose, onDone, setToas
     );
 };
 
-export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole, canUseFederalManagerAdvancedFeatures, singleCourseMode = false, title = 'Certificate Approvals' }) => {
+export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, currentUserRole, canUseFederalManagerAdvancedFeatures, singleCourseMode = false, courseType = null }) => {
     const { t } = useTranslation();
+    // Inside a course package, only that package's courses are listed.
+    const allCourses = React.useMemo(
+        () => (courseType ? everyCourse.filter(c => c.course_type === courseType) : everyCourse),
+        [everyCourse, courseType]
+    );
+    const [openId, setOpenId] = React.useState(singleCourseMode ? (everyCourse[0]?.id || null) : null);
     const { fetchCourses } = useDataCache(); 
     const [managerName, setManagerName] = React.useState('');
     const [loadingApprovals, setLoadingApprovals] = React.useState(false);
@@ -5323,13 +5325,13 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
 
         if (filterState !== 'All') filtered = filtered.filter(c => c.state === filterState);
         if (filterLocality !== 'All') filtered = filtered.filter(c => c.locality === filterLocality);
-        if (filterCourseType !== 'All') filtered = filtered.filter(c => c.course_type === filterCourseType);
+        if (!courseType && filterCourseType !== 'All') filtered = filtered.filter(c => c.course_type === filterCourseType);
         if (filterStatus !== 'All') {
             const isApproved = filterStatus === 'Approved';
             filtered = filtered.filter(c => !!c.isCertificateApproved === isApproved);
         }
         return filtered.sort((a, b) => new Date(b.start_date || 0) - new Date(a.start_date || 0));
-    }, [allCourses, localCourseUpdates, filterState, filterLocality, filterCourseType, filterStatus]);
+    }, [allCourses, localCourseUpdates, filterState, filterLocality, filterCourseType, filterStatus, courseType]);
 
     // Everything the approval dialog shows, resolved through the same rules as the certificate.
     const approvalPreview = React.useMemo(() => {
@@ -5362,12 +5364,13 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
             // Persist the names that will actually be printed, so approval records
             // and generated certificates never disagree.
             const approvedManager = sig.managerEn || courseToApprove.approvedByManagerName || managerName || '';
-            const approvedDirector = sig.directorEn || courseToApprove.approvedDirectorName || courseToApprove.director || '';
+            const approvedDirector = sig.directorEn || certificateDirectorName(courseToApprove);
 
             const approvalPayload = {
                 isCertificateApproved: true,
                 approvedByManagerName: approvedManager,
                 approvedDirectorName: approvedDirector,
+                approvedDirectorId: courseToApprove.directorId || null,
                 approvedThirdPartyName: sig.thirdPartyEnabled ? sig.thirdPartyEn : '',
                 approvedThirdPartyRole: sig.thirdPartyEnabled ? sig.thirdPartyRoleEn : '',
                 approvedThirdPartySignatureUrl: sig.thirdPartyEnabled ? sig.thirdPartySignatureUrl : '',
@@ -5516,7 +5519,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
             const sig = resolveCertificateSignatories(effective(course), managerName);
             
             if (assetType === 'managerSignature') { updatePayload.approvedByManagerSignatureUrl = url; updatePayload.approvedByManagerName = sig.managerEn || managerName; }
-            else if (assetType === 'directorSignature') { updatePayload.approvedDirectorSignatureUrl = url; updatePayload.approvedDirectorName = sig.directorEn || course.director || ''; }
+            else if (assetType === 'directorSignature') { updatePayload.approvedDirectorSignatureUrl = url; updatePayload.approvedDirectorName = sig.directorEn || certificateDirectorName(course); updatePayload.approvedDirectorId = course.directorId || null; }
             else if (assetType === 'stamp') { updatePayload.approvedProgramStampUrl = url; }
             else if (assetType === 'thirdSignature') {
                 updatePayload.approvedThirdPartySignatureUrl = url;
@@ -5531,6 +5534,16 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                 if (sig.fourthPartyRoleEn) updatePayload.approvedFourthPartyRole = sig.fourthPartyRoleEn;
             }
             
+            // Would the course record still fit? Dotted keys replace a nested value.
+            const projected = { ...course, customCertificate: { ...(course.customCertificate || {}) } };
+            Object.entries(updatePayload).forEach(([k, v]) => {
+                if (k.startsWith('customCertificate.')) projected.customCertificate[k.slice(18)] = v;
+                else if (k !== 'lastUpdatedAt') projected[k] = v;
+            });
+            if (approxDocBytes(projected) > COURSE_DOC_SAFE_BYTES) {
+                throw new Error(t('certificates.approvals.record_full', 'This course record has no room for another image. Remove an image you no longer need, or crop this one closer to the signature, then try again.'));
+            }
+
             setLocalCourseUpdates(prev => ({
                 ...prev,
                 [course.id]: {
@@ -5569,13 +5582,6 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
             hasGeneralTemplate: !!templateDocs[GENERAL_TEMPLATE_ID],
         };
     }), [courses, managerName, isFederalProgramManager, effective, templateDocs]);
-
-    const StatusPill = ({ approved }) => (
-        <span className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-            approved ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-            {approved ? t('certificates.approvals.ready', 'Ready') : t('certificates.approvals.pending', 'Pending')}
-        </span>
-    );
 
     const TemplateBadges = ({ row }) => (
         <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
@@ -5634,8 +5640,8 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                 </Pair>
 
                 <Pair>
-                    <Button onClick={() => triggerUpload(c, 'directorSignature')} disabled={isProcessing} variant={c.approvedDirectorSignatureUrl ? "success" : "secondary"} className={`${btn} ${uploaded(c.approvedDirectorSignatureUrl)} ${block ? 'flex-1' : ''}`}>
-                        {c.approvedDirectorSignatureUrl ? <CheckCircle size={12} /> : <FileSignature size={12} />} {t('certificates.approvals.dir_signature', 'Dir Signature')}
+                    <Button onClick={() => triggerUpload(c, 'directorSignature')} disabled={isProcessing} variant={certificateDirectorSignature(c) ? "success" : "secondary"} className={`${btn} ${uploaded(certificateDirectorSignature(c))} ${block ? 'flex-1' : ''}`}>
+                        {certificateDirectorSignature(c) ? <CheckCircle size={12} /> : <FileSignature size={12} />} {t('certificates.approvals.dir_signature', 'Dir Signature')}
                     </Button>
                     {c.approvedDirectorSignatureUrl && (
                         <button type="button" title={t('certificates.approvals.remove_dir', 'Remove director signature image')} onClick={() => removeAsset(c, 'directorSignature')} disabled={isProcessing} className={kill}>&times;</button>
@@ -5684,7 +5690,7 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
 
     return (
         <>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/png, image/jpeg" className="hidden" />
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" className="hidden" />
 
             {courseToPreview && (
                 <CertificatePreviewModal
@@ -5769,8 +5775,8 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                     </div>
 
                     <div className="flex flex-wrap gap-2 text-[11px]">
-                        <span className={`px-2 py-1 rounded font-semibold ${courseToApprove?.approvedDirectorSignatureUrl ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                            {courseToApprove?.approvedDirectorSignatureUrl ? t('certificates.approvals.dir_uploaded', 'Director signature uploaded') : t('certificates.approvals.no_dir', 'No director signature')}
+                        <span className={`px-2 py-1 rounded font-semibold ${certificateDirectorSignature(courseToApprove) ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                            {certificateDirectorSignature(courseToApprove) ? t('certificates.approvals.dir_uploaded', 'Director signature uploaded') : t('certificates.approvals.no_dir', 'No director signature')}
                         </span>
                         <span className={`px-2 py-1 rounded font-semibold ${courseToApprove?.approvedByManagerSignatureUrl ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
                             {courseToApprove?.approvedByManagerSignatureUrl ? t('certificates.approvals.mgr_uploaded', 'Manager signature uploaded') : t('certificates.approvals.no_mgr', 'No manager signature')}
@@ -5815,14 +5821,12 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
             </Modal>
 
             <Card>
-                <PageHeader title={title === 'Certificate Approvals' ? t('certificates.approvals.title', 'Certificate Approvals') : title} />
-                
-                {/* In single-course mode the list is already one row, so the filters
-                    would only be noise. */}
+                {/* The tab bar already names this page, so no big title here. */}
                 {!singleCourseMode && (
                     <CertificateTemplatesPanel
                         templateDocs={templateDocs}
                         courseTypes={templateCourseTypes}
+                        activeType={courseType}
                         canEdit={isFederalProgramManager}
                         busy={templatesBusy || isProcessing}
                         onEdit={openTemplateDesigner}
@@ -5831,77 +5835,87 @@ export const CertificateApprovalsView = ({ allCourses, setToast, currentUserRole
                 )}
 
                 {!singleCourseMode && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
-                        <FormGroup label={t('certificates.approvals.state', 'State')}><Select value={filterState} onChange={e => setFilterState(e.target.value)}>{states.map(s => <option key={s} value={s}>{s === 'All' ? t('certificates.approvals.all', 'All') : s}</option>)}</Select></FormGroup>
-                        <FormGroup label={t('certificates.approvals.course_type', 'Course Type')}><Select value={filterCourseType} onChange={e => setFilterCourseType(e.target.value)}>{courseTypes.map(c => <option key={c} value={c}>{c === 'All' ? t('certificates.approvals.all', 'All') : c}</option>)}</Select></FormGroup>
-                        <FormGroup label={t('certificates.approvals.status', 'Status')}><Select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}><option value="All">{t('certificates.approvals.all', 'All')}</option><option value="Approved">{t('certificates.approvals.approved', 'Approved')}</option><option value="Pending">{t('certificates.approvals.pending', 'Pending')}</option></Select></FormGroup>
-                    </div>
+                    <FilterPanel
+                        className="mb-4"
+                        activeCount={[filterState, filterLocality, courseType ? 'All' : filterCourseType, filterStatus].filter(v => v !== 'All').length}
+                    >
+                        <div className={`grid grid-cols-2 gap-3 ${courseType ? 'md:grid-cols-3' : 'md:grid-cols-4'}`}>
+                            <FormGroup label={t('certificates.approvals.state', 'State')}>
+                                <Select value={filterState} onChange={e => { setFilterState(e.target.value); setFilterLocality('All'); }}>
+                                    {states.map(s => <option key={s} value={s}>{s === 'All' ? t('certificates.approvals.all', 'All') : s}</option>)}
+                                </Select>
+                            </FormGroup>
+                            <FormGroup label={t('certificates.approvals.locality', 'Locality')}>
+                                <Select value={filterLocality} onChange={e => setFilterLocality(e.target.value)} disabled={localities.length <= 1}>
+                                    {localities.map(l => <option key={l} value={l}>{l === 'All' ? t('certificates.approvals.all', 'All') : l}</option>)}
+                                </Select>
+                            </FormGroup>
+                            {!courseType && (
+                                <FormGroup label={t('certificates.approvals.course_type', 'Course Type')}>
+                                    <Select value={filterCourseType} onChange={e => setFilterCourseType(e.target.value)}>
+                                        {courseTypes.map(c => <option key={c} value={c}>{c === 'All' ? t('certificates.approvals.all', 'All') : c}</option>)}
+                                    </Select>
+                                </FormGroup>
+                            )}
+                            <FormGroup label={t('certificates.approvals.status', 'Status')}>
+                                <Select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                                    <option value="All">{t('certificates.approvals.all', 'All')}</option>
+                                    <option value="Approved">{t('certificates.approvals.approved', 'Approved')}</option>
+                                    <option value="Pending">{t('certificates.approvals.pending', 'Pending')}</option>
+                                </Select>
+                            </FormGroup>
+                        </div>
+                    </FilterPanel>
                 )}
 
-                {/* THE COURSE LIST, TWICE.
-                    This was one fixed-layout table with up to eleven buttons in a
-                    flex-nowrap row. On a phone that is a table far wider than the
-                    screen, and the actions sat off the right-hand edge where
-                    nothing could reach them — on the screen where a manager is
-                    most likely to be approving something while away from a desk.
-                    The table stays for wide screens, where scanning rows is what
-                    it is good at, and a card per course serves narrow ones. */}
-                <div className="hidden lg:block overflow-x-auto rounded-xl border border-slate-300 shadow-sm bg-white">
-                    <table className="w-full text-left border-collapse text-sm">
-                        <thead>
-                            <tr className="bg-slate-100 text-[11px] uppercase tracking-wider text-slate-600">
-                                <th className="p-3 font-semibold border-b border-slate-300">{t('certificates.approvals.th_course', 'Course')}</th>
-                                <th className="p-3 font-semibold border-b border-slate-300">{t('certificates.approvals.th_location_date', 'Location & Date')}</th>
-                                <th className="p-3 font-semibold border-b border-slate-300">{t('certificates.approvals.status', 'Status')}</th>
-                                <th className="p-3 font-semibold border-b border-slate-300 text-right">{t('certificates.approvals.actions', 'Actions')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {rows.map(r => (
-                                <tr key={r.c.id} className={`transition-colors hover:bg-gray-50 ${r.isApproved ? "bg-green-50/20" : ""}`}>
-                                    <td className="p-3 align-top border-b border-slate-200">
-                                        <div className="font-bold text-sky-700">{r.c.course_type}</div>
-                                        <TemplateBadges row={r} />
-                                    </td>
-                                    <td className="p-3 align-top border-b border-slate-200">
-                                        <div className="font-semibold text-gray-800">{r.c.state} - {r.c.locality}</div>
-                                        <div className="text-[10px] text-gray-500 whitespace-nowrap">{r.c.start_date}</div>
-                                    </td>
-                                    <td className="p-3 align-top border-b border-slate-200">
-                                        <StatusPill approved={r.isApproved} />
-                                    </td>
-                                    <td className="p-3 align-top border-b border-slate-200">
-                                        <div className="flex flex-wrap items-center justify-end gap-1">
-                                            <RowActions row={r} />
+                {/* One line per course: place, date and status. Tapping a line
+                    opens its actions underneath, like the main courses list. */}
+                {rows.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                        {rows.map(r => {
+                            const open = openId === r.c.id;
+                            const place = [r.c.state, r.c.locality].filter(Boolean).join(' - ');
+                            const start = r.c.start_date ? new Date(r.c.start_date) : null;
+                            const dateText = start && !Number.isNaN(start.getTime())
+                                ? start.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+                                : (r.c.start_date || '');
+                            return (
+                                <div key={r.c.id} className={`rounded-xl border bg-white shadow-sm overflow-hidden ${open ? 'border-sky-300 ring-2 ring-sky-50' : 'border-slate-200'}`}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setOpenId(open ? null : r.c.id)}
+                                        aria-expanded={open}
+                                        className="w-full flex items-center gap-2 p-3.5 text-start hover:bg-slate-50 active:bg-slate-100"
+                                    >
+                                        <div className="min-w-0 flex-1">
+                                            <div className="truncate text-base font-bold text-slate-900" title={place}>
+                                                {!courseType && <span className="text-sky-700">{r.c.course_type} · </span>}
+                                                {place || '—'}
+                                            </div>
+                                            <div className="mt-1 flex items-center gap-3 text-sm text-slate-500 whitespace-nowrap overflow-hidden">
+                                                {dateText && <span className="shrink-0">📅 {dateText}</span>}
+                                                {r.c.participants_count > 0 && <span className="shrink-0">👥 {r.c.participants_count}</span>}
+                                            </div>
                                         </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                <div className="grid gap-3 lg:hidden">
-                    {rows.map(r => (
-                        <div key={r.c.id} className={`rounded-xl border shadow-sm p-3 ${r.isApproved ? 'border-green-300 bg-green-50/30' : 'border-slate-300 bg-white'}`}>
-                            <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                    <div className="font-bold text-sky-700 break-words">{r.c.course_type}</div>
-                                    <div className="text-sm font-semibold text-gray-800 break-words">{r.c.state} - {r.c.locality}</div>
-                                    <div className="text-[11px] text-gray-500">{r.c.start_date}</div>
-                                    <TemplateBadges row={r} />
+                                        <span className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-bold ${r.isApproved ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                                            {r.isApproved ? t('certificates.approvals.approved', 'Approved') : t('certificates.approvals.pending', 'Pending')}
+                                        </span>
+                                        <ChevronDown size={18} className={`shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {open && (
+                                        <div className="border-t border-slate-100 bg-slate-50/60 p-3">
+                                            <div className="text-xs text-slate-600 break-words">{place}</div>
+                                            <TemplateBadges row={r} />
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mt-2">
+                                                <RowActions row={r} block />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                                <StatusPill approved={r.isApproved} />
-                            </div>
-
-                            {/* Two per row at phone width, so each target is wide
-                                enough to hit and the labels are not truncated. */}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
-                                <RowActions row={r} block />
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                            );
+                        })}
+                    </div>
+                )}
 
                 {rows.length === 0 && (
                     <div className="p-6 text-center text-sm text-gray-500">{t('certificates.approvals.no_courses', 'No courses match the current filters.')}</div>

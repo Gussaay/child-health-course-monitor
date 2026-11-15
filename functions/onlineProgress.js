@@ -6,6 +6,7 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { getFirestore } = require("firebase-admin/firestore");
 const { buildReport } = require("./onlineProgressReport");
+const { tally, queryReads, flushUsage } = require("./usageTally");
 
 const docs = (snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
@@ -19,6 +20,11 @@ async function loadProgressReport(db, uid) {
     db.collection("onlineProgress").select("completed").get(),
     db.collection("users").select("displayName", "name", "email", "assignedState", "assignedLocality", "role", "roles", "isDeleted").get(),
   ]);
+  tally("onlineProgress", "users", 1 + queryReads(users));
+  tally("onlineProgress", "onlineCourses", queryReads(courses));
+  tally("onlineProgress", "onlineCourseItems", queryReads(items));
+  tally("onlineProgress", "onlineProgress", queryReads(progress));
+  await flushUsage(db);
   return buildReport({ caller: me.data(), courses: docs(courses), items: docs(items), progress: docs(progress), users: docs(users) });
 }
 

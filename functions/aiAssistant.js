@@ -23,12 +23,13 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
-const { FieldPath, FieldValue, getFirestore } = require("firebase-admin/firestore");
+const { FieldPath, FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
 
 const { accessFor, catalogueFor, scopedQuery, audit } = require("./claudeAccess");
 const { readReference } = require("./aiReference");
 const { loadProgressReport } = require("./onlineProgress");
 const { progressForModel } = require("./onlineProgressReport");
+const { tally, queryReads, countReads, flushUsage } = require("./usageTally");
 const {
   TOOLS, cleanEach, eachRows, passes, systemFor, rowsWithin, describeFields, groupRows, cleanFilters, cleanBreakdown, pageOf, splitFollowUps, splitChart,
 } = require("./aiDataText");
@@ -42,6 +43,8 @@ const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 // Models in order, and how long one request may take: see aiModels.js.
 const { GEMINI_MODELS, CEREBRAS_MODELS, GROQ_MODELS } = require("./aiModels");
 const { withAiLog } = require("./aiLog");
+const { remembered, readMemory } = require("./readMemory");
+const { createCopyReader } = require("./aiCopy");
 const {
   CHAT, SIZES, MAX_STEPS, LAST_STEP_AT, ANSWER_NOW, ProviderError, post, askChat, keepHistoryWithin,
 } = require("./aiChat");
@@ -62,6 +65,9 @@ const STAFF_ROLES = [
 ];
 
 const clip = (s, n) => String(s ?? "").slice(0, n);
+
+/** A snapshot reduced to plain data, so it can be kept and shared. */
+const plainSnap = (snap) => ({ size: snap.size, docs: snap.docs.map((d) => ({ id: d.id, data: d.data() })) });
 /** The turn list with a line of text added after the last turn's parts. */
 const withNote = (contents, note) => {
   const lastTurn = contents[contents.length - 1];
@@ -77,6 +83,8 @@ const notDeleted = (r) => r.isDeleted !== true && r.isDeleted !== "true";
 
 /** A field name as Firestore's select() needs it: dotted paths as given, others literal. */
 const fieldPath = (name) => (/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/.test(name) ? name : new FieldPath(name));
+
+let copyReader = null;
 
 function explainReadError(e) {
   const msg = String(e?.message || e);
@@ -94,24 +102,39 @@ async function countData(access, args) {
   const breakdown = cleanBreakdown(args.breakdown);
   const each = cleanEach(args.each);
   const eachFilters = each ? cleanFilters(args.eachFilters) : [];
-  const { q } = scopedQuery(access, args.collection, filters);
+  const { spec, q } = scopedQuery(access, args.collection, filters);
 
   // One overall count needs no records: Firestore counts on the server.
   if (!groupBy && !valueField && !breakdown.length && !each) {
     try {
-      const [all, deleted] = await Promise.all([
-        q.count().get(),
-        q.where("isDeleted", "in", [true, "true"]).count().get(),
-      ]);
-      return { collection: args.collection, filters, total: all.data().count - deleted.data().count };
+      const totals = await remembered(access, ["total", args.collection, filters], async () => {
+        const [all, deleted] = await Promise.all([
+          q.count().get(),
+          q.where("isDeleted", "in", [true, "true"]).count().get(),
+        ]);
+        tally("aiAssistant", args.collection, countReads(all.data().count) + countReads(deleted.data().count));
+        return { all: all.data().count, deleted: deleted.data().count };
+      });
+      return { collection: args.collection, filters, total: totals.all - totals.deleted };
     } catch (e) {
       logger.info(`[aiAssistant] count() fell back to reading: ${e.message}`);
     }
   }
 
   const wanted = [...new Set([groupBy, valueField, ...breakdown, "isDeleted", each].filter(Boolean))];
-  const snap = await q.select(...wanted.map(fieldPath)).limit(COUNT_ROWS).get();
-  const records = snap.docs.map((d) => d.data()).filter(notDeleted);
+  // Health facilities are counted from the server's kept copy when it has every
+  // field the question reads (aiCopy.js): a few reads, not up to 6,000.
+  let copied = null;
+  if (!bucket && !each && access.db) {
+    copyReader = copyReader || createCopyReader({ db: access.db, Timestamp, tally: (c, r, w) => tally("aiAssistant", c, r, w), log: (...a) => logger.info("[aiCopy]", ...a) });
+    copied = await copyReader.facilities(access, spec, args.collection, filters, wanted);
+  }
+  const snap = copied ? { size: copied.length, docs: copied.map((d) => ({ id: d.id, data: d })) } : await remembered(access, ["count", args.collection, filters, wanted], async () => {
+    const got = await q.select(...wanted.map(fieldPath)).limit(COUNT_ROWS).get();
+    tally("aiAssistant", args.collection, queryReads(got));
+    return plainSnap(got);
+  });
+  const records = snap.docs.map((d) => d.data).filter(notDeleted);
   // With `each`, every entry of the list (a facility's staff member) is a row.
   const rows = each ? eachRows(records, each).filter((r) => passes(r, eachFilters)) : records;
   const groups = groupRows(rows, { groupBy, bucket, valueField, breakdown });
@@ -144,8 +167,13 @@ async function queryData(access, args, budget) {
   // `each` the rows are list entries (a facility's staff), so records are read
   // until there are enough of them, with only their name and place beside.
   const listed = each ? q.select(...[each, "isDeleted", ...NAME_FIELDS, ...Object.values(spec.scope || {}), ...(pick || [])].map(fieldPath)) : q;
-  const snap = await listed.limit(each ? COUNT_ROWS : limit + 10).get();
-  const records = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter(notDeleted);
+  const rowLimit = each ? COUNT_ROWS : limit + 10;
+  const snap = await remembered(access, ["query", args.collection, filters, args.orderBy || "", each || "", pick || [], rowLimit], async () => {
+    const got = await listed.limit(rowLimit).get();
+    tally("aiAssistant", args.collection, queryReads(got));
+    return plainSnap(got);
+  });
+  const records = snap.docs.map((d) => ({ id: d.id, ...d.data })).filter(notDeleted);
   const rows = (each ? eachRows(records, each).filter((r) => passes(r, cleanFilters(args.eachFilters))) : records).slice(0, limit);
   const shown = rowsWithin(rows, budget, each ? null : pick);
   return {
@@ -162,8 +190,12 @@ async function queryData(access, args, budget) {
 
 async function describe(access, args) {
   const { spec, q } = scopedQuery(access, args.collection, []);
-  const snap = await q.limit(SAMPLE_ROWS).get();
-  const rows = snap.docs.map((d) => d.data()).filter(notDeleted);
+  const snap = await remembered(access, ["describe", args.collection], async () => {
+    const got = await q.limit(SAMPLE_ROWS).get();
+    tally("aiAssistant", args.collection, queryReads(got));
+    return plainSnap(got);
+  });
+  const rows = snap.docs.map((d) => d.data).filter(notDeleted);
   return { collection: args.collection, ...describeFields(rows, { personal: !!spec.personal }) };
 }
 
@@ -184,6 +216,9 @@ async function runTool(access, name, args, budget) {
     }
   } catch (e) {
     return { error: explainReadError(e) };
+  } finally {
+    // Reads noted above reach the usage tab (written at most every 10 minutes).
+    if (access && access.db) await flushUsage(access.db);
   }
 }
 

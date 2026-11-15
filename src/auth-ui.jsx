@@ -16,12 +16,36 @@ import {
   EmailAuthProvider,
   updateProfile,
   signInWithRedirect,
-  getRedirectResult 
+  getRedirectResult,
+  browserPopupRedirectResolver,
 } from 'firebase/auth';
 
 import { auth } from './firebase.js';
 import { useTranslation } from 'react-i18next';
 import { authErrorCode, authErrorKey } from './utils/authMessages';
+import { Fingerprint } from 'lucide-react';
+import {
+  fingerprintStatus,
+  savedFingerprintAccount,
+  signInWithFingerprint,
+  forgetFingerprintAccount,
+  takeFailedRestore,
+} from './utils/fingerprintSignIn';
+
+// Google's sign-in helper is no longer loaded at start-up (firebase.js), so
+// every popup/redirect call passes it explicitly. Coming back from a redirect
+// sign-in is detected with this flag, so the helper is loaded on page load
+// only for someone actually returning from Google.
+const REDIRECT_PENDING = 'auth_redirect_pending';
+const markRedirect = () => { try { sessionStorage.setItem(REDIRECT_PENDING, '1'); } catch { /* private mode */ } };
+const takeRedirectMark = () => {
+  try {
+    const pending = sessionStorage.getItem(REDIRECT_PENDING) === '1';
+    sessionStorage.removeItem(REDIRECT_PENDING);
+    return pending;
+  } catch { return true; } // storage blocked: check, as before
+};
+const googleRedirect = (provider) => { markRedirect(); return signInWithRedirect(auth, provider, browserPopupRedirectResolver); };
 
 // --- NATIVE PLUGIN INITIALIZATION ---
 let socialLoginInitialized = false;
@@ -56,7 +80,8 @@ const AUTH_ERROR_DEFAULTS = {
 };
 
 // --- Sign-In and Sign-Up Component ---
-export function SignInBox() {
+// `above`: shown just above the sign-in box (the phone app's QR scan bar).
+export function SignInBox({ above = null } = {}) {
   const { t, i18n } = useTranslation();
   const dir = i18n.language?.startsWith('ar') ? 'rtl' : 'ltr';
   const friendlyError = (err) => {
@@ -73,6 +98,61 @@ export function SignInBox() {
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [fullName, setFullName] = useState(''); 
   const [isMissingName, setIsMissingName] = useState(false);
+  // Android app: the account saved for fingerprint sign-in on this phone.
+  const [fpAccount, setFpAccount] = useState(null);
+  // Why the fingerprint button is missing, shown in small print on the app.
+  const [fpStatus, setFpStatus] = useState(null);
+
+  const fingerprintSignIn = async () => {
+    setError('');
+    setMessage('');
+    setIsLoading(true);
+    const result = await signInWithFingerprint({
+      title: t('auth.fingerprint_title', 'Sign in'),
+      subtitle: t('auth.fingerprint_subtitle', 'Touch the fingerprint sensor to sign in'),
+      cancel: t('auth.fingerprint_cancel', 'Use password'),
+    });
+    if (result === 'ok') {
+      setMessage(t('auth.signin_success', "Sign in successful. Loading your dashboard..."));
+      return;
+    }
+    if (result === 'failed') setError(t('auth.fingerprint_failed', 'Fingerprint sign-in did not work. Please sign in with your password or Google.'));
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return undefined;
+    let cancelled = false;
+    (async () => {
+      if (await takeFailedRestore()) {
+        if (!cancelled) setError(t('auth.fingerprint_expired', 'Your saved sign-in has expired. Please sign in once with your password or Google; fingerprint sign-in will then work again.'));
+        return;
+      }
+      const account = await savedFingerprintAccount();
+      if (cancelled) return;
+      if (!account) {
+        const status = await fingerprintStatus();
+        if (!cancelled) setFpStatus(status);
+        return;
+      }
+      setFpAccount(account);
+      if (account.email) setEmail((current) => current || account.email);
+      // Ask for the fingerprint straight away, unless the person just pressed Log out.
+      let loggedOut = false;
+      try { loggedOut = sessionStorage.getItem('intentional_signout') === '1'; } catch { /* storage blocked */ }
+      if (!loggedOut) fingerprintSignIn();
+    })();
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, when the sign-in screen opens
+
+  const useAnotherAccount = async () => {
+    await forgetFingerprintAccount();
+    setFpAccount(null);
+    setFpStatus({ state: 'not_yet' });
+    setEmail('');
+    setError('');
+    setMessage('');
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -89,7 +169,8 @@ export function SignInBox() {
   useEffect(() => {
     const handleRedirectReturn = async () => {
       try {
-        const result = await getRedirectResult(auth);
+        if (Capacitor.isNativePlatform() || !takeRedirectMark()) return;
+        const result = await getRedirectResult(auth, browserPopupRedirectResolver);
         if (result && result.user) {
           setIsLoading(true);
           checkAndPromptForName(result.user);
@@ -322,17 +403,17 @@ export function SignInBox() {
         // picked up by getRedirectResult when the page comes back.
         if (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) {
             setMessage(t('auth.redirecting_google', "Redirecting to secure Google sign-in..."));
-            await signInWithRedirect(auth, provider);
+            await googleRedirect(provider);
             return;
         }
         try {
-            const result = await signInWithPopup(auth, provider); 
+            const result = await signInWithPopup(auth, provider, browserPopupRedirectResolver);
             user = result.user;
         } catch (popupError) {
             // Fallback to redirect if browser blocks the popup[cite: 2]
             if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/operation-not-supported-in-this-environment') {
                 setMessage(t('auth.redirecting_google', "Redirecting to secure Google sign-in..."));
-                await signInWithRedirect(auth, provider);
+                await googleRedirect(provider);
                 return; // Stop execution, the page will redirect
             } else {
                 throw popupError; 
@@ -384,8 +465,8 @@ export function SignInBox() {
 
   if (isMissingName) {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-surface p-4">
-          <div dir={dir} className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl text-center">
+        <div className="sm:min-h-screen flex items-center justify-start sm:justify-center flex-col bg-surface px-4 pt-4 pb-4 sm:p-4">
+          <div dir={dir} className="w-full max-w-md px-5 py-5 sm:p-8 space-y-4 sm:space-y-6 bg-white rounded-lg shadow-xl text-center">
             <h1 className="text-3xl font-bold text-gray-800">{t('auth.complete_profile', "Complete Your Profile")}</h1>
             <p className="mt-2 text-gray-600">{t('auth.name_to_continue', "Please enter your full name to continue.")}</p>
 
@@ -416,14 +497,41 @@ export function SignInBox() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface p-4">
-      <div dir={dir} className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl text-center">
+    <div className="sm:min-h-screen flex flex-col gap-3 items-center justify-start sm:justify-center bg-surface px-4 pt-4 pb-4 sm:p-4">
+      {above && <div dir={dir} className="w-full max-w-md">{above}</div>}
+      <div dir={dir} className="w-full max-w-md px-5 py-5 sm:p-8 space-y-4 sm:space-y-6 bg-white rounded-lg shadow-xl text-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">{t('auth.system_title', "Monitoring System")}</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">{t('auth.system_title', "Monitoring System")}</h1>
+          <p className="mt-1 sm:mt-2 text-gray-600">
             {isSignUpMode ? t('auth.create_account', "Create a new account") : t('auth.signin_to_account', "Sign in to your account")}
           </p>
         </div>
+
+        {fpAccount && !isSignUpMode && (
+          <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50 p-4">
+            <p className="text-sm text-gray-700">
+              {t('auth.fingerprint_welcome', 'Welcome back')}{fpAccount.name ? `, ${fpAccount.name}` : ''}
+              {fpAccount.email && <span className="block text-xs text-gray-500" dir="ltr">{fpAccount.email}</span>}
+            </p>
+            <button
+              type="button"
+              onClick={fingerprintSignIn}
+              className="flex items-center justify-center w-full gap-3 bg-sky-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-sky-700 transition duration-300 shadow-md disabled:bg-gray-400"
+              disabled={isLoading}
+            >
+              <Fingerprint className="w-6 h-6" aria-hidden="true" />
+              {t('auth.fingerprint_button', 'Sign in with fingerprint')}
+            </button>
+            <button
+              type="button"
+              onClick={useAnotherAccount}
+              className="text-xs font-medium text-indigo-600 hover:text-indigo-500 disabled:opacity-50"
+              disabled={isLoading}
+            >
+              {t('auth.fingerprint_other_account', 'Use another account')}
+            </button>
+          </div>
+        )}
 
         <form className="space-y-4">
           {isSignUpMode && (
@@ -479,7 +587,7 @@ export function SignInBox() {
             {isSignUpMode ? (
               <button 
                 onClick={handleSignUp} 
-                className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 transition duration-300 disabled:bg-gray-400"
+                className="w-full px-4 py-2 font-bold text-white bg-green-700 rounded-md hover:bg-green-800 transition duration-300 disabled:bg-gray-400"
                 disabled={isLoading} 
               >
                 {isLoading ? (message ? message : t('auth.creating', "Creating Account...")) : t('auth.sign_up', "Sign Up")}
@@ -487,7 +595,7 @@ export function SignInBox() {
             ) : (
               <button 
                 onClick={handleSignIn} 
-                className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 transition duration-300 disabled:bg-gray-400"
+                className="w-full px-4 py-2 font-bold text-white bg-green-700 rounded-md hover:bg-green-800 transition duration-300 disabled:bg-gray-400"
                 disabled={isLoading} 
               >
                 {isLoading ? (message ? message : t('auth.signing_in', "Signing In...")) : t('auth.sign_in', "Sign In")}
@@ -521,12 +629,24 @@ export function SignInBox() {
             e.preventDefault();
             signInWithGoogle();
           }} 
-          className="flex items-center justify-center w-full gap-3 bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md disabled:bg-gray-400"
+          className="flex items-center justify-center w-full gap-3 bg-blue-600 text-white font-bold py-2.5 sm:py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md disabled:bg-gray-400"
           disabled={isLoading} 
         >
           <svg className="w-6 h-6" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19-5.238C39.902,35.619,44,29.89,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path></svg>
           {isLoading ? (message ? message : t('auth.processing', "Processing...")) : t('auth.google', "Sign in with Google")}
         </button>
+
+        {!fpAccount && fpStatus && fpStatus.state !== 'web' && fpStatus.state !== 'on' && (
+          <p className="flex items-start justify-center gap-1.5 text-xs text-gray-500">
+            <Fingerprint className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span>
+              {fpStatus.state === 'old_apk' && t('auth.fingerprint_status_old_apk', 'Fingerprint sign-in needs the latest app. Please install the new APK.')}
+              {fpStatus.state === 'no_fingerprint' && t('auth.fingerprint_status_none', "Fingerprint sign-in: add a fingerprint in your phone's Settings, then sign in once.")}
+              {fpStatus.state === 'not_yet' && t('auth.fingerprint_status_not_yet', 'Fingerprint sign-in turns on after you sign in once on this phone.')}
+              {fpStatus.detail ? ` (${fpStatus.detail})` : ''}
+            </span>
+          </p>
+        )}
       </div>
     </div>
   );

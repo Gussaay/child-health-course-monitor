@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useDataCache } from "../../DataContext";
 import { Timestamp, collection, getDocs, doc, query, where, orderBy, limit } from 'firebase/firestore';
-import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search, Share2, List, ArrowLeft, Target, AlertTriangle, ShieldCheck, Clock } from 'lucide-react';
+import { PlusCircle, Trash2, FileText, Users, Building, ClipboardCheck, Archive, LayoutDashboard, Search, Share2, List, ArrowLeft, Target, AlertTriangle, ShieldCheck, Clock, Activity, Baby, Siren } from 'lucide-react';
 import {
     saveMentorshipSession,
     importMentorshipSessions,
@@ -24,7 +24,7 @@ import {
 import {
     Card, PageHeader, Button, FormGroup, Select, Spinner, PageSkeleton, SkeletonTable, PhoneCards, PageActions,
     EmptyState, Input, Textarea, CourseIcon, Checkbox, Modal,
-    IS_NATIVE, PageTabs, FilterPanel, useInPageBack, PullToRefresh
+    IS_NATIVE, PageTabs, FilterPanel, useInPageBack, PullToRefresh, MenuTile, MenuGrid, BackArrow
 } from '../CommonComponents';
 
 import { STATE_LOCALITIES } from "../constants.js";
@@ -72,6 +72,7 @@ import { useStandardNames } from '../../hooks/useNameRegistry';
 import { hasRecordedProject, projectOfVisit, visitTimeOf } from '../../utils/visitProject';
 import { publicBaseUrl } from '../../utils/publicLink';
 import { useRememberedState } from '../../utils/rememberedState';
+import { isDateInRange } from '../../utils/dateRange';
 
 // --- IPC form tabs (all three IPC forms save with serviceType 'IPC') ---
 const IPC_LIST_TABS = [
@@ -119,41 +120,6 @@ const normalizeLocality = (stateEnKey, localityVal) => {
         if (locObj) return locObj.en;
     }
     return cleanVal;
-};
-
-const isDateInRange = (dateString, filterType, customStart, customEnd) => {
-    if (!dateString || dateString === 'N/A') return false;
-    const dParts = dateString.split('-');
-    if (dParts.length !== 3) return false;
-    const dateToCompare = new Date(parseInt(dParts[0]), parseInt(dParts[1]) - 1, parseInt(dParts[2]));
-    if (customStart || customEnd) {
-        let isValid = true;
-        if (customStart) {
-            const sDate = new Date(customStart);
-            sDate.setHours(0,0,0,0);
-            if (dateToCompare < sDate) isValid = false;
-        }
-        if (customEnd) {
-            const eDate = new Date(customEnd);
-            eDate.setHours(23,59,59,999);
-            if (dateToCompare > eDate) isValid = false;
-        }
-        return isValid;
-    }
-    if (!filterType) return true;
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    switch (filterType) {
-        case 'today': return dateToCompare.getTime() === today.getTime();
-        case 'yesterday': const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1); return dateToCompare.getTime() === yesterday.getTime();
-        case 'this_week': const startOfWeek = new Date(today); startOfWeek.setDate(today.getDate() - today.getDay()); return dateToCompare >= startOfWeek;
-        case 'last_week': const startOfLastWeek = new Date(today); startOfLastWeek.setDate(today.getDate() - today.getDay() - 7); const endOfLastWeek = new Date(startOfLastWeek); endOfLastWeek.setDate(startOfLastWeek.getDate() + 6); return dateToCompare >= startOfLastWeek && dateToCompare <= endOfLastWeek;
-        case 'this_month': return dateToCompare.getMonth() === today.getMonth() && dateToCompare.getFullYear() === today.getFullYear();
-        case 'last_month': const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1); return dateToCompare.getMonth() === lastMonth.getMonth() && dateToCompare.getFullYear() === lastMonth.getFullYear();
-        case 'this_year': return dateToCompare.getFullYear() === today.getFullYear();
-        case 'last_year': return dateToCompare.getFullYear() === today.getFullYear() - 1;
-        default: return true;
-    }
 };
 
 const normalizeJobTitle = (title) => {
@@ -775,33 +741,14 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
         });
     }
 
+    // The app's menu tile, as on the main menu.
     const renderGrid = (items) => (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {items.map(item => {
-                const Icon = item.icon;
-                return (
-                    <button
-                        key={item.id}
-                        onClick={() => onAction(item.id)}
-                        className={`flex flex-row items-center p-3 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-all duration-200 group w-full text-start focus:outline-none focus:ring-2 focus:ring-sky-500 ${item.border} ${item.shadow}`}
-                    >
-                        <div className={`p-2.5 rounded-md transition-transform duration-200 group-hover:scale-110 flex-shrink-0 ${item.bg}`}>
-                            <Icon className={`w-5 h-5 ${item.color}`} strokeWidth={2} />
-                        </div>
-                        <div className="font-semibold text-gray-700 text-sm group-hover:text-gray-900 transition-colors mx-3 flex-1">
-                            {item.label}
-                        </div>
-                        <div className="text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 transform group-hover:translate-x-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 rtl:rotate-180" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                            </svg>
-                        </div>
-                    </button>
-                );
-            })}
-        </div>
+        <MenuGrid columns="md:grid-cols-4">
+            {items.map(item => (
+                <MenuTile key={item.id} icon={item.icon} label={item.label} onClick={() => onAction(item.id)} />
+            ))}
+        </MenuGrid>
     );
-
     const landingItems = [
         ...(canManage ? [{
             id: 'add',
@@ -828,27 +775,18 @@ const ActionMenu = ({ onAction, activeService, draftCount, reportCount, onBack, 
     ];
 
     const renderLanding = () => (
-        <div className="grid grid-cols-2 gap-3 md:gap-4">
-            {landingItems.map(item => {
-                const Icon = item.icon;
-                return (
-                    <button
-                        key={item.id}
-                        onClick={() => onSelectSection(item.id)}
-                        className={`flex flex-col items-start p-4 md:p-5 border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-200 group w-full text-start focus:outline-none focus:ring-2 focus:ring-sky-500 ${item.border} ${item.shadow}`}
-                    >
-                        <div className={`p-3 rounded-lg transition-transform duration-200 group-hover:scale-110 ${item.bg}`}>
-                            <Icon className={`w-6 h-6 ${item.color}`} strokeWidth={2} />
-                        </div>
-                        <div className="mt-3 font-bold text-gray-800 group-hover:text-gray-900">{item.label}</div>
-                        <div className="text-sm text-gray-500" dir="rtl">{item.arabic}</div>
-                        <div className="text-xs text-gray-400 mt-1">{item.hint}</div>
-                    </button>
-                );
-            })}
-        </div>
+        <MenuGrid columns="">
+            {landingItems.map(item => (
+                <MenuTile
+                    key={item.id}
+                    icon={item.icon}
+                    label={<>{item.label}<span className="block text-sm font-normal text-slate-500" dir="rtl">{item.arabic}</span></>}
+                    hint={item.hint}
+                    onClick={() => onSelectSection(item.id)}
+                />
+            ))}
+        </MenuGrid>
     );
-
     const sectionTitles = { add: t('mentorship_page.menu.add_new_data', 'Add New Data'), view: t('mentorship_page.menu.view_records', 'View Records & Dashboards') };
 
     return (
@@ -2087,10 +2025,10 @@ const MentorshipSubmissionsTable = ({
 const ServiceSelector = ({ onSelectService }) => {
     const { t } = useTranslation();
     const services = [
-        { key: 'IMNCI', title: t('mentorship_page.services.imnci', 'Mentorship on Integrated Management of Newborn and Childhood Illnesses (IMNCI)'), enabled: true },
-        { key: 'EENC', title: t('mentorship_page.services.eenc', 'Mentorship on Early Essential Newborn Care (EENC)'), enabled: true },
-        { key: 'ETAT', title: t('mentorship_page.services.etat', 'Mentorship on Emergency Triage, Assessment and Treatment (ETAT)'), enabled: true },
-        { key: 'IPC', title: t('mentorship_page.services.ipc', 'Mentorship on Infection Prevention and Control in Neonatal Units (IPC)'), enabled: true }
+        { key: 'IMNCI', icon: Activity, title: t('mentorship_page.services.imnci', 'Mentorship on Integrated Management of Newborn and Childhood Illnesses (IMNCI)') },
+        { key: 'EENC', icon: Baby, title: t('mentorship_page.services.eenc', 'Mentorship on Early Essential Newborn Care (EENC)') },
+        { key: 'ETAT', icon: Siren, title: t('mentorship_page.services.etat', 'Mentorship on Emergency Triage, Assessment and Treatment (ETAT)') },
+        { key: 'IPC', icon: ShieldCheck, title: t('mentorship_page.services.ipc', 'Mentorship on Infection Prevention and Control in Neonatal Units (IPC)') }
     ];
 
     return (
@@ -2101,26 +2039,11 @@ const ServiceSelector = ({ onSelectService }) => {
                     subtitle={t('mentorship_page.services.choose_subtitle', 'Select a program to begin skills mentorship.')}
                 />
             </div>
-            <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3">
+            <MenuGrid columns="lg:grid-cols-4">
                 {services.map(service => (
-                    <button
-                        key={service.key}
-                        disabled={!service.enabled}
-                        className={`border rounded-lg p-4 md:p-6 text-start transition-all duration-200 ${service.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`}
-                        onClick={() => service.enabled && onSelectService(service.key)}
-                    >
-                        <div className="flex flex-col items-start gap-2 md:flex-row md:items-center md:gap-4">
-                            <CourseIcon course={service.key} />
-                            <div>
-                                <div className="font-semibold text-gray-800 text-start">{service.title}</div>
-                                <div className="text-xs text-gray-500 mt-1 text-start">
-                                    {service.enabled ? t('mentorship_page.services.click_to_start', 'Click to start session') : t('mentorship_page.services.coming_soon', 'Coming Soon')}
-                                </div>
-                            </div>
-                        </div>
-                    </button>
+                    <MenuTile key={service.key} icon={service.icon} label={service.key} title={service.title} onClick={() => onSelectService(service.key)} />
                 ))}
-            </div>
+            </MenuGrid>
         </Card>
     );
 };
@@ -4154,7 +4077,7 @@ const SkillsMentorshipView = ({
         const itemWidth = `${100 / navItems.length}%`;
 
         return (
-            <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 flex justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
+            <div className="sm:hidden fixed bottom-[var(--bottom-nav,0px)] left-0 right-0 z-40 flex justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
                 {navItems.map(item => {
                     const IconComponent = item.icon;
                     return (
@@ -4305,10 +4228,8 @@ const SkillsMentorshipView = ({
                     <div className="p-3 md:p-6">
                         <div className="flex flex-wrap justify-between items-center gap-2 md:gap-3 mb-3 md:mb-6 border-b border-gray-200 pb-2">
                             <div className="flex flex-wrap items-center gap-2 md:gap-4 min-w-0">
-                                {!publicDashboardMode && !IS_NATIVE && (
-                                    <Button variant="secondary" onClick={() => setCurrentView('action_menu')} className="me-4">
-                                        <ArrowLeft className="w-4 h-4 me-2" /> {t('mentorship_page.buttons.back_to_main_menu', 'Back to Main Menu')}
-                                    </Button>
+                                {!publicDashboardMode && (
+                                    <BackArrow onClick={() => setCurrentView('action_menu')} label={t('mentorship_page.buttons.back_to_main_menu', 'Back to Main Menu')} className="-ms-2" />
                                 )}
 
                                 {!publicDashboardMode && <PullToRefresh onRefresh={handleRefresh} disabled={isRefreshing} />}

@@ -6,6 +6,7 @@ import { Timestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 import { useStandardNames } from '../../hooks/useNameRegistry';
+import FormPdfButton from '../FormPdfButton';
 // --- Local ActionToggle with logical RTL support ---
 function ActionToggle({ options, currentValue, onClick, name }) {
     return (
@@ -492,6 +493,7 @@ const IPCAssessmentForm = forwardRef(({ facility, onSaveComplete, onExit, setToa
         <Card dir="rtl" className="relative pb-20">
             <StickyOverallScore totalScore={scores.total} />
             <form onSubmit={handleSubmit}>
+                <div className="flex justify-end mb-2" data-pdf-hide=""><FormPdfButton formName="Hospital Infection Prevention and Control (IPC) Assessment" subtitle="تقييم برنامج الطب الوقائي ومكافحة العدوى بالمستشفيات" /></div>
                 <div className="p-4 sm:p-8">
                     <div className="text-center mb-10 pb-6 border-b border-gray-200">
                         <h2 className="text-2xl font-extrabold text-sky-900 mb-2">

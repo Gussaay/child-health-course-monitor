@@ -17,12 +17,12 @@ import { useTranslation } from 'react-i18next';
 import { publicBaseUrl } from '../utils/publicLink';
 
 const PROGRAM_UNITS_DATA = [
-    { id: "Neonatal Health Unit", key: "neonatal", title: "Neonatal Health", icon: Baby, color: "text-blue-500", bg: "bg-blue-100", border: "border-blue-200" },
-    { id: "IMNCI unit", key: "imnci", title: "IMNCI", icon: Stethoscope, color: "text-green-500", bg: "bg-green-100", border: "border-green-200" },
-    { id: "Adolescent unit", key: "adolescent", title: "Adolescent Health", icon: Users, color: "text-purple-500", bg: "bg-purple-100", border: "border-purple-200" },
-    { id: "Monitoring and evaluation", key: "me", title: "Monitoring & Eval (M&E)", icon: Activity, color: "text-orange-500", bg: "bg-orange-100", border: "border-orange-200" },
-    { id: "Supply", key: "supply", title: "Supply & Logistics", icon: Package, color: "text-amber-500", bg: "bg-amber-100", border: "border-amber-200" },
-    { id: "Health promotion", key: "promotion", title: "Health Promotion", icon: HeartPulse, color: "text-rose-500", bg: "bg-rose-100", border: "border-rose-200" }
+    { id: "Neonatal Health Unit", key: "neonatal", title: "Neonatal Health", icon: Baby, color: "text-sky-600", bg: "bg-sky-100", border: "border-sky-200" },
+    { id: "IMNCI unit", key: "imnci", title: "IMNCI", icon: Stethoscope, color: "text-sky-600", bg: "bg-sky-100", border: "border-sky-200" },
+    { id: "Adolescent unit", key: "adolescent", title: "Adolescent Health", icon: Users, color: "text-sky-600", bg: "bg-sky-100", border: "border-sky-200" },
+    { id: "Monitoring and evaluation", key: "me", title: "Monitoring & Eval (M&E)", icon: Activity, color: "text-sky-600", bg: "bg-sky-100", border: "border-sky-200" },
+    { id: "Supply", key: "supply", title: "Supply & Logistics", icon: Package, color: "text-sky-600", bg: "bg-sky-100", border: "border-sky-200" },
+    { id: "Health promotion", key: "promotion", title: "Health Promotion", icon: HeartPulse, color: "text-sky-600", bg: "bg-sky-100", border: "border-sky-200" }
 ];
 
 const STATUS_OPTIONS = ['Pending', 'In Progress', 'Completed'];

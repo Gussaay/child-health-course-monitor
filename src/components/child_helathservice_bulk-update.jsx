@@ -449,7 +449,12 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                 { key: 'project_name', label: 'اسم المشروع', type: 'select', options: allProjectOptions },
                 { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
                 { key: 'immunization_office_exists', label: 'وجود مكتب تحصين', type: 'select', options: ['Yes', 'No'] },
-                { key: 'nearest_immunization_center', label: 'أقرب مركز تحصين', type: 'text' }
+                { key: 'nearest_immunization_center', label: 'أقرب مركز تحصين', type: 'text' },
+                { key: 'immunization_strategy_fixed', label: 'تحصين ثابت', type: 'select', options: ['Yes', 'No'] },
+                { key: 'immunization_strategy_outreach', label: 'تحصين فرعي', type: 'select', options: ['Yes', 'No'] },
+                { key: 'immunization_strategy_mobile', label: 'تحصين جوال', type: 'select', options: ['Yes', 'No'] },
+                { key: 'vaccines_available', label: 'كل اللقاحات متوفرة', type: 'select', options: ['Yes', 'No'] },
+                { key: 'vaccine_fridge_working', label: 'ثلاجة اللقاحات تعمل', type: 'select', options: ['Yes', 'No'] }
             ]
         },
         'Nutrition': {
@@ -461,7 +466,10 @@ const LocalityBulkUpdateView = ({ stateParam, localityParam, filters, setToast }
                 { key: 'هل_المؤسسة_تعمل', label: 'هل المؤسسة تعمل', type: 'select', options: ['Yes', 'No'] },
                 { key: 'nutrition_center_exists', label: 'مركز تغذية خارجي', type: 'select', options: ['Yes', 'No'] },
                 { key: 'growth_monitoring_service_exists', label: 'خدمة متابعة النمو', type: 'select', options: ['Yes', 'No'] },
-                { key: 'nearest_nutrition_center', label: 'أقرب مركز تغذية', type: 'text' }
+                { key: 'nearest_nutrition_center', label: 'أقرب مركز تغذية', type: 'text' },
+                { key: 'otp_rutf_exists', label: 'OTP مع RUTF', type: 'select', options: ['Yes', 'No'] },
+                { key: 'otp_tsfp_exists', label: 'OTP مع TSFP', type: 'select', options: ['Yes', 'No'] },
+                { key: 'iycf_service_exists', label: 'IYCF', type: 'select', options: ['Yes', 'No'] }
             ]
         }
     }), [allProjectOptions]);

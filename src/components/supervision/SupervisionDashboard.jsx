@@ -16,6 +16,7 @@ import {
     INFANT_WARMER_COMPONENTS, pickLabel, pctText, toneFor, ratio, toNum,
     scoreAssessment, scoreSection, warmerResults, monthLabel,
 } from './checklists';
+import { gridPresence } from './imnciChecklists';
 
 const fmt = (v) => (v == null ? '—' : Math.round(v).toLocaleString());
 
@@ -401,6 +402,135 @@ function PresenceDashboard({ checklist, records }) {
 }
 
 // -----------------------------------------------------------------------------
+// Checklists with their own metrics (the IMNCI forms)
+// -----------------------------------------------------------------------------
+
+function MetricValue({ metric }) {
+    const { t } = useTranslation();
+    const v = metric.value;
+    let text = '—';
+    let tone = 'bg-gray-100 text-gray-600';
+    if (v != null) {
+        if (metric.kind === 'pct') { text = pctText(v); tone = toneFor(v); }
+        else if (metric.kind === 'bool') {
+            text = v ? t('trackers.supervision.yes', 'Yes') : t('trackers.supervision.no', 'No');
+            tone = v ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+        } else { text = fmt(v); tone = v === 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'; }
+    }
+    return <span className={`px-2 py-0.5 rounded text-xs ${tone}`}>{text}</span>;
+}
+
+function MetricsDashboard({ checklist, records }) {
+    const { t, i18n } = useTranslation();
+    const isArabic = i18n.language === 'ar';
+    const presenceSections = checklist.sections.filter((s) => s.presenceColumn);
+    const stockSections = checklist.sections.filter((s) => s.type === 'grid' && (s.columns || []).some((c) => c.id === 'stockout'));
+
+    const data = useMemo(() => {
+        const results = records.map((a) => ({ a, metrics: checklist.metrics(a) }));
+        const defs = checklist.metrics({});
+        // Percentages are averaged across facilities, yes / no is the share of
+        // facilities answering yes, counts are the average per facility.
+        const overall = defs.map((d) => {
+            const values = results.map(({ metrics }) => metrics.find((m) => m.id === d.id)?.value);
+            if (d.kind === 'bool') {
+                const known = values.filter((v) => v === true || v === false);
+                return { ...d, value: ratio(known.filter(Boolean).length, known.length), shown: 'pct' };
+            }
+            return { ...d, value: mean(values), shown: d.kind };
+        });
+        const sections = presenceSections.map((section) => ({
+            section,
+            presence: mean(records.map((a) => gridPresence(section, a.responses?.[section.id])?.percent)),
+        }));
+        const tally = (sectionList, column, flag) => {
+            const out = [];
+            sectionList.forEach((section) => {
+                section.items.forEach((item) => {
+                    if (item.answerKind || item.notScored) return;
+                    let answered = 0;
+                    let hits = 0;
+                    records.forEach((a) => {
+                        const v = a.responses?.[section.id]?.[item.id]?.[column];
+                        if (v === true || v === false) { answered += 1; if (v === flag) hits += 1; }
+                    });
+                    if (hits > 0) out.push({ section, item, answered, hits, percent: ratio(hits, answered) });
+                });
+            });
+            return out.sort((x, y) => y.percent - x.percent || y.hits - x.hits).slice(0, 12);
+        };
+        const missing = [];
+        presenceSections.forEach((s) => missing.push(...tally([s], s.presenceColumn, false)));
+        missing.sort((x, y) => y.percent - x.percent || y.hits - x.hits);
+        return { results, overall, sections, missing: missing.slice(0, 12), stockouts: tally(stockSections, 'stockout', true) };
+    // The section lists derive from the static checklist.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [records, checklist]);
+
+    const sectionTitle = (s) => (isArabic ? s.titleAr : s.title);
+
+    return (
+        <div className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <StatTile label={t('trackers.supervision.dash.facilities', 'Facilities supervised')} value={records.length} />
+                {data.overall.map((m) => (
+                    <StatTile key={m.id} label={pickLabel(m, isArabic)}
+                        value={m.shown === 'pct' ? pctText(m.value) : (m.value == null ? '—' : m.value.toFixed(1))}
+                        hint={m.kind === 'bool' ? t('trackers.supervision.dash.share_yes', 'share of facilities') : m.kind === 'count' ? t('trackers.supervision.dash.per_facility', 'average per facility') : null}
+                        tone={m.shown === 'pct' ? coverageColor(m.value) : undefined} />
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Panel title={t('trackers.supervision.dash.by_section', 'Present, by section')}
+                    note={t('trackers.supervision.dash.by_section_note', 'Average across facilities of the share of items present.')}>
+                    {data.sections.map((x) => <BarRow key={x.section.id} label={sectionTitle(x.section)} percent={x.presence} />)}
+                </Panel>
+
+                <Panel title={t('trackers.supervision.dash.missing', 'Most often missing')}
+                    note={t('trackers.supervision.dash.missing_note_yesno', 'Facilities answering no.')}>
+                    {data.missing.length === 0 ? (
+                        <p className="text-sm text-slate-500">{t('trackers.supervision.dash.none_missing', 'Nothing reported missing.')}</p>
+                    ) : data.missing.map((m) => (
+                        <BarRow key={`${m.section.id}-${m.item.id}`} label={pickLabel(m.item, isArabic)}
+                            percent={100 - m.percent}
+                            detail={t('trackers.supervision.dash.missing_count', '{{n}} of {{d}} missing', { n: m.hits, d: m.answered })} />
+                    ))}
+                </Panel>
+
+                {stockSections.length > 0 && (
+                    <Panel title={t('trackers.supervision.dash.stockouts', 'Most frequent stock-outs (last 3 months)')}>
+                        {data.stockouts.length === 0 ? (
+                            <p className="text-sm text-slate-500">{t('trackers.supervision.dash.no_stockouts', 'No stock-outs reported.')}</p>
+                        ) : data.stockouts.map((m) => (
+                            <BarRow key={`${m.section.id}-${m.item.id}`} label={pickLabel(m.item, isArabic)}
+                                percent={100 - m.percent}
+                                detail={t('trackers.supervision.dash.stockout_count', '{{n}} of {{d}} facilities', { n: m.hits, d: m.answered })} />
+                        ))}
+                    </Panel>
+                )}
+            </div>
+
+            <Panel title={t('trackers.supervision.dash.by_facility', 'By facility')}>
+                <Table headers={[
+                    t('trackers.supervision.table.facility', 'Facility'), t('trackers.supervision.state', 'State'), t('trackers.supervision.table.date', 'Date'),
+                    ...data.overall.map((m) => pickLabel(m, isArabic)),
+                ]} cardsOnPhone>
+                    {data.results.map(({ a, metrics }) => (
+                        <tr key={a.id}>
+                            <td className="font-medium">{a.facilityName}</td>
+                            <td className="text-gray-600">{stateName(a.stateKey, isArabic)}</td>
+                            <td className="text-gray-600">{a.assessmentDate || '—'}</td>
+                            {metrics.map((m) => <td key={m.id}><MetricValue metric={m} /></td>)}
+                        </tr>
+                    ))}
+                </Table>
+            </Panel>
+        </div>
+    );
+}
+
+// -----------------------------------------------------------------------------
 
 export default function SupervisionDashboard({ checklist, assessments = [] }) {
     const { t, i18n } = useTranslation();
@@ -440,7 +570,9 @@ export default function SupervisionDashboard({ checklist, assessments = [] }) {
                     message={drafts && !includeDrafts
                         ? t('trackers.supervision.dash.only_drafts', 'No submitted assessments yet. Tick Include drafts to see the drafts.')
                         : t('trackers.supervision.dash.empty', 'No assessments to show yet.')} />
-            ) : checklist.id === 'infant_warmer'
+            ) : checklist.metrics
+                ? <MetricsDashboard checklist={checklist} records={records} />
+                : checklist.id === 'infant_warmer'
                 ? <WarmerDashboard checklist={checklist} records={records} />
                 : <PresenceDashboard checklist={checklist} records={records} />}
         </div>

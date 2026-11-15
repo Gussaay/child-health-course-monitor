@@ -55,17 +55,30 @@ jobs:
       # Fails the PR if the first-load payload grows without anyone noticing.
       # The budget is the current measured size plus room to move; raise it
       # deliberately, in a commit that explains why.
+      #
+      # A visitor downloads the shared files plus ONE translation file (English
+      # or Arabic, see src/i18n.js), and index.html names both, so the check
+      # adds the larger of the two rather than both.
+      #
+      # 520 KB: set when translations were split per language. Measured then
+      # at 468 KB (English) and 490 KB (Arabic). The old 450 KB budget was
+      # below what main itself shipped (about 590 KB), so this step had failed
+      # on every pull request since it was added.
       - name: Check first-load payload budget
         run: |
-          BUDGET_KB=450
+          BUDGET_KB=520
           TOTAL=0
-          for FILE in $(grep -oE '/assets/[^"]+' dist/index.html); do
+          LOCALE_MAX=0
+          for FILE in $(grep -oE '/assets/[^"]+' dist/index.html | sort -u); do
             SIZE=$(gzip -c "dist${FILE}" | wc -c)
             echo "$((SIZE / 1024)) KB  ${FILE}"
-            TOTAL=$((TOTAL + SIZE))
+            case "$FILE" in
+              /assets/locale-*) [ "$SIZE" -gt "$LOCALE_MAX" ] && LOCALE_MAX=$SIZE ;;
+              *) TOTAL=$((TOTAL + SIZE)) ;;
+            esac
           done
-          TOTAL_KB=$((TOTAL / 1024))
-          echo "First load: ${TOTAL_KB} KB gzipped (budget ${BUDGET_KB} KB)"
+          TOTAL_KB=$(((TOTAL + LOCALE_MAX) / 1024))
+          echo "First load: ${TOTAL_KB} KB gzipped, with the larger translation file (budget ${BUDGET_KB} KB)"
           if [ "$TOTAL_KB" -gt "$BUDGET_KB" ]; then
             echo "::error::First-load payload is ${TOTAL_KB} KB, over the ${BUDGET_KB} KB budget."
             exit 1

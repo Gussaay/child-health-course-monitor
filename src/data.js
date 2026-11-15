@@ -26,7 +26,8 @@ import {
     arrayUnion,
     onSnapshot,
     waitForPendingWrites,
-    runTransaction
+    runTransaction,
+    getCountFromServer
 } from "firebase/firestore";
 import { onAuthStateChanged } from 'firebase/auth'; 
 import { storage } from './firebase';
@@ -394,6 +395,24 @@ async function getData(query, sourceOptions = {}) {
     }
 }
 
+// --- DOWNLOAD SCOPE (participants) ---
+// A state or locality user's device downloads only the participants of their
+// own states or localities: the same records the Courses page already kept
+// for them (it filtered the full list on the device).
+// `scope` is { field, values }; Firestore's "in" takes 30 values at a time.
+// Delta and live queries stay unscoped (they bring only changed records) and
+// DataContext drops changes outside the scope.
+async function getScopedDocs(col, scope, sourceOptions) {
+    const values = [...new Set((scope.values || []).filter(Boolean))];
+    if (values.length === 0) return [];
+    const out = [];
+    for (let i = 0; i < values.length; i += 30) {
+        const snap = await getData(query(collection(db, col), where(scope.field, "in", values.slice(i, i + 30))), sourceOptions);
+        snap.docs.forEach((d) => out.push({ id: d.id, ...d.data() }));
+    }
+    return out;
+}
+
 // --- OFFLINE-SAFE WRITE HELPER ---
 // Uses isOnline() from firebase.js rather than navigator.onLine. navigator.onLine
 // reports that a network exists, not that it reaches anything — it says "online"
@@ -687,6 +706,9 @@ function facilityQuery(filters = {}) {
 }
 // The filters Firestore cannot express, applied on the device.
 const facilityLocalFilter = (filters = {}) => (f) => {
+    // A deleted facility is hidden (and removed from a device that still holds
+    // it): facilities are soft-deleted, see deleteHealthFacility.
+    if (f && (f.isDeleted === true || f.isDeleted === 'true')) return false;
     if (filters.state === 'NOT_ASSIGNED' && f['الولاية']) return false;
     if (filters.functioningStatus === 'NOT_SET' && !(f['هل_المؤسسة_تعمل'] == null || f['هل_المؤسسة_تعمل'] === '')) return false;
     return true;
@@ -696,11 +718,30 @@ export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
     const q = facilityQuery(filters);
     try {
         const querySnapshot = await getData(q, sourceOptions);
-        return querySnapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(facilityLocalFilter(filters));
+        const rows = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        // A changes-only download (lastUpdatedAfter) must also return deleted
+        // facilities: DataContext uses them to remove the facility from the
+        // device's saved list. A plain list never shows them.
+        const keep = facilityLocalFilter(filters);
+        return filters.lastUpdatedAfter instanceof Date
+            ? rows.filter((f) => f.isDeleted === true || f.isDeleted === 'true' || keep(f))
+            : rows.filter(keep);
     } catch (error) {
         console.error("Error fetching health facilities:", error);
         throw error;
     }
+}
+
+// How many facilities the unfiltered list query returns on the server (one
+// read per 1,000 facilities). Lets a device notice that its saved list is
+// incomplete and download it again.
+export async function countHealthFacilities() {
+    const [all, deleted] = await Promise.all([
+        getCountFromServer(facilityQuery({})),
+        getCountFromServer(query(collection(db, "healthFacilities"), where("isDeleted", "in", [true, "true"]))),
+    ]);
+    // Deleted facilities are not in the saved list, so they are not counted.
+    return Math.max(0, all.data().count - deleted.data().count);
 }
 
 export async function getHealthFacilityById(facilityId) {
@@ -709,8 +750,21 @@ export async function getHealthFacilityById(facilityId) {
     if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() };
     return null;
 }
+// A facility is soft-deleted: it is marked and stamped, not removed. The stamp
+// (lastSnapshotAt, the facilities' sync mark) makes the next Refresh and every
+// live listener bring the deletion to each device, which then drops the
+// facility; a record removed outright leaves nothing for them to find. It
+// appears in the Deleted Items tab of Child Health Services, where it can be
+// removed for good.
+const facilityDeletionStamp = () => ({
+    isDeleted: true,
+    deletedAt: serverTimestamp(),
+    deletedBy: firebaseAuth.currentUser?.email || firebaseAuth.currentUser?.uid || null,
+    lastSnapshotAt: serverTimestamp(),
+    lastUpdatedAt: serverTimestamp(),
+});
 export async function deleteHealthFacility(facilityId) {
-    await deleteDoc(doc(db, "healthFacilities", facilityId));
+    await fbUpdateDoc(doc(db, "healthFacilities", facilityId), facilityDeletionStamp());
     return true;
 }
 export async function deleteFacilitiesBatch(facilityIds) {
@@ -720,7 +774,7 @@ export async function deleteFacilitiesBatch(facilityIds) {
     for (let i = 0; i < facilityIds.length; i += BATCH_SIZE) {
         const batch = writeBatch(db);
         const chunk = facilityIds.slice(i, i + BATCH_SIZE);
-        chunk.forEach(id => batch.delete(doc(db, "healthFacilities", id)));
+        chunk.forEach(id => batch.update(doc(db, "healthFacilities", id), facilityDeletionStamp()));
         await batch.commit();
         deletedCount += chunk.length;
     }
@@ -1592,8 +1646,9 @@ export async function listParticipants(courseId, lastVisible = null, sourceOptio
     return { participants, lastVisible: newLastVisible };
 }
 
-export async function listAllParticipants(sourceOptions = {}, lastSync = 0) {
+export async function listAllParticipants(sourceOptions = {}, lastSync = 0, scope = null) {
     try {
+        if (!(lastSync > 0) && scope) return await getScopedDocs("participants", scope, sourceOptions);
         let q = collection(db, "participants");
         if (lastSync > 0) {
             q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
@@ -3068,18 +3123,25 @@ export async function deleteOnlineCourseItem(itemId) {
 // Awaited to completion rather than run through executeOfflineSafeWrite: an
 // import writes a hundred documents and the four-second timeout in that helper
 // would report success for a migration that had barely started.
-export async function bulkUpsertOnlineCourseContent({ course, items }) {
+export async function bulkUpsertOnlineCourseContent({ course, items, existingCourseId = null }) {
     if (!isOnline()) {
         throw new Error('You appear to be offline. Connect to the internet and import again — nothing was saved.');
     }
 
-    const courseRef = course.id
-        ? doc(db, "onlineCourses", course.id)
-        : doc(collection(db, "onlineCourses"));
-    await setDoc(courseRef, {
-        ...course, id: courseRef.id, isDeleted: false,
-        createdAt: serverTimestamp(), lastUpdatedAt: serverTimestamp(),
-    }, { merge: true });
+    // Adding modules to a course that is already there leaves the course
+    // document itself alone: its title, description and publishing stay as
+    // the managers set them.
+    const courseRef = existingCourseId
+        ? doc(db, "onlineCourses", existingCourseId)
+        : course.id
+            ? doc(db, "onlineCourses", course.id)
+            : doc(collection(db, "onlineCourses"));
+    if (!existingCourseId) {
+        await setDoc(courseRef, {
+            ...course, id: courseRef.id, isDeleted: false,
+            createdAt: serverTimestamp(), lastUpdatedAt: serverTimestamp(),
+        }, { merge: true });
+    }
 
     // Sections carry a legacy module key; it is swapped for the real Firestore
     // id once the module it belongs to has been written.
@@ -3284,6 +3346,57 @@ export async function listSupervisionAssessments(sourceOptions = {}, lastSync = 
 
 export async function deleteSupervisionAssessment(assessmentId) {
     await fbUpdateDoc(doc(db, "supervisionAssessments", assessmentId), {
+        isDeleted: true, lastUpdatedAt: serverTimestamp(),
+    });
+    return true;
+}
+
+// ============================================================================
+// --- SURVEYS ---
+//
+// One document per filled survey form (surveyResponses). Like the supervision
+// checklists, each survey's questions are code (survey/surveys.js) and the
+// record keeps `surveyId`, so a response can always be read back against the
+// form it was filled on.
+// ============================================================================
+
+export async function upsertSurveyResponse(payload) {
+    if (payload.id) {
+        const { id, ...rest } = payload;
+        const writePromise = fbSetDoc(doc(db, "surveyResponses", id), { ...rest, lastUpdatedAt: serverTimestamp() }, { merge: true });
+        await executeOfflineSafeWrite(writePromise, `Survey: ${payload.village || payload.surveyId}`);
+        return id;
+    }
+    const { id, ...dataToSave } = payload;
+    const newRef = doc(collection(db, "surveyResponses"));
+    const writePromise = fbSetDoc(newRef, {
+        ...dataToSave,
+        isDeleted: false,
+        createdByUid: firebaseAuth.currentUser?.uid || null,
+        createdByEmail: firebaseAuth.currentUser?.email || null,
+        createdAt: serverTimestamp(),
+        lastUpdatedAt: serverTimestamp(),
+    });
+    await executeOfflineSafeWrite(writePromise, `Survey: ${payload.village || payload.surveyId}`);
+    return newRef.id;
+}
+
+export async function listSurveyResponses(sourceOptions = {}, lastSync = 0) {
+    try {
+        let q = collection(db, "surveyResponses");
+        if (lastSync > 0) {
+            q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        }
+        const snapshot = await getData(q, sourceOptions);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+        console.error("Error fetching survey responses:", error);
+        throw error;
+    }
+}
+
+export async function deleteSurveyResponse(responseId) {
+    await fbUpdateDoc(doc(db, "surveyResponses", responseId), {
         isDeleted: true, lastUpdatedAt: serverTimestamp(),
     });
     return true;
@@ -4153,6 +4266,7 @@ const LIVE_LISTS = {
     supplyItems: { col: 'supplyItems' },
     populationTargets: { col: 'populationTargets' },
     supervisionAssessments: { col: 'supervisionAssessments' },
+    surveyResponses: { col: 'surveyResponses' },
     onlineCourses: { col: 'onlineCourses' },
     onlineCourseItems: { col: 'onlineCourseItems' },
     finalReports: { col: 'finalReports', map: (d) => lightFinalReport(d) },
@@ -4206,4 +4320,50 @@ export function subscribeFacilityDelta(filters, sinceMs, onChange, onError) {
         const changes = deltaChanges(snap, undefined, facilityLocalFilter(filters), 'healthFacilities');
         if (changes.upserts.length || changes.removed.length) onChange(changes);
     }, onError);
+}
+
+// --- IMCI OPERATIONAL GUIDE: DAILY EVALUATION ---
+// Exercise monitoring goes through the normal course monitoring (cases +
+// observations). The daily evaluation is anonymous participant feedback from a
+// public link, saved with lastUpdatedAt / isDeleted and written through
+// executeOfflineSafeWrite so it queues when offline.
+
+// Cases of one course (the operational guide exercise monitoring summary).
+export async function listCasesForCourse(courseId, sourceOptions = {}) {
+    const q = query(collection(db, "cases"), where("courseId", "==", courseId));
+    const snapshot = await getDocs(q, sourceOptions);
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.isDeleted !== true);
+}
+
+export async function getDailyEvalForm(formId) {
+    const snap = await getDoc(doc(db, "dailyEvalForms", formId));
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+export async function saveDailyEvalForm(formId, form) {
+    const data = { ...form, id: formId, lastUpdatedAt: serverTimestamp() };
+    const uid = firebaseAuth.currentUser?.uid || null;
+    if (uid) data.updatedByUid = uid;
+    return executeOfflineSafeWrite(setDoc(doc(db, "dailyEvalForms", formId), data, { merge: true }), 'Daily evaluation form');
+}
+
+export async function submitDailyEvalResponse(response) {
+    const ref = doc(collection(db, "dailyEvalResponses"));
+    const data = { ...response, id: ref.id, isDeleted: false, createdAt: serverTimestamp() };
+    const uid = firebaseAuth.currentUser?.uid || null;
+    if (uid) data.createdByUid = uid; // the form stays anonymous: no name, uid only marks a signed-in device
+    return executeOfflineSafeWrite(setDoc(ref, data), 'Daily evaluation');
+}
+
+export async function listDailyEvalResponses(courseId) {
+    const q = query(collection(db, "dailyEvalResponses"), where("courseId", "==", courseId));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => !r.isDeleted);
+}
+
+// Every day set up for one course's daily evaluation (Share dialog list).
+export async function listDailyEvalForms(courseId) {
+    const q = query(collection(db, "dailyEvalForms"), where("courseId", "==", courseId));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(f => !f.isDeleted);
 }

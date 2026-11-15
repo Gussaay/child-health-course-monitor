@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Merged into src/main/AndroidManifest.xml for this app only. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity android:name="com.nchp.monitoring.app.MainActivity">
+            <!--
+              Shared links of the EmONC site open in the EmONC app (Android App
+              Links). Main site and ch-sudan links open in the NCHP app.
+              The sites prove the app is theirs with /.well-known/assetlinks.json,
+              which the deploy writes from the signing key (deploy.yml, "Write
+              Android App Links file"); without it Android opens the link in the
+              browser. Only the shared-page paths are claimed; /training/ links
+              stay in the browser because a training link turns the whole tab
+              into the practice copy. <data> lines in one filter combine: every
+              host with every path.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="emonc-sudan.web.app" />
+                <data android:host="emonc-sudan.firebaseapp.com" />
+                <data android:pathPrefix="/public/" />
+                <data android:pathPrefix="/attendance/" />
+                <data android:pathPrefix="/monitor/" />
+                <data android:pathPrefix="/verify/" />
+                <data android:pathPrefix="/mentorship/" />
+                <data android:pathPrefix="/facilities/" />
+                <data android:pathPrefix="/submit/" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

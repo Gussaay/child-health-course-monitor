@@ -12,7 +12,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 export default [
   {
     ignores: [
-      'dist/**', 'android/**', 'ios/**', 'node_modules/**', 'public/**',
+      'dist/**', 'dist-emonc/**', 'dist-apps/**', 'android/**', 'ios/**', 'node_modules/**', 'public/**',
       '.firebase/**', 'src/components/AmiriFont.js', 'codemod-*.cjs',
     ],
   },

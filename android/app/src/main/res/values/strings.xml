@@ -4,6 +4,9 @@
     <string name="title_activity_main">National Child Health Program Monitor</string>
     <string name="package_name">com.nchp.monitoring.app</string>
     <string name="custom_url_scheme">com.nchp.monitoring.app</string>
+    <!-- Where BackgroundUpdateWorker looks for live updates. The EmONC app
+         overrides it (src/emonc/res/values/strings.xml). -->
+    <string name="update_manifest_url">https://imnci-courses-monitor.web.app/latest/update.json</string>
 
     <string name="server_client_id">928082473485-bu2fbkb8p12qcjijmb9lg4j7asj8emje.apps.googleusercontent.com</string>
 </resources>

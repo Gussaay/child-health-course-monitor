@@ -7,7 +7,7 @@ const ORDER = ['light', 'dark', 'system'];
 const ICONS = { light: Sun, dark: Moon, system: Monitor };
 
 /** One button that cycles light -> dark -> system. */
-export default function ThemeToggle({ className = '' }) {
+export default function ThemeToggle({ className = '', iconSize = 16 }) {
     const { t } = useTranslation();
     const [pref, setPref] = useTheme();
     const labels = {
@@ -25,7 +25,7 @@ export default function ThemeToggle({ className = '' }) {
             aria-label={`${t('theme.title', 'Appearance')}: ${labels[pref]}`}
             className={`p-1.5 text-sky-400 bg-slate-700 border border-slate-600 rounded hover:bg-slate-600 hover:text-sky-300 transition-colors flex items-center justify-center min-w-[32px] sm:min-w-[36px] ${className}`}
         >
-            <Icon size={16} />
+            <Icon size={iconSize} />
         </button>
     );
 }

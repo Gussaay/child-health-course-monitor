@@ -16,6 +16,7 @@ import { FileOpener } from '@capacitor-community/file-opener';
 import { amiriFontBase64 } from './AmiriFont.js';
 import { notify, confirmDialog, promptDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
+import { findLinkedParticipant } from '../utils/linkedParticipant';
 
 // --- Helper Functions ---
 
@@ -578,7 +579,7 @@ export function AttendanceManagerView({ course, onClose }) {
 
 // --- Component: PublicAttendanceView (For Participants) ---
 
-export function PublicAttendanceView({ courseId }) {
+export function PublicAttendanceView({ courseId, user = null }) {
     const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -632,12 +633,14 @@ export function PublicAttendanceView({ courseId }) {
         }
     };
 
+    // Opened from the app by a signed-in participant: their own name first.
+    const ownId = useMemo(() => findLinkedParticipant(participants, courseId, user)?.id || null, [participants, courseId, user]);
     const filteredParticipants = useMemo(() => {
         return participants
             .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
-            // Keep purely alphabetical order for the public link
-            .sort((a,b) => a.name.localeCompare(b.name));
-    }, [participants, searchTerm]);
+            // Alphabetical order for the public link, the signed-in person's own name first
+            .sort((a,b) => (b.id === ownId) - (a.id === ownId) || a.name.localeCompare(b.name));
+    }, [participants, searchTerm, ownId]);
 
     if (loading) return <PageSkeleton />;
     
@@ -700,7 +703,7 @@ export function PublicAttendanceView({ courseId }) {
                                 {filteredParticipants.map(p => {
                                     const isPresent = p.attendance && p.attendance.includes(targetDate);
                                     return (
-                                        <tr key={p.id} className={isPresent ? "bg-green-50" : "hover:bg-gray-50"}>
+                                        <tr key={p.id} className={isPresent ? "bg-green-50" : p.id === ownId ? "bg-sky-50" : "hover:bg-gray-50"}>
                                             <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm font-medium text-gray-900 break-words">{p.name}</td>
                                             <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm text-gray-500 break-words">{p.state}</td>
                                             <td className="hidden md:table-cell px-4 py-3 text-sm text-gray-500 break-words">{p.center_name || p.health_facility || p.facilityName || '-'}</td>

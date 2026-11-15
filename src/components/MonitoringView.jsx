@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import CpcmOsceView from './cpcm/CpcmOsceView';
 import { CPCM_COURSE_TYPE } from './cpcm/osceChecklists.js';
+import OperationalGuideExerciseMonitoring, { isOperationalGuideCourse } from './ExerciseMonitoring.jsx';
 import {
     Card, PageHeader, Button, FormGroup, Input, Select, Table, EmptyState, Modal, SkeletonCard } from "./CommonComponents";
 import {
@@ -97,6 +98,11 @@ function ActionToggle({ options, currentValue, onClick }) {
 export function ObservationView(props) {
     if (props.course?.course_type === CPCM_COURSE_TYPE) {
         return <CpcmOsceView participants={props.participants || []} selectedParticipantId={props.participant?.id} canEdit lockParticipant />;
+    }
+    // The IMCI operational guide course monitors its exercises (day + exercise,
+    // Done / Not done, score), saved as cases and observations like other courses.
+    if (isOperationalGuideCourse(props.course)) {
+        return <OperationalGuideExerciseMonitoring course={props.course} participant={props.participant} participants={props.participants || []} onChangeParticipant={props.onChangeParticipant} />;
     }
     return <ClinicalObservationView {...props} />;
 }

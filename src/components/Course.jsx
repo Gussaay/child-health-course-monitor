@@ -3,8 +3,8 @@ import React, { useState, useMemo, useRef, useEffect, Suspense } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { 
     Button, Card, EmptyState, FormGroup, Input, PageHeader, 
-    Select, Spinner, PageSkeleton, SkeletonTable, PhoneCards, Table, CourseIcon, Modal, CardBody, CardFooter, Toast, FinalReportStatusBadges,
-    PageTabs, FilterPanel, IS_NATIVE, PullToRefresh, PageActions, FormActions
+    Select, Spinner, PageSkeleton, SkeletonTable, PhoneCards, Table, Modal, CardBody, CardFooter, Toast, FinalReportStatusBadges,
+    PageTabs, FilterPanel, IS_NATIVE, PullToRefresh, FormActions, FormSection, FieldError, StepForm, useFullPageForm, MenuTile, MenuGrid, MENU_ICON_CLASS
 } from './CommonComponents';
 
 // --- Firebase Imports ---
@@ -27,6 +27,11 @@ import {
     listAllParticipantsForCourse 
 } from '../data.js'; 
 
+import { DailyEvaluationShare } from './DailyEvaluation';
+import TrainingLinkShare from '../training/TrainingLinkShare.jsx';
+const TrainingActivityView = React.lazy(() => import('../training/TrainingActivityView.jsx'));
+import { isTrainingMode } from '../training/trainingSession.js';
+import { isOperationalGuideCourse } from './ExerciseMonitoring.jsx';
 import { ParticipantsView } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
 import { CourseExercisesView } from './imnci';
@@ -43,7 +48,8 @@ import {
     Users, Share2, UserPlus, CheckCircle, 
     FileText, Edit, Trash2, ExternalLink, Link as LinkIcon, Eye, BarChart2,
     AlertTriangle, Shield, Check, X, RefreshCw, Archive, ClipboardList,
-    Award, FileSignature, Stamp, Upload, Lock, XCircle, QrCode, Send, Copy, Download
+    Award, FileSignature, Stamp, Upload, Lock, XCircle, QrCode, Send, Copy, Download,
+    Activity, Siren, HeartPulse, Baby, MoreHorizontal, CalendarDays, ChevronDown, Search, Plus
 } from 'lucide-react'; 
 import { useDataCache } from '../DataContext'; 
 import { useAuth } from '../hooks/useAuth'; 
@@ -66,6 +72,7 @@ import { publicBaseUrl } from '../utils/publicLink';
 import { useRememberedState } from '../utils/rememberedState';
 import { countsForCoverage } from '../utils/coverageEligibility';
 import { IS_EMONC_SITE } from '../siteMode';
+import { usePageAddButton } from '../utils/pageChrome';
 
 const CourseTypeReportView = React.lazy(() => import('./CourseTypeReportView.jsx'));
 const DeletedItemsPanel = React.lazy(() => import('./DeletedItemsPanel.jsx'));
@@ -234,6 +241,12 @@ export function FacilitatorIdMigrationModal({ isOpen, onClose, onComplete }) {
                 } else if (course.directorId) {
                     const f = getFacById(course.directorId);
                     if (f && f.name !== course.director) { updates.director = f.name; needsUpdate = true; }
+                }
+                // A spelling fix is the same person: keep the certificate's
+                // approved-director record in step so their signature still prints.
+                if (updates.director && course.approvedDirectorName
+                    && course.approvedDirectorName.trim().toLowerCase() === (course.director || '').trim().toLowerCase()) {
+                    updates.approvedDirectorName = updates.director;
                 }
 
                 // 2. Clinical
@@ -754,41 +767,39 @@ export function PublicParticipantRegistrationView({ courseId }) {
     );
 }
 
-const Landing = React.memo(function Landing({ active, onPick }) {
+// Course packages, as the same tile the main menu uses: a short name the eye
+// can find at once, with the number of courses under it. The full name is the
+// tile's tooltip.
+const Landing = React.memo(function Landing({ active, onPick, counts }) {
     const { t } = useTranslation();
-   const items = [
-        { key: 'IMNCI', title: t('course_page.packages.imnci', 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)'), enabled: true },
-        { key: 'ICCM', title: t('course_page.packages.iccm', 'Integrated Community case management for under 5 children (iCCM)'), enabled: true },
-        { key: 'Comprehensive Package For Community Midwives', title: t('course_page.packages.midwives', 'Comprehensive Package For Community Midwives'), enabled: true },
-        { key: 'ETAT', title: t('course_page.packages.etat', 'Emergency Triage, Assessment & Treatment (ETAT)'), enabled: true },
-        { key: 'EmONC', title: t('course_page.packages.emonc', 'Emergency Obstetric and Newborn Care (EmONC)'), enabled: true },
-        { key: 'IPC', title: t('course_page.packages.ipc', 'Infection Prevention & Control (Neonatal Unit)'), enabled: true },
-        { key: 'Small & Sick Newborn', title: t('course_page.packages.ssnc', 'Small & Sick Newborn Case Management'), enabled: true },
-        { key: 'Program Management', title: t('course_page.packages.program_management', 'Program Management'), enabled: true },
+    const items = [
+        { key: 'IMNCI', short: 'IMNCI', icon: Activity, title: t('course_page.packages.imnci', 'Integrated Management of Newborn and Childhood Illnesses (IMNCI)') },
+        { key: 'ICCM', short: 'iCCM', iconNode: <IccmIcon className={MENU_ICON_CLASS} />, title: t('course_page.packages.iccm', 'Integrated Community case management for under 5 children (iCCM)') },
+        { key: 'Comprehensive Package For Community Midwives', short: t('course_page.packages.short.midwives', 'Community Midwives'), icon: Users, title: t('course_page.packages.midwives', 'Comprehensive Package For Community Midwives') },
+        { key: 'ETAT', short: 'ETAT', icon: Siren, title: t('course_page.packages.etat', 'Emergency Triage, Assessment & Treatment (ETAT)') },
+        { key: 'EmONC', short: 'EmONC', icon: HeartPulse, title: t('course_page.packages.emonc', 'Emergency Obstetric and Newborn Care (EmONC)') },
+        { key: 'IPC', short: 'IPC', iconNode: <IpcIcon className={MENU_ICON_CLASS} />, title: t('course_page.packages.ipc', 'Infection Prevention & Control (Neonatal Unit)') },
+        { key: 'Small & Sick Newborn', short: t('course_page.packages.short.ssnc', 'Small & Sick Newborn'), icon: Baby, title: t('course_page.packages.ssnc', 'Small & Sick Newborn Case Management') },
+        { key: 'Program Management', short: t('course_page.packages.program_management', 'Program Management'), icon: ClipboardList, title: t('course_page.packages.program_management', 'Program Management') },
     ].filter(it => !IS_EMONC_SITE || it.key === 'EmONC');
-  
+
     return (
-        <Card className="p-4 md:p-6">
+        <Card className="p-3 md:p-6">
             <PageHeader title={t('course_page.packages.select_title', 'Select a Course Package')} subtitle={t('course_page.packages.select_subtitle', 'Choose a monitoring package to begin.')} />
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+            <MenuGrid columns="sm:grid-cols-3 lg:grid-cols-4">
                 {items.map(it => (
-                    <button key={it.key} disabled={!it.enabled} className={`border rounded-lg p-4 md:p-6 text-start transition-all duration-200 ${active === it.key ? 'ring-2 ring-sky-500 shadow-lg' : ''} ${it.enabled ? 'hover:shadow-md hover:scale-105' : 'opacity-60 cursor-not-allowed bg-gray-50'}`} onClick={() => it.enabled && onPick(it.key)}>
-                        <div className="flex flex-col items-start gap-2 md:flex-row md:items-center md:gap-4">
-                            {it.key === 'ICCM' ? <IccmIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
-                             it.key === 'Comprehensive Package For Community Midwives' ? <Users className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
-                             it.key === 'IPC' ? <IpcIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
-                             it.key === 'Small & Sick Newborn' ? <NewbornIcon className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
-                             it.key === 'Program Management' ? <ClipboardList className="w-10 h-10 text-slate-500 flex-shrink-0" /> :
-                                <CourseIcon course={it.key} />
-                             }
-                            <div>
-                                <div className="font-semibold text-gray-800 text-sm md:text-base">{it.title}</div>
-                                <div className="text-xs text-gray-500 mt-1">{it.enabled ? t('course_page.packages.click_to_manage', 'Click to manage courses') : t('course_page.packages.coming_soon', 'Coming Soon')}</div>
-                            </div>
-                        </div>
-                    </button>
+                    <MenuTile
+                        key={it.key}
+                        icon={it.icon}
+                        iconNode={it.iconNode}
+                        label={it.short}
+                        title={it.title}
+                        hint={counts ? t('course_page.packages.n_courses', '{{count}} courses', { count: counts[it.key] || 0 }) : undefined}
+                        active={active === it.key}
+                        onClick={() => onPick(it.key)}
+                    />
                 ))}
-            </div>
+            </MenuGrid>
         </Card>
     );
 });
@@ -889,6 +900,62 @@ function QRShareModal({ isOpen, onClose, url, title }) {
     );
 }
 
+/** The "⋯" button beside the course search: less-used page actions in one menu. */
+function CoursePageMoreMenu({ items, disabled }) {
+    const { t } = useTranslation();
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+    useEffect(() => {
+        if (!open) return undefined;
+        const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('pointerdown', close);
+        return () => document.removeEventListener('pointerdown', close);
+    }, [open]);
+    return (
+        <div ref={ref} className="relative shrink-0">
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                disabled={disabled}
+                aria-expanded={open}
+                aria-label={t('ui.more_actions', 'More actions')}
+                title={t('ui.more_actions', 'More actions')}
+                className={`h-full min-h-[40px] rounded-lg border px-3 flex items-center justify-center ${open ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}`}
+            >
+                <MoreHorizontal size={20} />
+            </button>
+            {open && (
+                <div className="absolute end-0 top-full mt-1 z-50 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                    {items.map((it) => {
+                        const Icon = it.icon;
+                        return (
+                            <button
+                                key={it.label}
+                                type="button"
+                                disabled={it.disabled}
+                                onClick={() => { setOpen(false); it.onClick(); }}
+                                className={`w-full flex items-center gap-2 px-4 py-3 text-start text-sm border-b border-slate-100 last:border-0 hover:bg-slate-50 disabled:opacity-50 ${it.danger ? 'text-red-600 font-semibold' : 'text-slate-800'}`}
+                            >
+                                {Icon && <Icon size={16} className="shrink-0" />} {it.label}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
+/** "9–14 Nov 2026", "28 Oct – 2 Nov 2026" or "9 Nov 2026": short enough for one phone line. */
+const formatDateRange = (start, end) => {
+    const mon = (d) => d.toLocaleDateString(undefined, { month: 'short' });
+    const full = (d) => `${d.getDate()} ${mon(d)} ${d.getFullYear()}`;
+    if (!end || end <= start) return full(start);
+    if (start.getFullYear() !== end.getFullYear()) return `${full(start)} – ${full(end)}`;
+    if (start.getMonth() === end.getMonth()) return `${start.getDate()}–${full(end)}`;
+    return `${start.getDate()} ${mon(start)} – ${full(end)}`;
+};
+
 const formatLocation = (locationStr) => {
     if (!locationStr) return 'N/A';
     const parts = String(locationStr).split(',').map(s => s.trim()).filter(Boolean);
@@ -902,7 +969,9 @@ export function CoursesTable({
     canManageFinalReportDocument,
     // { [courseId]: finalReport } for the status labels; null hides them.
     finalReportsByCourse,
-    onOpenAttendanceManager, isProcessing 
+    onOpenAttendanceManager, isProcessing,
+    // Extra controls shown beside the search box (the page's "More" menu).
+    toolbarExtra = null
 }) {
     const { t } = useTranslation();
     const [shareModalCourse, setShareModalCourse] = useState(null);
@@ -912,8 +981,12 @@ export function CoursesTable({
      
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
     const [expandedId, setExpandedId] = useState(null);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(5);
+    const PAGE_SIZE = 20;
+    const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [yearFilter, setYearFilter] = useState('All');
+    const [sortBy, setSortBy] = useState('newest');
 
     const getBaseUrl = () => publicBaseUrl();
 
@@ -929,7 +1002,7 @@ export function CoursesTable({
         });
     };
 
-    useEffect(() => { setCurrentPage(1); }, [courses, itemsPerPage]);
+    useEffect(() => { setVisibleCount(PAGE_SIZE); }, [courses, search, statusFilter, yearFilter, sortBy]);
 
     const isCourseActive = (course) => {
         if (course.approvalStatus === 'pending') return false; 
@@ -951,35 +1024,115 @@ export function CoursesTable({
         return filtered;
     }, [courses, userStates, userLocalities]);
 
+    const statusOf = (c) => (c.approvalStatus === 'pending' ? 'pending'
+        : c.approvalStatus === 'rejected' ? 'rejected'
+        : isCourseActive(c) ? 'active' : 'inactive');
+
+    const years = useMemo(() => {
+        const ys = new Set(filteredCourses.map(c => String(c.start_date || '').slice(0, 4)).filter(y => /^\d{4}$/.test(y)));
+        return ['All', ...[...ys].sort().reverse()];
+    }, [filteredCourses]);
+
+    // Year and search narrow the list first, so the chip counts match it.
+    const searchedCourses = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return filteredCourses.filter(c => {
+            if (yearFilter !== 'All' && String(c.start_date || '').slice(0, 4) !== yearFilter) return false;
+            if (!q) return true;
+            return [c.state, c.locality, c.director, c.coordinator, c.hall, c.course_project, c.funded_by]
+                .some(v => String(v || '').toLowerCase().includes(q));
+        });
+    }, [filteredCourses, search, yearFilter]);
+
+    const statusCounts = useMemo(() => {
+        const n = { all: searchedCourses.length, active: 0, pending: 0, inactive: 0, rejected: 0 };
+        searchedCourses.forEach(c => { n[statusOf(c)] += 1; });
+        return n;
+    }, [searchedCourses]);
+
     const sortedCourses = useMemo(() => {
-        return [...filteredCourses].sort((a, b) => {
+        const list = statusFilter === 'all' ? searchedCourses : searchedCourses.filter(c => statusOf(c) === statusFilter);
+        const time = (c) => (c.start_date ? new Date(c.start_date).getTime() || 0 : 0);
+        return [...list].sort((a, b) => {
+            if (sortBy === 'oldest') return time(a) - time(b);
+            if (sortBy === 'state') return String(a.state || '').localeCompare(String(b.state || '')) || time(b) - time(a);
             const aActive = isCourseActive(a);
             const bActive = isCourseActive(b);
             if (aActive && !bActive) return -1;
             if (!aActive && bActive) return 1;
-            
-            const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
-            const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
-            return dateB - dateA;
+            return time(b) - time(a);
         });
-    }, [filteredCourses]);
+    }, [searchedCourses, statusFilter, sortBy]);
 
     const totalItems = sortedCourses.length;
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedCourses = sortedCourses.slice(startIndex, startIndex + itemsPerPage);
+    const paginatedCourses = sortedCourses.slice(0, visibleCount);
 
     const toggleExpand = (id) => {
         setExpandedId(prev => (prev === id ? null : id));
     };
 
-    if (sortedCourses.length === 0) return <div className="text-center p-8 text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">{t('course_page.table.no_courses', 'No courses found matching the selected filters.')}</div>;
+    if (filteredCourses.length === 0) return <div className="text-center p-8 text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">{t('course_page.table.no_courses', 'No courses found matching the selected filters.')}</div>;
 
-    const courseType = sortedCourses.length > 0 ? sortedCourses[0].course_type : 'Courses';
+    const chip = (id, label, count, dot) => (
+        <button
+            key={id}
+            type="button"
+            onClick={() => setStatusFilter(id)}
+            aria-pressed={statusFilter === id}
+            className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${statusFilter === id ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+        >
+            {dot && <span className={`h-2 w-2 rounded-full ${dot}`} />}
+            {label} <span className="tabular-nums opacity-80">{count}</span>
+        </button>
+    );
+
+    const CertBadge = ({ c }) => {
+        if (c.approvalStatus === 'pending' || c.approvalStatus === 'rejected') return null;
+        return c.isCertificateApproved
+            ? <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold border whitespace-nowrap bg-violet-50 text-violet-700 border-violet-200"><Check size={12} />{t('course_page.table.cert_approved', 'Cert approved')}</span>
+            : <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold border whitespace-nowrap bg-amber-50 text-amber-700 border-amber-200">{t('course_page.table.cert_pending', 'Cert pending')}</span>;
+    };
 
     return (
         <div>
-            <h3 className="text-xl font-bold mb-4">{t('course_page.table.type_courses', '{{type}} Courses', { type: courseType })}</h3>
+            {/* Search, quick status chips, year and sort. The tab bar already
+                names the package, so there is no heading here. */}
+            <div className="mb-3 space-y-2">
+                <div className="flex items-stretch gap-2">
+                    <div className="relative flex-1 min-w-0">
+                        <Search size={16} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Input
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder={t('course_page.table.search_placeholder', 'Search state, locality, director…')}
+                            className="ps-9"
+                            type="search"
+                        />
+                    </div>
+                    {toolbarExtra}
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                    {chip('all', t('course_page.table.chip_all', 'All'), statusCounts.all)}
+                    {chip('active', t('course_page.status.active', 'Active'), statusCounts.active, 'bg-emerald-500')}
+                    {chip('pending', t('course_page.status.pending', 'Pending'), statusCounts.pending, 'bg-amber-500')}
+                    {chip('inactive', t('course_page.status.inactive', 'Inactive'), statusCounts.inactive, 'bg-slate-400')}
+                    {statusCounts.rejected > 0 && chip('rejected', t('course_page.status.rejected', 'Rejected'), statusCounts.rejected, 'bg-red-500')}
+                </div>
+                <div className="grid grid-cols-2 gap-2 md:max-w-md">
+                    <Select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)} aria-label={t('course_page.table.year', 'Year')}>
+                        {years.map(y => <option key={y} value={y}>{y === 'All' ? t('course_page.table.all_years', 'All years') : y}</option>)}
+                    </Select>
+                    <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label={t('course_page.table.sort', 'Sort')}>
+                        <option value="newest">{t('course_page.table.sort_newest', 'Newest first')}</option>
+                        <option value="oldest">{t('course_page.table.sort_oldest', 'Oldest first')}</option>
+                        <option value="state">{t('course_page.table.sort_state', 'By state')}</option>
+                    </Select>
+                </div>
+            </div>
+
+            {totalItems === 0 && (
+                <EmptyState message={t('course_page.table.no_courses', 'No courses found matching the selected filters.')} filtered />
+            )}
             
             {/* Desktop View (Standard Table) */}
             <div className="hidden md:block overflow-hidden bg-white border border-slate-300 rounded-xl shadow-sm">
@@ -1020,7 +1173,10 @@ export function CoursesTable({
                                             <span className="text-xs font-medium text-slate-500 truncate max-w-[250px]" title={subcourses}>
                                                 {subcourses}
                                             </span>
-                                            {finalReportsByCourse && <FinalReportStatusBadges report={finalReportsByCourse[c.id]} className="mt-1" />}
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                <CertBadge c={c} />
+                                                {finalReportsByCourse && <FinalReportStatusBadges report={finalReportsByCourse[c.id]} />}
+                                            </div>
                                         </div>
                                     </td>
 
@@ -1074,68 +1230,76 @@ export function CoursesTable({
                 </table>
             </div>
 
-            {/* Mobile View (Collapsible Accordion Cards) */}
-            <div className="grid gap-4 md:hidden">
+            {/* Phone view: two-line rows. Tap a row to open its buttons. */}
+            <div className="flex flex-col gap-2 md:hidden">
                 {paginatedCourses.map((c) => {
                     const isPendingDeletion = c.deletionRequested === true;
                     const active = isCourseActive(c);
                     const canEdit = active ? canEditDeleteActiveCourse : canEditDeleteInactiveCourse;
                     const canDelete = active ? canEditDeleteActiveCourse : canEditDeleteInactiveCourse;
                     const isExpanded = expandedId === c.id;
-                    
+                    const status = statusOf(c);
+
                     const subcourses = c.facilitatorAssignments && c.facilitatorAssignments.length > 0
-                        ? [...new Set(c.facilitatorAssignments.map(a => a.imci_sub_type))].join(', ') : t('course_page.na', 'N/A');
+                        ? [...new Set(c.facilitatorAssignments.map(a => a.imci_sub_type).filter(Boolean))].join(', ') : '';
+
+                    const startDate = c.start_date ? new Date(c.start_date) : null;
+                    const hasDates = startDate && !Number.isNaN(startDate.getTime());
+                    const endDate = hasDates && c.course_duration > 0 ? new Date(startDate.getTime() + (c.course_duration - 1) * 86400000) : null;
+                    const pill = {
+                        pending: ['bg-amber-100 text-amber-800', t('course_page.status.pending', 'Pending')],
+                        rejected: ['bg-red-100 text-red-800', t('course_page.status.rejected', 'Rejected')],
+                        active: ['bg-emerald-100 text-emerald-800', t('course_page.status.active', 'Active')],
+                        inactive: ['bg-slate-100 text-slate-700', t('course_page.status.inactive', 'Inactive')],
+                    }[status];
 
                     return (
-                        <div key={c.id} className={`border rounded-lg bg-white shadow-sm overflow-hidden ${isPendingDeletion ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
-                            <div 
-                                className="p-4 cursor-pointer hover:bg-gray-50 flex justify-between items-center"
+                        <div key={c.id} className={`rounded-xl border bg-white shadow-sm overflow-hidden ${isPendingDeletion ? 'border-red-300 bg-red-50' : isExpanded ? 'border-sky-300 ring-2 ring-sky-50' : 'border-slate-200'}`}>
+                            <button
+                                type="button"
                                 onClick={() => toggleExpand(c.id)}
+                                aria-expanded={isExpanded}
+                                className="w-full flex items-center gap-2 p-3.5 text-start active:bg-slate-50"
                             >
-                                <div>
-                                    <h4 className="font-bold text-lg text-gray-800">
+                                <div className="min-w-0 flex-1">
+                                    <div className="truncate text-base font-bold text-slate-900">
                                         {formatLocation(c.state)} - {formatLocation(c.locality)}
-                                    </h4>
-                                    <p className="text-sm text-gray-600 line-clamp-1">{subcourses}</p>
-                                    <div className="mt-2 flex gap-2 items-center flex-wrap">
-                                        {c.approvalStatus === 'pending' ? (
-                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{t('course_page.status.pending', 'Pending')}</span>
-                                        ) : c.approvalStatus === 'rejected' ? (
-                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">{t('course_page.status.rejected', 'Rejected')}</span>
-                                        ) : active ? (
-                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{t('course_page.status.active', 'Active')}</span>
-                                        ) : (
-                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{t('course_page.status.inactive', 'Inactive')}</span>
-                                        )}
+                                    </div>
+                                    <div className="mt-1 flex items-center gap-3 text-sm text-slate-500 whitespace-nowrap overflow-hidden">
+                                        {hasDates && <span className="flex items-center gap-1 shrink-0"><CalendarDays size={14} className="text-slate-400" />{formatDateRange(startDate, endDate)}</span>}
+                                        {c.participants_count > 0 && <span className="flex items-center gap-1 shrink-0"><Users size={14} className="text-slate-400" />{c.participants_count}</span>}
+                                        {subcourses && <span className="truncate">{subcourses}</span>}
+                                    </div>
+                                    <div className="mt-1.5 flex flex-wrap gap-1">
+                                        <CertBadge c={c} />
+                                        {finalReportsByCourse && <FinalReportStatusBadges report={finalReportsByCourse[c.id]} />}
                                         {isPendingDeletion && <span className="text-xs text-red-600 font-bold">{t('course_page.table.deletion_pending', '(Deletion Pending)')}</span>}
                                     </div>
-                                    {finalReportsByCourse && <FinalReportStatusBadges report={finalReportsByCourse[c.id]} className="mt-2" />}
                                 </div>
-                                <div className="text-gray-400">
-                                    <svg className={`w-6 h-6 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                                </div>
-                            </div>
+                                <span className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-bold ${pill[0]}`}>{pill[1]}</span>
+                                <ChevronDown size={18} className={`shrink-0 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                            </button>
 
                             {isExpanded && (
-                                <div className="p-4 border-t border-gray-100 bg-gray-50 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                                    <Button variant="primary" className="w-full flex justify-center items-center gap-2" onClick={() => onOpen(c.id)} disabled={isProcessing}>
+                                <div className="grid grid-cols-2 gap-2 border-t border-slate-100 bg-slate-50/60 p-3">
+                                    <Button variant="primary" className="w-full px-2" onClick={() => onOpen(c.id)} disabled={isProcessing}>
                                         <ExternalLink size={16} /> {t('course_page.buttons.open', 'Open')}
                                     </Button>
-                                    <Button variant="secondary" className="w-full flex justify-center items-center gap-2" onClick={() => onEdit(c)} disabled={!canEdit || isPendingDeletion || isProcessing}>
-                                        <Edit size={16} /> {t('course_page.buttons.edit', 'Edit')}
-                                    </Button>
-                                    <Button variant="secondary" className="w-full flex justify-center items-center gap-2" onClick={() => setReportModalCourse(c)} disabled={isProcessing}>
+                                    <Button variant="secondary" className="w-full px-2" onClick={() => setReportModalCourse(c)} disabled={isProcessing}>
                                         <FileText size={16} /> {t('course_page.buttons.reports', 'Reports')}
                                     </Button>
+                                    <Button variant="secondary" className="w-full px-2" onClick={() => setShareModalCourse(c)} disabled={isProcessing}>
+                                        <Share2 size={16} /> {t('course_page.buttons.share', 'Share')}
+                                    </Button>
+                                    <Button variant="secondary" className="w-full px-2" onClick={() => onEdit(c)} disabled={!canEdit || isPendingDeletion || isProcessing}>
+                                        <Edit size={16} /> {t('course_page.buttons.edit', 'Edit')}
+                                    </Button>
                                     {canManageFinalReportDocument && (
-                                        <Button variant="secondary" className="w-full flex justify-center items-center gap-2 text-purple-700" onClick={() => setFinalReportCourse(c)} disabled={isProcessing}>
+                                        <Button variant="secondary" className="w-full px-2 text-purple-700" onClick={() => setFinalReportCourse(c)} disabled={isProcessing}>
                                             <FileSignature size={16} /> {t('course_page.buttons.final_report', 'Final report')}
                                         </Button>
                                     )}
-                                    <Button variant="secondary" className="w-full flex justify-center items-center gap-2" onClick={() => setShareModalCourse(c)} disabled={isProcessing}>
-                                        <Share2 size={16} /> {t('course_page.buttons.share', 'Share')}
-                                    </Button>
-                                    <Button variant="danger" className="w-full flex justify-center items-center gap-2 sm:col-span-2 md:col-span-1" onClick={async () => { if(await confirmDialog(t('course_page.table.confirm_delete', 'Are you sure you want to delete {{type}} ({{state}})? It will be moved to Deleted Courses.', { type: c.course_type, state: c.state }))) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
+                                    <Button variant="danger" className="w-full px-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white" onClick={async () => { if(await confirmDialog(t('course_page.table.confirm_delete', 'Are you sure you want to delete {{type}} ({{state}})? It will be moved to Deleted Courses.', { type: c.course_type, state: c.state }))) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
                                         <Trash2 size={16} /> {t('course_page.buttons.delete', 'Delete')}
                                     </Button>
                                 </div>
@@ -1145,44 +1309,17 @@ export function CoursesTable({
                 })}
             </div>
 
-            {totalItems > 0 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between mt-4 p-4 bg-white border rounded-lg text-sm text-gray-700 shadow-sm">
-                    <div className="flex items-center gap-4 mb-4 sm:mb-0">
-                        <span>{t('course_page.pagination.page_of', 'Page {{page}} of {{total}}', { page: currentPage, total: totalPages || 1 })} <span className="text-gray-500">{t('course_page.pagination.total_courses', '(Total: {{count}} courses)', { count: totalItems })}</span></span>
-                        <div className="flex items-center gap-2">
-                            <span className="font-medium">{t('course_page.pagination.per_page', 'Per Page:')}</span>
-                            <Select 
-                                disabled={isProcessing}
-                                value={itemsPerPage} 
-                                onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                                className="py-1 px-2 text-sm w-20 border-gray-300 rounded"
-                            >
-                                <option value={5}>5</option>
-                                <option value={10}>10</option>
-                                <option value={25}>25</option>
-                                <option value={50}>50</option>
-                            </Select>
-                        </div>
-                    </div>
-                    <div className="flex gap-2">
-                        <Button 
-                            variant="secondary" 
-                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                            disabled={currentPage === 1 || isProcessing}
-                            className="px-3 py-1"
-                        >
-                            &larr; {t('course_page.pagination.previous', 'Previous')}
-                        </Button>
-                        <Button 
-                            variant="secondary" 
-                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                            disabled={currentPage >= totalPages || totalPages === 0 || isProcessing}
-                            className="px-3 py-1"
-                        >
-                            {t('course_page.pagination.next', 'Next')} &rarr;
-                        </Button>
-                    </div>
-                </div>
+            {totalItems > visibleCount && (
+                <button
+                    type="button"
+                    onClick={() => setVisibleCount(n => n + PAGE_SIZE)}
+                    className="mt-3 w-full rounded-xl border border-dashed border-slate-400 bg-white p-3 text-sm font-bold text-sky-700 hover:bg-sky-50"
+                >
+                    {t('course_page.table.show_more', 'Show {{count}} more ({{shown}} of {{total}})', { count: Math.min(PAGE_SIZE, totalItems - visibleCount), shown: visibleCount, total: totalItems })}
+                </button>
+            )}
+            {totalItems > 0 && totalItems <= visibleCount && totalItems > PAGE_SIZE && (
+                <p className="mt-3 text-center text-xs text-slate-500">{t('course_page.table.all_shown', 'All {{count}} courses shown', { count: totalItems })}</p>
             )}
 
             {shareModalCourse && (
@@ -1286,6 +1423,10 @@ export function CoursesTable({
                                     </div>
                                 )}
 
+                                {isOperationalGuideCourse(shareModalCourse) && (
+                                    <DailyEvaluationShare key={shareModalCourse.id} course={shareModalCourse} />
+                                )}
+
                                 <div className="bg-gray-50 p-3 rounded border">
                                     <span className="text-sm font-semibold block mb-2">{t('course_page.share.daily_attendance', 'Daily Attendance')}</span>
                                     <div className="flex gap-2">
@@ -1308,6 +1449,18 @@ export function CoursesTable({
                                         </Button>
                                     </div>
                                 </div>
+
+                                {/* Practice copy of the whole app for this course (src/training/).
+                                    Not offered from inside a training link itself. */}
+                                {!isTrainingMode() && (
+                                    <TrainingLinkShare
+                                        key={`training-${shareModalCourse.id}`}
+                                        course={shareModalCourse}
+                                        baseUrl={getBaseUrl()}
+                                        notify={notify}
+                                        onShare={(link) => setQrShareData({ url: link, title: t('course_page.share.qr_training', 'Training (practice): {{type}}', { type: shareModalCourse.course_type }) })}
+                                    />
+                                )}
                             </div>
                         </div>
                     </CardBody>
@@ -1610,14 +1763,23 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         fetchStateCoordinators();
         fetchLocalityCoordinators();
         fetchFunders();
-        fetchParticipants(true); 
-    }, [fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators, fetchFunders, fetchParticipants]); 
+    }, [fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators, fetchFunders]); 
 
+    // Courses first, participants after. Both used to start together, and the
+    // participant list (many times larger) took the connection the course list
+    // needed, so the page sat empty. Participants still start after 8 s if the
+    // courses are slow, so a slow course list never holds them back for long.
     useEffect(() => {
-        if (['courses', 'dashboard', 'participants'].includes(activeCoursesTab)) {
-            fetchCourses(true);
-            fetchParticipants(true);
-        }
+        let cancelled = false;
+        const coursesFirst = ['courses', 'dashboard', 'participants'].includes(activeCoursesTab)
+            ? Promise.resolve().then(() => fetchCourses()).catch(() => {})
+            : Promise.resolve();
+        // Cache-first: the saved lists show at once and are kept current by
+        // the live listeners. Asking the server on every tab change ('sync')
+        // cost reads each time even when nothing had changed.
+        Promise.race([coursesFirst, new Promise((resolve) => setTimeout(resolve, 8000))])
+            .then(() => { if (!cancelled) fetchParticipants(); });
+        return () => { cancelled = true; };
     }, [activeCoursesTab, fetchCourses, fetchParticipants]);
 
     useEffect(() => {
@@ -1641,6 +1803,20 @@ const [emoncModule, setEmoncModule] = useState('maternal');
     const [filterLocality, setFilterLocality] = useRememberedState('courses.locality', 'All');
     const [filterSubCourse, setFilterSubCourse] = useRememberedState('courses.subCourse', 'All');
     const [filterProject, setFilterProject] = useRememberedState('courses.project', 'All');
+
+    // Number of courses in each package, shown on the package tiles.
+    // Nothing is counted while the courses are still arriving after sign-in
+    // (a "0 courses" that turns into the real number a moment later misleads).
+    const coursesLoading = !!isLoading?.courses && (allCourses || []).length === 0;
+    const packageCounts = useMemo(() => {
+        if (coursesLoading) return null;
+        const counts = {};
+        (allCourses || []).forEach(c => {
+            if (c.inRecycleBin || c.isDeleted) return;
+            counts[c.course_type] = (counts[c.course_type] || 0) + 1;
+        });
+        return counts;
+    }, [allCourses, coursesLoading]);
 
     const filterStateOptions = useMemo(() => {
         const states = new Set();
@@ -2163,8 +2339,13 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         !isGlobalView && selectedCourse && { id: 'reports', label: t('course_page.tabs.individual_report', 'Individual Participant Report'), short: t('ui.short.report', 'Report'), go: () => setActiveCoursesTab('reports') },
         showTestScores && { id: 'enter-test-scores', label: t('course_page.tabs.test_scores', 'Test Scores'), short: t('ui.short.tests', 'Tests'), go: () => setActiveCoursesTab('enter-test-scores') },
         showExercises && { id: 'exercises', label: t('course_page.tabs.exercises', 'Exercises'), short: t('ui.short.exercises', 'Exercises'), go: () => setActiveCoursesTab('exercises') },
+        // Training link activity (src/training/): who practised and what they did.
+        !isGlobalView && selectedCourse?.training && canManageCourse && !isTrainingMode() && { id: 'training-activity', label: t('course_page.tabs.training', 'Training link'), short: t('ui.short.training', 'Training'), go: openTab('training-activity') },
         !isGlobalView && selectedCourse && canManageCourseCertificates && { id: 'course-certificates', label: <>{t('course_page.tabs.certificates', 'Certificates')}{selectedCourse.isCertificateApproved && <span className="ms-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">{t('course_page.status.approved', 'Approved')}</span>}</>, short: t('ui.short.certificates', 'Certificates'), go: openTab('course-certificates') },
     ];
+    // The app's round "Add" button (bottom corner) adds a course while the course list is open.
+    usePageAddButton(t('course_page.buttons.add_course', 'Add New Course'), handleOpenAddForm,
+        canAddCourse && activeCoursesTab === 'courses' && !!activeCourseType && !showTypeReport && !isProcessing);
     const activeCourseTabId =
         ['courses', 'add-course', 'edit-course'].includes(activeCoursesTab) ? 'courses'
         : ['participants', 'participant-form', 'participant-migration'].includes(activeCoursesTab) ? 'participants'
@@ -2190,7 +2371,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                 {activeCoursesTab === 'courses' && (
                     <>
                         {!activeCourseType ? (
-                            <Landing active={activeCourseType} onPick={(type) => setActiveCourseType(type)} />
+                            <Landing active={activeCourseType} onPick={(type) => setActiveCourseType(type)} counts={packageCounts} />
                         ) : showTypeReport ? (
                             <Suspense fallback={<PageSkeleton />}>
                                 <CourseTypeReportView
@@ -2206,22 +2387,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                         ) : (
                             <div>
                                 <PullToRefresh onRefresh={handleRefresh} disabled={isRefreshing || isProcessing} />
-                                <PageActions className="mb-4">
-                                        {canAddCourse && <Button disabled={isProcessing} onClick={handleOpenAddForm} className="bg-sky-600 text-white hover:bg-sky-700">{t('course_page.buttons.add_course', 'Add New Course')}</Button>}
-                                        <Button variant="secondary" onClick={handleRefresh} disabled={isRefreshing || isProcessing}>{isRefreshing ? <Spinner size="sm" /> : <><RefreshCw size={14} className="me-1"/> {t('course_page.buttons.refresh', 'Refresh Data')}</>}</Button>
-                                        
-                                        {/* TRIGGER BUTTON FOR MIGRATION MODAL */}
-                                        {canUseSuperUserAdvancedFeatures && (
-                                            <Button variant="danger" onClick={() => setShowMigrationModal(true)}>
-                                                {t('course_page.buttons.total_sync', 'Total Sync Tool')}
-                                            </Button>
-                                        )}
-                                        <Button disabled={isProcessing} onClick={() => setShowTypeReport(true)} className="md:ms-auto"><ClipboardList size={14} className="me-1"/> {t('course_page.buttons.comprehensive_report', 'Comprehensive {{type}} Report', { type: activeCourseType })}</Button>
-                                        <Button disabled={isProcessing} variant="secondary" onClick={() => setActiveCourseType(null)}>{t('course_page.buttons.change_package', 'Change Course Package')}</Button>
-                                </PageActions>
-                                
                                 <FilterPanel className="mb-4" activeCount={[filterState, filterLocality, filterSubCourse, filterProject].filter(v => v && v !== 'All').length}>
-                                    <h4 className="hidden md:block text-lg font-semibold mb-3">{t('course_page.filters.title', 'Filter Courses')}</h4>
                                     <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                                         <FormGroup label={t('course_page.filters.by_state', 'Filter by State')}><Select disabled={isProcessing} value={filterState} onChange={(e) => setFilterState(e.target.value)}>{filterStateOptions.map(s => <option key={s} value={s}>{s === 'All' ? t('course_page.filters.all', 'All') : s}</option>)}</Select></FormGroup>
                                         <FormGroup label={t('course_page.filters.by_locality', 'Filter by Locality')}><Select disabled={isProcessing || filterLocalityOptions.length <= 1} value={filterLocality} onChange={(e) => setFilterLocality(e.target.value)}>{filterLocalityOptions.map(l => <option key={l} value={l}>{l === 'All' ? t('course_page.filters.all', 'All') : l}</option>)}</Select></FormGroup>
@@ -2230,7 +2396,20 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                                     </div>
                                 </FilterPanel>
                                 
-                                <CoursesTable
+                                {coursesLoading ? <SkeletonTable /> : <CoursesTable
+                                    toolbarExtra={
+                                        <>
+                                            <CoursePageMoreMenu
+                                                disabled={isProcessing}
+                                                items={[
+                                                    { label: t('course_page.buttons.comprehensive_report', 'Comprehensive {{type}} Report', { type: activeCourseType }), icon: ClipboardList, onClick: () => setShowTypeReport(true) },
+                                                    { label: t('course_page.buttons.change_package', 'Change Course Package'), icon: Archive, onClick: () => setActiveCourseType(null) },
+                                                    { label: isRefreshing ? t('course_page.buttons.refreshing', 'Refreshing…') : t('course_page.buttons.refresh', 'Refresh Data'), icon: RefreshCw, onClick: handleRefresh, disabled: isRefreshing },
+                                                    canUseSuperUserAdvancedFeatures && { label: t('course_page.buttons.total_sync', 'Total Sync Tool'), icon: AlertTriangle, onClick: () => setShowMigrationModal(true), danger: true },
+                                                ].filter(Boolean)}
+                                            />
+                                        </>
+                                    }
                                     courses={courses} onOpen={handleOpenCourse} onEdit={handleOpenEditForm} onDelete={handleCourseDeleteAction} 
                                     onOpenReport={onOpenReport} onOpenTestForm={handleOpenTestForm} onOpenAttendanceManager={onOpenAttendanceManager} 
                                     canEditDeleteActiveCourse={canEditDeleteActiveCourse} canEditDeleteInactiveCourse={canEditDeleteInactiveCourse}
@@ -2238,7 +2417,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                                     canManageFinalReportDocument={canSeeFinalReports}
                                     finalReportsByCourse={finalReportsByCourse}
                                     isProcessing={isProcessing}
-                                />
+                                />}
                             </div>
                         )}
                     </>
@@ -2285,6 +2464,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                 {activeCoursesTab === 'certificate-approvals' && (
                     <CertificateApprovalsView 
                         allCourses={allCourses} 
+                        courseType={activeCourseType || null}
                         setToast={setToast} 
                         currentUserRole={currentUserRole}
                         canUseFederalManagerAdvancedFeatures={canUseFederalManagerAdvancedFeatures}
@@ -2296,6 +2476,12 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                     the course. Guarded twice: the tab is hidden without permission and
                     the panel itself refuses to render, so a stale activeCoursesTab
                     value can't expose it. */}
+                {activeCoursesTab === 'training-activity' && selectedCourse && canManageCourse && !isTrainingMode() && (
+                    <Suspense fallback={<Card className="p-6 text-center text-sm text-gray-500">…</Card>}>
+                        <TrainingActivityView course={selectedCourse} />
+                    </Suspense>
+                )}
+
                 {activeCoursesTab === 'course-certificates' && selectedCourse && (
                     canManageCourseCertificates ? (
                         <CertificateApprovalsView
@@ -2304,7 +2490,6 @@ const [emoncModule, setEmoncModule] = useState('maternal');
                             currentUserRole={currentUserRole}
                             canUseFederalManagerAdvancedFeatures={canUseFederalManagerAdvancedFeatures}
                             singleCourseMode
-                            title={t('course_page.certificates_title', 'Certificates — {{type}}', { type: selectedCourse.course_type })}
                         />
                     ) : (
                         <Card className="p-6 text-center text-sm text-gray-600">
@@ -2762,7 +2947,8 @@ export function CourseForm({
     const [error, setError] = useState('');
 
     const directorOptions = useMemo(() => {
-        if (canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
+        // Program Management: any existing facilitator can be the course director.
+        if (isProgramManagement || canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
             return [...facilitatorsList].sort((a, b) => a.name.localeCompare(b.name));
         }
         return facilitatorsList
@@ -2777,7 +2963,7 @@ export function CourseForm({
                 return f.directorCourse === 'Yes';
             })
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, isCpcm, isSmallAndSick, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures]);
+    }, [facilitatorsList, isCpcm, isSmallAndSick, isProgramManagement, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures]);
 
     const clinicalInstructorOptions = useMemo(() => {
         if (canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
@@ -2789,7 +2975,8 @@ export function CourseForm({
     }, [facilitatorsList, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures]);
 
     const facilitatorOptions = useMemo(() => {
-        if (canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
+        // Program Management: any existing facilitator can facilitate.
+        if (isProgramManagement || canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
             return [...facilitatorsList].sort((a, b) => a.name.localeCompare(b.name));
         }
         return facilitatorsList
@@ -2798,7 +2985,6 @@ export function CourseForm({
                 
                 if (isIccm || isCpcm) return fCourses.includes('ICCM') || fCourses.includes('IMNCI') || fCourses.includes('Comprehensive Package For Community Midwives');
                 if (isInfectionControl) return fCourses.includes('IPC');
-                if (isProgramManagement) return fCourses.includes('Program Management') || fCourses.includes('IMNCI');
                 if (isSmallAndSick) return fCourses.includes('SSNC') || fCourses.includes('Small & Sick Newborn');
                 if (isEmonc) return fCourses.includes('EmONC') || fCourses.includes('EENC');
                 
@@ -2894,7 +3080,107 @@ export function CourseForm({
         });
     };
 
-    const submit = async () => {
+    // ---- Language: the form follows the app language (it was Arabic only). ----
+    const { i18n: formI18n } = useTranslation();
+    const isAr = String(formI18n.language || 'ar').startsWith('ar');
+    const L = (ar, en) => (isAr ? ar : en);
+
+    // ---- Which required fields are still empty, per section. ----
+    const hasFacilitator = groups.some(g => (facilitatorGroups[g] || []).some(a => a.name));
+    const missing = {
+        states: states.length === 0,
+        localities: localities.length === 0,
+        hall: !hall || !hall.trim(),
+        startDate: !startDate,
+        courseDuration: !courseDuration || courseDuration <= 0,
+        participantsCount: !participantsCount || participantsCount <= 0,
+        coordinator: !coordinator,
+        supporter: !supporter,
+        implementedBy: !implementedBy,
+        director: !isInfectionControl && !director,
+        facilitators: !isInfectionControl && !isSmallAndSick && !hasFacilitator,
+    };
+    const SECTION_FIELDS = {
+        basics: ['states', 'localities', 'hall', 'startDate', 'courseDuration', 'participantsCount'],
+        coordination: ['coordinator', 'supporter', 'implementedBy'],
+        leadership: ['director'],
+        facilitators: ['facilitators'],
+    };
+    const missingIn = (sec) => SECTION_FIELDS[sec].filter(f => missing[f]).length;
+    const [showErrors, setShowErrors] = useState(false);
+    const err = (field) => showErrors && missing[field];
+    // Adding: the first section open. Editing: all closed, each with a summary.
+    // Steps: one part of the form at a time, with a step bar to jump around.
+    useFullPageForm(true);
+    const STEP_IDS = ['basics', 'coordination', ...(isInfectionControl ? [] : ['leadership']), 'facilitators', ...(initialData ? [] : ['review'])];
+    const [stepId, setStepId] = useState('basics');
+    const stepIndex = STEP_IDS.indexOf(stepId);
+    const goStep = (id) => { setStepId(id); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+    const goNext = () => goStep(STEP_IDS[Math.min(STEP_IDS.length - 1, stepIndex + 1)]);
+    const goPrev = () => goStep(STEP_IDS[Math.max(0, stepIndex - 1)]);
+
+    // Two people in the same course twice is almost always a slip.
+    const duplicateFacilitators = useMemo(() => {
+        const seen = {}; const dup = new Set();
+        groups.forEach(g => (facilitatorGroups[g] || []).forEach(a => {
+            if (!a.name) return;
+            if (seen[a.name]) dup.add(a.name);
+            seen[a.name] = true;
+        }));
+        return dup;
+    }, [groups, facilitatorGroups]);
+
+    // The last day, shown as soon as start date and duration are known.
+    const endDateText = useMemo(() => {
+        if (!startDate || !(courseDuration > 0)) return '';
+        const start = new Date(startDate);
+        if (Number.isNaN(start.getTime())) return '';
+        const end = new Date(start.getTime() + (courseDuration - 1) * 86400000);
+        return formatDateRange(start, end);
+    }, [startDate, courseDuration]);
+
+    // ---- Draft: a new course being typed survives the app closing. ----
+    const draftKey = `courseFormDraft:${courseType || 'none'}`;
+    const draftSnapshot = {
+        courseLevel, states, localities, hall, hallEnglish, startDate, courseDuration, coordinator, participantsCount,
+        courseBudget, supporter, stateCoordinator, localityCoordinator, courseProject, implementedBy, director, clinical,
+        directorImciSubType, clinicalImciSubType, groups, facilitatorGroups
+    };
+    const [savedDraft, setSavedDraft] = useState(() => {
+        if (initialData) return null;
+        try { const raw = localStorage.getItem(draftKey); return raw ? JSON.parse(raw) : null; } catch { return null; }
+    });
+    const draftJson = JSON.stringify(draftSnapshot);
+    useEffect(() => {
+        if (initialData || savedDraft) return undefined; // don't overwrite a draft not yet restored/discarded
+        const id = setTimeout(() => {
+            try {
+                const d = JSON.parse(draftJson);
+                const touched = d.hall || d.startDate || d.coordinator || d.director || d.supporter || d.localities.length;
+                if (touched) localStorage.setItem(draftKey, JSON.stringify({ ...d, savedAt: Date.now() }));
+            } catch { /* storage unavailable */ }
+        }, 800);
+        return () => clearTimeout(id);
+    }, [draftJson, draftKey, initialData, savedDraft]);
+    const clearDraft = () => { try { localStorage.removeItem(draftKey); } catch { /* ignore */ } };
+    const restoreDraft = () => {
+        const d = savedDraft || {};
+        setCourseLevel(d.courseLevel ?? courseLevel); setStates(d.states || []); setLocalities(d.localities || []);
+        setHall(d.hall || ''); setHallEnglish(d.hallEnglish || ''); setStartDate(d.startDate || '');
+        setCourseDuration(d.courseDuration || 7); setCoordinator(d.coordinator || ''); setParticipantsCount(d.participantsCount || 0);
+        setCourseBudget(d.courseBudget || ''); setSupporter(d.supporter || ''); setStateCoordinator(d.stateCoordinator || '');
+        setLocalityCoordinator(d.localityCoordinator || ''); setCourseProject(d.courseProject || ''); setImplementedBy(d.implementedBy || '');
+        setDirector(d.director || ''); setClinical(d.clinical || '');
+        if (d.directorImciSubType) setDirectorImciSubType(d.directorImciSubType);
+        if (d.clinicalImciSubType) setClinicalImciSubType(d.clinicalImciSubType);
+        if (Array.isArray(d.groups) && d.groups.length) setGroups(d.groups);
+        if (d.facilitatorGroups) setFacilitatorGroups(d.facilitatorGroups);
+        setSavedDraft(null);
+    };
+    const discardDraft = () => { clearDraft(); setSavedDraft(null); };
+
+
+    const submit = async (confirmed = false) => {
         const allFacilitatorAssignments = groups.reduce((acc, group) => {
             const groupAssignments = facilitatorGroups[group].map(assignment => ({
                 ...assignment,
@@ -2910,39 +3196,36 @@ export function CourseForm({
             return [...acc, ...groupAssignments];
         }, []);
 
-        // --- ENHANCED VALIDATION CHECK ---
-        const missingFields = [];
-        if (states.length === 0) missingFields.push('الولايات');
-        if (localities.length === 0) missingFields.push('المحليات');
-        if (!hall || hall.trim() === '') missingFields.push('قاعة الدورة');
-        if (!startDate) missingFields.push('تاريخ بداية الدورة');
-        if (!courseDuration || courseDuration <= 0) missingFields.push('مدة الدورة بالأيام');
-        if (!participantsCount || participantsCount <= 0) missingFields.push('عدد المشاركين');
-        if (!coordinator) missingFields.push('المنسق الاتحادي للدورة');
-        if (!supporter) missingFields.push('بتمويل من');
-        if (!implementedBy) missingFields.push('تنفيذ');
-
-        if (!isInfectionControl && !director) {
-            missingFields.push('مدير الدورة');
-        }
-
-        if (!isInfectionControl && !isSmallAndSick && allFacilitatorAssignments.length === 0) {
-            missingFields.push('تعيين ميسر واحد على الأقل');
-        }
-
+        // --- VALIDATION: mark the fields, open their sections, jump to the first. ---
+        const labels = {
+            states: L('الولايات', 'States'), localities: L('المحليات', 'Localities'), hall: L('قاعة الدورة', 'Course hall'),
+            startDate: L('تاريخ بداية الدورة', 'Start date'), courseDuration: L('مدة الدورة بالأيام', 'Duration (days)'),
+            participantsCount: L('عدد المشاركين', 'Number of participants'), coordinator: L('المنسق الاتحادي للدورة', 'Federal coordinator'),
+            supporter: L('بتمويل من', 'Funded by'), implementedBy: L('تنفيذ', 'Implemented by'), director: L('مدير الدورة', 'Course director'),
+            facilitators: L('تعيين ميسر واحد على الأقل', 'At least one facilitator'),
+        };
+        const missingFields = Object.keys(missing).filter(k => missing[k]);
         if (missingFields.length > 0) {
-            const errorMsg = 'الرجاء إكمال الحقول الإلزامية التالية:\n- ' + missingFields.join('\n- ');
-            alertDialog(errorMsg, { title: 'تعذر حفظ الدورة (Course not saved)' });
-            setError('الرجاء إكمال الحقول الإلزامية التالية: ' + missingFields.join('، '));
+            setShowErrors(true);
+            const firstMissing = Object.keys(SECTION_FIELDS).find(sec => STEP_IDS.includes(sec) && missingIn(sec) > 0);
+            if (firstMissing) setStepId(firstMissing);
+            setError(L('الرجاء إكمال الحقول الإلزامية التالية: ', 'Please complete: ') + missingFields.map(k => labels[k]).join(isAr ? '، ' : ', '));
+            setTimeout(() => {
+                const el = document.querySelector('[data-missing="true"]');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 80);
             return;
         }
 
         if (!courseType) {
-            const typeError = 'تعذر تحديد نوع الدورة. الرجاء العودة لصفحة الدورات واختيار حزمة قبل إضافة دورة جديدة.';
-            alertDialog(typeError, { title: 'تعذر حفظ الدورة (Course not saved)' });
+            const typeError = L('تعذر تحديد نوع الدورة. الرجاء العودة لصفحة الدورات واختيار حزمة قبل إضافة دورة جديدة.', 'The course package is not known. Go back to Courses and choose a package first.');
+            alertDialog(typeError, { title: L('تعذر حفظ الدورة', 'Course not saved') });
             setError(typeError);
             return;
         }
+
+        // A new course gets one look at the summary before it is created.
+        if (!initialData && !confirmed) { setError(''); goStep('review'); return; }
 
         const selectedDirectorObj = directorOptions.find(d => d.name === director);
         const directorId = selectedDirectorObj ? selectedDirectorObj.id : null;
@@ -3009,149 +3292,207 @@ export function CourseForm({
         setIsSaving(true);
         try {
             await onSave(payload);
+            clearDraft();
         } catch(e) {
-            const message = e.message || "حدث خطأ أثناء حفظ الدورة.";
+            const message = e.message || L("حدث خطأ أثناء حفظ الدورة.", "The course could not be saved.");
             setError(message);
-            alertDialog(message, { title: 'تعذر حفظ الدورة (Course not saved)' });
+            alertDialog(message, { title: L('تعذر حفظ الدورة', 'Course not saved') });
             setIsSaving(false);
         }
     };
 
+    const stateNames = states.map(st => (isAr ? STATE_LOCALITIES[st]?.ar : st) || st).join(isAr ? '، ' : ', ');
+    const facilitatorCount = groups.reduce((n, g) => n + (facilitatorGroups[g] || []).filter(a => a.name).length, 0);
+    const summaries = {
+        basics: [stateNames, endDateText, participantsCount > 0 ? L(`${participantsCount} مشارك`, `${participantsCount} participants`) : ''].filter(Boolean).join(' · '),
+        coordination: [coordinator, supporter].filter(Boolean).join(' · '),
+        leadership: director || '',
+        facilitators: L(`${groups.length} مجموعات · ${facilitatorCount} ميسرين`, `${groups.length} groups · ${facilitatorCount} facilitators`),
+    };
+    const sectionProps = (sec) => {
+        const n = missingIn(sec);
+        return {
+            hidden: stepId !== sec,
+            bare: true,
+            missing: showErrors ? n : 0,
+            missingLabel: L(`${n} ناقص`, `${n} missing`),
+            complete: n === 0,
+            summary: summaries[sec],
+        };
+    };
+    const req = L('هذا الحقل مطلوب', 'This field is required');
+    const searchPh = L('اكتب للبحث...', 'Type to search…');
+    // A plain function, not a component, so typing never remounts the inputs.
+    const fieldWrap = (name) => ({ 'data-missing': err(name) ? 'true' : undefined, className: err(name) ? 'rounded-lg ring-2 ring-red-300 ring-offset-2' : '' });
+
     return (
         <Card>
-            <div className="p-6" dir="rtl" style={{ textAlign: 'right' }}>
-                <PageHeader title={initialData ? 'تعديل دورة' : 'إضافة دورة'} subtitle={`الحزمة: ${courseType || 'غير محدد'}`} className="mb-6" />
-                {error && <div className="p-3 mb-6 rounded-md bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
-                
-                <div className="mb-8">
-                    <h3 className="text-lg font-bold bg-sky-100 text-sky-800 p-3 rounded-md mb-4 border-r-4 border-sky-500">معلومات الدورة الأساسية</h3>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <FormGroup label={<ReqLabel text="مستوى الدورة" />}>
+            <div className="p-3 md:p-6" dir={isAr ? 'rtl' : 'ltr'} style={{ textAlign: isAr ? 'right' : 'left' }}>
+                <StepForm
+                    title={initialData ? L('تعديل دورة', 'Edit course') : L('إضافة دورة', 'Add course')}
+                    subtitle={`${L('الحزمة', 'Package')}: ${courseType || L('غير محدد', 'not set')}`}
+                    backLabel={L('رجوع', 'Back')}
+                    onBack={() => onCancel()}
+                    current={stepId}
+                    onStepChange={goStep}
+                    steps={STEP_IDS.map(id => ({
+                        id,
+                        label: {
+                            basics: L('الأساسيات', 'Basics'), coordination: L('التنسيق', 'Coordination'), leadership: L('القيادة', 'Leadership'),
+                            facilitators: L('الميسرون', 'Facilitators'), review: L('مراجعة', 'Review'),
+                        }[id],
+                        missing: id === 'review' ? 0 : (showErrors ? missingIn(id) : 0),
+                        complete: id === 'review' ? false : missingIn(id) === 0,
+                    }))}
+                    footer={
+                        <FormActions edge>
+                            {stepIndex === 0
+                                ? <Button variant="secondary" onClick={() => { clearDraft(); onCancel(); }} disabled={isSaving}>{L('إلغاء', 'Cancel')}</Button>
+                                : <Button variant="secondary" onClick={goPrev} disabled={isSaving}>{isAr ? '→' : '←'} {L('السابق', 'Back')}</Button>}
+                            {initialData && (
+                                <Button variant={stepIndex === STEP_IDS.length - 1 ? 'primary' : 'secondary'} onClick={() => submit(true)} disabled={isSaving}>
+                                    {isSaving ? <Spinner size="sm" /> : L('حفظ الدورة', 'Save course')}
+                                </Button>
+                            )}
+                            {stepId === 'review' ? (
+                                <Button variant="success" onClick={() => submit(true)} disabled={isSaving}>
+                                    {isSaving ? <Spinner size="sm" /> : `✓ ${L('حفظ الدورة', 'Save course')}`}
+                                </Button>
+                            ) : stepIndex < STEP_IDS.length - 1 && (
+                                <Button onClick={goNext} disabled={isSaving}>{L('التالي', 'Next')} {isAr ? '←' : '→'}</Button>
+                            )}
+                        </FormActions>
+                    }
+                >
+
+                {savedDraft && (
+                    <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                        <span className="flex-1 min-w-[12rem]">💾 {L('توجد مسودة غير مكتملة لدورة جديدة', 'There is an unfinished new-course draft')}{savedDraft.savedAt ? ` (${new Date(savedDraft.savedAt).toLocaleString()})` : ''}</span>
+                        <Button size="sm" onClick={restoreDraft}>{L('استعادة', 'Restore')}</Button>
+                        <Button size="sm" variant="secondary" onClick={discardDraft}>{L('تجاهل', 'Discard')}</Button>
+                    </div>
+                )}
+
+                {error && <div className="p-3 mb-3 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm">{error}</div>}
+
+                <FormSection tone="sky" title={L('معلومات الدورة الأساسية', 'Course basics')} {...sectionProps('basics')}>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <FormGroup label={<ReqLabel text={L('مستوى الدورة', 'Course level')} />}>
                             <Select disabled={isSaving} value={courseLevel} onChange={(e) => setCourseLevel(e.target.value)}>
-                                <option value={COURSE_LEVELS.FEDERAL}>اتحادية (مشاركون من كل الولايات)</option>
-                                <option value={COURSE_LEVELS.STATE}>ولائية</option>
-                                <option value={COURSE_LEVELS.LOCALITY}>محلية</option>
+                                <option value={COURSE_LEVELS.FEDERAL}>{L('اتحادية (مشاركون من كل الولايات)', 'Federal (participants from all states)')}</option>
+                                <option value={COURSE_LEVELS.STATE}>{L('ولائية', 'State')}</option>
+                                <option value={COURSE_LEVELS.LOCALITY}>{L('محلية', 'Locality')}</option>
                             </Select>
                             {courseLevel === COURSE_LEVELS.FEDERAL && (
                                 <p className="mt-1 text-xs text-sky-700">
-                                    عند التسجيل، يمكن اختيار المشاركين من جميع الولايات. الولاية/المحلية أدناه هي مكان انعقاد الدورة فقط.
+                                    {L('عند التسجيل، يمكن اختيار المشاركين من جميع الولايات. الولاية/المحلية أدناه هي مكان انعقاد الدورة فقط.', 'Participants can come from every state. The state and locality below are only where the course is held.')}
                                 </p>
                             )}
                         </FormGroup>
-                        <FormGroup label={<ReqLabel text="الولايات (يمكن اختيار أكثر من ولاية)" />}>
-                            <MultiSelectDropdown 
-                                disabled={isSaving} 
-                                selectedValues={states} 
-                                onChange={setStates} 
-                                placeholder="— اختر الولايات —"
-                                options={availableStates.map(s => ({ value: s, label: STATE_LOCALITIES[s].ar }))} 
-                            />
-                        </FormGroup>
-                        <FormGroup label={<ReqLabel text="المحليات (يمكن اختيار أكثر من محلية)" />}>
-                            <MultiSelectDropdown 
-                                disabled={isSaving || states.length === 0} 
-                                selectedValues={localities} 
-                                onChange={setLocalities} 
-                                placeholder="— اختر المحليات —"
-                                options={availableLocalities.map(l => ({ value: l.en, label: l.ar }))} 
-                            />
-                        </FormGroup>
-                        <FormGroup label={<ReqLabel text="قاعة الدورة" />}>
-                            <Input disabled={isSaving} value={hall} onChange={(e) => setHall(e.target.value)} />
-                        </FormGroup>
-                        <FormGroup label="قاعة الدورة (باللغة الإنجليزية - للشهادات)">
+                        <div {...fieldWrap('states')}>
+                            <FormGroup label={<ReqLabel text={L('الولايات (يمكن اختيار أكثر من ولاية)', 'States (you can pick more than one)')} />}>
+                                <MultiSelectDropdown
+                                    disabled={isSaving}
+                                    selectedValues={states}
+                                    onChange={setStates}
+                                    placeholder={L('— اختر الولايات —', '— Choose states —')}
+                                    options={availableStates.map(st => ({ value: st, label: isAr ? STATE_LOCALITIES[st].ar : st }))}
+                                />
+                                <FieldError show={err('states')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        <div {...fieldWrap('localities')}>
+                            <FormGroup label={<ReqLabel text={L('المحليات (يمكن اختيار أكثر من محلية)', 'Localities (you can pick more than one)')} />}>
+                                <MultiSelectDropdown
+                                    disabled={isSaving || states.length === 0}
+                                    selectedValues={localities}
+                                    onChange={setLocalities}
+                                    placeholder={L('— اختر المحليات —', '— Choose localities —')}
+                                    options={availableLocalities.map(l => ({ value: l.en, label: isAr ? l.ar : l.en }))}
+                                />
+                                <FieldError show={err('localities')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        <div {...fieldWrap('hall')}>
+                            <FormGroup label={<ReqLabel text={L('قاعة الدورة', 'Course hall')} />}>
+                                <Input disabled={isSaving} value={hall} onChange={(e) => setHall(e.target.value)} />
+                                <FieldError show={err('hall')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        <FormGroup label={L('قاعة الدورة (باللغة الإنجليزية - للشهادات)', 'Course hall in English (for certificates)')}>
                             <Input disabled={isSaving} value={hallEnglish} onChange={(e) => setHallEnglish(e.target.value)} dir="ltr" placeholder="Course Hall Name in English" />
                         </FormGroup>
-                        <FormGroup label={<ReqLabel text="تاريخ بداية الدورة" />}><Input disabled={isSaving} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FormGroup>
-                        <FormGroup label={<ReqLabel text="مدة الدورة بالأيام" />}><Input disabled={isSaving} type="number" inputMode="decimal" value={courseDuration} onChange={(e) => setCourseDuration(Number(e.target.value))} /></FormGroup>
-                        <FormGroup label={<ReqLabel text="عدد المشاركين" />}><Input disabled={isSaving} type="number" inputMode="decimal" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} /></FormGroup>
-                        <FormGroup label="ميزانية الدورة بالدولار الأمريكي"><Input disabled={isSaving} type="number" inputMode="decimal" value={courseBudget} onChange={(e) => setCourseBudget(Number(e.target.value))} /></FormGroup>
+                        <div {...fieldWrap('startDate')}>
+                            <FormGroup label={<ReqLabel text={L('تاريخ بداية الدورة', 'Start date')} />}>
+                                <Input disabled={isSaving} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                                <FieldError show={err('startDate')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        <div {...fieldWrap('courseDuration')}>
+                            <FormGroup label={<ReqLabel text={L('مدة الدورة بالأيام', 'Duration in days')} />}>
+                                <Input disabled={isSaving} type="number" inputMode="decimal" value={courseDuration} onChange={(e) => setCourseDuration(Number(e.target.value))} />
+                                <FieldError show={err('courseDuration')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        {endDateText && (
+                            <div className="md:col-span-2 lg:col-span-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">
+                                📅 {L('الدورة تنعقد', 'Course runs')} {endDateText}
+                            </div>
+                        )}
+                        <div {...fieldWrap('participantsCount')}>
+                            <FormGroup label={<ReqLabel text={L('عدد المشاركين', 'Number of participants')} />}>
+                                <Input disabled={isSaving} type="number" inputMode="decimal" value={participantsCount} onChange={(e) => setParticipantsCount(Number(e.target.value))} />
+                                <FieldError show={err('participantsCount')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        <FormGroup label={L('ميزانية الدورة بالدولار الأمريكي', 'Course budget (USD)')}><Input disabled={isSaving} type="number" inputMode="decimal" value={courseBudget} onChange={(e) => setCourseBudget(Number(e.target.value))} /></FormGroup>
                     </div>
-                </div>
+                </FormSection>
 
-                <div className="mb-8">
-                    <h3 className="text-lg font-bold bg-green-100 text-green-800 p-3 rounded-md mb-4 border-r-4 border-green-500">التنسيق والتمويل</h3>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <FormGroup label={<ReqLabel text="المنسق الاتحادي للدورة" />}>
-                            <SearchableSelect
-                                disabled={isSaving}
-                                value={coordinator}
-                                onChange={setCoordinator}
-                                options={federalCoordinatorOptions}
-                                placeholder="اكتب للبحث..."
-                                label="المنسق الاتحادي للدورة"
-                            />
+                <FormSection tone="green" title={L('التنسيق والتمويل', 'Coordination and funding')} {...sectionProps('coordination')}>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div {...fieldWrap('coordinator')}>
+                            <FormGroup label={<ReqLabel text={L('المنسق الاتحادي للدورة', 'Federal coordinator')} />}>
+                                <SearchableSelect disabled={isSaving} value={coordinator} onChange={setCoordinator} options={federalCoordinatorOptions} placeholder={searchPh} label={L('المنسق الاتحادي للدورة', 'Federal coordinator')} />
+                                <FieldError show={err('coordinator')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        <FormGroup label={L('المنسق الولائي للدورة', 'State coordinator')}>
+                            <SearchableSelect disabled={isSaving} value={stateCoordinator} onChange={setStateCoordinator} options={stateCoordinatorOptions} placeholder={searchPh} label={L('المنسق الولائي للدورة', 'State coordinator')} />
                         </FormGroup>
-                        <FormGroup label="المنسق الولائي للدورة">
-                            <SearchableSelect
-                                disabled={isSaving}
-                                value={stateCoordinator}
-                                onChange={setStateCoordinator}
-                                options={stateCoordinatorOptions}
-                                placeholder="اكتب للبحث..."
-                                label="المنسق الولائي للدورة"
-                            />
+                        <FormGroup label={L('منسق الدورة بالمحلية', 'Locality coordinator')}>
+                            <SearchableSelect disabled={isSaving} value={localityCoordinator} onChange={setLocalityCoordinator} options={localityCoordinatorOptions} placeholder={searchPh} label={L('منسق الدورة بالمحلية', 'Locality coordinator')} />
                         </FormGroup>
-                        <FormGroup label="منسق الدورة بالمحلية">
-                            <SearchableSelect
-                                disabled={isSaving}
-                                value={localityCoordinator}
-                                onChange={setLocalityCoordinator}
-                                options={localityCoordinatorOptions}
-                                placeholder="اكتب للبحث..."
-                                label="منسق الدورة بالمحلية"
-                            />
-                        </FormGroup>
-                        <FormGroup label={<ReqLabel text="بتمويل من" />}>
-                            <SearchableSelect
-                                disabled={isSaving}
-                                value={supporter}
-                                onChange={setSupporter}
-                                options={funderOptions}
-                                placeholder="اكتب للبحث..."
-                                label="بتمويل من"
-                            />
-                        </FormGroup>
-                        <FormGroup label={<ReqLabel text="تنفيذ" />}>
-                            <SearchableSelect
-                                disabled={isSaving}
-                                value={implementedBy}
-                                onChange={setImplementedBy}
-                                options={funderOptions}
-                                placeholder="اكتب للبحث..."
-                                label="تنفيذ"
-                            />
-                        </FormGroup>
-                        <FormGroup label="مشروع الدورة">
-                             <SearchableSelect
-                                disabled={isSaving}
-                                value={courseProject}
-                                onChange={setCourseProject}
-                                options={projectOptions}
-                                placeholder="اكتب للبحث..."
-                                label="مشروع الدورة"
-                            />
+                        <div {...fieldWrap('supporter')}>
+                            <FormGroup label={<ReqLabel text={L('بتمويل من', 'Funded by')} />}>
+                                <SearchableSelect disabled={isSaving} value={supporter} onChange={setSupporter} options={funderOptions} placeholder={searchPh} label={L('بتمويل من', 'Funded by')} />
+                                <FieldError show={err('supporter')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        <div {...fieldWrap('implementedBy')}>
+                            <FormGroup label={<ReqLabel text={L('تنفيذ', 'Implemented by')} />}>
+                                <SearchableSelect disabled={isSaving} value={implementedBy} onChange={setImplementedBy} options={funderOptions} placeholder={searchPh} label={L('تنفيذ', 'Implemented by')} />
+                                <FieldError show={err('implementedBy')}>{req}</FieldError>
+                            </FormGroup>
+                        </div>
+                        <FormGroup label={L('مشروع الدورة', 'Project')}>
+                            <SearchableSelect disabled={isSaving} value={courseProject} onChange={setCourseProject} options={projectOptions} placeholder={searchPh} label={L('مشروع الدورة', 'Project')} />
                         </FormGroup>
                     </div>
-                </div>
+                </FormSection>
 
                 {!isInfectionControl && (
-                    <div className="mb-8">
-                        <h3 className="text-lg font-bold bg-amber-100 text-amber-800 p-3 rounded-md mb-4 border-r-4 border-amber-500">مهام القيادة</h3>
-                        <div className="flex flex-col space-y-4 p-5 border border-gray-200 shadow-sm rounded-lg bg-white">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end">
-                                <FormGroup label={<ReqLabel text="مدير الدورة" required={!isInfectionControl} />}>
-                                    <SearchableSelect
-                                        disabled={isSaving}
-                                        value={director}
-                                        onChange={setDirector}
-                                        options={directorOptions}
-                                        placeholder="اكتب للبحث..."
-                                        label="مدير الدورة"
-                                    />
-                                </FormGroup>
+                    <FormSection tone="amber" title={L('مهام القيادة', 'Course leadership')} {...sectionProps('leadership')}>
+                        <div className="flex flex-col space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                                <div {...fieldWrap('director')}>
+                                    <FormGroup label={<ReqLabel text={L('مدير الدورة', 'Course director')} required={!isInfectionControl} />}>
+                                        <SearchableSelect disabled={isSaving} value={director} onChange={setDirector} options={directorOptions} placeholder={searchPh} label={L('مدير الدورة', 'Course director')} />
+                                        <FieldError show={err('director')}>{req}</FieldError>
+                                    </FormGroup>
+                                </div>
                                 {isImnci && (
-                                    <FormGroup label="اسم الورشة الفرعية">
+                                    <FormGroup label={L('اسم الورشة الفرعية', 'Sub-course')}>
                                         <Select disabled={isSaving} value={directorImciSubType} onChange={(e) => setDirectorImciSubType(e.target.value)} className="w-full">
                                             {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
                                         </Select>
@@ -3160,19 +3501,12 @@ export function CourseForm({
                             </div>
 
                             {(isImnci || isIccm || isCpcm) && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end pt-5 border-t border-gray-100">
-                                    <FormGroup label="المدرب السريري - اختياري">
-                                        <SearchableSelect
-                                            disabled={isSaving}
-                                            value={clinical}
-                                            onChange={setClinical}
-                                            options={clinicalInstructorOptions}
-                                            placeholder="اكتب للبحث..."
-                                            label="المدرب السريري - اختياري"
-                                        />
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end pt-4 border-t border-gray-100">
+                                    <FormGroup label={L('المدرب السريري - اختياري', 'Clinical instructor (optional)')}>
+                                        <SearchableSelect disabled={isSaving} value={clinical} onChange={setClinical} options={clinicalInstructorOptions} placeholder={searchPh} label={L('المدرب السريري - اختياري', 'Clinical instructor (optional)')} />
                                     </FormGroup>
                                     {isImnci && (
-                                        <FormGroup label="اسم الورشة الفرعية">
+                                        <FormGroup label={L('اسم الورشة الفرعية', 'Sub-course')}>
                                             <Select disabled={isSaving} value={clinicalImciSubType} onChange={(e) => setClinicalImciSubType(e.target.value)} className="w-full">
                                                 {IMNCI_SUBCOURSE_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
                                             </Select>
@@ -3181,38 +3515,43 @@ export function CourseForm({
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </FormSection>
                 )}
 
-                <div className="mb-8">
-                    <h3 className="text-lg font-bold bg-purple-100 text-purple-800 p-3 rounded-md mb-4 border-r-4 border-purple-500">مهام الميسرين / المدربين</h3>
-                    <div className="space-y-6">
+                <FormSection tone="purple" title={L('مهام الميسرين / المدربين', 'Facilitators')} {...sectionProps('facilitators')}>
+                    <div data-missing={err('facilitators') ? 'true' : undefined}>
+                        <FieldError show={err('facilitators')}>{L('عيّن ميسراً واحداً على الأقل', 'Assign at least one facilitator')}</FieldError>
+                    </div>
+                    <div className="space-y-4">
                         {groups.map(groupName => (
-                            <div key={groupName} className="p-6 border-2 border-indigo-50 shadow-md rounded-xl bg-white relative">
-                                <h4 className="text-md font-bold mb-5 text-indigo-700 bg-indigo-50 inline-block px-4 py-1.5 rounded-lg border border-indigo-200">{groupName}</h4>
+                            <div key={groupName} className="p-4 border border-indigo-100 rounded-xl bg-white">
+                                <h4 className="text-sm font-bold mb-3 text-indigo-700 bg-indigo-50 inline-block px-3 py-1 rounded-lg border border-indigo-200">{groupName}</h4>
                                 {facilitatorGroups[groupName]?.map((assignment, index) => (
-                                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-4 items-end pb-4 border-b border-gray-50 last:border-0">
-                                        <FormGroup label={<ReqLabel text="اسم الميسر" required={!isInfectionControl && !isSmallAndSick} />} className={(isIccm || isCpcm) ? "lg:col-span-2" : ""}>
+                                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-3 items-end pb-3 border-b border-gray-50 last:border-0">
+                                        <FormGroup label={<ReqLabel text={L('اسم الميسر', 'Facilitator')} required={!isInfectionControl && !isSmallAndSick} />} className={(isIccm || isCpcm) ? "lg:col-span-2" : ""}>
                                             <SearchableSelect
                                                 disabled={isSaving}
                                                 value={assignment.name}
                                                 onChange={(value) => updateFacilitatorAssignment(groupName, index, 'name', value)}
                                                 options={facilitatorOptions}
-                                                placeholder="اكتب للبحث..."
-                                                label="اسم الميسر"
+                                                placeholder={searchPh}
+                                                label={L('اسم الميسر', 'Facilitator')}
                                             />
+                                            {assignment.name && duplicateFacilitators.has(assignment.name) && (
+                                                <p className="text-xs font-semibold text-amber-700">⚠ {L('هذا الميسر مضاف أكثر من مرة في هذه الدورة', 'This facilitator is listed more than once in this course')}</p>
+                                            )}
                                         </FormGroup>
-                                      {!(isIccm || isCpcm) && (
-                                            <FormGroup label="اسم الورشة الفرعية">
+                                        {!(isIccm || isCpcm) && (
+                                            <FormGroup label={L('اسم الورشة الفرعية', 'Sub-course')}>
                                                 <Select
                                                     disabled={isSaving}
                                                     value={assignment.imci_sub_type || ''}
                                                     onChange={(e) => updateFacilitatorAssignment(groupName, index, 'imci_sub_type', e.target.value)}
                                                     className="w-full"
                                                 >
-                                                    <option value="">— اختر الورشة الفرعية —</option>
-                                                    {(isImnci ? IMNCI_SUBCOURSE_TYPES : 
-                                                      isInfectionControl ? INFECTION_CONTROL_SUBCOURSE_TYPES : 
+                                                    <option value="">{L('— اختر الورشة الفرعية —', '— Choose sub-course —')}</option>
+                                                    {(isImnci ? IMNCI_SUBCOURSE_TYPES :
+                                                      isInfectionControl ? INFECTION_CONTROL_SUBCOURSE_TYPES :
                                                       isSmallAndSick ? SMALL_AND_SICK_SUBCOURSE_TYPES :
                                                       isEmonc ? EMONC_SUBCOURSE_TYPES :
                                                       isEtat ? ETAT_SUBCOURSE_TYPES :
@@ -3224,33 +3563,62 @@ export function CourseForm({
                                                 </Select>
                                             </FormGroup>
                                         )}
-
-
-
                                         <div className="flex items-end pb-1">
-                                            <Button type="button" variant="danger" disabled={isSaving || facilitatorGroups[groupName]?.length <= 1} onClick={() => removeFacilitatorFromGroup(groupName, index)}>إزالة</Button>
+                                            <Button type="button" variant="danger" disabled={isSaving || facilitatorGroups[groupName]?.length <= 1} onClick={() => removeFacilitatorFromGroup(groupName, index)}>{L('إزالة', 'Remove')}</Button>
                                         </div>
                                     </div>
                                 ))}
-                                <div className="flex justify-end mt-2 pt-4">
-                                    <Button type="button" variant="secondary" disabled={isSaving} onClick={() => addFacilitatorToGroup(groupName)} className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200">إضافة ميسر آخر لهذه المجموعة</Button>
+                                <div className="flex justify-end mt-2">
+                                    <Button type="button" variant="secondary" disabled={isSaving} onClick={() => addFacilitatorToGroup(groupName)} className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200">{L('إضافة ميسر آخر لهذه المجموعة', 'Add another facilitator to this group')}</Button>
                                 </div>
                             </div>
                         ))}
                     </div>
                     {groups.length < COURSE_GROUPS.length && (
-                        <div className="flex justify-start mt-4">
-                            <Button type="button" variant="secondary" disabled={isSaving} onClick={addGroup} className="font-bold border-dashed border-2">إضافة مجموعة أخرى</Button>
+                        <div className="flex justify-start mt-3">
+                            <Button type="button" variant="secondary" disabled={isSaving} onClick={addGroup} className="font-bold border-dashed border-2">{L('إضافة مجموعة أخرى', 'Add another group')}</Button>
                         </div>
                     )}
-                </div>
+                </FormSection>
 
-                <FormActions className="mt-8 md:border-t md:pt-6">
-                    <Button variant="secondary" onClick={onCancel} disabled={isSaving}>إلغاء</Button>
-                    <Button onClick={submit} disabled={isSaving}>
-                        {isSaving ? <Spinner size="sm" /> : 'حفظ الدورة'}
-                    </Button>
-                </FormActions>
+                {stepId === 'review' && (
+                    <section className="mb-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <h3 className="mb-3 text-base font-bold text-slate-900">{L('راجع الدورة قبل الحفظ', 'Check the course before saving')}</h3>
+                    <div dir={isAr ? 'rtl' : 'ltr'} className="space-y-2">
+                        {[
+                            ['basics', L('الأساسيات', 'Basics'), [
+                                [L('المكان', 'Place'), stateNames],
+                                [L('القاعة', 'Hall'), hall],
+                                [L('التاريخ', 'Dates'), endDateText],
+                                [L('المشاركون', 'Participants'), participantsCount],
+                            ]],
+                            ['coordination', L('التنسيق والتمويل', 'Coordination and funding'), [
+                                [L('المنسق الاتحادي', 'Federal coordinator'), coordinator],
+                                [L('التمويل', 'Funded by'), supporter],
+                                [L('التنفيذ', 'Implemented by'), implementedBy],
+                            ]],
+                            !isInfectionControl && ['leadership', L('القيادة', 'Leadership'), [
+                                [L('مدير الدورة', 'Director'), director],
+                                [L('المدرب السريري', 'Clinical instructor'), clinical],
+                            ]],
+                            ['facilitators', L('الميسرون', 'Facilitators'), [
+                                [L('المجموعات', 'Groups'), summaries.facilitators],
+                            ]],
+                        ].filter(Boolean).map(([sec, title, rows]) => (
+                            <div key={sec} className="rounded-xl border border-slate-200 p-3 text-sm">
+                                <div className="mb-1 flex items-center justify-between font-bold text-slate-900">
+                                    <span>{title}</span>
+                                    <button type="button" className="text-xs font-bold text-sky-700 hover:underline" onClick={() => goStep(sec)}>{L('تعديل', 'Edit')}</button>
+                                </div>
+                                {rows.filter(([, v]) => v !== '' && v != null).map(([k, v]) => (
+                                    <div key={k} className="flex justify-between gap-3 py-0.5 text-slate-600"><span>{k}</span><b className="text-slate-900 text-end">{v}</b></div>
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+                    </section>
+                )}
+                </StepForm>
             </div>
         </Card>
     );
@@ -3315,7 +3683,8 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
                              <div className="text-gray-600">
                                 <span className="font-semibold text-gray-900">{course.course_type}</span>
                                 <span className="mx-2">•</span>
-                                <span>{course.state} - {course.locality}</span>
+                                {/* The operational guide course gathers several localities; its link shows the state only. */}
+                                <span>{isOperationalGuideCourse(course) ? course.state : `${course.state} - ${course.locality}`}</span>
                              </div>
                         </div>
                     

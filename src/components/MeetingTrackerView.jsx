@@ -18,12 +18,12 @@ import {
 } from 'lucide-react';
 
 const PROGRAM_UNITS_DATA = [
-    { id: "Neonatal Health Unit", key: "neonatal", title: "Neonatal Health", icon: Baby, color: "text-blue-500", bg: "bg-blue-100" },
-    { id: "IMNCI unit", key: "imnci", title: "IMNCI", icon: Stethoscope, color: "text-green-500", bg: "bg-green-100" },
-    { id: "Adolescent unit", key: "adolescent", title: "Adolescent Health", icon: Users, color: "text-purple-500", bg: "bg-purple-100" },
-    { id: "Monitoring and evaluation", key: "me", title: "Monitoring & Eval (M&E)", icon: Activity, color: "text-orange-500", bg: "bg-orange-100" },
-    { id: "Supply", key: "supply", title: "Supply & Logistics", icon: Package, color: "text-amber-500", bg: "bg-amber-100" },
-    { id: "Health promotion", key: "promotion", title: "Health Promotion", icon: HeartPulse, color: "text-rose-500", bg: "bg-rose-100" }
+    { id: "Neonatal Health Unit", key: "neonatal", title: "Neonatal Health", icon: Baby, color: "text-sky-600", bg: "bg-sky-100" },
+    { id: "IMNCI unit", key: "imnci", title: "IMNCI", icon: Stethoscope, color: "text-sky-600", bg: "bg-sky-100" },
+    { id: "Adolescent unit", key: "adolescent", title: "Adolescent Health", icon: Users, color: "text-sky-600", bg: "bg-sky-100" },
+    { id: "Monitoring and evaluation", key: "me", title: "Monitoring & Eval (M&E)", icon: Activity, color: "text-sky-600", bg: "bg-sky-100" },
+    { id: "Supply", key: "supply", title: "Supply & Logistics", icon: Package, color: "text-sky-600", bg: "bg-sky-100" },
+    { id: "Health promotion", key: "promotion", title: "Health Promotion", icon: HeartPulse, color: "text-sky-600", bg: "bg-sky-100" }
 ];
 
 const getInviteeDetails = (baseName, allTeamMembers) => {

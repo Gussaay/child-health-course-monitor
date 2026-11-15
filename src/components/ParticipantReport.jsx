@@ -1,5 +1,7 @@
 // ParticipantReport.jsx
 import React, { useState, useMemo, useRef } from 'react';
+import { isOperationalGuideCourse } from './ExerciseMonitoring.jsx';
+import { ParticipantExerciseCard } from './OperationalGuideReports.jsx';
 import jsPDF from 'jspdf';
 import html2canvas from '../utils/html2canvasLight';
 import { Bar } from 'react-chartjs-2';
@@ -358,6 +360,7 @@ export function ParticipantReportView({
             />
 
             <div ref={reportContentRef} className="flex flex-col gap-6 bg-white p-4 sm:p-6 w-full max-w-full min-w-0">
+                {isOperationalGuideCourse(course) && <ParticipantExerciseCard cases={cases} />}
                 {selectedDay && (
                     <Modal isOpen={!!selectedDay} onClose={() => setSelectedDay(null)} title={t('shared_ui.participant_report.case_details_day', 'Case Details for Day {{day}}', { day: selectedDay })}>
                         <div className="p-4 max-h-[70vh] w-full max-w-full overflow-y-auto overflow-x-auto touch-pan-x">

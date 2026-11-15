@@ -200,6 +200,7 @@ function analyseQuestion(t, filter) {
     const scope = {
         crashes: t('admin_pages.problem_reports.ai_scope_crashes', 'the crash reports (kind "crash")'),
         permissions: t('admin_pages.problem_reports.ai_scope_permissions', 'the permission errors (kind "permission")'),
+        updates: t('admin_pages.problem_reports.ai_scope_updates', 'the app update errors (kind "update")'),
         open: t('admin_pages.problem_reports.ai_scope_open', 'the problem reports that are not resolved'),
         all: t('admin_pages.problem_reports.ai_scope_all', 'all the problem reports'),
     }[filter] || t('admin_pages.problem_reports.ai_scope_all', 'all the problem reports');
@@ -238,6 +239,7 @@ export function ProblemReportsTab() {
         if (filter === 'all') return all;
         if (filter === 'crashes') return all.filter((r) => r.kind === 'crash');
         if (filter === 'permissions') return all.filter((r) => r.kind === 'permission');
+        if (filter === 'updates') return all.filter((r) => r.kind === 'update');
         return all.filter((r) => r.status !== 'resolved');
     }, [reports, filter]);
 
@@ -271,6 +273,7 @@ export function ProblemReportsTab() {
         open: (reports || []).filter((r) => r.status !== 'resolved').length,
         crashes: (reports || []).filter((r) => r.kind === 'crash').length,
         permissions: (reports || []).filter((r) => r.kind === 'permission').length,
+        updates: (reports || []).filter((r) => r.kind === 'update').length,
         all: (reports || []).length,
     };
 
@@ -281,6 +284,7 @@ export function ProblemReportsTab() {
                     ['open', t('admin_pages.problem_reports.filter_open', 'Open ({{count}})', { count: counts.open })],
                     ['crashes', t('admin_pages.problem_reports.filter_crashes', 'Crashes ({{count}})', { count: counts.crashes })],
                     ['permissions', t('admin_pages.problem_reports.filter_permissions', 'Permission errors ({{count}})', { count: counts.permissions })],
+                    ['updates', t('admin_pages.problem_reports.filter_updates', 'Update errors ({{count}})', { count: counts.updates })],
                     ['all', t('admin_pages.problem_reports.filter_all', 'All ({{count}})', { count: counts.all })],
                 ].map(([key, label]) => (
                     <button key={key} onClick={() => setFilter(key)}
@@ -315,6 +319,8 @@ export function ProblemReportsTab() {
                                         ? <AlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
                                         : r.kind === 'permission'
                                             ? <ShieldAlert size={18} className="text-orange-500 shrink-0 mt-0.5" />
+                                            : r.kind === 'update'
+                                            ? <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
                                             : <MessageSquareWarning size={18} className="text-sky-600 shrink-0 mt-0.5" />}
 
                                     <div className="flex-1 min-w-0">

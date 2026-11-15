@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
     FormGroup, Select, Checkbox
 } from '../CommonComponents';
+import { usePrintAll, ConditionNote, anyOf } from '../pdfPrint';
 
 // --- Smart Auto-Scroll Helper ---
 // After an answer, move down to the next unanswered question BELOW the one
@@ -60,6 +61,7 @@ export function ActionToggle({ options, currentValue, onClick, name }) {
 // --- Accordion Wrapper Component ---
 const SubgroupAccordion = ({ title, scoreData, children, isMainSymptom = false, isCompleted = false }) => {
     const [isExpanded, setIsExpanded] = useState(true);
+    const printAll = usePrintAll();
 
     useEffect(() => {
         if (isCompleted) {
@@ -84,7 +86,7 @@ const SubgroupAccordion = ({ title, scoreData, children, isMainSymptom = false, 
                 </div>
                 <svg className={`w-5 h-5 text-slate-500 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
             </button>
-            {isExpanded && (
+            {(isExpanded || printAll) && (
                 <div className={`divide-y divide-slate-100 bg-white ${isMainSymptom ? 'p-0' : ''}`}>
                     {children}
                 </div>
@@ -247,6 +249,7 @@ export const IMNCI_FORM_STRUCTURE = [
                         key: 'skill_ref_quinine',
                         label: 'في حالة التحويل : أعطى الكينيين بالعضل قبل التحويل',
                         showNaOption: false,
+                        printCondition: 'تصنيف الحمى الصحيح يشمل «مرض حمي شديد»',
                         relevant: (formData) => {
                             const didClassifyCorrectly = formData.assessment_skills.skill_classify_fever === 'yes';
                             const workerCls = formData.assessment_skills.worker_fever_classification || {};
@@ -256,6 +259,7 @@ export const IMNCI_FORM_STRUCTURE = [
                         }
                     },
                 ],
+                printCondition: 'القرار النهائي «تحويل عاجل» وقرار العامل الصحي يتطابق مع المشرف',
                 relevant: (formData) => {
                     return formData.finalDecision === 'referral' && formData.decisionMatches === 'yes';
                 }
@@ -264,6 +268,7 @@ export const IMNCI_FORM_STRUCTURE = [
                 subgroupTitle: 'في حالة الإلتهاب الرئوي',
                 scoreKey: 'pneu_treatment',
                 skills: [ { key: 'skill_pneu_abx', label: 'هل وصف مضاد حيوي (أموكسيلين) لعلاج الالتهاب الرئوي بصورة صحيحة', showNaOption: false }, { key: 'skill_pneu_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج الالتهاب الرئوي بالعيادة بصورة صحيحة', showNaOption: false, relevant: "${skill_pneu_abx}='yes'" }, ],
+                printCondition: 'القرار النهائي «علاج ونصائح منزلية» وتصنيف الكحة الصحيح هو «التهاب رئوي»',
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_cough === 'yes';
@@ -277,6 +282,7 @@ export const IMNCI_FORM_STRUCTURE = [
                 subgroupTitle: 'في حالة الإسهال',
                 scoreKey: 'diar_treatment',
                 skills: [ { key: 'skill_diar_ors', label: 'هل حدد كمية محلول الإرواء بصورة صحيحة', showNaOption: false }, { key: 'skill_diar_counsel', label: 'هل نصح الأم بالرعاية المنزلية بإعطاء سوائل أكثر و الاستمرار في تغذية الطفل)', showNaOption: false }, { key: 'skill_diar_zinc', label: 'هل وصف دواء الزنك بصورة صحيحة', showNaOption: false }, { key: 'skill_diar_zinc_dose', label: 'هل أعطى الجرعة الأولى من دواء الزنك للطفل بالوحدة الصحية بطريقة صحيحة', showNaOption: false, relevant: "${skill_diar_zinc}='yes'" }, ],
+                printCondition: 'القرار النهائي «علاج ونصائح منزلية» وتصنيف الإسهال الصحيح يشمل: ' + anyOf(['جفاف شديد', 'بعض الجفاف', 'إسهال مستمر شديد', 'إسهال مستمر', 'دسنتاريا', 'لا يوجد جفاف']),
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_diarrhea === 'yes';
@@ -291,6 +297,7 @@ export const IMNCI_FORM_STRUCTURE = [
                 subgroupTitle: 'في حالة الدسنتاريا',
                 scoreKey: 'dyst_treatment',
                 skills: [ { key: 'skill_dyst_abx', label: 'هل وصف مضاد حيوي (سبروفلوكساسين) لعلاج الدسنتاريا بصورة صحيحة', showNaOption: false }, { key: 'skill_dyst_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج الدسنتاريا في العيادة بصورة صحيحة', showNaOption: false, relevant: "${skill_dyst_abx}='yes'" }, ],
+                printCondition: 'القرار النهائي «علاج ونصائح منزلية» وتصنيف الإسهال الصحيح يشمل «دسنتاريا»',
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_diarrhea === 'yes';
@@ -304,6 +311,7 @@ export const IMNCI_FORM_STRUCTURE = [
                 subgroupTitle: 'في حالة الملاريا',
                 scoreKey: 'mal_treatment',
                 skills: [ { key: 'skill_mal_meds', label: 'هل وصف دواء لعلاج الملاريا (كوارتم) بصورة صحيحة', showNaOption: false }, { key: 'skill_mal_dose', label: 'هل أعطى الجرعة الأولى من الدواء لعلاج الملاريا في العيادة بصورة صحيحة', showNaOption: false, relevant: "${skill_mal_meds}='yes'" }, ],
+                printCondition: 'القرار النهائي «علاج ونصائح منزلية» وتصنيف الحمى الصحيح يشمل «ملاريا»',
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_fever === 'yes';
@@ -317,6 +325,7 @@ export const IMNCI_FORM_STRUCTURE = [
                 subgroupTitle: 'في حالة التهاب الأذن',
                 scoreKey: 'ear_treatment',
                 skills: [ { key: 'skill_ear_abx', label: 'هل وصف مضاد حيوي (أموكسيلين) لعلاج التهاب الأذن الحاد بصورة صحيحة', showNaOption: false }, { key: 'skill_ear_dose', label: 'هل أعطى الجرعة الأولى من مضاد حيوي لعلاج التهاب الأذن الحاد بصورة صحيحة', showNaOption: false, relevant: "${skill_ear_abx}='yes'" }, { key: 'skill_ear_para', label: 'هل وصف دواء الباراسيتامول بصورة صحيحة', showNaOption: false }, { key: 'skill_ear_para_dose', label: 'هل أعطى الجرعة الأولى من الباراسيتامول بصورة صحيحة', showNaOption: false, relevant: "${skill_ear_para}='yes'" }, ],
+                printCondition: 'القرار النهائي «علاج ونصائح منزلية» وتصنيف الأذن الصحيح هو: ' + anyOf(['التهاب العظمة خلف الاذن', 'التهاب أذن حاد', 'التهاب أذن مزمن']),
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_classify_ear === 'yes';
@@ -334,6 +343,7 @@ export const IMNCI_FORM_STRUCTURE = [
                         key: 'skill_nut_refer_otp',
                         label: 'هل حول الطفل الى مركز المعالجة الخارجي OTP',
                         showNaOption: false,
+                        printCondition: 'تصنيف سوء التغذية الصحيح هو: ' + anyOf(['سوء تغذية شديد غير مصحوب بمضاعفات', 'سوء تغذية حاد متوسط']),
                         relevant: (formData) => {
                             const didClassifyCorrectly = formData.assessment_skills.skill_mal_classify === 'yes';
                             const workerCls = formData.assessment_skills.worker_malnutrition_classification;
@@ -344,6 +354,7 @@ export const IMNCI_FORM_STRUCTURE = [
                     },
                     { key: 'skill_nut_assess', label: 'قيم تغذية الطفل بما في ذلك مشاكل الرضاعة (لأقل من عمر سنتين)', showNaOption: false }, { key: 'skill_nut_counsel', label: 'أرشد الأم عن تغذية الطفل بما في ذلك مشاكل الرضاعة الأقل من عمر سنتين)', showNaOption: false },
                 ],
+                printCondition: 'القرار النهائي «علاج ونصائح منزلية» وتصنيف سوء التغذية الصحيح هو: ' + anyOf(['سوء تغذية شديد غير مصحوب بمضاعفات', 'سوء تغذية حاد متوسط']),
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_mal_classify === 'yes';
@@ -357,6 +368,7 @@ export const IMNCI_FORM_STRUCTURE = [
                 subgroupTitle: 'في حالة فقر الدم',
                 scoreKey: 'anemia_treatment',
                 skills: [ { key: 'skill_anemia_iron', label: 'هل وصف (شراب حديد) بصورة صحيحة', showNaOption: false }, { key: 'skill_anemia_iron_dose', label: 'هل أعطى الجرعة الأولى من شراب حديد بصورة صحيحة', showNaOption: false, relevant: "${skill_anemia_iron}='yes'" }, ],
+                printCondition: 'القرار النهائي «علاج ونصائح منزلية» وتصنيف الانيميا الصحيح هو «فقر دم»',
                 relevant: (formData) => {
                     if (formData.finalDecision !== 'treatment') return false;
                     const didClassifyCorrectly = formData.assessment_skills.skill_anemia_classify === 'yes';
@@ -370,6 +382,7 @@ export const IMNCI_FORM_STRUCTURE = [
                 scoreKey: 'fu_treatment',
                 skills: [ { key: 'skill_fu_when', label: 'هل ذكر لها علامتين علي الأقل إذا ظهرت على الطفل يجب أن تعود به فورا للوحدة الصحية', showNaOption: false }, { key: 'skill_fu_return', label: 'هل حدد للام متى تعود بالطفل', showNaOption: false }, ]
                 ,
+                printCondition: 'القرار النهائي «علاج ونصائح منزلية»',
                 relevant: (formData) => {
                     return formData.finalDecision === 'treatment';
                 }
@@ -920,11 +933,31 @@ export const isRecordingComplete = (data) => {
 };
 
 // --- Form Renderer ---
-export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormChange, handleSkillChange, handleMultiClassificationChange, isEditing }) => {
+// The answer that brings up a conditional part, for the note in the PDF.
+const ANSWER_WORDS = { yes: 'نعم', no: 'لا', na: 'لا ينطبق' };
+const describeCondition = (item, siblings = []) => {
+    if (!item) return null;
+    if (item.printCondition) return item.printCondition;
+    if (typeof item.relevant === 'string') {
+        const m = item.relevant.match(/\$\{(.*?)\}\s*=\s*'(.*?)'/);
+        if (m) {
+            const source = siblings.find((x) => x.key === m[1]);
+            return `الإجابة «${ANSWER_WORDS[m[2].toLowerCase()] || m[2]}» على: ${source?.label || m[1]}`;
+        }
+    }
+    return null;
+};
+
+// printAll (while the PDF is made): every step, section and conditional
+// question is shown, each conditional one with a note of when it appears.
+export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormChange, handleSkillChange, handleMultiClassificationChange, isEditing: isEditingProp }) => {
+    const printAll = usePrintAll();
+    // In print mode nothing waits for the question before it to be answered.
+    const isEditing = isEditingProp || printAll;
     return (
         <>
             {IMNCI_FORM_STRUCTURE.map(group => {
-                const isGroupVisible = !group.step || visibleStep >= group.step;
+                const isGroupVisible = printAll || !group.step || visibleStep >= group.step;
                 if (!isGroupVisible) return null;
                 
                 const groupScoreData = group.scoreKey 
@@ -949,8 +982,9 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                             <option value="treatment">علاج ونصائح منزلية</option>
                                         </Select>
                                     </FormGroup>
-                                    {formData.finalDecision !== '' && (
+                                    {(formData.finalDecision !== '' || printAll) && (
                                         <FormGroup label="هل يتطابق قرار العامل الصحي مع المشرف؟" className="text-right flex-shrink-0 row-unanswered">
+                                            <ConditionNote>اختيار القرار النهائي أولاً</ConditionNote>
                                             <Select name="decisionMatches" value={formData.decisionMatches} onChange={(e) => { handleFormChange(e); handleAutoScroll(); }} className="min-w-[100px]">
                                                 <option value="">-- اختر --</option>
                                                 <option value="yes">نعم</option>
@@ -973,7 +1007,7 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                             </span>
                         </h3>
                         {Array.isArray(group.subgroups) && group.subgroups.map(subgroup => {
-                            const isSubgroupVisible = !subgroup.step || visibleStep >= subgroup.step;
+                            const isSubgroupVisible = printAll || !subgroup.step || visibleStep >= subgroup.step;
                             if (!isSubgroupVisible) return null;
                             const subgroupScoreData = subgroup.scoreKey ? scores[subgroup.scoreKey] : null;
 
@@ -983,7 +1017,8 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                     ? subgroup.relevant(formData)
                                     : evaluateRelevance(subgroup.relevant, formData);
                             }
-                            if (!isSubgroupRelevant) return null;
+                            if (!isSubgroupRelevant && !printAll) return null;
+                            const subgroupCondition = printAll ? describeCondition(subgroup) : null;
 
                             if (subgroup.isSymptomGroupContainer && Array.isArray(subgroup.symptomGroups)) {
                                 return (
@@ -1022,15 +1057,17 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                             const mainSkillValue = formData[group.sectionKey]?.[mainSkill.key];
                                             
                                             const isMultiSelectClassification = ['diarrhea', 'fever'].includes(symptomPrefix);
-                                            const showSubQuestions = mainSkillValue === 'yes';
-                                            const showClassifications = showSubQuestions && formData.assessment_skills[supervisorConfirmsKey] === 'yes';
-                                            const showSupervisorCorrection = showClassifications && formData.assessment_skills[classifySkillKey] === 'no';
+                                            const showSubQuestions = mainSkillValue === 'yes' || printAll;
+                                            const showClassifications = showSubQuestions && (formData.assessment_skills[supervisorConfirmsKey] === 'yes' || printAll);
+                                            const showSupervisorCorrection = showClassifications && (formData.assessment_skills[classifySkillKey] === 'no' || printAll);
+                                            const listBox = printAll ? 'border rounded p-3 bg-slate-50 grid grid-cols-2 gap-x-4' : 'max-h-40 overflow-y-auto border rounded p-3 bg-slate-50 grid grid-cols-2 gap-x-4';
 
                                             return (
                                                 <div key={mainSkill.key} className="mb-4 border border-slate-200 rounded-xl bg-white overflow-hidden shadow-sm">
                                                     <SkillChecklistItem name={mainSkill.key} label={mainSkill.label} value={mainSkillValue} onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)} showNaOption={false} isMainSymptom={true} scoreCircle={symptomScoreCircle} />
                                                     {showSubQuestions && (
                                                         <div dir="rtl" className="p-4 pt-2 bg-white space-y-4 text-right rounded-b-xl border-t border-slate-100 divide-y divide-slate-100">
+                                                            <ConditionNote>{`الإجابة «نعم» على: ${mainSkill.label}`}</ConditionNote>
                                                             <div className={`flex flex-col sm:flex-row justify-between sm:items-center py-2 px-1 hover:bg-sky-50 transition-colors ${formData.assessment_skills[supervisorConfirmsKey] === '' ? 'row-unanswered' : 'row-answered'}`}>
                                                                 <span className="text-sm font-medium text-slate-800 mb-2 sm:mb-0 sm:ms-4 text-right">{supervisorConfirmLabel}</span>
                                                                 <div className="flex gap-4 mt-1 sm:mt-0 flex-shrink-0">
@@ -1050,18 +1087,20 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                                 </div>
                                                             </div>
                                                             {showClassifications && ( <>
+                                                                <ConditionNote>{`الإجابة «نعم» على: ${supervisorConfirmLabel}`}</ConditionNote>
                                                                 {originalCheckSkill && <SkillChecklistItem key={originalCheckSkill.key} name={originalCheckSkill.key} label={originalCheckSkill.label} value={formData.assessment_skills[originalCheckSkill.key]} onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)} showNaOption={false} />}
                                                                 
-                                                                {originalClassifySkill && formData.assessment_skills[originalCheckSkill.key] !== '' && (
+                                                                {originalClassifySkill && (formData.assessment_skills[originalCheckSkill.key] !== '' || printAll) && (
                                                                     <SkillChecklistItem key={originalClassifySkill.key} name={originalClassifySkill.key} label={originalClassifySkill.label} value={formData.assessment_skills[classifySkillKey]} onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)} showNaOption={false} />
                                                                 )}
 
-                                                                {formData.assessment_skills[classifySkillKey] !== '' && formData.assessment_skills[classifySkillKey] !== 'na' && (
+                                                                {((formData.assessment_skills[classifySkillKey] !== '' && formData.assessment_skills[classifySkillKey] !== 'na') || printAll) && (
                                                                     <div className="pt-4 mt-2 row-unanswered">
+                                                                        <ConditionNote>{`الإجابة «نعم» أو «لا» على: ${originalClassifySkill.label}`}</ConditionNote>
                                                                         <FormGroup label="ما هو التصنيف الذي الذي صنفه العامل الصحي؟" className="text-right">
                                                                             {isMultiSelectClassification && multiSelectCols ? (
                                                                                 <>
-                                                                                    {formData.assessment_skills[classifySkillKey] === 'no' && (
+                                                                                    {(formData.assessment_skills[classifySkillKey] === 'no' || printAll) && (
                                                                                         <div className="flex items-center gap-2 mb-2 p-2 border border-red-200 rounded bg-red-50">
                                                                                             <Checkbox 
                                                                                                 label="" 
@@ -1073,9 +1112,10 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                                                             <label htmlFor={`${workerClassKey}-did_not_classify`} className="cursor-pointer text-sm font-medium" style={{ color: 'red' }}>
                                                                                                 لم يتم التصنيف
                                                                                             </label>
+                                                                                            {printAll && <span className="text-xs text-amber-800">(فقط إذا كانت الإجابة «لا» على: {originalClassifySkill.label})</span>}
                                                                                         </div>
                                                                                     )}
-                                                                                    <div className="max-h-40 overflow-y-auto border rounded p-3 bg-slate-50 grid grid-cols-2 gap-x-4">
+                                                                                    <div className={listBox}>
                                                                                         <div className="space-y-1">{multiSelectCols.col1.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={(e) => { handleMultiClassificationChange(workerClassKey, c, e.target.checked); handleAutoScroll(); }} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
                                                                                         <div className="space-y-1">{multiSelectCols.col2.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[workerClassKey]?.[c]} onChange={(e) => { handleMultiClassificationChange(workerClassKey, c, e.target.checked); handleAutoScroll(); }} /> <label htmlFor={`${workerClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
                                                                                     </div>
@@ -1083,7 +1123,7 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                                             ) : (
                                                                                 <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={(e) => { handleFormChange(e); handleAutoScroll(); }}>
                                                                                     <option value="">-- اختر التصنيف --</option>
-                                                                                    {formData.assessment_skills[classifySkillKey] === 'no' && (
+                                                                                    {(formData.assessment_skills[classifySkillKey] === 'no' || printAll) && (
                                                                                         <option value="did_not_classify" style={{ color: 'red' }}>لم يتم التصنيف</option>
                                                                                     )}
                                                                                     {symptomClassifications.map(c => <option key={c} value={c}>{c}</option>)}
@@ -1093,14 +1133,15 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                                     </div>
                                                                 )}
 
-                                                                {showSupervisorCorrection && (
+                                                                {showSupervisorCorrection && (printAll ||
                                                                     (isMultiSelectClassification && !isMultiSelectGroupEmpty(formData.assessment_skills[workerClassKey])) ||
                                                                     (!isMultiSelectClassification && formData.assessment_skills[workerClassKey] !== '')
                                                                 ) && (
                                                                     <div className="pt-4 mt-2 border-t border-slate-100 row-unanswered">
+                                                                        <ConditionNote>{`الإجابة «لا» على: ${originalClassifySkill.label} (التصنيف غير صحيح)`}</ConditionNote>
                                                                         <FormGroup label="ما هو التصنيف الصحيح؟" className="text-right">
                                                                             {isMultiSelectClassification && multiSelectCols ? (
-                                                                                <div className="max-h-40 overflow-y-auto border rounded p-3 bg-slate-50 grid grid-cols-2 gap-x-4">
+                                                                                <div className={listBox}>
                                                                                     <div className="space-y-1">{multiSelectCols.col1.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[correctClassKey]?.[c]} onChange={(e) => { handleMultiClassificationChange(correctClassKey, c, e.target.checked); handleAutoScroll(); }} /> <label htmlFor={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
                                                                                     <div className="space-y-1">{multiSelectCols.col2.map(c => ( <div key={c} className="flex items-center gap-2"> <Checkbox label="" id={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} name={c} checked={!!formData.assessment_skills[correctClassKey]?.[c]} onChange={(e) => { handleMultiClassificationChange(correctClassKey, c, e.target.checked); handleAutoScroll(); }} /> <label htmlFor={`${correctClassKey}-${c.replace(/\s+/g, '-')}`} className="cursor-pointer text-sm">{c}</label> </div> ))}</div>
                                                                                 </div>
@@ -1123,7 +1164,8 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                 const isVitalSignsGroup = subgroup.subgroupTitle === 'القياسات الجسمانية والحيوية';
                                 const isMalnutrition = subgroup.subgroupTitle === 'تحرى عن سوء التغذية الحاد'; const isAnemia = subgroup.subgroupTitle === 'تحرى عن الانيميا'; let classPrefix = ''; let classifications = []; if (isMalnutrition) { classPrefix = 'malnutrition'; classifications = MALNUTRITION_CLASSIFICATIONS; } if (isAnemia) { classPrefix = 'anemia'; classifications = ANEMIA_CLASSIFICATIONS; } const workerClassKey = `worker_${classPrefix}_classification`; const correctClassKey = `supervisor_correct_${classPrefix}_classification`; const classifySkillKey = isMalnutrition ? 'skill_mal_classify' : isAnemia ? 'skill_anemia_classify' : null;
                                 const showClassifications = (isMalnutrition || isAnemia) && classifySkillKey;
-                                const showSupervisorCorrection = showClassifications && formData.assessment_skills[classifySkillKey] === 'no';
+                                const showSupervisorCorrection = showClassifications && (formData.assessment_skills[classifySkillKey] === 'no' || printAll);
+                                const classifySkillLabel = classifySkillKey ? subgroup.skills.find((x) => x.key === classifySkillKey)?.label : '';
 
                                 // Determine if subgroup is fully completed to trigger auto-collapse
                                 const isSubgroupComplete = subgroup.skills.every(skill => {
@@ -1143,6 +1185,7 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
 
                                 return (
                                     <SubgroupAccordion key={subgroup.subgroupTitle} title={subgroup.subgroupTitle} scoreData={subgroupScoreData} isCompleted={isFullyComplete}>
+                                        {subgroupCondition && <ConditionNote>{subgroupCondition}</ConditionNote>}
                                         {subgroup.skills.map((skill, index) => {
                                             let isConditionallyRelevant = true;
                                             if (skill.relevant) {
@@ -1150,7 +1193,8 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                     ? skill.relevant(formData)
                                                     : evaluateRelevance(skill.relevant, formData);
                                             }
-                                            if (!isConditionallyRelevant) return null;
+                                            if (!isConditionallyRelevant && !printAll) return null;
+                                            const skillCondition = printAll ? describeCondition(skill, subgroup.skills) : null;
 
                                             let isSequentiallyVisible = true;
                                             if (!isEditing && index > 0) {
@@ -1179,25 +1223,28 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                             if (!isSequentiallyVisible) return null;
 
                                             return (
-                                                <SkillChecklistItem
-                                                    key={skill.key}
-                                                    name={skill.key}
-                                                    label={skill.label}
-                                                    value={formData[group.sectionKey]?.[skill.key]}
-                                                    onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)}
-                                                    showNaOption={isVitalSignsGroup ? true : (skill.showNaOption !== undefined ? skill.showNaOption : true)}
-                                                    naLabel={skill.naLabel || (isVitalSignsGroup ? "لا يوجد / لا يعمل الجهاز" : "لا ينطبق")}
-                                                />
+                                                <React.Fragment key={skill.key}>
+                                                    {skillCondition && <ConditionNote>{skillCondition}</ConditionNote>}
+                                                    <SkillChecklistItem
+                                                        name={skill.key}
+                                                        label={skill.label}
+                                                        value={formData[group.sectionKey]?.[skill.key]}
+                                                        onChange={(key, value) => handleSkillChange(group.sectionKey, key, value)}
+                                                        showNaOption={isVitalSignsGroup ? true : (skill.showNaOption !== undefined ? skill.showNaOption : true)}
+                                                        naLabel={skill.naLabel || (isVitalSignsGroup ? "لا يوجد / لا يعمل الجهاز" : "لا ينطبق")}
+                                                    />
+                                                </React.Fragment>
                                             );
                                         })}
                                         
                                         {showClassifications && (
                                             <div className="p-4 bg-white space-y-4">
-                                                {formData.assessment_skills[classifySkillKey] !== '' && formData.assessment_skills[classifySkillKey] !== 'na' && (
+                                                {((formData.assessment_skills[classifySkillKey] !== '' && formData.assessment_skills[classifySkillKey] !== 'na') || printAll) && (
                                                     <FormGroup label="ما هو التصنيف الذي الذي صنفه العامل الصحي؟" className="text-right row-unanswered">
+                                                        <ConditionNote>{`الإجابة «نعم» أو «لا» على: ${classifySkillLabel}`}</ConditionNote>
                                                         <Select name={workerClassKey} value={formData.assessment_skills[workerClassKey]} onChange={(e) => { handleFormChange(e); handleAutoScroll(); }}>
                                                             <option value="">-- اختر التصنيف --</option>
-                                                            {formData.assessment_skills[classifySkillKey] === 'no' && (
+                                                            {(formData.assessment_skills[classifySkillKey] === 'no' || printAll) && (
                                                                 <option value="did_not_classify" style={{ color: 'red' }}>لم يتم التصنيف</option>
                                                             )}
                                                             {classifications.map(c => <option key={c} value={c}>{c}</option>)}
@@ -1205,8 +1252,9 @@ export const IMNCIFormRenderer = ({ formData, visibleStep, scores, handleFormCha
                                                     </FormGroup>
                                                 )}
                                                 
-                                                {showSupervisorCorrection && formData.assessment_skills[workerClassKey] !== '' && (
+                                                {showSupervisorCorrection && (formData.assessment_skills[workerClassKey] !== '' || printAll) && (
                                                     <FormGroup label="ما هو التصنيف الصحيح؟" className="text-right row-unanswered">
+                                                        <ConditionNote>{`الإجابة «لا» على: ${classifySkillLabel} (التصنيف غير صحيح)`}</ConditionNote>
                                                         <Select name={correctClassKey} value={formData.assessment_skills[correctClassKey]} onChange={(e) => { handleFormChange(e); handleAutoScroll(); }}> <option value="">-- اختر التصنيف الصحيح --</option> {classifications.map(c => <option key={c} value={c}>{c}</option>)} </Select>
                                                     </FormGroup>
                                                 )}
