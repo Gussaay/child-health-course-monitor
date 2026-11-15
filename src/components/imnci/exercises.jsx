@@ -2611,7 +2611,7 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
     );
 }
 
-export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE }) {
+export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE, openId = null }) {
     const { t } = useTranslation();
     const [list, setList] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -2629,6 +2629,15 @@ export function ExerciseManagerView({ subCourse = ONLINE_SUB_COURSE }) {
     }, [subCourse]);
 
     useEffect(() => { load(); }, [load]);
+
+    // Opened from a course section's exercise card: that exercise straight
+    // into the editor, once the list has loaded.
+    const openedRef = useRef(false);
+    useEffect(() => {
+        if (!openId || openedRef.current || loading) return;
+        const ex = list.find((e) => e.id === openId);
+        if (ex) { openedRef.current = true; setEditing(ex); }
+    }, [openId, list, loading]);
 
     // `isCustom` is a runtime marker from loadAllExercises, not part of the
     // document — it must never be written back to Firestore.

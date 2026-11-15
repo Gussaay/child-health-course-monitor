@@ -1,41 +1,65 @@
 // src/components/imnci/onlineCourses/SectionPage.jsx
 //
-// One section: its Read, See and Practise tabs, the AI study helper, and
-// Previous / Next within the module.
-import React, { Suspense } from 'react';
+// One section, on one page: its text, charts, videos and activities in the
+// order they were written, the AI study helper, and Previous / Next within the
+// module. There are no tabs to step through: a learner reads, watches and
+// practises in one pass and then moves on to the next section.
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Pencil, ArrowLeft, ArrowRight, Columns2, CheckCircle2, ZoomIn, ZoomOut, Clock,
+    Pencil, ArrowLeft, ArrowRight, Columns2, CheckCircle2, ZoomIn, ZoomOut, Clock, Sparkles, Trophy,
 } from 'lucide-react';
 import { Button } from '../../CommonComponents';
-import { SECTION_TABS, tabContent } from '../book';
-import { TAB_ICONS, ContentBlocks } from './blocks';
+import { sectionContent } from '../book';
+import { ContentBlocks, activityKeys } from './blocks';
+import { ActivityContext } from './interactive';
 import { SectionTabEditor } from './SectionTabEditor';
 import { SectionAiPanel } from './lazyParts';
 import { useCourseScreen } from './screen';
 import { Pill } from './ui';
 
+// Which activities of a section this learner has done, kept on the device: it
+// is the learner's own running tally, not a record anyone else reads.
+const storeKey = (id) => `oc-activities-${id}`;
+function readDone(id) {
+    try { return new Set(JSON.parse(localStorage.getItem(storeKey(id)) || '[]')); } catch { return new Set(); }
+}
+function useSectionActivities(sectionId) {
+    const [done, setDone] = useState(() => readDone(sectionId));
+    useEffect(() => { setDone(readDone(sectionId)); }, [sectionId]);
+    const markDone = useCallback((key) => setDone((prev) => {
+        if (prev.has(key)) return prev;
+        const next = new Set(prev).add(key);
+        try { localStorage.setItem(storeKey(sectionId), JSON.stringify([...next])); } catch { /* private mode */ }
+        return next;
+    }), [sectionId]);
+    const value = useMemo(() => ({ isDone: (k) => done.has(k), markDone }), [done, markDone]);
+    return [done, value];
+}
+
 export function SectionPage() {
     const { t } = useTranslation();
     const {
         back, compare, duration, editingTab, fontScale, go, inOrder, isAdmin,
-        minutesById, modules, openModule, openSection, progress, reload, sectionTab, sectionsByModule,
-        setCompare, setEditingTab, setScale, setSectionTab, tabName, toggleComplete, user,
+        minutesById, modules, openModule, openSection, progress, reload, sectionsByModule,
+        setCompare, setEditingTab, setScale, toggleComplete, user,
     } = useCourseScreen();
 
     const isDone = !!progress.completed?.[openSection.id];
-    const content = tabContent(openSection, sectionTab);
-    const meta = SECTION_TABS.find((x) => x.id === sectionTab) || SECTION_TABS[0];
+    const content = sectionContent(openSection);
+    const [doneKeys, activityValue] = useSectionActivities(openSection.id);
+    const keys = activityKeys(content);
+    const activitiesDone = keys.filter((k) => doneKeys.has(k)).length;
     // Revising the converted text means holding it against the page it came
     // from. The captured pages make that possible without leaving the app.
-    const pages = tabContent(openSection, 'see').filter((b) => b.type === 'page');
-    const canCompare = sectionTab === 'read' && pages.length > 0;
+    const pages = content.filter((b) => b.type === 'page');
+    const canCompare = pages.length > 0 && pages.length < content.length;
     // Revision is done section by section, so it is worth being able to
     // move to the next one without returning to the list and losing the
     // tab and the compare view each time.
     const siblings = sectionsByModule[openSection.moduleId || '__none__'] || [];
     const here = siblings.findIndex((x) => x.id === openSection.id);
-    const goTo = (sec) => { if (sec) go({ section: sec.id, tab: 'read' }); };
+    const goTo = (sec) => { if (sec) { go({ section: sec.id, tab: 'read' }); window.scrollTo?.({ top: 0 }); } };
     // Going on is what completion unlocks. Going back is always allowed —
     // a learner who wants to re-read something should never be stopped.
     const nextAllowed = isAdmin || isDone || !inOrder;
@@ -80,11 +104,11 @@ export function SectionPage() {
                         {isDone && <CheckCircle2 size={24} className="text-emerald-600 shrink-0 mt-1" aria-label={t('imnci_ui.courses.main.completed', 'Completed')} />}
                     </h1>
                     <div className="flex flex-wrap gap-1.5">
-                        {SECTION_TABS.map((tb) => {
-                            const n = tabContent(openSection, tb.id).length;
-                            const Icon = TAB_ICONS[tb.id];
-                            return n > 0 ? <Pill key={tb.id}><Icon size={12} /> {tabName(tb)} · {n}</Pill> : null;
-                        })}
+                        {keys.length > 0 && (
+                            <Pill tone={activitiesDone >= keys.length ? 'done' : undefined}>
+                                <Sparkles size={12} /> {t('imnci_ui.courses.activity.count', '{{n}} of {{total}} activities done', { n: activitiesDone, total: keys.length })}
+                            </Pill>
+                        )}
                         {isDone && <Pill tone="done"><CheckCircle2 size={12} /> {t('imnci_ui.courses.look.completed', 'Completed')}</Pill>}
                     </div>
                     {siblings.length > 1 && here >= 0 && (
@@ -95,35 +119,14 @@ export function SectionPage() {
                     )}
                 </header>
 
-                {/* Read, See and Practise as a segmented control: equal thirds
-                    so the three fit a phone without scrolling sideways. */}
-                <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200">
-                    {SECTION_TABS.map((tb) => {
-                        const Icon = TAB_ICONS[tb.id];
-                        const n = tabContent(openSection, tb.id).length;
-                        const active = sectionTab === tb.id;
-                        return (
-                            <button key={tb.id} disabled={!!editingTab && editingTab !== tb.id}
-                                onClick={() => { setSectionTab(tb.id); setCompare(false); }}
-                                className={`flex flex-col items-center justify-center min-h-[44px] px-2 py-1.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 ${
-                                    active ? 'bg-white text-sky-700 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
-                                <span className="inline-flex items-center gap-1.5"><Icon size={15} className="shrink-0" />{tabName(tb)}</span>
-                                <span className={`text-[11px] font-medium tabular-nums ${active ? 'text-sky-600' : 'text-slate-400'}`}>
-                                    {n > 0 ? n : '—'}
-                                </span>
-                            </button>
-                        );
-                    })}
-                </div>
-
                 <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6 space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-xs text-slate-500">{t(`imnci_ui.courses.tab_hints.${meta.id}`, meta.hint)}</p>
+                        <span />
                         <div className="flex items-center gap-1">
                             {isAdmin && !editingTab && (
                                 <Button variant="secondary" className="px-2 py-1 h-auto"
-                                    onClick={() => setEditingTab(sectionTab)}>
-                                    <Pencil size={14} /> {t('imnci_ui.courses.main.edit_tab', 'Edit {{tab}}', { tab: tabName(meta) })}
+                                    onClick={() => setEditingTab('all')}>
+                                    <Pencil size={14} /> {t('imnci_ui.courses.main.edit_section', 'Edit section')}
                                 </Button>
                             )}
                             {canCompare && !editingTab && (
@@ -133,7 +136,7 @@ export function SectionPage() {
                                     <Columns2 size={14} /> {t('imnci_ui.courses.main.compare', 'Compare')}
                                 </Button>
                             )}
-                            {sectionTab === 'read' && !editingTab && (
+                            {!editingTab && (
                                 <>
                                     <Button variant="secondary" onClick={() => setScale(fontScale - 0.1)}
                                         disabled={fontScale <= 0.8} className="px-2 py-1 h-auto"><ZoomOut size={16} /></Button>
@@ -150,7 +153,7 @@ export function SectionPage() {
 
                     {editingTab ? (
                         <SectionTabEditor
-                            section={openSection} tab={editingTab}
+                            section={openSection} tab="all"
                             onCancel={() => setEditingTab(null)}
                             onSaved={() => { setEditingTab(null); reload(); }}
                         />
@@ -161,7 +164,7 @@ export function SectionPage() {
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             <div className="lg:max-h-[38rem] lg:overflow-y-auto pe-1">
                                 <div className="text-xs font-semibold text-slate-500 mb-2">{t('imnci_ui.courses.main.converted_text', 'Converted text')}</div>
-                                <ContentBlocks blocks={content} scale={fontScale} />
+                                <ContentBlocks blocks={content.filter((b) => b.type !== 'page')} scale={fontScale} />
                             </div>
                             <div className="lg:max-h-[38rem] lg:overflow-y-auto ps-1 border-s">
                                 <div className="text-xs font-semibold text-slate-500 mb-2">{t('imnci_ui.courses.main.the_book', 'The book')}</div>
@@ -169,17 +172,29 @@ export function SectionPage() {
                             </div>
                         </div>
                     ) : content.length > 0 ? (
-                        <ContentBlocks blocks={content} scale={sectionTab === 'read' ? fontScale : 1} />
+                        <ActivityContext.Provider value={activityValue}>
+                            <ContentBlocks blocks={content} scale={fontScale} activities />
+                        </ActivityContext.Provider>
                     ) : (
                         <div className="text-sm text-slate-500 py-12 text-center border border-dashed rounded-lg">
-                            {t('imnci_ui.courses.main.nothing_in_tab', 'Nothing in {{tab}} for this section yet.', { tab: tabName(meta) })}
+                            {t('imnci_ui.courses.main.nothing_in_section', 'Nothing in this section yet.')}
                             {isAdmin && (
-                                <div className="mt-1 text-xs">{t('imnci_ui.courses.main.use_edit_tab', 'Use Edit {{tab}}, above, to write it.', { tab: tabName(meta) })}</div>
+                                <div className="mt-1 text-xs">{t('imnci_ui.courses.main.use_edit_section', 'Use Edit section, above, to write it.')}</div>
                             )}
                         </div>
                     )}
 
-                    {sectionTab === 'read' && openSection.bookFromPage && (
+                    {!editingTab && keys.length > 0 && activitiesDone >= keys.length && !isDone && (
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 flex items-center gap-3">
+                            <span className="w-10 h-10 rounded-full bg-emerald-600 text-white grid place-items-center shrink-0"><Trophy size={20} /></span>
+                            <div className="text-sm text-emerald-900">
+                                <div className="font-bold">{t('imnci_ui.courses.activity.all_done', 'Well done: every activity in this section is done.')}</div>
+                                <div>{next ? t('imnci_ui.courses.activity.go_on', 'Complete the section to go on to the next one.') : t('imnci_ui.courses.activity.finish', 'Mark the section complete to finish the module.')}</div>
+                            </div>
+                        </div>
+                    )}
+
+                    {openSection.bookFromPage && (
                         <div className="text-xs text-slate-400 pt-2 border-t">
                             {t('imnci_ui.courses.main.from_book_pages', 'From the module book, pages {{from}}–{{to}}.', { from: openSection.bookFromPage, to: openSection.bookToPage })}
                         </div>
