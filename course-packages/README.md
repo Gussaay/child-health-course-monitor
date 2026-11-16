@@ -95,5 +95,9 @@ WHO IMCI distance learning course (2014), in the Sudan national wording. Where t
 - `who-dimci-module1.imnci.json`: Module 1, General danger signs for the sick child (8 lessons, 8 exercises).
 - `who-dimci-module2.imnci.json`: Module 2, The sick young infant (25 lessons, 16 exercises, including the Henri, Sashi and Mimi cases on the young infant form).
 - `who-dimci-modules-1-2.imnci.json`: both modules in one file.
+- `who-dimci-module3.imnci.json`: Module 3, Cough or difficult breathing (14 lessons, 10 exercises, including the Gyatsu case).
+- `who-dimci-module4.imnci.json`: Module 4, Diarrhoea (17 lessons, 14 exercises, including the Maya, Rana, Pano and Jane cases).
+- `who-dimci-modules-3-4.imnci.json`: Modules 3 and 4 in one file, to import into the existing course.
+- `who-dimci-modules-1-4.imnci.json`: all four modules in one file. This is the file the upload script writes.
 
 The narration scripts for the video slots are kept outside the course, in a separate Word file.

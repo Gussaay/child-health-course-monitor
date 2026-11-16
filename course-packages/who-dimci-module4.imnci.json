@@ -1,0 +1,3210 @@
+{
+ "format": "imnci-course-package",
+ "version": 1,
+ "about": "WHO IMCI distance learning course (2014), Module 4, in the Sudan national IMNCI wording. Each WHO section is cut into short lessons of one topic, with the same information as the WHO module, laid out as activities: step-by-step cards, flip cards, sorting, case stories and questions. Where the Sudan national booklet differs from WHO, the Sudan wording is used and a \"Sudan national protocol\" note says what WHO wrote. Chart booklet and recording form blocks are read live from the protocol. Video slots without a link show a placeholder; their narration scripts are in a separate file. Exercises start as drafts and open in the exercise manager.",
+ "course": {
+  "title": "IMNCI distance learning modules",
+  "description": "Self-study modules based on the WHO IMCI distance learning course (2014), in the wording of the Sudan national IMNCI protocol."
+ },
+ "modules": [
+  {
+   "title": "Module 4: Diarrhoea",
+   "order": 4,
+   "sections": [
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 5,
+     "bookToPage": 7,
+     "title": "Module overview",
+     "order": 1,
+     "read": [
+      {
+       "type": "note",
+       "text": "See what Module 4 covers and which part of the recording form it uses, then take the pre-test.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Diarrhoea is likely a very common problem in the children you see at your clinic. Diarrhoea can be serious, and can even lead to death."
+      },
+      {
+       "type": "note",
+       "text": "In Module 2 you were told to come to this module to assess and classify diarrhoea in sick young infants. The process is similar for the young infant and the child. There are some important differences, which this module points out as \"For the young infant\".",
+       "label": "Diarrhoea in the sick young infant"
+      },
+      {
+       "type": "steps",
+       "title": "Where this module fits",
+       "steps": [
+        {
+         "title": "For ALL sick children",
+         "text": "Ask the caregiver about the child's problems, check for general danger signs, and assess for cough or difficult breathing."
+        },
+        {
+         "title": "Then ASK: does the child have diarrhoea?",
+         "text": "If NO, go on to the next main symptom. If YES, assess and classify the child using the colour-coded classification charts for dehydration and diarrhoea."
+        },
+        {
+         "title": "Continue the assessment",
+         "text": "Assess the next main symptoms (next is fever), check for malnutrition and anaemia, check immunization status and other problems."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "What you will be able to do"
+      },
+      {
+       "type": "rich",
+       "text": "<p>After you study this module, you will be able to:</p><ul><li>Define the types of diarrhoea and the levels of dehydration</li><li>Recognize the clinical signs of dehydration</li><li>Assess diarrhoea in sick children</li><li>Assess dehydration in young infants and sick children</li><li>Classify diarrhoea and the severity of dehydration using the IMNCI charts</li><li>Give Plans A, B and C for dehydration</li><li>Counsel the caregiver about home treatment for diarrhoea and dehydration</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Which part of the recording form is used in this module?"
+      },
+      {
+       "type": "form",
+       "part": "child",
+       "sections": [
+        "diarrhea"
+       ],
+       "caption": "The national recording form: diarrhoea"
+      },
+      {
+       "type": "heading",
+       "text": "Before you begin"
+      },
+      {
+       "type": "paragraph",
+       "text": "What do you know now about managing diarrhoea? Check quickly with five questions. After the module you will answer the same questions, and see what you have learned."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m4-pretest",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 8,
+     "bookToPage": 9,
+     "title": "Meet Mary: start the visit",
+     "order": 2,
+     "read": [
+      {
+       "type": "note",
+       "text": "Start the visit of a child with diarrhoea: greet the caregiver, check for danger signs and ask about cough.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Diarrhoea",
+       "caption": "Watch this first.",
+       "script": "V4.2"
+      },
+      {
+       "type": "paragraph",
+       "text": "Consider a typical case that you might see in your practice. You will follow Mary and her mother Ana through the whole module."
+      },
+      {
+       "type": "story",
+       "title": "Opening case: Mary",
+       "stages": [
+        {
+         "text": "It is a busy afternoon in your clinic. A young mother comes into your clinic room, carrying a small girl. She says her daughter, Mary, has diarrhoea. You ask the mother's name, and she says Ana. Ana says that Mary usually eats porridge and milk, but that she has had bad diarrhoea in the past few days. Ana tried giving more porridge but Mary is still sick. Ana thought it was a bad stomach from spoiled milk, and that it would pass."
+        },
+        {
+         "text": "The diarrhoea has remained for several days now, and Mary looks unwell. Ana fears that Mary is getting worse, and feels guilty that she did not come sooner. Ana works in the mornings and lives some distance from the clinic, so she has little time in the day to bring Mary in. She is worried that her family will blame her for working and letting Mary get more and more sick.",
+         "question": "How do you greet Ana and begin?",
+         "options": [
+          "Praise her for bringing Mary, and explain that you will check her and decide the best treatment",
+          "Tell her she should have come on the first day",
+          "Give ORS packets at once and send them home"
+         ],
+         "answer": 0,
+         "explanation": "You praise Ana for bringing in her daughter. You tell her that diarrhoea can be a serious problem for young children, but that there are ways to help her daughter get better. You explain that you will check her condition and decide the best treatment. Ana seems relieved."
+        },
+        {
+         "text": "You ask Mary's age. Ana tells you that she is 9 months old. You ask if there are other problems besides the diarrhoea. She says no. This is their first visit for this diarrhoea. You take Mary's weight, 8.2 kg, and her temperature, 37 °C."
+        },
+        {
+         "text": "You check for general danger signs. Ana tells you that Mary is able to drink milk and take porridge. She does not vomit. She has not had convulsions. Mary looks very tired in Ana's arms, but she watches you as you speak. When you reach out to take her hand, she grabs your finger.",
+         "question": "Does Mary have a general danger sign?",
+         "options": [
+          "No",
+          "Yes: she is lethargic",
+          "Yes: she is not able to drink"
+         ],
+         "answer": 0,
+         "explanation": "Mary can drink, does not vomit everything, has had no convulsions, and is awake: she watches you and grabs your finger. She has no general danger signs."
+        },
+        {
+         "text": "Next you ask about cough or difficult breathing. Ana says that Mary had a cough about 2 months ago, but it has cleared up. So you move to the next main symptom, diarrhoea. This is also the problem that Ana brought Mary for."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 8,
+     "bookToPage": 11,
+     "title": "What diarrhoea is, and its types",
+     "order": 3,
+     "read": [
+      {
+       "type": "note",
+       "text": "Define diarrhoea and its three types, and ask the two questions that tell you the type.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "heading",
+       "text": "What is diarrhoea?"
+      },
+      {
+       "type": "paragraph",
+       "text": "Diarrhoea occurs when stools contain more water than normal, and are loose or watery. In many regions diarrhoea is defined as three or more loose or watery stools in a 24-hour period. Children between the ages of 6 months and 2 years often have diarrhoea. It is more common in settings of poor sanitation and hygiene, including a lack of safe drinking water."
+      },
+      {
+       "type": "paragraph",
+       "text": "Most diarrhoea that causes dehydration is loose or watery. Cholera is one example, though only a small proportion of all loose or watery diarrhoeas are due to cholera."
+      },
+      {
+       "type": "flip",
+       "title": "The types of diarrhoea in children",
+       "cards": [
+        {
+         "front": "ACUTE DIARRHOEA",
+         "back": "An episode of diarrhoea that lasts less than 14 days. Acute watery diarrhoea causes dehydration and contributes to malnutrition. The death of a child with acute diarrhoea is usually due to dehydration."
+        },
+        {
+         "front": "PERSISTENT DIARRHOEA",
+         "back": "Lasts 14 days or more. Up to 20% of episodes of diarrhoea become persistent. This often causes nutritional problems and contributes to death in children."
+        },
+        {
+         "front": "DYSENTERY",
+         "back": "Diarrhoea with blood in the stool, with or without mucus. The most common cause is Shigella bacteria. Amoebic dysentery is not common in young children. A child may have both watery diarrhoea and dysentery."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "A young infant has diarrhoea if the stools have changed from the usual pattern, and are many and watery: more water than faecal matter. The normally frequent or semi-solid stools of a breastfed baby are not diarrhoea.",
+       "label": "For the young infant"
+      },
+      {
+       "type": "heading",
+       "text": "ASK: does the child have diarrhoea?"
+      },
+      {
+       "type": "paragraph",
+       "text": "Ask ALL caregivers if the child has diarrhoea. Use words for diarrhoea that the mother understands: you may need to explain it as loose, watery stools. If the answer is NO, ask about the next main symptom, fever. If YES, or if diarrhoea was the reason for coming, you assess in two parts: the type of diarrhoea, and the signs of dehydration."
+      },
+      {
+       "type": "steps",
+       "title": "Two questions tell you the type",
+       "steps": [
+        {
+         "title": "ASK: for how long?",
+         "text": "Diarrhoea which lasts 14 days or more is persistent diarrhoea. Give the mother time to answer. She may need time to recall the exact number of days."
+        },
+        {
+         "title": "ASK: is there blood in the stool?",
+         "text": "Ask the mother if she has seen blood in the stools at any time during this episode of diarrhoea. Diarrhoea with blood in the stool is dysentery, and needs specific treatment."
+        }
+       ]
+      },
+      {
+       "type": "sort",
+       "text": "Which type of diarrhoea? Sort each child.",
+       "groups": [
+        "Acute diarrhoea",
+        "Persistent diarrhoea",
+        "Dysentery"
+       ],
+       "items": [
+        {
+         "text": "Loose stools for 3 days, no blood",
+         "group": 0,
+         "why": "Less than 14 days, no blood."
+        },
+        {
+         "text": "Watery stools for 16 days, no blood",
+         "group": 1,
+         "why": "14 days or more."
+        },
+        {
+         "text": "Diarrhoea for 2 days, the mother saw blood yesterday",
+         "group": 2,
+         "why": "Blood in the stool at any time during this episode."
+        },
+        {
+         "text": "Loose stools for 13 days, no blood",
+         "group": 0,
+         "why": "Persistent diarrhoea begins at 14 days."
+        }
+       ]
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "categories": [
+        "diarrhea",
+        "persistent_diarrhea",
+        "dysentery"
+       ],
+       "caption": "Chart booklet: diarrhoea (Sudan national IMNCI booklet)"
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 11,
+     "bookToPage": 12,
+     "title": "Look for dehydration: condition, eyes and drinking",
+     "order": 4,
+     "read": [
+      {
+       "type": "note",
+       "text": "Explain what dehydration is, and look for three of its signs: general condition, sunken eyes and how the child drinks.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "heading",
+       "text": "What is dehydration?"
+      },
+      {
+       "type": "paragraph",
+       "text": "Diarrhoea can be a serious problem, and can even lead to death, if the child becomes dehydrated. Dehydration is when the child loses too much water and salt from the body. This causes a disturbance of electrolytes, which can affect vital organs."
+      },
+      {
+       "type": "paragraph",
+       "text": "A child who is dehydrated must be treated to help restore the balance of water and salt. Many cases of diarrhoea can be treated with Oral Rehydration Salts (ORS), a mixture of glucose and several salts. ORS and extra fluids can be used as home treatment to prevent dehydration. Low osmolarity ORS should be used to treat dehydration."
+      },
+      {
+       "type": "note",
+       "text": "When a child becomes dehydrated, he is at first restless or irritable. As the body loses fluids, the eyes may look sunken, and the skin loses elasticity. If dehydration continues, the child becomes lethargic or unconscious.",
+       "label": "Key point"
+      },
+      {
+       "type": "heading",
+       "text": "LOOK at the child's general condition"
+      },
+      {
+       "type": "flip",
+       "title": "General condition",
+       "cards": [
+        {
+         "front": "Lethargic or unconscious",
+         "back": "You checked this with the general danger signs. A lethargic or unconscious child has a general danger sign. Remember to use this sign again when you classify the child's diarrhoea."
+        },
+        {
+         "front": "Restless and irritable",
+         "back": "The child is restless and irritable all the time, or every time he is touched and handled. A child who is calm when breastfeeding but restless and irritable again when he stops has the sign."
+        },
+        {
+         "front": "Upset only because he is in the clinic",
+         "back": "Many children are upset just because they are in the clinic. Usually these children can be consoled and calmed. They do NOT have the sign restless and irritable."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Watch the infant's movement. Does he move on his own? Does the infant move only when stimulated, and then stop? Is the infant restless and irritable? The young infant chart does not test how well the infant drinks.",
+       "label": "For the young infant"
+      },
+      {
+       "type": "heading",
+       "text": "LOOK for sunken eyes"
+      },
+      {
+       "type": "paragraph",
+       "text": "The eyes of a child who is dehydrated may look sunken. Decide if you think the eyes are sunken. Then ask the mother if she thinks her child's eyes look unusual. Her opinion can help you confirm."
+      },
+      {
+       "type": "note",
+       "text": "In a severely malnourished child who is wasted, the eyes may always look sunken, even if the child is not dehydrated. Still use the sign to classify dehydration."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "DVD exercise: assess sunken eyes",
+       "caption": "WHO course DVD, disc 1. Six children: does each have sunken eyes? The video reviews the answers with you."
+      },
+      {
+       "type": "heading",
+       "text": "LOOK to see how the child drinks"
+      },
+      {
+       "type": "paragraph",
+       "text": "Ask the mother to offer the child some water in a cup or spoon. Watch the child drink."
+      },
+      {
+       "type": "flip",
+       "title": "How does the child drink?",
+       "cards": [
+        {
+         "front": "Not able to drink",
+         "back": "The child is not able to suck or swallow when offered a drink. A child may not be able to drink because he is lethargic or unconscious."
+        },
+        {
+         "front": "Drinking poorly",
+         "back": "The child is weak and cannot drink without help. He may be able to swallow only if fluid is put in his mouth."
+        },
+        {
+         "front": "Drinking eagerly, thirsty",
+         "back": "It is clear that the child wants to drink. He reaches out for the cup or spoon when you offer water. When the water is taken away, he is unhappy because he wants to drink more."
+        },
+        {
+         "front": "Drinks only with encouragement",
+         "back": "A child who takes a drink only with encouragement and does not want to drink more does NOT have the sign drinking eagerly, thirsty."
+        }
+       ]
+      },
+      {
+       "type": "sort",
+       "text": "Does the child have the sign? Sort each observation.",
+       "groups": [
+        "Has the sign",
+        "Does not have the sign"
+       ],
+       "items": [
+        {
+         "text": "Cries when the nurse comes near, but calms in his mother's arms",
+         "group": 1,
+         "why": "He can be consoled: not restless and irritable."
+        },
+        {
+         "text": "Fusses every time he is touched, and again whenever he stops breastfeeding",
+         "group": 0,
+         "why": "Restless and irritable."
+        },
+        {
+         "text": "Grabs the cup and cries when it is taken away",
+         "group": 0,
+         "why": "Drinking eagerly, thirsty."
+        },
+        {
+         "text": "Takes a sip when coaxed, then turns away",
+         "group": 1,
+         "why": "Not drinking eagerly."
+        },
+        {
+         "text": "Swallows only when water is put in his mouth with a spoon",
+         "group": 0,
+         "why": "Drinking poorly."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 12,
+     "bookToPage": 14,
+     "title": "The skin pinch, and assessing Mary",
+     "order": 5,
+     "read": [
+      {
+       "type": "note",
+       "text": "Do the skin pinch correctly, read the result, and assess Mary for diarrhoea and dehydration.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "The skin pinch is an important test for dehydration. When a child is dehydrated, the skin loses elasticity."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "How to do the skin pinch",
+       "caption": "The five steps of the skin pinch, and what slowly and very slowly look like.",
+       "script": "V4.5"
+      },
+      {
+       "type": "steps",
+       "title": "The skin pinch in five steps",
+       "steps": [
+        {
+         "title": "ASK the mother to lay the child flat",
+         "text": "The child lies flat on his back on the examining table, with his arms at his sides (not over his head) and his legs straight. Or the mother holds the child lying flat on her lap."
+        },
+        {
+         "title": "USE your thumb and first finger",
+         "text": "Locate the area on the child's abdomen halfway between the umbilicus and the side of the abdomen. Do not use your fingertips, because this will cause pain. The fold of skin should be in a line up and down the child's body."
+        },
+        {
+         "title": "PICK UP all the layers",
+         "text": "Pick up all the layers of skin and the tissue underneath them."
+        },
+        {
+         "title": "HOLD for one second",
+         "text": "Hold the pinch for one second. Then release it."
+        },
+        {
+         "title": "LOOK at how the skin goes back",
+         "text": "Very slowly, slowly, or immediately."
+        }
+       ]
+      },
+      {
+       "type": "flip",
+       "title": "How does the skin pinch go back?",
+       "cards": [
+        {
+         "front": "Very slowly",
+         "back": "Longer than 2 seconds."
+        },
+        {
+         "front": "Slowly",
+         "back": "Less than 2 seconds, but not immediately. If the skin stays up for even a brief time after you release it, decide that the skin pinch goes back slowly."
+        },
+        {
+         "front": "Immediately",
+         "back": "The skin goes back at once when you release it."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "The skin pinch is not always an accurate sign. In a child with severe malnutrition, the skin may go back slowly even if the child is not dehydrated. In a child who is overweight or has oedema, the skin may go back immediately even if the child is dehydrated. You should still use the skin pinch to classify the child's dehydration."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "DVD exercise: assess skin pinch",
+       "caption": "WHO course DVD, disc 1. Five children: very slowly, slowly or immediately? The video reviews the answers with you."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Demonstration: assess and classify diarrhoea",
+       "caption": "WHO course DVD, disc 1. All the steps of assessing diarrhoea, in a clinical setting."
+      },
+      {
+       "type": "story",
+       "title": "Assess Mary's diarrhoea",
+       "stages": [
+        {
+         "text": "Ana has already reported that Mary has diarrhoea. You ask how many days she has had diarrhoea, and Ana tells you 3 days. You ask if there is blood in her daughter's stool, and she tells you no.",
+         "question": "What does this tell you about the type of diarrhoea?",
+         "options": [
+          "Acute diarrhoea, no dysentery",
+          "Persistent diarrhoea",
+          "Dysentery"
+         ],
+         "answer": 0,
+         "explanation": "3 days is less than 14 days, and there is no blood in the stool."
+        },
+        {
+         "text": "Now you examine Mary's condition. She seems restless and irritable, especially when you touch her. You check for sunken eyes, and it appears that she has them. Ana agrees that her daughter's eyes look unusual. You offer Mary some water. She drinks eagerly."
+        },
+        {
+         "text": "You ask Ana to place Mary flat on her back on the examining table, with her arms at her sides and her legs straight. You pinch the skin of Mary's abdomen, and it goes back in 1 second.",
+         "question": "How does Mary's skin pinch go back?",
+         "options": [
+          "Slowly",
+          "Very slowly",
+          "Immediately"
+         ],
+         "answer": 0,
+         "explanation": "It did not go back at once, and it took less than 2 seconds: slowly. On the recording form you tick restless and irritable, sunken eyes, drinking eagerly and skin pinch slowly."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 15,
+     "bookToPage": 16,
+     "title": "Practise assessing: Maya and Rana",
+     "order": 6,
+     "read": [
+      {
+       "type": "note",
+       "text": "Record the signs of two children with diarrhoea on the recording form.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Now practise with two children. Read each case, record the signs on the recording form, and classify. If you are not yet sure of the classification, do the next two lessons and then come back."
+      },
+      {
+       "type": "reveal",
+       "text": "Which two questions do you ask every caregiver whose child has diarrhoea?",
+       "answer": "For how long? Is there blood in the stool?"
+      },
+      {
+       "type": "reveal",
+       "text": "Which four things do you look at or feel to find dehydration in a child?",
+       "answer": "The child's general condition (lethargic or unconscious; restless and irritable), sunken eyes, how the child drinks when offered fluid, and the skin pinch."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m4-maya",
+       "note": "Exercise A."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m4-rana",
+       "note": "Exercise B."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 17,
+     "bookToPage": 19,
+     "title": "Classify dehydration",
+     "order": 7,
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify a child with diarrhoea as severe, some or no dehydration, and name the action for each.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "The main symptom diarrhoea has more than one classification table. When classifying:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>ALL children with diarrhoea are classified for dehydration.</li><li>If the child has had diarrhoea for 14 days or more, also classify for persistent diarrhoea.</li><li>If the child has blood in the stool, also classify for dysentery.</li></ul>"
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "categories": [
+        "diarrhea"
+       ],
+       "caption": "Chart booklet: classify dehydration (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Classify dehydration",
+       "caption": "Two signs in a row decide the classification.",
+       "script": "V4.7"
+      },
+      {
+       "type": "flip",
+       "title": "The three classifications for dehydration",
+       "cards": [
+        {
+         "front": "SEVERE DEHYDRATION (red)",
+         "back": "Two or more of these signs: lethargic or unconscious; sunken eyes; not able to drink or drinking poorly; skin pinch goes back very slowly. The child needs fluids quickly: Plan C."
+        },
+        {
+         "front": "SOME DEHYDRATION (yellow)",
+         "back": "Two or more of these signs: restless, irritable; sunken eyes; drinks eagerly, thirsty; skin pinch goes back slowly. The child needs fluid, zinc and food: Plan B."
+        },
+        {
+         "front": "NO DEHYDRATION (green)",
+         "back": "Not enough signs to classify as some or severe dehydration. The child needs extra fluid, zinc and food to prevent dehydration: Plan A, at home."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "If a child has one sign in the red (top) row and one sign in the yellow (middle) row, classify the child in the yellow row: SOME DEHYDRATION.",
+       "label": "Key point"
+      },
+      {
+       "type": "heading",
+       "text": "What are your actions?"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>SEVERE DEHYDRATION:</strong> if the child has no other severe classification, give fluid for severe dehydration (Plan C). If the child also has another severe classification, refer URGENTLY to hospital with the mother giving frequent sips of ORS on the way. Advise the mother to continue breastfeeding. If the child is 2 years or older and there is cholera in your area, give an antibiotic for cholera.</li><li><strong>SOME DEHYDRATION:</strong> give fluid, zinc and food for some dehydration (Plan B). Breastfed children continue breastfeeding. Other children receive their usual milk or some nutritious food after 4 hours of treatment with ORS. If the child also has a severe classification, refer URGENTLY with the mother giving frequent sips of ORS on the way. Advise when to return immediately. Follow up in 5 days if not improving.</li><li><strong>NO DEHYDRATION:</strong> give fluid, zinc and food to treat diarrhoea at home (Plan A). Advise when to return immediately. Follow up in 5 days if not improving.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: For SEVERE DEHYDRATION the national booklet also gives zinc for 14 days, and names the cholera antibiotic: for a child 2 years or older, erythromycin 250 mg, 1 tablet 4 times daily for 3 days (second line: tetracycline). WHO module (page 17): says only \"give antibiotic for cholera\", and lists zinc under SOME and NO DEHYDRATION.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "note",
+       "text": "The young infant is classified with fewer signs, because the chart does not test drinking. SEVERE DEHYDRATION: two of movement only when stimulated or no movement at all, sunken eyes, skin pinch goes back very slowly. SOME DEHYDRATION: two of restless and irritable, sunken eyes, skin pinch goes back slowly. Follow up in 2 days if not improving.",
+       "label": "For the young infant"
+      },
+      {
+       "type": "sort",
+       "text": "Classify each child's dehydration.",
+       "groups": [
+        "SEVERE DEHYDRATION",
+        "SOME DEHYDRATION",
+        "NO DEHYDRATION"
+       ],
+       "items": [
+        {
+         "text": "Lethargic, and the skin pinch goes back very slowly",
+         "group": 0,
+         "why": "Two signs in the red row."
+        },
+        {
+         "text": "Sunken eyes, and drinks eagerly",
+         "group": 1,
+         "why": "Two signs in the yellow row."
+        },
+        {
+         "text": "Drinks eagerly; no other sign",
+         "group": 2,
+         "why": "One sign is not enough."
+        },
+        {
+         "text": "Drinking poorly, and restless and irritable",
+         "group": 1,
+         "why": "One red sign and one yellow sign: classify in the yellow row."
+        },
+        {
+         "text": "Not able to drink, and sunken eyes",
+         "group": 0,
+         "why": "Two signs in the red row."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m4-ex-c",
+       "note": "Exercise C."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 19,
+     "bookToPage": 22,
+     "title": "Classify persistent diarrhoea and dysentery",
+     "order": 8,
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify a child with diarrhoea for 14 days or more, and a child with blood in the stool, then classify Mary.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "After you classify dehydration, classify the child for persistent diarrhoea if the child has had diarrhoea for 14 days or more. Then classify for dysentery if there is blood in the stool."
+      },
+      {
+       "type": "heading",
+       "text": "Diarrhoea for 14 days or more"
+      },
+      {
+       "type": "paragraph",
+       "text": "Health workers often mismanage persistent diarrhoea, so these instructions are important."
+      },
+      {
+       "type": "flip",
+       "title": "Persistent diarrhoea",
+       "cards": [
+        {
+         "front": "SEVERE PERSISTENT DIARRHOEA (red)",
+         "back": "Diarrhoea for 14 days or more AND some or severe dehydration. Treat the dehydration before referral, unless the child has another severe classification. Refer to hospital."
+        },
+        {
+         "front": "PERSISTENT DIARRHOEA (yellow)",
+         "back": "Diarrhoea for 14 days or more and NO signs of dehydration. Special feeding is the most important treatment. Give zinc for 14 days. Follow up in 5 days."
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "Why refer the child with SEVERE PERSISTENT DIARRHOEA? These children need special attention to help prevent loss of fluid. They may need a change in diet. They may also need laboratory tests to identify the cause of the diarrhoea. Treating dehydration in a child who has another severe disease can be difficult, so that child is treated in hospital."
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "categories": [
+        "persistent_diarrhea"
+       ],
+       "caption": "Chart booklet: diarrhoea for 14 days or more (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: For PERSISTENT DIARRHOEA, give zinc for 14 days. WHO module (page 17): says \"give multivitamins and minerals (including zinc) for 14 days\".",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "heading",
+       "text": "Blood in the stool"
+      },
+      {
+       "type": "paragraph",
+       "text": "If the child has diarrhoea and any blood in the stool, classify as DYSENTERY. A child with dysentery is treated for dehydration, and is given an antibiotic recommended for Shigella: ciprofloxacin for 3 days."
+      },
+      {
+       "type": "paragraph",
+       "text": "Finding the actual cause of dysentery requires a stool culture, and it can take at least 2 days to get the laboratory results. You assume Shigella is the cause because Shigella causes about 60% of the dysentery cases seen in clinics, and nearly all cases of life-threatening dysentery."
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "categories": [
+        "dysentery"
+       ],
+       "caption": "Chart booklet: blood in the stool (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: A child with DYSENTERY is followed up in 3 days, and also receives zinc for 14 days. WHO module (page 19): the classification table says \"follow-up in 2 days\", while the counselling and follow-up sections of the same module say 3 days.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "story",
+       "title": "Classify Mary",
+       "stages": [
+        {
+         "text": "Mary has had diarrhoea for 3 days, and there is no blood in the stool.",
+         "question": "Do you classify Mary for persistent diarrhoea or dysentery?",
+         "options": [
+          "No: it is an acute episode with no blood",
+          "Yes: persistent diarrhoea",
+          "Yes: dysentery"
+         ],
+         "answer": 0,
+         "explanation": "Persistent diarrhoea lasts 14 days or more. Dysentery has blood in the stool. Every child with diarrhoea is still classified for dehydration."
+        },
+        {
+         "text": "When you assessed Mary you found that she is restless and irritable, has sunken eyes, is eager to drink, and her skin pinch goes back slowly.",
+         "question": "How do you classify Mary's dehydration?",
+         "options": [
+          "SOME DEHYDRATION",
+          "SEVERE DEHYDRATION",
+          "NO DEHYDRATION"
+         ],
+         "answer": 0,
+         "explanation": "Mary has two or more signs in the yellow row and none in the red row: SOME DEHYDRATION."
+        },
+        {
+         "text": "You tell Ana that Mary has some dehydration. It is not serious enough to send her to the hospital. You can begin treatment at the clinic, and she can continue treatment at home. Ana looks relieved."
+        }
+       ]
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "DVD exercise: case study Josh",
+       "caption": "WHO course DVD, disc 1. Record Josh's signs on a recording form. Does he have a general danger sign? How do you classify his respiratory illness and his diarrhoea?"
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m4-pano",
+       "note": "Exercise D, child 1."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m4-jane",
+       "note": "Exercise D, child 2."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 23,
+     "bookToPage": 24,
+     "title": "Treat: three fluid plans, and Plan C",
+     "order": 9,
+     "read": [
+      {
+       "type": "note",
+       "text": "Match each dehydration classification to its fluid plan, and decide how a severely dehydrated child gets Plan C.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Children with diarrhoea are treated for dehydration. They are also treated for their diarrhoea, if they have persistent diarrhoea or dysentery. The treatments in this module are all new: Plans A, B and C for giving fluids and food, ORS, zinc, and ciprofloxacin for dysentery."
+      },
+      {
+       "type": "flip",
+       "title": "Three plans to replace water and salts",
+       "cards": [
+        {
+         "front": "PLAN C",
+         "back": "SEVERE DEHYDRATION. Urgent treatment: rehydrate quickly with intravenous (IV) fluids."
+        },
+        {
+         "front": "PLAN B",
+         "back": "SOME DEHYDRATION. Treat at the clinic with low osmolarity ORS."
+        },
+        {
+         "front": "PLAN A",
+         "back": "NO DEHYDRATION. Treat diarrhoea at home."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "How is Plan C given?"
+      },
+      {
+       "type": "paragraph",
+       "text": "Severely dehydrated children and young infants need to have water and salts quickly replaced. Plan C requires rapid hydration using IV fluids or a nasogastric (NG) tube."
+      },
+      {
+       "type": "note",
+       "text": "Rehydration using IV fluids or a nasogastric tube is recommended ONLY for children who have SEVERE DEHYDRATION.",
+       "label": "Key point"
+      },
+      {
+       "type": "heading",
+       "text": "Where is Plan C given?"
+      },
+      {
+       "type": "paragraph",
+       "text": "Plan C in your chart booklet is a flow chart for deciding the safest place to treat the severely dehydrated child. It depends on the equipment available at your clinic or at a nearby clinic or hospital, the training you have received, and whether the child can drink."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>If IV treatment is available within a 30-minute drive, refer URGENTLY to hospital for treatment with IV fluids. On the way, have the mother offer frequent sips of ORS to her sick child.</li><li>If you cannot give IV or NG fluid and the child cannot drink, refer the child URGENTLY to the nearest hospital that can give IV or NG treatment.</li></ul>"
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>Plan C by IV in the national booklet: 100 ml/kg Ringer's lactate (or normal saline)</strong></p><table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Age</strong></td><td style=\"padding: 4px\"><strong>First give 30 ml/kg in</strong></td><td style=\"padding: 4px\"><strong>Then give 70 ml/kg in</strong></td></tr><tr><td style=\"padding: 4px\">Under 12 months</td><td style=\"padding: 4px\">1 hour</td><td style=\"padding: 4px\">5 hours</td></tr><tr><td style=\"padding: 4px\">12 months up to 5 years</td><td style=\"padding: 4px\">30 minutes</td><td style=\"padding: 4px\">2½ hours</td></tr></table><p>Repeat the first 30 ml/kg once if the radial pulse is still very weak. Reassess the child every 1 to 2 hours, and classify the dehydration again at the end (after 6 hours in an infant, 3 hours in a child).</p>"
+      },
+      {
+       "type": "note",
+       "text": "The WHO module does not print the Plan C amounts: it asks you to open Plan C in your chart booklet. The amounts above are read from the Sudan national booklet.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "reveal",
+       "text": "Are you able to give Plan C in your clinic? If not, where will you refer?",
+       "answer": "Decide this now for your own clinic, before you need it. Check what equipment you have for IV fluid, whether you are trained to use a nasogastric tube for rehydration, and which facility within a 30-minute drive can give IV fluid."
+      },
+      {
+       "type": "question",
+       "text": "A 2-year-old has SEVERE DEHYDRATION and no other severe classification. Your clinic cannot give IV fluid, but the hospital 20 minutes away can. He can drink. What do you do?",
+       "options": [
+        "Refer URGENTLY for IV fluids, with his mother giving frequent sips of ORS on the way",
+        "Give Plan B for 4 hours, then reassess",
+        "Send him home on Plan A with 2 packets of ORS"
+       ],
+       "answer": 0,
+       "explanation": "IV treatment is available within 30 minutes, so refer urgently, with sips of ORS on the way."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 25,
+     "bookToPage": 28,
+     "title": "Treat: Plan B at the clinic",
+     "order": 10,
+     "read": [
+      {
+       "type": "note",
+       "text": "Decide the amount of ORS for the first 4 hours, show the mother how to give it, and reassess the child.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "A child or young infant with SOME DEHYDRATION needs fluid, zinc and food. Plan B begins with a 4-hour treatment period at the clinic. During the 4 hours, the mother slowly gives a recommended amount of ORS solution. If the child needs treatment for other problems, start treating the dehydration first. Then give the other treatments. Zinc is given just as in Plan A."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Plan B in the clinic",
+       "caption": "Four hours of ORS, and what to do during them.",
+       "script": "V4.10"
+      },
+      {
+       "type": "heading",
+       "text": "Step 1. Determine the amount of ORS for the first 4 hours"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Age</strong></td><td style=\"padding: 4px\"><strong>Weight</strong></td><td style=\"padding: 4px\"><strong>ORS in the first 4 hours</strong></td></tr><tr><td style=\"padding: 4px\">Up to 4 months</td><td style=\"padding: 4px\">Under 6 kg</td><td style=\"padding: 4px\">200–400 ml</td></tr><tr><td style=\"padding: 4px\">4 months up to 12 months</td><td style=\"padding: 4px\">6 kg up to 10 kg</td><td style=\"padding: 4px\">400–700 ml</td></tr><tr><td style=\"padding: 4px\">12 months up to 2 years</td><td style=\"padding: 4px\">10 kg up to 12 kg</td><td style=\"padding: 4px\">700–900 ml</td></tr><tr><td style=\"padding: 4px\">2 years up to 5 years</td><td style=\"padding: 4px\">12 kg up to 19 kg</td><td style=\"padding: 4px\">900–1400 ml</td></tr></table><p>Look below the child's weight. Use the age only if you do not know the weight. If you have no chart, multiply the child's weight in kg by 75: an 8 kg child needs 8 × 75 = 600 ml.</p>"
+      },
+      {
+       "type": "paragraph",
+       "text": "The child will usually want to drink as much as he needs. If the child wants more or less than the estimated amount, give him what he wants. The mother should also breastfeed whenever the baby wants to, then resume the ORS solution."
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: The amounts above are those of the national booklet. WHO module (page 36): its worked example for a 9-month-old uses a range of 450 to 800 ml, but its own answer key for Exercise E uses the same ranges as the national booklet (for example 400 to 700 ml at 11 months).",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "heading",
+       "text": "Step 2. Show the mother how to give ORS solution"
+      },
+      {
+       "type": "paragraph",
+       "text": "Find a comfortable place in the clinic for the mother to sit with her child. Tell her how much ORS solution to give over the next 4 hours, and show her the amount in units that are used in your area. If the child is less than 2 years, show her how to give a spoonful frequently. If the child is older, show her how to give frequent sips from a cup. Sit with her while she gives the first few sips. Ask her if she has any questions."
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>While the mother gives ORS for 4 hours</strong></p><ul><li>Show her where to wash her hands, and where she can change the child's nappy or the child can use a toilet.</li><li>Check with her from time to time to see if she has problems. If the child is not drinking the ORS solution well, try another method: a dropper, or a syringe without the needle.</li><li>Use the time to teach. The first concern is to rehydrate the child. When the child is obviously improving, the mother can turn her attention to learning how to mix and give ORS solution (Plan A).</li><li>It is a good idea to have printed information she can study while she sits with her child. Posters on the wall reinforce it.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "During the first 4 hours, encourage the mother to pause to breastfeed whenever the infant wants, then resume giving ORS. Give a young infant who does not breastfeed an additional 100–200 ml of clean water during this period.",
+       "label": "For the young infant"
+      },
+      {
+       "type": "heading",
+       "text": "Step 3. Reassess after 4 hours"
+      },
+      {
+       "type": "flip",
+       "title": "After 4 hours, classify the dehydration again",
+       "cards": [
+        {
+         "front": "NO DEHYDRATION",
+         "back": "Move to Plan A. Counsel on home care."
+        },
+        {
+         "front": "Still SOME DEHYDRATION",
+         "back": "Choose Plan B again. Begin feeding the child in the clinic: offer food, milk or juice. Continue to breastfeed frequently if the child is breastfed."
+        },
+        {
+         "front": "Worse: now SEVERE DEHYDRATION",
+         "back": "Begin Plan C."
+        },
+        {
+         "front": "Puffy eyes",
+         "back": "A sign of overhydration. It is not a danger sign. The child has been rehydrated and does not need more ORS solution at this time. Give clean water or breast milk, and ORS according to Plan A when the puffiness is gone."
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "If the child is not taking the ORS solution, or seems to be getting worse, reassess before the four hours are over."
+      },
+      {
+       "type": "steps",
+       "title": "If the caregiver must leave before the 4 hours are finished",
+       "steps": [
+        {
+         "title": "Show her how to prepare ORS solution",
+         "text": "Have her practise."
+        },
+        {
+         "title": "Show her how much ORS to give",
+         "text": "Enough to complete the 4-hour treatment at home."
+        },
+        {
+         "title": "Give her packets",
+         "text": "Enough to complete rehydration, PLUS 2 more packets as recommended in Plan A."
+        },
+        {
+         "title": "Explain the 4 rules of home treatment",
+         "text": "Extra fluid, zinc, continue feeding, when to return."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "A child who has SOME DEHYDRATION and a severe classification needs urgent referral. Do not try to rehydrate the child before he leaves. Quickly give the mother some ORS solution and show her how to give frequent sips on the way. The exception is SEVERE PERSISTENT DIARRHOEA: this child is rehydrated first, then referred.",
+       "label": "Key point"
+      },
+      {
+       "type": "story",
+       "title": "Plan B for Mary",
+       "stages": [
+        {
+         "text": "Mary has SOME DEHYDRATION, so she needs Plan B: fluid, food and zinc. Mary is 9 months old and weighs 8.2 kg.",
+         "question": "How much ORS should Mary receive in the first 4 hours?",
+         "options": [
+          "400–700 ml",
+          "200–400 ml",
+          "900–1400 ml"
+         ],
+         "answer": 0,
+         "explanation": "By weight (6 kg up to 10 kg) and by age (4 months up to 12 months) the chart gives 400–700 ml. By the second method, 8.2 kg × 75 is about 615 ml, which is within the chart range."
+        },
+        {
+         "text": "You explain to Ana that Mary has diarrhoea with some dehydration and needs fluids and food. You ask her to stay at the clinic to give Mary ORS, and you show her how much to give from a cup. You take her to a corner where she can sit with Mary. You show her where she can wash her hands and change Mary or use the toilets. Ana is worried about staying too late, because her husband will worry. You assure her that she can give all of the ORS now, and that you will then decide together about treatment at home. Ana props Mary on her lap and slowly begins to give ORS from a cup. You also encourage her to breastfeed if Mary wants to."
+        },
+        {
+         "text": "After 4 hours, you reassess Mary. She has NO DEHYDRATION. Her diarrhoea continues.",
+         "question": "What now?",
+         "options": [
+          "Plan A at home, with zinc and food",
+          "Plan B for another 4 hours",
+          "Refer to hospital"
+         ],
+         "answer": 0,
+         "explanation": "Mary is ready to go home on Plan A. Plan A also includes giving zinc and food."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m4-ex-e",
+       "note": "Exercise E."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 29,
+     "bookToPage": 31,
+     "title": "Treat: Plan A and extra fluid at home",
+     "order": 11,
+     "read": [
+      {
+       "type": "note",
+       "text": "Name the four rules of home treatment, teach a caregiver to mix and give ORS, and say how much to give.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "A child with diarrhoea but NO DEHYDRATION needs fluid, zinc and food to prevent dehydration. This child can be treated at home with Plan A. Plan A depends on your teaching and advising skills, because you counsel the mother about the four rules of home treatment."
+      },
+      {
+       "type": "note",
+       "text": "Eventually ALL children with diarrhoea need Plan A. A child with NO DEHYDRATION is put on Plan A right away. A child with more serious dehydration is first treated with Plan B or C, and then put on Plan A.",
+       "label": "Key point"
+      },
+      {
+       "type": "steps",
+       "title": "The 4 rules of home treatment",
+       "steps": [
+        {
+         "title": "1. Give extra fluid",
+         "text": "As much as the child will take."
+        },
+        {
+         "title": "2. Give zinc",
+         "text": "Once a day for 14 days."
+        },
+        {
+         "title": "3. Continue feeding",
+         "text": ""
+        },
+        {
+         "title": "4. When to return",
+         "text": "For a follow-up visit, or immediately if danger signs develop."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Rule 1: give extra fluid"
+      },
+      {
+       "type": "paragraph",
+       "text": "Tell the caregiver to give as much fluid as the child will take. The purpose is to replace the fluid lost in diarrhoea and so prevent dehydration. The critical action is to give more fluid than usual, as soon as the diarrhoea starts."
+      },
+      {
+       "type": "flip",
+       "title": "Which fluids?",
+       "cards": [
+        {
+         "front": "Breastfed child",
+         "back": "Continue breastfeeding, and add ORS and clean water."
+        },
+        {
+         "front": "Exclusively breastfed child",
+         "back": "Breastfeed more frequently than usual. A breastfed child under 4 months is first offered a breastfeed, then given ORS."
+        },
+        {
+         "front": "Child who is not breastfed",
+         "back": "ORS solution, food-based fluids (soup, rice water, yoghurt drinks) and clean water."
+        },
+        {
+         "front": "Young infant",
+         "back": "If the infant is exclusively breastfed, do not introduce a food-based fluid. If ORS will be given at home, show how much to give after each loose stool. The mother first offers a breastfeed, then gives ORS."
+        }
+       ]
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Mixing and giving ORS",
+       "caption": "Teach the caregiver, then watch her do it.",
+       "script": "V4.11"
+      },
+      {
+       "type": "steps",
+       "title": "How to mix ORS",
+       "steps": [
+        {
+         "title": "Wash your hands",
+         "text": "With soap and water."
+        },
+        {
+         "title": "Pour all the powder from one packet into a clean container",
+         "text": "Use any available container, such as a jar, bowl or bottle."
+        },
+        {
+         "title": "Measure 1 litre of clean water",
+         "text": "Or the correct amount for the packet used. It is best to boil and cool the water. If this is not possible, use the cleanest drinking water available."
+        },
+        {
+         "title": "Pour the water into the container",
+         "text": "Mix well until the powder is completely dissolved."
+        },
+        {
+         "title": "Taste the solution",
+         "text": "So you know how it tastes."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "The caregiver should mix fresh ORS every day, in a clean container, and keep the container covered. She should throw away any solution remaining from the day before.",
+       "label": "Remember"
+      },
+      {
+       "type": "heading",
+       "text": "How much ORS at home?"
+      },
+      {
+       "type": "rich",
+       "text": "<p>Give the caregiver <strong>2 packets of ORS</strong> to use at home. Show her how much fluid to give in addition to the usual fluid intake:</p><ul><li>Up to 2 years: 50–100 ml after each loose stool</li><li>2 years or older: 100–200 ml after each loose stool</li></ul><p>Then tell her how to give it:</p><ol><li>Give frequent small sips from a cup.</li><li>If the child vomits, wait 10 minutes. Then continue, but more slowly.</li><li>Continue giving extra fluid until the diarrhoea stops.</li></ol>"
+      },
+      {
+       "type": "reveal",
+       "text": "For which children with NO DEHYDRATION is it especially important to give ORS at home?",
+       "answer": "A child who was treated with Plan B or C during this visit: the child has just been rehydrated and needs ORS to stop dehydration coming back. And a child who cannot return to the clinic if the diarrhoea gets worse: for example, the family lives far away or the mother has a job she cannot leave."
+      },
+      {
+       "type": "sort",
+       "text": "How much ORS after each loose stool?",
+       "groups": [
+        "50–100 ml",
+        "100–200 ml"
+       ],
+       "items": [
+        {
+         "text": "Kala, 6 months",
+         "group": 0,
+         "why": "Up to 2 years."
+        },
+        {
+         "text": "Sam, 2 years",
+         "group": 1,
+         "why": "2 years or older."
+        },
+        {
+         "text": "Kara, 15 months",
+         "group": 0,
+         "why": "Up to 2 years."
+        },
+        {
+         "text": "Lalita, 4 years",
+         "group": 1,
+         "why": "2 years or older."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 31,
+     "bookToPage": 33,
+     "title": "Treat: zinc, feeding and when to return",
+     "order": 12,
+     "read": [
+      {
+       "type": "note",
+       "text": "Give the right dose of zinc, advise the caregiver to continue feeding, and teach the signs to return immediately.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "heading",
+       "text": "Rule 2: give zinc"
+      },
+      {
+       "type": "paragraph",
+       "text": "Zinc treatment can considerably reduce the duration and severity of a child's episode of diarrhoea. It is also shown to decrease stool output, and to decrease the need to hospitalize a child with diarrhoea."
+      },
+      {
+       "type": "note",
+       "text": "Zinc is only given to children 2 months up to 5 years.",
+       "label": "Key point"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Age</strong></td><td style=\"padding: 4px\"><strong>Zinc, once a day for 14 days</strong></td></tr><tr><td style=\"padding: 4px\">2 months up to 6 months</td><td style=\"padding: 4px\">½ tablet (20 mg tablet), or 5 ml syrup (10 mg/5 ml)</td></tr><tr><td style=\"padding: 4px\">6 months or older</td><td style=\"padding: 4px\">1 tablet (20 mg), or 10 ml syrup</td></tr></table>"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: The national booklet gives zinc as a 20 mg tablet or as syrup (10 mg per 5 ml). WHO module (page 31): gives the tablet only.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "flip",
+       "title": "Show the caregiver how to give zinc",
+       "cards": [
+        {
+         "front": "Infants",
+         "back": "Dissolve the tablet in a small amount of expressed breast milk, ORS or clean water, in a small cup or spoon."
+        },
+        {
+         "front": "Older children",
+         "back": "The tablet can be chewed, or dissolved in a small amount of clean water in a cup or spoon."
+        },
+        {
+         "front": "The first dose",
+         "back": "The mother gives her child the first zinc supplement in the clinic, while you watch."
+        },
+        {
+         "front": "All 14 days",
+         "back": "Remind the caregiver to give zinc for the full 14 days, even after the diarrhoea has stopped."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Rule 3: continue feeding"
+      },
+      {
+       "type": "paragraph",
+       "text": "The caregiver should continue feeding the child during the diarrhoea. A child with persistent diarrhoea has special feeding needs, which you will learn in the next lesson."
+      },
+      {
+       "type": "heading",
+       "text": "Rule 4: when to return"
+      },
+      {
+       "type": "rich",
+       "text": "<p>Tell the mother of ANY sick child to return immediately if the child:</p><ul><li>Is not able to drink or breastfeed</li><li>Becomes sicker</li><li>Develops a fever</li></ul><p>If the child has diarrhoea, also tell her to return if the child has:</p><ul><li>Blood in the stool</li><li>Drinking poorly (this also includes not able to drink or breastfeed)</li></ul>"
+      },
+      {
+       "type": "sort",
+       "text": "How much zinc each day? Sort each child with diarrhoea.",
+       "groups": [
+        "No zinc",
+        "½ tablet",
+        "1 tablet"
+       ],
+       "items": [
+        {
+         "text": "4 months, 7.3 kg, SOME DEHYDRATION",
+         "group": 1,
+         "why": "2 months up to 6 months."
+        },
+        {
+         "text": "37 months, 12 kg, NO DEHYDRATION",
+         "group": 2,
+         "why": "6 months or older."
+        },
+        {
+         "text": "9 months, DYSENTERY",
+         "group": 2,
+         "why": "6 months or older."
+        },
+        {
+         "text": "5 weeks old, NO DEHYDRATION",
+         "group": 0,
+         "why": "Zinc is only given from 2 months up to 5 years."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m4-ex-f",
+       "note": "Exercise F."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 33,
+     "bookToPage": 35,
+     "title": "Treat persistent diarrhoea and dysentery",
+     "order": 13,
+     "read": [
+      {
+       "type": "note",
+       "text": "Give special feeding advice for persistent diarrhoea, treat dysentery, and say when an antibiotic is needed for diarrhoea.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "heading",
+       "text": "SEVERE PERSISTENT DIARRHOEA"
+      },
+      {
+       "type": "paragraph",
+       "text": "These children have had diarrhoea for 14 days or longer and have signs of dehydration. They should be referred to hospital. They need special attention to prevent fluid loss. Treat the dehydration before referral, unless the child has another severe classification."
+      },
+      {
+       "type": "heading",
+       "text": "PERSISTENT DIARRHOEA"
+      },
+      {
+       "type": "paragraph",
+       "text": "These children have had diarrhoea for 14 days or longer and have no signs of dehydration. Special feeding is the most important treatment. Children with persistent diarrhoea may have difficulty digesting milk other than breast milk. They need to temporarily reduce the amount of other milk in their diet."
+      },
+      {
+       "type": "flip",
+       "title": "Feeding advice for a child with PERSISTENT DIARRHOEA",
+       "cards": [
+        {
+         "front": "If still breastfeeding",
+         "back": "Give more frequent, longer breastfeeds, day and night."
+        },
+        {
+         "front": "If taking other milk",
+         "back": "Replace it with increased breastfeeding, OR replace it with fermented milk products such as yoghurt, OR replace half the milk with nutrient-rich semi-solid food."
+        },
+        {
+         "front": "For other foods",
+         "back": "Follow the feeding recommendations for the child's age. Give small, frequent meals (at least 6 times a day), and avoid very sweet foods or drinks."
+        },
+        {
+         "front": "Also",
+         "back": "Give zinc for 14 days. Follow up in 5 days."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "DYSENTERY"
+      },
+      {
+       "type": "paragraph",
+       "text": "Children with dysentery receive ciprofloxacin for 3 days, and zinc given in the same way as in Plans A and B. Treat dehydration as classified. Teach the caregiver to give the oral medicine at home, as you learned in the module on cough or difficult breathing."
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>Ciprofloxacin (250 mg tablet), twice daily for 3 days</strong></p><table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Age</strong></td><td style=\"padding: 4px\"><strong>Weight</strong></td><td style=\"padding: 4px\"><strong>Each dose</strong></td></tr><tr><td style=\"padding: 4px\">2 months up to 4 months</td><td style=\"padding: 4px\">4 kg up to 6 kg</td><td style=\"padding: 4px\">¼ tablet</td></tr><tr><td style=\"padding: 4px\">4 months up to 12 months</td><td style=\"padding: 4px\">6 kg up to 10 kg</td><td style=\"padding: 4px\">½ tablet</td></tr><tr><td style=\"padding: 4px\">12 months up to 5 years</td><td style=\"padding: 4px\">10 kg up to 19 kg</td><td style=\"padding: 4px\">1 tablet</td></tr></table>"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: The dose is given in 250 mg tablets, and the child with DYSENTERY returns for follow-up in 3 days. WHO module (page 34): the answer key for Exercise G gives the dose as ciprofloxacin syrup (250 mg/5 ml), and the treatment section says follow-up in 2 days while the counselling and follow-up sections say 3 days.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "heading",
+       "text": "When should antibiotics be used for diarrhoea?"
+      },
+      {
+       "type": "paragraph",
+       "text": "Antibiotics are not effective in treating most diarrhoea. They rarely help, and they make some children sicker. Unnecessary use of antibiotics may increase the resistance of some pathogens. Antibiotics are also costly, and money is often wasted on ineffective treatment. Therefore, do not give antibiotics routinely."
+      },
+      {
+       "type": "note",
+       "text": "The only types of diarrhoea that should be treated with antibiotics are DYSENTERY, and SEVERE DEHYDRATION with cholera in the area.",
+       "label": "Key point"
+      },
+      {
+       "type": "sort",
+       "text": "Does this child need an antibiotic for the diarrhoea?",
+       "groups": [
+        "Antibiotic",
+        "No antibiotic"
+       ],
+       "items": [
+        {
+         "text": "Watery diarrhoea for 3 days, NO DEHYDRATION",
+         "group": 1,
+         "why": "Fluid, zinc and food (Plan A)."
+        },
+        {
+         "text": "Blood in the stool for 2 days",
+         "group": 0,
+         "why": "DYSENTERY: ciprofloxacin for 3 days."
+        },
+        {
+         "text": "Diarrhoea for 3 weeks, no dehydration, no blood",
+         "group": 1,
+         "why": "PERSISTENT DIARRHOEA: special feeding and zinc."
+        },
+        {
+         "text": "3 years old, SEVERE DEHYDRATION, cholera in the area",
+         "group": 0,
+         "why": "A child of 2 years or older gets the antibiotic for cholera."
+        },
+        {
+         "text": "SOME DEHYDRATION after 2 days of watery stools",
+         "group": 1,
+         "why": "Plan B and zinc."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m4-ex-g",
+       "note": "Exercise G."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 37,
+     "bookToPage": 41,
+     "title": "Counsel the caregiver: the four rules",
+     "order": 14,
+     "read": [
+      {
+       "type": "note",
+       "text": "Counsel a caregiver on each of the four rules of home treatment, and check that she has understood.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Good teaching and advising skills are particularly important when treating dehydration and diarrhoea. The caregiver gives many of the treatments, in the clinic or at home, so you must teach her how. Every child with diarrhoea goes home on Plan A in the end, so every caregiver needs the four rules."
+      },
+      {
+       "type": "steps",
+       "title": "Counselling on the four rules",
+       "steps": [
+        {
+         "title": "Rule 1. Give extra fluid",
+         "text": "Tell the caregiver that during illness a child loses fluid due to fever, fast breathing or diarrhoea. The child will feel better and stay stronger if he drinks extra fluid. First, tell her to give as much fluid as the child will take, as soon as the diarrhoea starts. Second, teach her how to mix and give ORS, and ask her to practise as you observe."
+        },
+        {
+         "title": "Rule 2. Give zinc",
+         "text": "Show the mother how to give the zinc. She gives the first dose in the clinic. Explain that she will continue for 14 days. Check her understanding with checking questions, and solve any problems she has."
+        },
+        {
+         "title": "Rule 3. Continue feeding",
+         "text": "For a child with persistent diarrhoea, explain that other milk is temporarily reduced, and that the child must take more breast milk or other foods to make up for it. The child is seen again in 5 days, and gets further feeding instructions then."
+        },
+        {
+         "title": "Rule 4. When to return",
+         "text": "Immediately if the child is not able to breastfeed or drink, becomes sicker, develops a fever or has blood in the stool. In 3 days if the child has dysentery. In 5 days if the child has persistent diarrhoea."
+        }
+       ]
+      },
+      {
+       "type": "flip",
+       "title": "Extra fluid can be given by",
+       "cards": [
+        {
+         "front": "Breastfeeding",
+         "back": "More frequently, and for longer feeds. If the child is exclusively breastfed, also give ORS or clean water."
+        },
+        {
+         "front": "If the child is not breastfed",
+         "back": "Food-based fluids (soup, rice water, yoghurt drinks), or ORS."
+        },
+        {
+         "front": "ORS at home",
+         "back": "Especially important if the child was treated on Plan B or C, or cannot return to the clinic if the diarrhoea gets worse."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "If the child must come back for more than one illness, tell the caregiver the earliest definite date to return.",
+       "label": "Remember"
+      },
+      {
+       "type": "question",
+       "text": "Which of these is the best checking question after you advise a mother about increasing fluids during diarrhoea?",
+       "options": [
+        "How much fluid will you give your child?",
+        "Do you remember some good fluids to give your child?",
+        "Will you be sure to give your child extra fluid?"
+       ],
+       "answer": 0,
+       "explanation": "A good checking question cannot be answered with yes or no. It shows you what the caregiver has learned."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m4-ex-h",
+       "note": "Exercise H."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m4-ex-i",
+       "note": "Exercise I."
+      },
+      {
+       "type": "story",
+       "title": "Counselling Ana",
+       "stages": [
+        {
+         "text": "After 4 hours of ORS, Mary has NO DEHYDRATION. You will now counsel Ana on Plan A. You give Ana a Mother's Card to take home. It reminds her of what fluids and food to give her child."
+        },
+        {
+         "text": "Rule 1. You tell Ana to give extra fluid, as much as Mary will take: breast milk, clean water, ORS, or food-based fluids such as soup, rice water and yoghurt drinks. Ana says that Mary takes rice water well, and she will still breastfeed. She will also try to get some yoghurt from a neighbour. You remind her to breastfeed as often as Mary will.",
+         "question": "You taught Ana to make ORS in the clinic. How do you check that she remembers?",
+         "options": [
+          "\"How much clean water do you need for 1 packet of ORS?\"",
+          "\"Do you remember how to make the ORS?\"",
+          "\"You will mix it with 1 litre of water, won't you?\""
+         ],
+         "answer": 0,
+         "explanation": "Ana says, \"1 litre.\" You also ask, \"How will you give the ORS?\" and she says, \"With a cup, as she sits in my lap.\" You ask how often she will give it, and what she will do if Mary vomits. You remind her to wait 10 minutes, then continue more slowly. You give Ana 2 packets of ORS to take home."
+        },
+        {
+         "text": "Rule 2. You advise Ana how to give Mary zinc.",
+         "question": "Mary is 9 months old. How much zinc will she take?",
+         "options": [
+          "1 tablet a day for 14 days",
+          "½ tablet a day for 14 days",
+          "1 tablet a day for 5 days"
+         ],
+         "answer": 0,
+         "explanation": "A child of 6 months or older takes 1 full tablet (20 mg) a day for 14 days. You show Ana how to dissolve the tablet in a spoon with breast milk or clean water. You explain that zinc is a good nutrient for the body that will help with Mary's diarrhoea."
+        },
+        {
+         "text": "Rule 3. You advise Ana to continue feeding Mary.",
+         "question": "How much ORS should Mary get after each loose stool?",
+         "options": [
+          "50–100 ml",
+          "100–200 ml",
+          "10–20 ml"
+         ],
+         "answer": 0,
+         "explanation": "Mary is under 2 years: 50–100 ml after each loose stool."
+        },
+        {
+         "text": "Rule 4. You advise Ana to return immediately if Mary is not able to breastfeed or drink, becomes sicker, develops a fever, or has blood in the stool. You use the Mother's Card to show these signs. Mary has no other illness that needs a follow-up date. Your checking questions showed how much Ana understands, and gave her a chance to ask questions. You feel confident that she understands home treatment, and you say goodbye to her and Mary."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 42,
+     "bookToPage": 44,
+     "title": "Follow-up care for diarrhoea",
+     "order": 15,
+     "read": [
+      {
+       "type": "note",
+       "text": "Follow up a young infant with diarrhoea, a child with persistent diarrhoea and a child with dysentery.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "At a follow-up visit you first reassess the earlier classification: is the child improving, the same, or worsening? Then you reassess the child with the full IMNCI assessment to see if there are any new problems. You use a second recording form for this visit."
+      },
+      {
+       "type": "heading",
+       "text": "Diarrhoea in the sick young infant (follow-up in 2 days)"
+      },
+      {
+       "type": "paragraph",
+       "text": "ASK: has the diarrhoea stopped?"
+      },
+      {
+       "type": "flip",
+       "title": "Young infant at 2 days",
+       "cards": [
+        {
+         "front": "The diarrhoea has stopped",
+         "back": "Tell the mother to continue exclusive breastfeeding. If the infant's signs are improving, tell her to continue giving the infant fluids and breastfeeding according to Plan A."
+        },
+        {
+         "front": "The diarrhoea has not stopped",
+         "back": "Reassess the young infant for diarrhoea. Classify the dehydration and select a fluid plan. If the signs are the same or worse, refer the infant to hospital. If the young infant has developed fever, give intramuscular antibiotics before referral, as for VERY SEVERE DISEASE."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Persistent diarrhoea (follow-up in 5 days)"
+      },
+      {
+       "type": "paragraph",
+       "text": "ASK: has the diarrhoea stopped? How many loose stools is the child having per day?"
+      },
+      {
+       "type": "flip",
+       "title": "Persistent diarrhoea at 5 days",
+       "cards": [
+        {
+         "front": "The diarrhoea has stopped (fewer than 3 loose stools a day)",
+         "back": "Tell the mother to follow the usual feeding recommendations for the child's age. If the child is not normally fed in this way, teach her the feeding recommendations on the COUNSEL chart."
+        },
+        {
+         "front": "The diarrhoea has not stopped (3 or more loose stools a day)",
+         "back": "Do a full reassessment of the child. Identify and manage any problems that need immediate attention, such as dehydration. Then refer the child to hospital."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Dysentery (follow-up in 3 days)"
+      },
+      {
+       "type": "paragraph",
+       "text": "ASK: are there fewer stools? Is there less blood in the stool? Is there less fever? Is there less abdominal pain? Is the child eating better?"
+      },
+      {
+       "type": "flip",
+       "title": "Dysentery at 3 days",
+       "cards": [
+        {
+         "front": "Fewer stools, less blood, less fever, less abdominal pain, and eating better",
+         "back": "The child is improving on ciprofloxacin. Usually all of these signs diminish if the antibiotic is working. If only some have diminished, use your judgment. Tell the mother to finish the 3 days of ciprofloxacin, and review why finishing the antibiotic is important."
+        },
+        {
+         "front": "The child is dehydrated",
+         "back": "Classify the dehydration with the classification table. Select the appropriate fluid plan and treat the dehydration."
+        },
+        {
+         "front": "Stools, blood, fever, abdominal pain or eating are the same or worse",
+         "back": "The child is not improving: resistance of Shigella to the antibiotic may be the cause. Stop the first antibiotic and give the second-line antibiotic recommended for Shigella for 5 days. Give the first dose in the clinic, teach the caregiver how and when to give it, and advise her to return in 2 days."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "REFER the child with dysentery who is not improving if he is less than 12 months old, OR was dehydrated on the first visit, OR had measles within the last 3 months.",
+       "label": "Key point"
+      },
+      {
+       "type": "paragraph",
+       "text": "If the child has received the second-line antibiotic for two days and has not improved, the child may have amoebiasis. This child may be treated with metronidazole, if it is available or can be obtained by the family, or referred for treatment. Amoebiasis can only be diagnosed with certainty when trophozoites of E. histolytica containing red blood cells are seen in a fresh stool sample."
+      },
+      {
+       "type": "story",
+       "title": "Follow-up for Mary",
+       "stages": [
+        {
+         "text": "Mary had SOME DEHYDRATION and received Plan B in the clinic. You reassessed her, classified NO DEHYDRATION, counselled Ana on Plan A, and sent them home.",
+         "question": "When was Mary supposed to return?",
+         "options": [
+          "Immediately if a sign to return appears, or in 5 days if she is not improving",
+          "Every day until the diarrhoea stops",
+          "In 3 days, whatever happens"
+         ],
+         "answer": 0,
+         "explanation": "Ana and Mary were to return only if Mary's dehydration and diarrhoea did not improve. Mary does not return, and you are pleased: you hope it means that the fluid plan worked, and that Mary is no longer dehydrated or unwell."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m4-ex-j",
+       "note": "Exercise J."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 45,
+     "bookToPage": 45,
+     "title": "Using this module in your clinic",
+     "order": 16,
+     "read": [
+      {
+       "type": "note",
+       "text": "Plan how you will practise these skills in your own clinic.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "How will you begin to apply what you have learned about managing children with diarrhoea? In the coming days, focus on these key clinical skills. Practising them in your clinic, with your chart booklet and recording form, will help you observe and understand the signs you need to assess and classify a child with dehydration and diarrhoea."
+      },
+      {
+       "type": "flip",
+       "title": "Your clinic plan",
+       "cards": [
+        {
+         "front": "ASSESS",
+         "back": "<ul><li>Assess children for diarrhoea: how long has the diarrhoea lasted? Is there blood in the stool?</li><li>Assess children for signs of dehydration: sunken eyes, the skin pinch, the child's condition, and the child's willingness and ability to drink.</li><li>Practise the skin pinch, and decide if it goes back very slowly, slowly or immediately.</li><li>Practise observing children's condition (restless, irritable, unconscious, lethargic) and willingness to drink.</li></ul>"
+        },
+        {
+         "front": "CLASSIFY",
+         "back": "<ul><li>Use your chart booklet to classify the signs of dehydration.</li><li>Classify whether a child has persistent diarrhoea or dysentery.</li></ul>"
+        },
+        {
+         "front": "TREAT",
+         "back": "<ul><li>Determine if children need Plan A, B or C.</li><li>Determine how you will give Plan C in your facility: what equipment do you have for intravenous fluid? Is there a facility within a 30-minute drive that can give this fluid? Are you trained to use nasogastric tubes for rehydration?</li><li>Advise a caregiver on giving Plan B in your facility. Determine the correct amount of ORS.</li><li>Advise a caregiver about giving Plan A. Focus on the 4 rules of home treatment.</li></ul>"
+        },
+        {
+         "front": "COUNSEL",
+         "back": "<ul><li>Teach a caregiver how to make and give ORS. Determine the amounts required.</li><li>Advise a caregiver on giving extra fluid and continuing to breastfeed at home.</li><li>Advise a caregiver on giving zinc, show how to give the tablets, and say how often zinc should be given.</li><li>Advise a caregiver on continued feeding, especially for children with persistent diarrhoea.</li><li>Counsel a caregiver about when to return for follow-up, and when to return immediately.</li></ul>"
+        }
+       ]
+      },
+      {
+       "type": "reveal",
+       "text": "Before your next clinic day: where will a child with SEVERE DEHYDRATION get Plan C?",
+       "answer": "Write down your answer for your own clinic: can you give IV fluid or use a nasogastric tube? If not, which facility within a 30-minute drive can give IV fluid?"
+      },
+      {
+       "type": "heading",
+       "text": "Remember to use your logbook"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Complete the logbook exercises for Module 4.</li><li>Record at least 2 cases on IMNCI recording forms.</li><li>Take notes if you experience anything difficult, confusing or interesting during these cases, to share with your study group and facilitator.</li></ul>"
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 46,
+     "bookToPage": 47,
+     "title": "Review questions and Module 4 test",
+     "order": 17,
+     "read": [
+      {
+       "type": "note",
+       "text": "Test what you have learned in Module 4.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Before the module you answered five questions. Answer them again now, to see what you have learned. Then take the logbook test: you may use your chart booklet, but not the module."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m4-posttest",
+       "note": ""
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m4-logbook",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    }
+   ],
+   "isPublished": true
+  }
+ ],
+ "exercises": [
+  {
+   "id": "dimci-m4-pretest",
+   "order": 401,
+   "title": "Distance learning Module 4: Pre-test",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 4 (2014)",
+   "narrative": [
+    "Before you begin studying this module, check what you know. After the module you will answer the same questions."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "q1",
+     "type": "mcq",
+     "question": "How can diarrhoea kill children?",
+     "options": [
+      "Children lose valuable fluids, salts and sugars, which can cause shock to vital organs",
+      "Children lose valuable nutrients because they cannot eat",
+      "Diarrhoea causes liver failure"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q2",
+     "type": "mcq",
+     "question": "What are critical treatments for children with diarrhoea and dehydration?",
+     "options": [
+      "Oral antibiotics",
+      "Oral rehydration therapy and zinc",
+      "Paracetamol for discomfort"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q3",
+     "type": "mcq",
+     "question": "What is persistent diarrhoea?",
+     "options": [
+      "When a child frequently has diarrhoea over a period of 1 month, and is ill as a result",
+      "When a child has several episodes of diarrhoea a day",
+      "When a child has an episode of diarrhoea lasting 14 days or more, which is particularly dangerous for dehydration and malnutrition"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q4",
+     "type": "mcq",
+     "question": "Critical messages for caregivers about diarrhoea and dehydration include:",
+     "options": [
+      "The child must receive increased fluids, ORS, zinc and regular feeding",
+      "The child requires ORS, but should receive less food in order to reduce the diarrhoea",
+      "The child should immediately receive antibiotics to stop the diarrhoea"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q5",
+     "type": "mcq",
+     "question": "Nidhi arrives at your clinic and is very lethargic. Her eyes are very sunken. She has diarrhoea. You observe a significant loss of skin elasticity. How will you manage Nidhi?",
+     "options": [
+      "Nidhi requires ORS immediately, as she is dehydrated",
+      "These are common signs of diarrhoea, as the child's body is exhausted",
+      "Nidhi is severely dehydrated. She requires urgent rehydration therapy by IV or nasogastric tube"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m4-maya",
+   "order": 402,
+   "title": "Distance learning Module 4: Exercise A (Maya, 25 months)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 10,
+   "draft": true,
+   "source": "WHO dIMCI Module 4 (2014)",
+   "narrative": [
+    "Maya is at the clinic today because she has had diarrhoea for 4 days. She is 25 months old. She weighs 9 kg. Her temperature is 37.0 °C.",
+    "Maya has no general danger signs. She does not have cough or difficult breathing.",
+    "The health worker said to the mother, \"When Maya has diarrhoea, is there any blood in the stool?\" The mother said, \"No.\"",
+    "The health worker checked for signs of dehydration. Maya is not lethargic or unconscious. She is not restless or irritable. Her eyes are not sunken. Maya drinks eagerly when offered some water. Her skin pinch goes back immediately.",
+    "Record Maya's signs and classify them."
+   ],
+   "expected": {
+    "sections": [
+     "danger",
+     "cough",
+     "diarrhea"
+    ],
+    "patientData": {
+     "childName": "Maya",
+     "sex": "female",
+     "ageMonths": 25,
+     "weightKg": 9,
+     "tempC": 37,
+     "visitType": "initial"
+    },
+    "assessments": {
+     "notAbleToDrink": false,
+     "vomitsEverything": false,
+     "historyOfConvulsions": false,
+     "lethargicUnconscious": false,
+     "convulsingNow": false,
+     "hasCough": false,
+     "hasDiarrhea": true,
+     "diarrheaDays": 4,
+     "bloodInStool": false,
+     "lethargic": false,
+     "restlessIrritable": false,
+     "sunkenEyes": false,
+     "drinkPoorly": false,
+     "drinkEagerly": true,
+     "pinchVerySlow": false,
+     "pinchSlow": false
+    },
+    "classifications": {
+     "danger": [],
+     "cough": [],
+     "diarrhea": [
+      "imci.classifications.no_dehydration"
+     ]
+    },
+    "includeTreatment": false,
+    "treatments": {}
+   },
+   "learningPoints": [
+    "Maya has only one sign of dehydration: she drinks eagerly.",
+    "Two signs are needed to classify SOME DEHYDRATION, so Maya has NO DEHYDRATION.",
+    "4 days is less than 14 days and there is no blood, so there is no persistent diarrhoea and no dysentery."
+   ],
+   "explain": "Maya has only one sign of dehydration: she drinks eagerly. Two signs are needed to classify SOME DEHYDRATION, so Maya has NO DEHYDRATION. 4 days is less than 14 days and there is no blood, so there is no persistent diarrhoea and no dysentery."
+  },
+  {
+   "id": "dimci-m4-rana",
+   "order": 403,
+   "title": "Distance learning Module 4: Exercise B (Rana, 14 months)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 10,
+   "draft": true,
+   "source": "WHO dIMCI Module 4 (2014)",
+   "narrative": [
+    "Rana is 14 months old. She weighs 12 kg. Her temperature is 37.5 °C. Rana's mother said the child has had diarrhoea for 3 weeks.",
+    "Rana does not have any general danger signs. She does not have cough or difficult breathing.",
+    "The health worker assessed her diarrhoea. He noted she has had diarrhoea for 21 days. He asked if there has been blood in the child's stool. The mother said, \"No.\"",
+    "The health worker checked Rana for signs of dehydration. The child is irritable throughout the visit. Her eyes are not sunken. She drinks eagerly. The skin pinch goes back immediately.",
+    "Record Rana's signs and classify."
+   ],
+   "expected": {
+    "sections": [
+     "danger",
+     "cough",
+     "diarrhea"
+    ],
+    "patientData": {
+     "childName": "Rana",
+     "sex": "female",
+     "ageMonths": 14,
+     "weightKg": 12,
+     "tempC": 37.5,
+     "visitType": "initial"
+    },
+    "assessments": {
+     "notAbleToDrink": false,
+     "vomitsEverything": false,
+     "historyOfConvulsions": false,
+     "lethargicUnconscious": false,
+     "convulsingNow": false,
+     "hasCough": false,
+     "hasDiarrhea": true,
+     "diarrheaDays": 21,
+     "bloodInStool": false,
+     "lethargic": false,
+     "restlessIrritable": true,
+     "sunkenEyes": false,
+     "drinkPoorly": false,
+     "drinkEagerly": true,
+     "pinchVerySlow": false,
+     "pinchSlow": false
+    },
+    "classifications": {
+     "danger": [],
+     "cough": [],
+     "diarrhea": [
+      "imci.classifications.some_dehydration",
+      "imci.classifications.severe_persistent_diarrhea"
+     ]
+    },
+    "includeTreatment": false,
+    "treatments": {}
+   },
+   "learningPoints": [
+    "Rana is irritable and drinks eagerly: two signs in the yellow row, so SOME DEHYDRATION.",
+    "She has had diarrhoea for 21 days (14 days or more) and has dehydration, so she is also classified SEVERE PERSISTENT DIARRHOEA.",
+    "Her dehydration is treated before referral, because she has no other severe classification."
+   ],
+   "explain": "Rana is irritable and drinks eagerly: two signs in the yellow row, so SOME DEHYDRATION. She has had diarrhoea for 21 days (14 days or more) and has dehydration, so she is also classified SEVERE PERSISTENT DIARRHOEA. Her dehydration is treated before referral, because she has no other severe classification."
+  },
+  {
+   "id": "dimci-m4-ex-c",
+   "order": 404,
+   "title": "Distance learning Module 4: Exercise C (classify)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 4 (2014)",
+   "narrative": [
+    "Answer the questions about assessing and classifying diarrhoea and dehydration."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "c1",
+     "type": "mcq",
+     "question": "How many signs are needed to classify a child with SOME DEHYDRATION?",
+     "options": [
+      "One",
+      "Two",
+      "Three"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "Two signs from: restless and irritable; sunken eyes; drinks eagerly, thirsty; skin pinch goes back slowly."
+    },
+    {
+     "id": "c2",
+     "type": "mcq",
+     "question": "Which pair of signs may indicate that a child has SEVERE DEHYDRATION?",
+     "options": [
+      "Lethargic, and skin pinch goes back very slowly",
+      "Restless and irritable, and drinks eagerly",
+      "Sunken eyes, and skin pinch goes back slowly"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "SEVERE DEHYDRATION needs two of: lethargic or unconscious; sunken eyes; not able to drink or drinking poorly; skin pinch goes back very slowly (longer than 2 seconds)."
+    },
+    {
+     "id": "c3",
+     "type": "mcq",
+     "question": "What type of ORS should be used to treat dehydration?",
+     "options": [
+      "Low osmolarity ORS",
+      "Any sugar and salt drink",
+      "Double-strength ORS"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "c4",
+     "type": "open",
+     "question": "Which children need zinc supplements?",
+     "points": [
+      "Children with diarrhoea who do not need immediate referral: diarrhoea with some or no dehydration",
+      "Children with persistent diarrhoea receive zinc for 14 days",
+      "Children with dysentery also receive zinc (national booklet)",
+      "Zinc is only given from 2 months up to 5 years"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "c5",
+     "type": "open",
+     "question": "What are the 4 rules of home treatment of diarrhoea?",
+     "points": [
+      "Give extra fluid: as much as the child will take",
+      "Give zinc",
+      "Continue feeding",
+      "When to return: for a follow-up visit, or immediately if danger signs develop"
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m4-pano",
+   "order": 405,
+   "title": "Distance learning Module 4: Exercise D (Pano)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 10,
+   "draft": true,
+   "source": "WHO dIMCI Module 4 (2014)",
+   "narrative": [
+    "Pano has had diarrhoea for five days. He has no blood in the stool.",
+    "He is irritable. His eyes are sunken. His father and mother also think that Pano's eyes are sunken.",
+    "The health worker offers Pano some water, and the child drinks eagerly. When the health worker pinches the skin on the child's abdomen, it goes back slowly.",
+    "Record the child's signs and classification for dehydration on the recording form."
+   ],
+   "expected": {
+    "sections": [
+     "diarrhea"
+    ],
+    "patientData": {
+     "childName": "Pano",
+     "sex": "male",
+     "visitType": "initial"
+    },
+    "assessments": {
+     "notAbleToDrink": false,
+     "vomitsEverything": false,
+     "historyOfConvulsions": false,
+     "lethargicUnconscious": false,
+     "convulsingNow": false,
+     "hasCough": false,
+     "hasDiarrhea": true,
+     "diarrheaDays": 5,
+     "bloodInStool": false,
+     "lethargic": false,
+     "restlessIrritable": true,
+     "sunkenEyes": true,
+     "drinkPoorly": false,
+     "drinkEagerly": true,
+     "pinchVerySlow": false,
+     "pinchSlow": true
+    },
+    "classifications": {
+     "diarrhea": [
+      "imci.classifications.some_dehydration"
+     ]
+    },
+    "includeTreatment": false,
+    "treatments": {}
+   },
+   "learningPoints": [
+    "Pano is irritable, has sunken eyes, drinks eagerly, and his skin pinch goes back slowly.",
+    "These are signs in the yellow row, and he has none in the red row: SOME DEHYDRATION."
+   ],
+   "explain": "Pano is irritable, has sunken eyes, drinks eagerly, and his skin pinch goes back slowly. These are signs in the yellow row, and he has none in the red row: SOME DEHYDRATION."
+  },
+  {
+   "id": "dimci-m4-jane",
+   "order": 406,
+   "title": "Distance learning Module 4: Exercise D (Jane)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 10,
+   "draft": true,
+   "source": "WHO dIMCI Module 4 (2014)",
+   "narrative": [
+    "Jane has had diarrhoea for 3 days. There was no blood in the stool.",
+    "The child was not lethargic or unconscious. She was not irritable or restless. Her eyes were sunken.",
+    "She was able to drink, but she was not thirsty. The skin pinch went back immediately.",
+    "Record the child's signs and classification for dehydration on the recording form."
+   ],
+   "expected": {
+    "sections": [
+     "diarrhea"
+    ],
+    "patientData": {
+     "childName": "Jane",
+     "sex": "female",
+     "visitType": "initial"
+    },
+    "assessments": {
+     "notAbleToDrink": false,
+     "vomitsEverything": false,
+     "historyOfConvulsions": false,
+     "lethargicUnconscious": false,
+     "convulsingNow": false,
+     "hasCough": false,
+     "hasDiarrhea": true,
+     "diarrheaDays": 3,
+     "bloodInStool": false,
+     "lethargic": false,
+     "restlessIrritable": false,
+     "sunkenEyes": true,
+     "drinkPoorly": false,
+     "drinkEagerly": false,
+     "pinchVerySlow": false,
+     "pinchSlow": false
+    },
+    "classifications": {
+     "diarrhea": [
+      "imci.classifications.no_dehydration"
+     ]
+    },
+    "includeTreatment": false,
+    "treatments": {}
+   },
+   "learningPoints": [
+    "Jane has only one sign: sunken eyes.",
+    "One sign is not enough to classify some or severe dehydration: NO DEHYDRATION."
+   ],
+   "explain": "Jane has only one sign: sunken eyes. One sign is not enough to classify some or severe dehydration: NO DEHYDRATION."
+  },
+  {
+   "id": "dimci-m4-ex-e",
+   "order": 407,
+   "title": "Distance learning Module 4: Exercise E (Plan B)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 10,
+   "draft": true,
+   "source": "WHO dIMCI Module 4 (2014)",
+   "narrative": [
+    "Answer the questions about Plan B for dehydrated children. Use the Plan B table of the national chart booklet."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "e1",
+     "type": "mcq",
+     "question": "Andras is 3 years old and has SOME DEHYDRATION. How much ORS solution is he likely to need in the first 4 hours?",
+     "options": [
+      "400–700 ml",
+      "700–900 ml",
+      "900–1400 ml"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e2",
+     "type": "mcq",
+     "question": "Gul weighs 10 kg and has SOME DEHYDRATION. How much ORS solution in the first 4 hours?",
+     "options": [
+      "400–700 ml",
+      "700–900 ml (about 750 ml)",
+      "900–1400 ml"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "10 kg × 75 = 750 ml."
+    },
+    {
+     "id": "e3",
+     "type": "mcq",
+     "question": "Nirveli weighs 7.5 kg and has SOME DEHYDRATION. How much ORS solution in the first 4 hours?",
+     "options": [
+      "200–400 ml",
+      "400–700 ml (about 560 ml)",
+      "700–900 ml"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "7.5 kg × 75 = 562.5 ml."
+    },
+    {
+     "id": "e4",
+     "type": "mcq",
+     "question": "Sami is 11 months old and has SOME DEHYDRATION. How much ORS solution in the first 4 hours?",
+     "options": [
+      "200–400 ml",
+      "400–700 ml",
+      "700–900 ml"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e5",
+     "type": "mcq",
+     "question": "Vinita is 5 months old and has diarrhoea with SOME DEHYDRATION. There is no scale at the small clinic. Vinita's mother died during childbirth, so Vinita has been taking infant formula. The grandmother has recently started giving cooked cereal as well. What should Vinita be given during the first 4 hours?",
+     "options": [
+      "400–700 ml of low osmolarity ORS solution, and also 100–200 ml of clean water",
+      "200–400 ml of low osmolarity ORS solution only",
+      "400–700 ml of infant formula"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "By age (4 months up to 12 months): 400–700 ml. This is the answer of the WHO key, which adds 100–200 ml of clean water because Vinita is not breastfed."
+    },
+    {
+     "id": "e6",
+     "type": "mcq",
+     "question": "What should the grandmother do if Vinita vomits during the treatment?",
+     "options": [
+      "Wait 10 minutes, then give the ORS solution more slowly",
+      "Stop the ORS and go to hospital",
+      "Give the same amount again at once"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e7",
+     "type": "mcq",
+     "question": "When should the health worker reassess Vinita?",
+     "options": [
+      "After Vinita has been given ORS solution for 4 hours on Plan B",
+      "After 1 hour",
+      "The next morning"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e8",
+     "type": "mcq",
+     "question": "When Vinita is reassessed, she has NO DEHYDRATION. What treatment plan should she be put on?",
+     "options": [
+      "Plan A",
+      "Plan B again",
+      "Plan C"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "The grandmother takes home 2 one-litre packets of ORS and gives Vinita 50–100 ml of ORS solution after each loose stool."
+    },
+    {
+     "id": "e9",
+     "type": "mcq",
+     "question": "Yasmin is 9 months old and weighs 8 kg. She has SOME DEHYDRATION and the health worker chooses Plan B. She breastfeeds several times each day and eats 3 meals each day. About how much ORS solution should her mother give during the first 4 hours?",
+     "options": [
+      "400–700 ml",
+      "100–200 ml",
+      "900–1400 ml"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "8 kg × 75 = 600 ml."
+    },
+    {
+     "id": "e10",
+     "type": "mcq",
+     "question": "During the first 4 hours of treatment, should Yasmin eat or drink anything in addition to the ORS solution?",
+     "options": [
+      "Yes: she should breastfeed whenever and as much as she wants",
+      "No: only ORS for 4 hours",
+      "Yes: her 3 usual meals of rice"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e11",
+     "type": "mcq",
+     "question": "After 4 hours of treatment, Yasmin is still classified SOME DEHYDRATION. What is the appropriate plan to continue?",
+     "options": [
+      "Continue on Plan B",
+      "Plan A at home",
+      "Plan C"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "Begin feeding her in the clinic, and repeat Plan B."
+    }
+   ]
+  },
+  {
+   "id": "dimci-m4-ex-f",
+   "order": 408,
+   "title": "Distance learning Module 4: Exercise F (Plan A)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 4 (2014)",
+   "narrative": [
+    "Answer the questions about Plan A for children with diarrhoea."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "f1",
+     "type": "open",
+     "question": "At your clinic, what are the recommended fluids for children with diarrhoea with NO DEHYDRATION?",
+     "points": [
+      "Answers will vary by clinic",
+      "ORS solution",
+      "Food-based fluids such as soup, rice water and yoghurt drinks",
+      "Clean water",
+      "More frequent breastfeeding"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f2",
+     "type": "open",
+     "question": "Somi is a 4-year-old boy with diarrhoea. He has no general danger signs and is classified NO DEHYDRATION. He will be treated according to Plan A. What are the 4 rules of home treatment of diarrhoea?",
+     "points": [
+      "Give extra fluid: as much as the child will take",
+      "Give zinc",
+      "Continue feeding",
+      "When to return: for a follow-up visit, or immediately if danger signs develop"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f3",
+     "type": "mcq",
+     "question": "What fluids should the health worker tell Somi's mother to give?",
+     "options": [
+      "ORS solution, food-based fluids (such as soup, rice water, yoghurt drinks) and clean water",
+      "ORS solution only",
+      "Less fluid than usual, to slow the diarrhoea"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f4",
+     "type": "mcq",
+     "question": "Kasit is a 3-month-old boy with diarrhoea. He has no general danger signs and is classified NO DEHYDRATION. He is exclusively breastfed. What should the health worker tell his mother about extra fluids?",
+     "options": [
+      "Breastfeed him more frequently than usual, and after breastfeeding give ORS solution or clean water",
+      "Stop breastfeeding and give only ORS until the diarrhoea stops",
+      "Give soup and rice water as well as breast milk"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f5",
+     "type": "open",
+     "question": "For which children with NO DEHYDRATION is it especially important to give ORS at home?",
+     "points": [
+      "Children who have been treated with Plan B or Plan C during the visit",
+      "Children who cannot return to a clinic if the diarrhoea gets worse"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f6",
+     "type": "mcq",
+     "question": "Kala is 6 months old with NO DEHYDRATION. How much extra fluid should her mother give after each loose stool?",
+     "options": [
+      "50–100 ml",
+      "100–200 ml",
+      "200–400 ml"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f7",
+     "type": "mcq",
+     "question": "Sam is 2 years old with NO DEHYDRATION. How much extra fluid after each loose stool?",
+     "options": [
+      "50–100 ml",
+      "100–200 ml",
+      "200–400 ml"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f8",
+     "type": "mcq",
+     "question": "Kara is 15 months old with NO DEHYDRATION. How much extra fluid after each loose stool?",
+     "options": [
+      "50–100 ml",
+      "100–200 ml",
+      "200–400 ml"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f9",
+     "type": "mcq",
+     "question": "Lalita is 4 years old with NO DEHYDRATION. How much extra fluid after each loose stool?",
+     "options": [
+      "50–100 ml",
+      "100–200 ml",
+      "200–400 ml"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m4-ex-g",
+   "order": 409,
+   "title": "Distance learning Module 4: Exercise G (treat)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 4 (2014)",
+   "narrative": [
+    "Answer the questions about treatment for diarrhoea and dehydration. Use the dose tables of the national chart booklet."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "g1",
+     "type": "mcq",
+     "question": "How will you give zinc to a 4-month-old infant, weight 7.3 kg, with SOME DEHYDRATION?",
+     "options": [
+      "½ of a 20 mg tablet (10 mg) once each day for 14 days",
+      "1 tablet (20 mg) once each day for 14 days",
+      "½ tablet twice each day for 5 days"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "The tablet is crushed and dissolved in breast milk, ORS or clean water. It is important to give zinc for all 14 days."
+    },
+    {
+     "id": "g2",
+     "type": "mcq",
+     "question": "How will you give zinc to a 37-month-old child, weight 12 kg, with NO DEHYDRATION?",
+     "options": [
+      "½ of a 20 mg tablet once each day for 14 days",
+      "1 tablet (20 mg) once each day for 14 days",
+      "1 tablet once each day until the diarrhoea stops"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "The tablet can be chewed or dissolved in fluid. It is important to give zinc for all 14 days."
+    },
+    {
+     "id": "g3",
+     "type": "mcq",
+     "question": "How would you treat a 9-month-old, weighing 8.3 kg, with a classification of DYSENTERY?",
+     "options": [
+      "Ciprofloxacin ½ tablet (250 mg) 2 times a day for 3 days, and zinc",
+      "Ciprofloxacin 1 tablet (250 mg) 2 times a day for 3 days, and zinc",
+      "Amoxicillin for 5 days"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "4 months up to 12 months (6 kg up to 10 kg): ½ tablet. Follow up in 3 days."
+    },
+    {
+     "id": "g4",
+     "type": "mcq",
+     "question": "How would you treat a 36-month-old, weighing 15 kg, with a classification of DYSENTERY?",
+     "options": [
+      "Ciprofloxacin ½ tablet (250 mg) 2 times a day for 3 days, and zinc",
+      "Ciprofloxacin 1 tablet (250 mg) 2 times a day for 3 days, and zinc",
+      "ORS only: no antibiotic is needed"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "12 months up to 5 years (10 kg up to 19 kg): 1 tablet. Follow up in 3 days."
+    },
+    {
+     "id": "g5",
+     "type": "mcq",
+     "question": "How would you treat a 7-month-old with SEVERE PERSISTENT DIARRHOEA and no other severe classification?",
+     "options": [
+      "Treat the dehydration, then refer to hospital, with the mother giving frequent sips of ORS on the way",
+      "Give special feeding advice and follow up in 5 days",
+      "Give ciprofloxacin for 3 days"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "Treat dehydration before referral unless the child has another severe classification."
+    },
+    {
+     "id": "g6",
+     "type": "mcq",
+     "question": "The mother of a 15-month-old child with PERSISTENT DIARRHOEA is counselled. He is no longer breastfed. He normally takes 2 feedings of cow's milk and 1 meal of family foods each day. His diet has not changed during the diarrhoea. Tick ALL the comments that are appropriate.",
+     "options": [
+      "You were right to keep feeding your child during the diarrhoea. He needs food to stay strong.",
+      "Your child needs more food each day. Try to give him 3 family meals plus 2 feedings between meals.",
+      "Cow's milk is very bad for your child.",
+      "Your child may be having trouble digesting the cow's milk, and that may be the reason that the diarrhoea has lasted so long.",
+      "Give your child yoghurt instead of milk until the follow-up visit in 5 days. Or give only half the usual milk and increase the amount of family foods to make up for this."
+     ],
+     "correct": [
+      0,
+      1,
+      3,
+      4
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m4-ex-h",
+   "order": 410,
+   "title": "Distance learning Module 4: Exercise H (Basaka)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 4 (2014)",
+   "narrative": [
+    "Health worker Basaka must teach a mother to prepare ORS solution for her child with diarrhoea. The child was treated with Plan B during this visit. First Basaka explains how to mix the ORS, then he shows her how to do it. He asks the mother, \"Do you understand?\" The mother answers \"yes\". So Basaka gives her 2 ORS packets and says good-bye."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "h1",
+     "type": "open",
+     "question": "What are the four rules of home treatment that must be explained to the mother?",
+     "points": [
+      "GIVE EXTRA FLUID: explain what extra fluids to give. As the child was treated with Plan B, the mother should give ORS at home. Explain how much ORS solution to give after each loose stool",
+      "CONTINUE FEEDING: instruct her how to continue feeding during and after the diarrhoea",
+      "GIVE ZINC: explain the dose and schedule for 14 days of zinc, how to give it, and why it is given",
+      "WHEN TO RETURN: teach her the signs to bring the child back immediately"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "h2",
+     "type": "open",
+     "question": "What information did Basaka give the mother about the task?",
+     "points": [
+      "How to mix ORS into water",
+      "He did not include what containers to use, the ratio of packets and water, how to give the ORS to her child, or how often to give it"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "h3",
+     "type": "tf",
+     "question": "Basaka showed the mother an example.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "h4",
+     "type": "tf",
+     "question": "Basaka asked the mother to practise.",
+     "correct": false,
+     "explain": ""
+    },
+    {
+     "id": "h5",
+     "type": "mcq",
+     "question": "How did Basaka check the mother's understanding?",
+     "options": [
+      "With a yes/no question (\"Do you understand?\")",
+      "With a checking question",
+      "By watching her mix the ORS"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "This is not a checking question."
+    },
+    {
+     "id": "h6",
+     "type": "tf",
+     "question": "Basaka checked the mother's understanding correctly.",
+     "correct": false,
+     "explain": "The question does not show whether the caregiver learned."
+    },
+    {
+     "id": "h7",
+     "type": "open",
+     "question": "How would you have checked the mother's understanding?",
+     "points": [
+      "With a checking question, for example: \"How will you prepare the ORS for your child?\""
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m4-ex-i",
+   "order": 411,
+   "title": "Distance learning Module 4: Exercise I (counsel)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 4 (2014)",
+   "narrative": [
+    "Answer these questions about counselling a caregiver."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "i1",
+     "type": "mcq",
+     "question": "A 4-year-old boy has diarrhoea. He has no general danger signs and is classified NO DEHYDRATION. The health worker has taught his mother Plan A and given her 2 packets of ORS. Tick ALL the fluids the mother should encourage her son to drink as long as the diarrhoea continues.",
+     "options": [
+      "Tea that the child usually drinks with meals",
+      "Fruit juice that the child usually drinks each day",
+      "Water from the water jug: the child can get water whenever he is thirsty",
+      "ORS after each loose stool",
+      "Yoghurt drink when the mother makes some for the family"
+     ],
+     "correct": [
+      0,
+      1,
+      2,
+      3,
+      4
+     ],
+     "explain": "All five should be ticked."
+    },
+    {
+     "id": "i2",
+     "type": "mcq",
+     "question": "Aviva is 11 months old and has diarrhoea with NO DEHYDRATION, no general danger signs and no other classification. She eats cereal and bits of meat, vegetables and fruit, and is still breastfed. Her mother lives far from the clinic and might not be able to come back for several days, even if the child gets worse. Should the health worker give ORS packets to take home?",
+     "options": [
+      "Yes: 2 one-litre packets",
+      "No: Aviva has no dehydration",
+      "Yes: 1 packet for each day of diarrhoea so far"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "ORS at home is especially important for a child who cannot return if the diarrhoea gets worse."
+    },
+    {
+     "id": "i3",
+     "type": "mcq",
+     "question": "What should Aviva's mother do if the child vomits while being fed the solution?",
+     "options": [
+      "Wait 10 minutes before giving more fluid, then give the solution more slowly",
+      "Stop giving ORS",
+      "Give a double amount to replace it"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "i4",
+     "type": "mcq",
+     "question": "How long should Aviva's mother continue giving extra fluid?",
+     "options": [
+      "Until the diarrhoea stops",
+      "For 2 days",
+      "For 14 days"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "i5",
+     "type": "open",
+     "question": "The health worker will teach Aviva's mother the signs to return immediately. What are they?",
+     "points": [
+      "Drinking poorly, or not able to drink or breastfeed",
+      "Becomes sicker",
+      "Develops a fever",
+      "Blood in the stool"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "i6",
+     "type": "mcq",
+     "question": "Which is the best checking question after advice about increasing fluids during diarrhoea?",
+     "options": [
+      "Do you remember some good fluids to give your child?",
+      "Will you be sure to give your child extra fluid?",
+      "How much fluid will you give your child?"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m4-ex-j",
+   "order": 412,
+   "title": "Distance learning Module 4: Exercise J (Evaristo's follow-up)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 4 (2014)",
+   "narrative": [
+    "This clinic refers children with severe dehydration, because health workers cannot give IV or NG therapy. A hospital nearby can give IV therapy.",
+    "Evaristo was brought for follow-up of PERSISTENT DIARRHOEA after 5 days. He is 9 months old and weighs 6.5 kg. His temperature is 36.5 °C today. He is no longer breastfed. His mother feeds him cereal twice a day and gives him a milk formula 4 times each day. When you saw him last week, you advised his mother to give him only half his usual amount of milk, and to replace half the milk by giving extra servings of cereal with oil and vegetables or meat or fish added."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "j1",
+     "type": "mcq",
+     "question": "What is your first step for reassessing Evaristo?",
+     "options": [
+      "Ask: has the diarrhoea stopped? How many loose stools is he having per day?",
+      "Give ORS for 4 hours",
+      "Weigh him and send him home"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "j2",
+     "type": "mcq",
+     "question": "Evaristo's mother says the diarrhoea has not stopped. What do you do next?",
+     "options": [
+      "Reassess him completely as on the ASSESS AND CLASSIFY chart, treat any problem that needs immediate attention, then refer him to hospital",
+      "Repeat the feeding advice and see him again in 5 days",
+      "Give ciprofloxacin for 3 days"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "j3",
+     "type": "tf",
+     "question": "You find that Evaristo has no general danger signs and no cough. He has now had diarrhoea for about 3 weeks. There is no blood in the stool. He is restless and irritable. His eyes are not sunken. When you offer him water, he takes a sip but does not seem thirsty. A skin pinch goes back immediately. Evaristo is dehydrated.",
+     "correct": false,
+     "explain": "He has only one sign (restless and irritable): NO DEHYDRATION."
+    },
+    {
+     "id": "j4",
+     "type": "mcq",
+     "question": "How will you treat Evaristo?",
+     "options": [
+      "Refer him to hospital. He does not need any treatment before he leaves",
+      "Plan B for 4 hours, then send him home",
+      "Give the second-line antibiotic"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "j5",
+     "type": "mcq",
+     "question": "If your reassessment had found that Evaristo had SOME DEHYDRATION, what would you have done before referral?",
+     "options": [
+      "Rehydrate him according to Plan B before referral",
+      "Refer at once with sips of ORS on the way",
+      "Give IV fluids by Plan C"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m4-posttest",
+   "order": 413,
+   "title": "Distance learning Module 4: Review questions (post-test)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 4 (2014)",
+   "narrative": [
+    "Now that you have finished the module, answer the same questions as before. This will show what you have learned."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "q1",
+     "type": "mcq",
+     "question": "How can diarrhoea kill children?",
+     "options": [
+      "Children lose valuable fluids, salts and sugars, which can cause shock to vital organs",
+      "Children lose valuable nutrients because they cannot eat",
+      "Diarrhoea causes liver failure"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q2",
+     "type": "mcq",
+     "question": "What are critical treatments for children with diarrhoea and dehydration?",
+     "options": [
+      "Oral antibiotics",
+      "Oral rehydration therapy and zinc",
+      "Paracetamol for discomfort"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q3",
+     "type": "mcq",
+     "question": "What is persistent diarrhoea?",
+     "options": [
+      "When a child frequently has diarrhoea over a period of 1 month, and is ill as a result",
+      "When a child has several episodes of diarrhoea a day",
+      "When a child has an episode of diarrhoea lasting 14 days or more, which is particularly dangerous for dehydration and malnutrition"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q4",
+     "type": "mcq",
+     "question": "Critical messages for caregivers about diarrhoea and dehydration include:",
+     "options": [
+      "The child must receive increased fluids, ORS, zinc and regular feeding",
+      "The child requires ORS, but should receive less food in order to reduce the diarrhoea",
+      "The child should immediately receive antibiotics to stop the diarrhoea"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q5",
+     "type": "mcq",
+     "question": "Nidhi arrives at your clinic and is very lethargic. Her eyes are very sunken. She has diarrhoea. You observe a significant loss of skin elasticity. How will you manage Nidhi?",
+     "options": [
+      "Nidhi requires ORS immediately, as she is dehydrated",
+      "These are common signs of diarrhoea, as the child's body is exhausted",
+      "Nidhi is severely dehydrated. She requires urgent rehydration therapy by IV or nasogastric tube"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m4-logbook",
+   "order": 414,
+   "title": "Distance learning Module 4: Logbook assessment questions",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 15,
+   "draft": true,
+   "source": "WHO dIMCI Module 4 (2014)",
+   "narrative": [
+    "You are allowed to use your chart booklet as you answer these questions. You should not use your study modules."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "l1",
+     "type": "mcq",
+     "question": "Diarrhoea is an important childhood disease because:",
+     "options": [
+      "It is a major killer of children worldwide",
+      "It is a nuisance because the child has to go to the toilet frequently",
+      "Its treatment is very complicated"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l2",
+     "type": "mcq",
+     "question": "Dehydration can be treated by replacement of water and salt using:",
+     "options": [
+      "Zinc",
+      "Low osmolarity ORS or IV fluids",
+      "Antibiotics"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l3",
+     "type": "mcq",
+     "question": "Why is dehydration a cause for serious concern?",
+     "options": [
+      "It can cause shock to vital organs, and possibly death",
+      "It gives the child a headache",
+      "Dehydration is not a very serious health issue"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l4",
+     "type": "mcq",
+     "question": "What is in ORS?",
+     "options": [
+      "Copper and zinc",
+      "Antibiotics",
+      "Sodium (salts) and glucose (sugars)"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l5",
+     "type": "mcq",
+     "question": "What signs do you assess for dehydration?",
+     "options": [
+      "Blood in the stool or diarrhoea that persists for 14 days",
+      "Sunken eyes, loose skin (turgor) and lethargy",
+      "Swollen abdomen and sunken eyes"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l6",
+     "type": "mcq",
+     "question": "Persistent diarrhoea can be classified as SEVERE PERSISTENT DIARRHOEA if the child:",
+     "options": [
+      "Has diarrhoea for 10 days or more",
+      "Is dehydrated",
+      "Has blood in the stool"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l7",
+     "type": "mcq",
+     "question": "What are the 4 rules of home treatment in Plan A?",
+     "options": [
+      "Give extra fluid, give oral antibiotics, give zinc, counsel for when to return",
+      "Give extra fluid, reduce feeding, keep the child warm, counsel for when to return",
+      "Give extra fluid, continue feeding, give zinc, and counsel for when to return"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l8",
+     "type": "mcq",
+     "question": "An infant is 11 months of age and weighs 9.6 kg. She is classified as having SOME DEHYDRATION. How much ORS should she receive in the next 4 hours?",
+     "options": [
+      "At least 400 ml, up to 700 ml",
+      "At least 200 ml, up to 960 ml",
+      "At least 800 ml, up to 960 ml"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "National booklet: 4 months up to 12 months, 6 kg up to 10 kg: 400–700 ml."
+    },
+    {
+     "id": "l9",
+     "type": "mcq",
+     "question": "Lily is restless, but drinks quickly when you give her water. How would you classify her dehydration?",
+     "options": [
+      "SEVERE DEHYDRATION",
+      "SOME DEHYDRATION",
+      "NO DEHYDRATION"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l10",
+     "type": "mcq",
+     "question": "Why is zinc important in the treatment of diarrhoea?",
+     "options": [
+      "It reduces stool volume",
+      "It replaces sodium, potassium and other electrolytes",
+      "It is useful only in those infants shown to be zinc-deficient"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l11",
+     "type": "mcq",
+     "question": "What antibiotic should be given for dysentery?",
+     "options": [
+      "Ciprofloxacin",
+      "Cotrimoxazole",
+      "Amoxicillin"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l12",
+     "type": "tf",
+     "question": "Diarrhoea is when there is more water than normal in the stool and may occur at least 3 times per day.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l13",
+     "type": "tf",
+     "question": "Dehydration can be recognized by making a rapid stool examination.",
+     "correct": false,
+     "explain": ""
+    },
+    {
+     "id": "l14",
+     "type": "tf",
+     "question": "Dysentery is when there is blood in the stool.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l15",
+     "type": "tf",
+     "question": "Diarrhoea causes death because of dehydration, that is, the loss of water and salt.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l16",
+     "type": "tf",
+     "question": "You need at least two signs to classify an infant with diarrhoea as having SOME DEHYDRATION.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l17",
+     "type": "tf",
+     "question": "You can classify a 3-month-old infant with diarrhoea as having SEVERE DEHYDRATION if she has sunken eyes and lethargy.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l18",
+     "type": "tf",
+     "question": "Persistent diarrhoea is when diarrhoea occurs for 3 months continuously.",
+     "correct": false,
+     "explain": "14 days or more."
+    },
+    {
+     "id": "l19",
+     "type": "tf",
+     "question": "Shigella bacteria is the most common cause of blood in stool in children.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l20",
+     "type": "tf",
+     "question": "You do not need to give antibiotics for a child with watery diarrhoea.",
+     "correct": true,
+     "explain": ""
+    }
+   ]
+  }
+ ]
+}
