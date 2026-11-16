@@ -1,4 +1,4 @@
-// Uploads the WHO distance learning Modules 1 to 4 course file into the live
+// Uploads the WHO distance learning Modules 1 to 9 (no Module 8) course file into the live
 // app, writing exactly what Online courses → Manage → Import → "Import a course
 // file" (new course) writes: the exercises into exerciseDefinitions, then the
 // course, its modules and sections into onlineCourses / onlineCourseItems.
@@ -19,7 +19,7 @@ if (!keyPath || !fs.existsSync(keyPath)) { console.error('Pass --key <service-ac
 const COMMIT = a.includes('--commit'), UNDO = a.includes('--undo'), REPLACE = a.includes('--replace');
 // The batch tag keeps the name of the first upload (Modules 1 and 2), so replace and undo still find it.
 const BATCH = 'imnci-dimci-modules-1-2-2026-11-15';
-const FILE = path.join(__dirname, '..', '..', 'course-packages', 'who-dimci-modules-1-4.imnci.json');
+const FILE = path.join(__dirname, '..', '..', 'course-packages', 'who-dimci-modules-1-9.imnci.json');
 
 admin.initializeApp({ credential: admin.credential.cert(JSON.parse(fs.readFileSync(keyPath, 'utf8'))) });
 const db = admin.firestore(), now = () => admin.firestore.FieldValue.serverTimestamp();

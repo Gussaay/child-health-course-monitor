@@ -438,3 +438,103 @@ describe('short lessons', () => {
         expect(JSON.stringify([PKG, PKG2])).not.toMatch(/[Ss]ections? \d\.\d/);
     });
 });
+
+describe('WHO distance learning Modules 5, 6, 7 and 9', () => {
+    const read = (name) => JSON.parse(fs.readFileSync(path.join(__dirname, '../course-packages', name), 'utf8'));
+    const each = [5, 6, 7, 9].map((n) => read(`who-dimci-module${n}.imnci.json`));
+    const lessonsOf = (pkg) => pkg.modules.flatMap((m) => m.sections);
+
+    it('are valid course files with every exercise as a draft', () => {
+        const counts = [[16, 10], [16, 11], [11, 9], [16, 10]];
+        each.forEach((pkg, i) => {
+            const check = checkPackage(pkg, []);
+            expect(check.errors).toEqual([]);
+            expect(check.warnings).toEqual([]);
+            expect(check.summary).toMatchObject({ modules: 1, sections: counts[i][0], exercises: counts[i][1] });
+            pkg.exercises.forEach((e) => expect(e.draft).toBe(true));
+        });
+        const later = checkPackage(read('who-dimci-modules-5-9.imnci.json'), []);
+        expect(later.errors).toEqual([]);
+        expect(later.summary).toMatchObject({ modules: 4, sections: 59, exercises: 40 });
+        const all = read('who-dimci-modules-1-9.imnci.json');
+        expect(checkPackage(all, []).errors).toEqual([]);
+        expect(checkPackage(all, []).summary).toMatchObject({ modules: 8, sections: 123, exercises: 88 });
+        expect(all.modules.map((m) => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 9]);
+    });
+
+    it('have quiz answers that point at real options, and the logbook questions of each module', () => {
+        each.flatMap((p) => p.exercises).filter((e) => e.kind === 'quiz').forEach((e) => {
+            expect(new Set(e.questions.map((q) => q.id)).size).toBe(e.questions.length);
+            e.questions.forEach((q) => {
+                if (q.type === 'mcq') q.correct.forEach((i) => expect(q.options[i], `${e.id} ${q.id}`).toBeTruthy());
+                if (q.type === 'tf') expect(typeof q.correct).toBe('boolean');
+                if (q.type === 'open') expect(q.points.length).toBeGreaterThan(0);
+            });
+        });
+        const ex = each.flatMap((p) => p.exercises);
+        expect([5, 6, 7, 9].map((n) => ex.find((e) => e.id === `dimci-m${n}-logbook`).questions.length)).toEqual([20, 20, 16, 20]);
+    });
+
+    it('mark each case right when the form is filled as in the answer key', () => {
+        const cases = each.flatMap((p) => p.exercises).filter((e) => e.kind !== 'quiz');
+        expect(cases.map((e) => e.id)).toEqual(['dimci-m5-kareem', 'dimci-m5-dolma', 'dimci-m6-noah', 'dimci-m7-dana', 'dimci-m7-telisa']);
+        cases.forEach((ex) => {
+            const want = ex.expected;
+            Object.entries(want.classifications).forEach(([sec, ids]) => {
+                const offered = CLASSIFY_OPTIONS[sec].map((o) => o.id);
+                ids.forEach((id) => expect(offered, ex.id).toContain(id));
+            });
+            const r = gradeCase(want, {
+                patientData: { ...want.patientData, date: '2026-11-16', problems: 'x' },
+                assessments: want.assessments,
+                chosenClassifications: want.classifications,
+            }, (k) => k, { requiredFields: REQUIRED_PATIENT_FIELDS.child });
+            expect(r.percent, ex.id).toBe(100);
+        });
+    });
+
+    it('link only to exercises in the file, and name chart tables and form rows the protocol has', () => {
+        const rows = NATIONAL_FORMS.form_child.sections.map((s) => s.id);
+        each.forEach((pkg) => {
+            const ids = new Set(pkg.exercises.map((e) => e.id));
+            const all = lessonsOf(pkg).flatMap(blocks);
+            all.filter((b) => b.type === 'exercise').forEach((b) => expect(ids.has(b.exerciseId)).toBe(true));
+            pkg.exercises.forEach((e) => expect(all.some((b) => b.exerciseId === e.id), e.id).toBe(true));
+            all.filter((b) => b.type === 'booklet')
+                .forEach((b) => b.categories.forEach((c) => expect(NATIONAL_PROTOCOLS[b.part].categories[c], c).toBeTruthy()));
+            all.filter((b) => b.type === 'form').forEach((b) => b.sections.forEach((s) => expect(rows).toContain(s)));
+            expect(all.filter((b) => b.type === 'note' && b.label === 'Sudan national protocol').length).toBeGreaterThanOrEqual(3);
+        });
+    });
+
+    it('are short lessons that open with their goal, each with something to do, all on one page', async () => {
+        const { activityKeys } = await import('../src/components/imnci/onlineCourses/activityKeys');
+        each.flatMap(lessonsOf).forEach((s) => {
+            expect(s.read[0]).toMatchObject({ type: 'note', label: 'In this lesson' });
+            expect(s.title).not.toMatch(/^\d/);
+            expect(s.read.length, s.title).toBeLessThanOrEqual(20);
+            expect(activityKeys(s.read).length, s.title).toBeGreaterThan(0);
+            expect(s.see).toEqual([]);
+            expect(s.practise).toEqual([]);
+        });
+        expect(JSON.stringify(each)).not.toMatch(/[Ss]ections? \d\.\d/);
+    });
+
+    it('have answers that point at real options in every question, sorting and story activity', () => {
+        each.flatMap(lessonsOf).flatMap((s) => s.read).forEach((b) => {
+            if (b.type === 'question') expect(b.options[b.answer]).toBeTruthy();
+            if (b.type === 'sort') b.items.forEach((i) => expect(b.groups[i.group]).toBeTruthy());
+            if (b.type === 'story') b.stages.filter((st) => st.question).forEach((st) => expect(st.options[st.answer]).toBeTruthy());
+        });
+    });
+
+    it('render every lesson', async () => {
+        const React = (await import('react')).default;
+        const { renderToStaticMarkup } = await import('react-dom/server');
+        const { ContentBlocks } = await import('../src/components/imnci/onlineCourses/blocks');
+        each.flatMap(lessonsOf).forEach((s) => {
+            const html = renderToStaticMarkup(React.createElement(ContentBlocks, { blocks: s.read }));
+            expect(html.length, s.title).toBeGreaterThan(200);
+        });
+    });
+});

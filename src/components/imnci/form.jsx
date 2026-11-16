@@ -5,7 +5,7 @@ import { rememberProtocols } from './vocabulary';
 import { SECTION_LABELS, INFANT_SECTION_LABELS } from './exercises';
 import { Card, PageHeader, Button, IS_NATIVE, useInPageBack, FormActions } from '../CommonComponents'; 
 import { AlertCircle, Baby, User, ClipboardList, CheckSquare, CalendarDays, UserSquare2, Ruler, Weight, Thermometer, Building, LayoutDashboard, Activity, Syringe, ArrowRight, CheckCircle, XCircle, FileText, X, Check, Stethoscope, Users, ArrowLeft } from 'lucide-react';
-import zScoreData from '../zscore_reference_data.json'; 
+import { weightForHeight } from './whz';
 import { STATE_LOCALITIES } from '../constants'; 
 
 // --- Firebase & Context Imports ---
@@ -879,36 +879,7 @@ export function ChildForm({ selectedState, selectedLocality, selectedFacility, o
     const handleRadioChange = (e) => setAssessments(prev => ({ ...prev, [e.target.name]: e.target.value }));
     const toggleTreatment = (tItem) => setSelectedTreatments(prev => ({ ...prev, [tItem]: !prev[tItem] }));
 
-    const zScoreResult = useMemo(() => {
-        const { sex, ageMonths, weightKg, lengthCm } = childData;
-        const weight = parseFloat(weightKg); const length = parseFloat(lengthCm); const age = parseFloat(ageMonths);
-        if (!weight || !length || !age || !sex) return { zScore: null, status: 'Incomplete Data' };
-
-        let groupKey = (sex === 'male') ? (age < 24 ? "boys_0_2" : "boys_2_5") : (age < 24 ? "girls_0_2" : "girls_2_5");
-        const groupData = zScoreData[groupKey];
-        if (!groupData) return { zScore: null, status: 'Group Error' };
-
-        const lengthKey = (Math.round(length * 2) / 2).toFixed(1);
-        const row = groupData[lengthKey];
-        if (!row) return { zScore: null, status: 'Length out of range' };
-
-        const thresholds = ["-3", "-2", "-1", "0", "1", "2", "3"];
-        let z = null;
-
-        if (weight <= row["-3"]) z = -3;
-        else if (weight >= row["3"]) z = 3;
-        else {
-            for (let i = 0; i < thresholds.length - 1; i++) {
-                if (weight >= row[thresholds[i]] && weight <= row[thresholds[i + 1]]) {
-                    z = parseFloat(thresholds[i]) + (weight - row[thresholds[i]]) / (row[thresholds[i + 1]] - row[thresholds[i]]);
-                    break;
-                }
-            }
-        }
-        let status = '-2 Z or more';
-        if (z !== null) { if (z < -3) status = 'Less than -3Z'; else if (z < -2) status = 'Between -3 and -2 Z'; }
-        return { zScore: z?.toFixed(2), status };
-    }, [childData]);
+    const zScoreResult = useMemo(() => weightForHeight(childData), [childData]);
 
     const results = useMemo(() => {
         const findings = computeChildFindings(assessments, zScoreResult.status);

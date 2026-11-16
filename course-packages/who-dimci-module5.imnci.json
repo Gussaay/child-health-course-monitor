@@ -1,0 +1,2672 @@
+{
+ "format": "imnci-course-package",
+ "version": 1,
+ "about": "WHO IMCI distance learning course (2014), Module 5, in the Sudan national IMNCI wording. Each WHO section is cut into short lessons of one topic, with the same information as the WHO module, laid out as activities: step-by-step cards, flip cards, sorting, case stories and questions. Where the Sudan national booklet differs from WHO, the Sudan wording is used and a \"Sudan national protocol\" note says what WHO wrote. Chart booklet and recording form blocks are read live from the protocol. Video slots without a link show a placeholder; their narration scripts are in a separate file. Exercises start as drafts and open in the exercise manager.",
+ "course": {
+  "title": "IMNCI distance learning modules",
+  "description": "Self-study modules based on the WHO IMCI distance learning course (2014), in the wording of the Sudan national IMNCI protocol."
+ },
+ "modules": [
+  {
+   "title": "Module 5: Fever",
+   "order": 5,
+   "sections": [
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 5,
+     "bookToPage": 7,
+     "title": "Module overview",
+     "order": 1,
+     "read": [
+      {
+       "type": "note",
+       "text": "See what Module 5 covers and which part of the recording form it uses, then take the pre-test.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "A fever can have many causes. Fever can be the only sign of a sick child, or it may be combined with other problems. It is important to keep the big picture in mind as you manage the child with fever. You will have to do a careful assessment to determine how serious the problem is. This module teaches you how to do this assessment."
+      },
+      {
+       "type": "steps",
+       "title": "Where this module fits",
+       "steps": [
+        {
+         "title": "For ALL sick children",
+         "text": "Ask the caregiver about the child's problems, check for general danger signs, assess for cough or difficult breathing, and assess diarrhoea and dehydration."
+        },
+        {
+         "title": "Then DETERMINE: does the child have fever?",
+         "text": "If NO, go on to the next main symptom. If YES, assess and classify the child using the colour-coded classification charts for fever."
+        },
+        {
+         "title": "Continue the assessment",
+         "text": "Assess the next main symptom (ear problem), check for malnutrition and anaemia, check immunization status and other problems."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "What you will be able to do"
+      },
+      {
+       "type": "rich",
+       "text": "<p>After you study this module, you will be able to:</p><ul><li>Determine if a child has fever by measuring temperature, by history, or by feeling</li><li>Decide when to do a malaria test</li><li>Recognize the clinical signs of very severe febrile disease</li><li>Identify the clinical signs of measles and of complications from measles</li><li>Classify fever using the IMNCI charts</li><li>Classify measles and measles with complications</li><li>Give oral antimalarials</li><li>Give appropriate treatments for measles</li><li>Counsel on home treatment and follow-up care for children with fever</li><li>Provide follow-up care to children with fever</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Which part of the recording form is used in this module?"
+      },
+      {
+       "type": "form",
+       "part": "child",
+       "sections": [
+        "fever",
+        "measles"
+       ],
+       "caption": "The national recording form: fever and measles"
+      },
+      {
+       "type": "heading",
+       "text": "Before you begin"
+      },
+      {
+       "type": "paragraph",
+       "text": "What do you know now about managing fever? Check quickly with five questions. After the module you will answer the same questions, and see what you have learned."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m5-pretest",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 8,
+     "bookToPage": 12,
+     "title": "Meet Sami: start the visit",
+     "order": 2,
+     "read": [
+      {
+       "type": "note",
+       "text": "Start the visit of a child who feels hot: greet the caregiver, check for danger signs, and assess cough and diarrhoea first.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Fever",
+       "caption": "Watch this first.",
+       "script": "V5.2"
+      },
+      {
+       "type": "paragraph",
+       "text": "Consider a typical case that you might see in your practice. You will follow Sami and his mother Miriam through the whole module."
+      },
+      {
+       "type": "story",
+       "title": "Opening case: Sami",
+       "stages": [
+        {
+         "text": "It is a hot day in your clinic, and the waiting room is crowded with mothers. Miriam comes in with her son, Sami. He has been complaining of being \"hot\" for a few days, she says. Sami sits next to Miriam but does not look very energetic. When you ask him how he is feeling, he puts his head into his mother's skirt. He lies on her lap and looks unwell. You are not yet sure if he is unwell because of the heat, or if he has a fever."
+        },
+        {
+         "text": "You praise Miriam for bringing Sami to the clinic: she has listened to her son's complaints and brought him in. She tells you Sami is 3 years old. She says he handles the heat well, and that his body feels warm. She has put cool, wet rags on his chest and head, but they have not helped. This is her first visit for this problem. You take Sami's temperature under his armpit: 38.6 °C. He weighs 12 kg.",
+         "question": "Does Sami have fever?",
+         "options": [
+          "Yes: his axillary temperature is 37.5 °C or above",
+          "No: it is a hot day",
+          "You cannot tell without a blood test"
+         ],
+         "answer": 0,
+         "explanation": "A child has fever if he has a history of fever, feels hot, or has an axillary temperature of 37.5 °C or above."
+        },
+        {
+         "text": "You check for general danger signs. Miriam says Sami is able to eat and drink. He is not vomiting, and has not had convulsions. Sami acts very tired and keeps his head on his mother's lap, but he watches you as you talk. He holds the material of Miriam's skirt and plays with it.",
+         "question": "Does Sami have a general danger sign?",
+         "options": [
+          "No",
+          "Yes: he is lethargic",
+          "Yes: he is not able to drink"
+         ],
+         "answer": 0,
+         "explanation": "Sami can drink, does not vomit everything, has had no convulsions, and is awake and watching you."
+        },
+        {
+         "text": "You ask about cough: Miriam says no. You ask about diarrhoea: she says Sami has had loose stools for the last week, with no blood. Sami is not restless or irritable. His eyes are not sunken. He is shy to take a glass of water, but then drinks eagerly. His skin pinch goes back immediately.",
+         "question": "How do you classify Sami's diarrhoea?",
+         "options": [
+          "NO DEHYDRATION",
+          "SOME DEHYDRATION",
+          "PERSISTENT DIARRHOEA"
+         ],
+         "answer": 0,
+         "explanation": "Sami has only one sign (drinks eagerly), so NO DEHYDRATION: you will counsel Miriam on Plan A. One week is less than 14 days, and there is no blood, so no persistent diarrhoea and no dysentery."
+        },
+        {
+         "text": "Now you will assess Sami for the next main symptom, fever. This was his complaint, and you have already found by taking his temperature that he has a fever."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 8,
+     "bookToPage": 10,
+     "title": "What causes fever: malaria, measles and more",
+     "order": 3,
+     "read": [
+      {
+       "type": "note",
+       "text": "Say when a child has the main symptom fever, and name its common and dangerous causes.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "heading",
+       "text": "When does a child have the main symptom fever?"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>The child has a history of fever, OR</li><li>The child feels hot, OR</li><li>The child has an axillary (underarm) temperature of 37.5 °C or above (38 °C rectal)</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "A child with fever may have malaria, measles or another severe disease, like meningitis, septicaemia or very severe pneumonia. Signs of some very severe diseases may be general and non-specific. It is very important to identify the key signs of the diseases that may cause the child's death very quickly: all sick children with those signs are referred to hospital."
+      },
+      {
+       "type": "paragraph",
+       "text": "Other bacterial infections causing fever include pneumonia, acute ear infection, streptococcal sore throat, dysentery, local bacterial infection, typhoid and urinary tract infection. Or a child with fever may have a simple cough or cold or another viral infection."
+      },
+      {
+       "type": "note",
+       "text": "Malaria and measles are common causes of fever, and two major killers of children under five.",
+       "label": "Key point"
+      },
+      {
+       "type": "flip",
+       "title": "Malaria",
+       "cards": [
+        {
+         "front": "What causes malaria?",
+         "back": "Parasites in the blood called plasmodia. They are transmitted when infected female anopheline mosquitoes bite humans. The most dangerous species is Plasmodium falciparum: its signs include shivering, sweating and vomiting. Plasmodium vivax rarely causes very severe illness or death, but adds to malaria illness in some countries."
+        },
+        {
+         "front": "How can malaria kill?",
+         "back": "Uncomplicated malaria can develop into severe malaria as soon as 24 hours after the fever first appears. Severe malaria is malaria with complications such as cerebral malaria, severe anaemia, or any general danger sign. The child can die without urgent treatment."
+        },
+        {
+         "front": "What are the signs?",
+         "back": "Fever is the main symptom. It can be present all the time, or go away and return at regular intervals. Signs overlap with other illnesses: a child may have malaria AND pneumonia, or malaria AND diarrhoea, and needs treatment for both. Chronic anaemia with no fever may be the only sign."
+        },
+        {
+         "front": "How do you confirm it?",
+         "back": "With a malaria test: parasites (microscopy) or malaria antigens (rapid diagnostic test) are present in the blood. If there are none, the fever is unlikely to be due to malaria, and you look for other causes."
+        }
+       ]
+      },
+      {
+       "type": "flip",
+       "title": "Besides malaria: three kinds of fever",
+       "cards": [
+        {
+         "front": "Fever WITH localising signs",
+         "back": "An apparent bacterial cause such as pneumonia, dysentery, acute ear infection, sore throat, meningitis or local infection. Signs of local infection may be refusal to use a limb, hot tender swelling, tenderness, or red tender skin."
+        },
+        {
+         "front": "Fever WITHOUT localising signs",
+         "back": "Bacterial infection with no localising signs, like septicaemia, typhoid fever, urinary tract infection, HIV infection and miliary tuberculosis. These are difficult to diagnose without laboratory tests, so children suspected of them are referred to hospital for assessment."
+        },
+        {
+         "front": "Fever WITH a rash",
+         "back": "Commonly measles. It can also be other simple viral infections, or infections like meningococcal meningitis and dengue haemorrhagic fever."
+        }
+       ]
+      },
+      {
+       "type": "flip",
+       "title": "Measles",
+       "cards": [
+        {
+         "front": "What causes measles?",
+         "back": "A virus that infects the skin and the layer of cells that line the lung, gut, eye, mouth and throat. Measles is highly infectious. Most cases occur between 6 months and 2 years of age."
+        },
+        {
+         "front": "Why is it dangerous?",
+         "back": "The virus damages the immune system for many weeks after the onset of measles, leaving the child at risk of other infections. Complications occur in about 30% of all cases."
+        },
+        {
+         "front": "What are the signs?",
+         "back": "Fever and a generalized rash are the main signs. Sometimes measles presents with eye and mouth complications."
+        },
+        {
+         "front": "Why does it lead to malnutrition?",
+         "back": "It causes diarrhoea, high fever and mouth ulcers, which interfere with feeding. Malnourished children, especially those short of vitamin A, are more likely to have severe complications: one in ten severely malnourished children with measles may die. So help the caregiver to continue feeding her child during measles."
+        }
+       ]
+      },
+      {
+       "type": "sort",
+       "text": "Which kind of fever? Sort each child.",
+       "groups": [
+        "With localising signs",
+        "Without localising signs",
+        "With a rash"
+       ],
+       "items": [
+        {
+         "text": "Fever, with pus draining from one ear",
+         "group": 0,
+         "why": "Acute ear infection."
+        },
+        {
+         "text": "Fever, with a red rash over the whole body and red eyes",
+         "group": 2,
+         "why": "Commonly measles."
+        },
+        {
+         "text": "Fever every day for 9 days, and nothing found on examination",
+         "group": 1,
+         "why": "Possibly typhoid: refer for assessment."
+        },
+        {
+         "text": "Fever, and a hot tender swelling on the thigh",
+         "group": 0,
+         "why": "A local infection."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 13,
+     "bookToPage": 17,
+     "title": "Assess fever: history, stiff neck and the malaria test",
+     "order": 4,
+     "read": [
+      {
+       "type": "note",
+       "text": "Ask how long the fever has lasted, look and feel for a stiff neck, and do and record a malaria test.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "First determine if the child has fever. If you have no thermometer, feel the child's stomach or underarm and decide whether the child feels hot. Ask the caregiver, \"Does the child have fever?\""
+      },
+      {
+       "type": "note",
+       "text": "History of fever is enough. If the child has had any fever with this illness, assess for fever even if his temperature is not 37.5 °C or above and he does not feel hot now.",
+       "label": "Key point"
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "categories": [
+        "fever"
+       ],
+       "caption": "Chart booklet: fever (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "heading",
+       "text": "ASK: for how long? Has the child had measles within the last 3 months?"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>For how long?</strong> Most fevers due to viral illnesses go away within a few days. If the fever has lasted more than 7 days, ask if it has been present every day. A fever present every day for more than 7 days can mean a more severe disease such as typhoid fever. Refer this child for further assessment.</li><li><strong>Measles within the last 3 months?</strong> Measles damages the child's immune system and leaves the child at risk of other infections for many weeks. A child with fever and a history of measles within the last 3 months may have an infection due to complications of measles, such as an eye infection.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "LOOK or FEEL for stiff neck"
+      },
+      {
+       "type": "paragraph",
+       "text": "A stiff neck may be a sign of meningitis, cerebral malaria or another very severe febrile disease. It needs urgent treatment with injectable antibiotics and referral to hospital."
+      },
+      {
+       "type": "steps",
+       "title": "Checking for a stiff neck",
+       "steps": [
+        {
+         "title": "WATCH the child",
+         "text": "While you talk with the caregiver, look to see if the child moves and bends his neck easily as he looks around. If he does, he does not have a stiff neck."
+        },
+        {
+         "title": "TEST the child",
+         "text": "If you saw no movement, or are not sure, draw the child's attention to his umbilicus or toes: shine a flashlight on them, or tickle the toes. Look to see if he can bend his neck to look down."
+        },
+        {
+         "title": "FEEL for stiff neck",
+         "text": "If you still have not seen the child bend his neck, ask the caregiver to help you lay the child on his back. Lean over the child, gently support his back and shoulders with one hand, and hold his head with the other. Carefully bend the head forward towards the chest. If the neck bends easily, there is no stiff neck. If the neck feels stiff and resists bending, the child has a stiff neck. Often a child with a stiff neck will cry when you try to bend the neck."
+        }
+       ]
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "DVD exercise: assess neck stiffness",
+       "caption": "WHO course DVD, disc 2. Four children: does each have a stiff neck? The video reviews the answers with you."
+      },
+      {
+       "type": "heading",
+       "text": "Do a malaria test"
+      },
+      {
+       "type": "paragraph",
+       "text": "It is not possible to tell clinically whether a fever is caused by malaria, because fever has many causes. To be sure, you need a malaria test. Testing first also avoids treating a large number of children for malaria when they have another illness, and it helps to distinguish P. falciparum, which is more dangerous, from P. vivax."
+      },
+      {
+       "type": "note",
+       "text": "Do a malaria test in ALL children with fever (or a history of fever) who have NO general danger sign and NO stiff neck. Do NOT test a child with a general danger sign or stiff neck: do not delay referral. Give the pre-referral treatment and refer urgently.",
+       "label": "Key point"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: Do a malaria test in all fever cases. WHO module (page 14): asks you first to decide the malaria risk of your area. HIGH risk (more than 5% of fever cases in children are due to malaria): test all fever cases. LOW risk (fewer than 5%): test only if there is no obvious cause of fever, such as a runny nose, pneumonia or ear infection, or if the child travelled to a high risk area in the last 2 weeks. Risk varies by region and by season (it is usually lower in the dry season).",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "flip",
+       "title": "The malaria test",
+       "cards": [
+        {
+         "front": "Two ways to test",
+         "back": "Examine a blood slide for malaria parasites with a microscope, or use a Rapid Diagnostic Test (RDT) to check the blood for malaria antigens. Always check the quality of your slides or RDTs so that results are reliable."
+        },
+        {
+         "front": "POSITIVE",
+         "back": "There are malaria parasites on the slide, or the RDT is positive. Note whether it is P. falciparum or P. vivax if you are able to, especially with microscopy."
+        },
+        {
+         "front": "NEGATIVE",
+         "back": "No parasites are seen by microscopy, or the RDT is negative."
+        }
+       ]
+      },
+      {
+       "type": "sort",
+       "text": "Malaria test now, or not? Sort each child with fever.",
+       "groups": [
+        "Do a malaria test",
+        "Do not test: refer urgently"
+       ],
+       "items": [
+        {
+         "text": "Fever for 2 days, a runny nose, no danger sign",
+         "group": 0,
+         "why": "National booklet: test all fever cases without a danger sign or stiff neck."
+        },
+        {
+         "text": "Fever, and has had convulsions today",
+         "group": 1,
+         "why": "A general danger sign: do not delay referral."
+        },
+        {
+         "text": "History of fever, temperature 36.8 °C now, no danger sign",
+         "group": 0,
+         "why": "History of fever is enough."
+        },
+        {
+         "text": "Fever, and the neck resists bending",
+         "group": 1,
+         "why": "Stiff neck: give pre-referral treatment and refer."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 17,
+     "bookToPage": 20,
+     "title": "Look for other causes of fever, and for measles",
+     "order": 5,
+     "read": [
+      {
+       "type": "note",
+       "text": "Look for other causes of fever, recognize the signs of measles, and assess Sami.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "heading",
+       "text": "LOOK for other causes of fever"
+      },
+      {
+       "type": "paragraph",
+       "text": "Look for a runny nose: a child with fever and a runny nose may simply have a common cold. Then assess the child for signs of bacterial infection that are not apparent at first: local tenderness, oral sores, refusal to use a limb, hot tender swelling, red tender skin or boils, lower abdominal pain, or pain on passing urine in older children."
+      },
+      {
+       "type": "heading",
+       "text": "LOOK for signs suggesting measles"
+      },
+      {
+       "type": "note",
+       "text": "To classify a child as having measles, the child with fever must have a GENERALIZED RASH and ONE of these: cough, runny nose, or red eyes.",
+       "label": "Key point"
+      },
+      {
+       "type": "flip",
+       "title": "The signs of measles",
+       "cards": [
+        {
+         "front": "Generalized rash",
+         "back": "A red rash begins behind the ears and on the neck. It spreads to the face. During the next day it spreads to the rest of the body, arms and legs. After 4 to 5 days the rash starts to fade and the skin may peel."
+        },
+        {
+         "front": "In severe infection",
+         "back": "The rash covers more of the body, becomes more discoloured (dark brown or blackish), and there is more peeling of the skin."
+        },
+        {
+         "front": "What a measles rash does NOT have",
+         "back": "No vesicles (blisters) and no pustules. The rash does not itch."
+        },
+        {
+         "front": "Red eyes",
+         "back": "There is redness in the white part of the eye. In a healthy eye, the white part is clearly white and not discoloured."
+        }
+       ]
+      },
+      {
+       "type": "sort",
+       "text": "Measles rash, or another rash? Sort each description.",
+       "groups": [
+        "Suggests measles",
+        "Another rash"
+       ],
+       "items": [
+        {
+         "text": "A red rash over the whole body with no blisters, that does not itch",
+         "group": 0
+        },
+        {
+         "text": "A generalized rash with vesicles",
+         "group": 1,
+         "why": "Chicken pox."
+        },
+        {
+         "text": "An itching rash on the hands, feet, ankles, elbows, buttocks and underarm",
+         "group": 1,
+         "why": "Scabies."
+        },
+        {
+         "text": "Small itching bumps and vesicles in a child who is not sick",
+         "group": 1,
+         "why": "Heat rash."
+        },
+        {
+         "text": "A rash that began behind the ears and spread to the face, then the body",
+         "group": 0
+        }
+       ]
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Demonstration: assess and classify fever",
+       "caption": "WHO course DVD, disc 2. All the steps of assessing fever. Note that this video does not include a malaria test: testing with microscopy or RDT is a more recent update."
+      },
+      {
+       "type": "story",
+       "title": "Assess Sami's fever",
+       "stages": [
+        {
+         "text": "Sami's temperature is 38.6 °C, so he has the symptom fever. You ask how long Sami has been feeling hot, and Miriam says 2 days.",
+         "question": "What does 2 days tell you?",
+         "options": [
+          "It is under the 7 days that would need referral for assessment",
+          "He needs referral now",
+          "He cannot have malaria yet"
+         ],
+         "answer": 0,
+         "explanation": "A fever present every day for more than 7 days may indicate a more serious disease, and the child is referred."
+        },
+        {
+         "text": "You watch Sami as he rests on his mother's lap. He moves his neck well. To check, you tap his feet and ask him to look down: he bends his neck well. He has no runny nose. You examine his body for signs of bacterial infection, like tenderness, swelling or red skin. He has none."
+        },
+        {
+         "text": "Sami has fever, no general danger sign and no stiff neck.",
+         "question": "What do you do now?",
+         "options": [
+          "A malaria test",
+          "Refer urgently without testing",
+          "Give paracetamol and send him home"
+         ],
+         "answer": 0,
+         "explanation": "You have RDTs in the clinic. Sami's test is positive for P. falciparum, the more dangerous parasite. You mark this on his recording form."
+        },
+        {
+         "text": "You ask Miriam if Sami has had measles within the past three months. She does not understand, so you explain some of the signs: a rash, runny nose or red eyes. She says no. Sami has no rash today. If he had signs of measles today, or had had measles within the last 3 months, you would look for mouth ulcers, clouding of the cornea and pus draining from the eye."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 18,
+     "bookToPage": 19,
+     "title": "Assess for complications of measles",
+     "order": 6,
+     "read": [
+      {
+       "type": "note",
+       "text": "Look for mouth ulcers, clouding of the cornea and pus draining from the eye in a child with measles.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "If the child has measles NOW, or has had measles within the LAST 3 MONTHS, assess for mouth and eye complications.",
+       "label": "Key point"
+      },
+      {
+       "type": "paragraph",
+       "text": "Measles complications can lead to severe disease and death. Some are due to bacterial infections. Others are due to the measles virus, which damages the respiratory and intestinal tracts. Vitamin A deficiency contributes to some complications, such as corneal ulcer, and any vitamin A deficiency is made worse by measles."
+      },
+      {
+       "type": "note",
+       "text": "Other important complications of measles, such as pneumonia, stridor in a calm child, diarrhoea and dehydration, ear infection and malnutrition, are classified in their own tables."
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "categories": [
+        "measles"
+       ],
+       "caption": "Chart booklet: measles now or within the last 3 months (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "flip",
+       "title": "Three things to look for",
+       "cards": [
+        {
+         "front": "Mouth ulcers",
+         "back": "Look inside the mouth. Ulcers are painful open sores on the inside of the mouth and lips or on the tongue. They may be red or have a white coating. In severe cases they are deep and extensive. A child with mouth ulcers finds it difficult to drink or eat."
+        },
+        {
+         "front": "Clouding of the cornea",
+         "back": "The cornea is usually clear. A clouded cornea looks hazy, the way a glass of water looks when you add a small amount of milk. It may be in one or both eyes. It is a dangerous condition: untreated, the cornea can ulcerate and cause blindness. The child needs urgent treatment with vitamin A."
+        },
+        {
+         "front": "Pus draining from the eye",
+         "back": "A sign of conjunctivitis, an infection of the inside surface of the eyelid and the white part of the eye. If you do not see pus draining, look for pus on the conjunctiva or the eyelids. Often the pus forms a crust during sleep and seals the eye shut."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>Tips</strong></p><ul><li><strong>Koplik spots are not mouth ulcers.</strong> They occur inside the cheek in the early stages of measles: small, irregular, bright red spots with a white spot in the centre. They do not interfere with drinking or eating and need no treatment.</li><li>A child with corneal clouding may keep his eyes tightly shut in the light, because light irritates and hurts. Wait for the child to open his eye, or gently pull down the lower eyelid.</li><li>If there is clouding, ask how long it has been present. If the caregiver is certain that it has been there for some time, ask if it has already been assessed and treated at the hospital. If it has, you do not need to refer the child again for corneal clouding.</li><li>Wash your hands after examining the eye of any child with pus draining from the eye.</li></ul>"
+      },
+      {
+       "type": "sort",
+       "text": "Is this a complication of measles to record here? Sort each finding in a child with measles.",
+       "groups": [
+        "Yes",
+        "No"
+       ],
+       "items": [
+        {
+         "text": "Small bright red spots with white centres inside the cheek",
+         "group": 1,
+         "why": "Koplik spots: no treatment needed."
+        },
+        {
+         "text": "Painful open sores on the tongue and inside the lips",
+         "group": 0,
+         "why": "Mouth ulcers."
+        },
+        {
+         "text": "One cornea looks hazy, like water with a little milk",
+         "group": 0,
+         "why": "Clouding of the cornea: dangerous."
+        },
+        {
+         "text": "Eyelids stuck shut with crusts in the morning",
+         "group": 0,
+         "why": "Pus draining from the eye."
+        },
+        {
+         "text": "Redness of the white of the eye, with no pus",
+         "group": 1,
+         "why": "Red eyes are a sign of measles itself, not a complication."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 21,
+     "bookToPage": 22,
+     "title": "Classify fever",
+     "order": 7,
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify a child with fever as very severe febrile disease, malaria, or fever with no malaria, and classify Sami.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "If the child has fever and no signs of measles, classify the child for fever only. If the child has signs of both fever and measles, classify for fever AND for measles. You classify from the signs you assessed and the result of the malaria test."
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "categories": [
+        "fever"
+       ],
+       "caption": "Chart booklet: classify fever (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Classifying fever",
+       "caption": "Read the table from the top.",
+       "script": "V5.4"
+      },
+      {
+       "type": "flip",
+       "title": "The three classifications for fever",
+       "cards": [
+        {
+         "front": "VERY SEVERE FEBRILE DISEASE (red)",
+         "back": "Any general danger sign, or stiff neck. The child may have meningitis, sepsis or severe malaria (including cerebral malaria). It is not possible to tell these apart without laboratory tests. The child needs urgent pre-referral treatment and referral."
+        },
+        {
+         "front": "MALARIA (yellow)",
+         "back": "A positive malaria test, with NO general danger sign and NO stiff neck. Give the first-line oral antimalarial."
+        },
+        {
+         "front": "FEVER: NO MALARIA (green)",
+         "back": "A negative malaria test. Look for other causes of fever and treat them."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "What are your actions?"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>VERY SEVERE FEBRILE DISEASE:</strong> give the first dose of IM quinine for severe malaria. Give the first dose of antibiotic. Give one dose of paracetamol in clinic for high fever (38.5 °C or above). Treat the child to prevent low blood sugar. Refer URGENTLY to hospital.</li><li><strong>MALARIA:</strong> give the first-line oral antimalarial, artemether-lumefantrine. If P. vivax, give primaquine after the first-line treatment. Give one dose of paracetamol in clinic for high fever. Give an appropriate antibiotic for any bacterial cause of fever found. Advise the mother when to return immediately. Follow up in 3 days if fever persists. If fever has been present every day for more than 7 days, refer for assessment.</li><li><strong>FEVER: NO MALARIA:</strong> assess for other causes of fever and treat accordingly. Give one dose of paracetamol in clinic for high fever. Give an appropriate antibiotic for any bacterial cause of fever found. Advise the mother when to return immediately. Follow up in 3 days if fever persists. If fever has been present every day for more than 7 days, refer for assessment.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: The pre-referral antimalarial is IM quinine. The first dose of antibiotic is oral amoxicillin if the child can take oral medicine, or IM ampicillin and gentamicin if the child cannot drink, vomits everything, is convulsing or is lethargic. P. vivax malaria also gets primaquine. A child with FEVER: NO MALARIA returns in 3 days if fever persists. WHO module (page 21): says \"artesunate or quinine\" and \"an appropriate antibiotic\", does not mention primaquine, and in its text and counselling section says a child with FEVER: NO MALARIA returns in 2 days if fever persists (its own table says 3 days).",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "sort",
+       "text": "Classify each child's fever.",
+       "groups": [
+        "VERY SEVERE FEBRILE DISEASE",
+        "MALARIA",
+        "FEVER: NO MALARIA"
+       ],
+       "items": [
+        {
+         "text": "Fever and a stiff neck",
+         "group": 0,
+         "why": "Stiff neck is a red sign. Do not wait for a malaria test."
+        },
+        {
+         "text": "Fever, positive test for P. vivax, no danger sign, no stiff neck",
+         "group": 1,
+         "why": "A positive test for either species."
+        },
+        {
+         "text": "Fever, negative test, runny nose",
+         "group": 2,
+         "why": "The fever is probably from the common cold."
+        },
+        {
+         "text": "Fever, and the child is unconscious",
+         "group": 0,
+         "why": "A general danger sign."
+        },
+        {
+         "text": "History of fever, 37 °C now, positive RDT",
+         "group": 1,
+         "why": "History of fever is enough to assess, and the test is positive."
+        }
+       ]
+      },
+      {
+       "type": "story",
+       "title": "Classify Sami",
+       "stages": [
+        {
+         "text": "Sami has a temperature of 38.6 °C. He has no general danger sign and no stiff neck. His RDT is positive for P. falciparum. He has no runny nose and no other cause of fever. Miriam says he has not had measles.",
+         "question": "How do you classify Sami's fever?",
+         "options": [
+          "MALARIA",
+          "VERY SEVERE FEBRILE DISEASE",
+          "FEVER: NO MALARIA"
+         ],
+         "answer": 0,
+         "explanation": "A positive malaria test with no red sign is MALARIA."
+        },
+        {
+         "text": "Now think about measles.",
+         "question": "Do you classify Sami for measles?",
+         "options": [
+          "No: he has no signs of measles today and has not had measles in the last 3 months",
+          "Yes: every child with fever is classified for measles",
+          "Yes: he has diarrhoea"
+         ],
+         "answer": 0,
+         "explanation": "Only a child with measles now or within the last 3 months is classified for measles."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m5-ex-a",
+       "note": "Exercise A."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 23,
+     "bookToPage": 28,
+     "title": "Classify measles",
+     "order": 8,
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify a child with measles now or within the last 3 months, and follow a worked example.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "A child who has fever and measles now, or within the last 3 months, is classified both for fever and for measles."
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "categories": [
+        "measles"
+       ],
+       "caption": "Chart booklet: classify measles (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "flip",
+       "title": "The three classifications for measles",
+       "cards": [
+        {
+         "front": "SEVERE COMPLICATED MEASLES (red)",
+         "back": "Any general danger sign, OR clouding of the cornea, OR deep or extensive mouth ulcers. Give vitamin A treatment and the first dose of antibiotic. If clouding of the cornea or pus draining from the eye, apply tetracycline eye ointment. Refer URGENTLY to hospital."
+        },
+        {
+         "front": "MEASLES WITH EYE OR MOUTH COMPLICATIONS (yellow)",
+         "back": "Pus draining from the eye, OR mouth ulcers that are not deep or extensive. No referral is needed. Give vitamin A treatment. Treat the eye infection with tetracycline eye ointment. Treat mouth ulcers with half-strength gentian violet. Advise the mother on feeding. Follow up in 3 days."
+        },
+        {
+         "front": "MEASLES (green)",
+         "back": "Measles now or within the last 3 months, with none of the complications above. Give vitamin A treatment, and advise the mother on feeding the child."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "ALL children with measles receive vitamin A. It helps to correct any vitamin A deficiency and to decrease the severity of the complications.",
+       "label": "Key point"
+      },
+      {
+       "type": "paragraph",
+       "text": "Untreated corneal clouding can result in blindness. Remember to ask if the clouding has been present for some time and was already assessed and treated at hospital: if so, you do not refer the child again for this eye sign. Early treatment of eye and mouth complications prevents many deaths, and treating mouth ulcers helps the child to resume normal feeding more quickly."
+      },
+      {
+       "type": "story",
+       "title": "Worked example: Paulo",
+       "stages": [
+        {
+         "text": "Paulo is 10 months old. He weighs 8.2 kg. His temperature is 37.5 °C. His mother says he has a rash and cough. Paulo is able to drink, is not vomiting, has not had convulsions and is not lethargic or unconscious. He has been coughing for 5 days. The health worker counts 43 breaths per minute, sees no chest indrawing and hears no stridor. Paulo has no diarrhoea."
+        },
+        {
+         "text": "Paulo has felt hot for 2 days. He has no stiff neck. He has had a runny nose with this illness. His RDT is positive for P. falciparum.",
+         "question": "How do you classify Paulo's fever?",
+         "options": [
+          "MALARIA",
+          "VERY SEVERE FEBRILE DISEASE",
+          "FEVER: NO MALARIA"
+         ],
+         "answer": 0,
+         "explanation": "No general danger sign and no stiff neck, so not the red row. The test is positive: MALARIA. (43 breaths per minute is not fast breathing at 10 months, so his cough is classified COUGH OR COLD.)"
+        },
+        {
+         "text": "Paulo has a rash covering his whole body, and his eyes are red.",
+         "question": "Does Paulo have signs suggesting measles?",
+         "options": [
+          "Yes: generalized rash, and one of cough, runny nose or red eyes",
+          "No: he would need mouth ulcers too",
+          "No: he has malaria"
+         ],
+         "answer": 0,
+         "explanation": "A child can have malaria and measles. Paulo is classified for both."
+        },
+        {
+         "text": "The health worker checks for complications. There are no mouth ulcers, no pus draining from the eye and no clouding of the cornea.",
+         "question": "How do you classify Paulo's measles?",
+         "options": [
+          "MEASLES",
+          "MEASLES WITH EYE OR MOUTH COMPLICATIONS",
+          "SEVERE COMPLICATED MEASLES"
+         ],
+         "answer": 0,
+         "explanation": "No sign in the red row or the yellow row, so MEASLES (green). Red eyes without pus are a sign of measles, not a complication."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m5-ex-b",
+       "note": "Exercise B."
+      },
+      {
+       "type": "heading",
+       "text": "Practise on the recording form"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m5-kareem",
+       "note": "Exercise C."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m5-dolma",
+       "note": "Exercise D."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 29,
+     "bookToPage": 34,
+     "title": "Treat malaria",
+     "order": 9,
+     "read": [
+      {
+       "type": "note",
+       "text": "Give IM quinine before referral, give the first-line oral antimalarial at the right dose, and give paracetamol for high fever.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "The treatments in this module are: quinine for severe malaria, paracetamol, the first-line oral antimalarial, and vitamin A. Eye ointment and gentian violet are taught to the caregiver, so they come in the counselling lessons. Antibiotics and preventing low blood sugar you have learned in earlier modules."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Treating malaria",
+       "caption": "The first dose is given in the clinic.",
+       "script": "V5.5"
+      },
+      {
+       "type": "heading",
+       "text": "Quinine for very severe febrile disease"
+      },
+      {
+       "type": "paragraph",
+       "text": "A child with VERY SEVERE FEBRILE DISEASE may have severe malaria. To kill malaria parasites as quickly as possible, give a quinine injection before referral. Use the table in the chart booklet to determine the dose, by the child's weight."
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>IM quinine (300 mg/ml), diluted with normal saline to 60 mg/ml: one dose before referral</strong></p><table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Weight</strong></td><td style=\"padding: 4px\"><strong>Quinine</strong></td><td style=\"padding: 4px\"><strong>Normal saline</strong></td><td style=\"padding: 4px\"><strong>Diluted dose</strong></td></tr><tr><td style=\"padding: 4px\">4 kg up to 6 kg</td><td style=\"padding: 4px\">0.2 ml</td><td style=\"padding: 4px\">0.8 ml</td><td style=\"padding: 4px\">1 ml</td></tr><tr><td style=\"padding: 4px\">6 kg up to 10 kg</td><td style=\"padding: 4px\">0.3 ml</td><td style=\"padding: 4px\">1.2 ml</td><td style=\"padding: 4px\">1.5 ml</td></tr><tr><td style=\"padding: 4px\">10 kg up to 12 kg</td><td style=\"padding: 4px\">0.4 ml</td><td style=\"padding: 4px\">1.6 ml</td><td style=\"padding: 4px\">2 ml</td></tr><tr><td style=\"padding: 4px\">12 kg up to 14 kg</td><td style=\"padding: 4px\">0.5 ml</td><td style=\"padding: 4px\">2.0 ml</td><td style=\"padding: 4px\">2.5 ml</td></tr><tr><td style=\"padding: 4px\">14 kg up to 19 kg</td><td style=\"padding: 4px\">0.6 ml</td><td style=\"padding: 4px\">2.4 ml</td><td style=\"padding: 4px\">3 ml</td></tr></table>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Possible side effects of a quinine injection are a sudden drop in blood pressure, dizziness, ringing of the ears, and a sterile abscess. If the blood pressure drops suddenly, the effect stops after 15 to 20 minutes. Dizziness, ringing of the ears and abscess are of minor importance in the treatment of a very severe disease."
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: The pre-referral antimalarial in the national booklet is IM quinine. WHO module (page 29): says artesunate suppositories are the preferred antimalarial, because they are effective in most areas of the world and act rapidly, with a quinine injection as the other choice.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "heading",
+       "text": "The first-line oral antimalarial"
+      },
+      {
+       "type": "paragraph",
+       "text": "WHO recommends artemisinin-based combination therapies (ACT), which improve treatment efficacy: they very quickly reduce the number of malaria parasites and improve the symptoms. Chloroquine and sulfadoxine-pyrimethamine (SP) are no longer first-line because resistance to them has grown. The antimalarial you use depends on national policy."
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>Artemether-lumefantrine (AL) tablets, 20 mg artemether and 120 mg lumefantrine</strong></p><table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Weight</strong></td><td style=\"padding: 4px\"><strong>Now</strong></td><td style=\"padding: 4px\"><strong>After 8 hours</strong></td><td style=\"padding: 4px\"><strong>Day 2</strong></td><td style=\"padding: 4px\"><strong>Day 3</strong></td><td style=\"padding: 4px\"><strong>In all</strong></td></tr><tr><td style=\"padding: 4px\">5 kg up to 15 kg</td><td style=\"padding: 4px\">1 tablet</td><td style=\"padding: 4px\">1 tablet</td><td style=\"padding: 4px\">1 tablet twice</td><td style=\"padding: 4px\">1 tablet twice</td><td style=\"padding: 4px\">6 tablets</td></tr><tr><td style=\"padding: 4px\">15 kg up to 25 kg</td><td style=\"padding: 4px\">2 tablets</td><td style=\"padding: 4px\">2 tablets</td><td style=\"padding: 4px\">2 tablets twice</td><td style=\"padding: 4px\">2 tablets twice</td><td style=\"padding: 4px\">12 tablets</td></tr></table>"
+      },
+      {
+       "type": "steps",
+       "title": "Giving artemether-lumefantrine",
+       "steps": [
+        {
+         "title": "First dose in the clinic",
+         "text": "Give the first dose in the clinic and observe the child for one hour. If the child vomits within the hour, repeat the dose."
+        },
+        {
+         "title": "Second dose at home after 8 hours",
+         "text": ""
+        },
+        {
+         "title": "Then twice daily for two more days",
+         "text": "Six doses in all, over 3 days."
+        },
+        {
+         "title": "Give with food",
+         "text": "Artemether-lumefantrine should be taken with food. The national booklet says fatty food."
+        },
+        {
+         "title": "If P. vivax",
+         "text": "Give primaquine after the first-line treatment: 0.25 mg/kg once daily for 14 days. Not for children under 6 months, and not with G6PD deficiency."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: The first-line antimalarial is artemether-lumefantrine, and the second-line is dihydroartemisinin-piperaquine, once daily for 3 days: 5 kg up to 8 kg, 1 tablet (20/160 mg); 8 kg up to 11 kg, 1½ tablets (20/160 mg); 11 kg up to 18 kg, 1 tablet (40/320 mg). WHO module (page 30): lists artemether-lumefantrine first and gives artesunate plus amodiaquine as the second treatment, with its own dose table.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "heading",
+       "text": "Paracetamol for high fever"
+      },
+      {
+       "type": "paragraph",
+       "text": "Paracetamol lowers a fever and reduces pain. If a child has high fever (38.5 °C or above), whatever the classification, give one dose of paracetamol in the clinic."
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Age</strong></td><td style=\"padding: 4px\"><strong>Weight</strong></td><td style=\"padding: 4px\"><strong>Paracetamol</strong></td></tr><tr><td style=\"padding: 4px\">2 months up to 3 years</td><td style=\"padding: 4px\">4 kg up to 14 kg</td><td style=\"padding: 4px\">5 ml syrup (120 mg/5 ml), or ¼ tablet (500 mg)</td></tr><tr><td style=\"padding: 4px\">3 years up to 5 years</td><td style=\"padding: 4px\">14 kg up to 19 kg</td><td style=\"padding: 4px\">7.5 ml syrup (120 mg/5 ml), or ½ tablet (500 mg)</td></tr></table>"
+      },
+      {
+       "type": "story",
+       "title": "Treat Sami",
+       "stages": [
+        {
+         "text": "Sami is classified MALARIA. His temperature is 38.6 °C.",
+         "question": "Does Sami need paracetamol in the clinic?",
+         "options": [
+          "Yes: his temperature is 38.5 °C or above",
+          "No: paracetamol is only for pain",
+          "No: the antimalarial is enough"
+         ],
+         "answer": 0,
+         "explanation": "You explain to Miriam that you think Sami has malaria, that it can be treated with an oral medicine, and that you will also give him medicine to bring down his high fever."
+        },
+        {
+         "text": "Sami is 3 years old and weighs 12 kg. Use the weight.",
+         "question": "What dose of paracetamol syrup (120 mg/5 ml) does he get?",
+         "options": [
+          "5 ml",
+          "7.5 ml",
+          "10 ml"
+         ],
+         "answer": 0,
+         "explanation": "By weight, 4 kg up to 14 kg: 5 ml. (The WHO module's table gives 7.5 ml for a child of 12 up to 14 kg. The national table is used here.)"
+        },
+        {
+         "text": "Miriam asks how she will give the antimalarial. She is nervous and worried about harming Sami. You tell her that you will walk her through it.",
+         "question": "How many artemether-lumefantrine tablets is each dose for Sami, at 12 kg?",
+         "options": [
+          "1 tablet",
+          "2 tablets",
+          "½ tablet"
+         ],
+         "answer": 0,
+         "explanation": "5 kg up to 15 kg: 1 tablet per dose, 6 tablets in all. You show Miriam the dose, she gives the first dose in the clinic, and you watch Sami for 1 hour. He does not vomit, so the dose is not repeated. She will give the second dose at home after 8 hours, then one tablet twice a day for the next two days, with food."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m5-ex-e",
+       "note": "Exercise E."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 33,
+     "bookToPage": 33,
+     "title": "Treat measles: vitamin A and local infections",
+     "order": 10,
+     "read": [
+      {
+       "type": "note",
+       "text": "Give vitamin A treatment for measles, and give the first dose of eye ointment before referral.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "heading",
+       "text": "Vitamin A treatment"
+      },
+      {
+       "type": "paragraph",
+       "text": "Vitamin A helps to resist the measles virus infection in the eye, and in the layer of cells that line the lung, gut, mouth and throat. It may also help the immune system to prevent other infections. Corneal clouding, a sign of vitamin A deficiency, can progress to blindness if vitamin A is not given."
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Age</strong></td><td style=\"padding: 4px\"><strong>Vitamin A, each dose</strong></td></tr><tr><td style=\"padding: 4px\">6 months up to 12 months</td><td style=\"padding: 4px\">100 000 IU (blue capsule)</td></tr><tr><td style=\"padding: 4px\">12 months up to 5 years</td><td style=\"padding: 4px\">200 000 IU (red capsule)</td></tr></table><p>Three doses: day 1 in the clinic, day 2 at home, and after 2 weeks in the clinic. Do not give it if the child had a dose in the last 6 months or is on RUTF.</p>"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: Vitamin A treatment for measles is three doses: the first in the clinic, the second the next day at home, and the third after 2 weeks in the clinic. The national chart gives no dose under 6 months. WHO module (page 33): says \"give 2 doses\": the first in the clinic, the second given to the mother for the next day.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "steps",
+       "title": "Giving a vitamin A capsule",
+       "steps": [
+        {
+         "title": "Give the first dose in the clinic",
+         "text": "Give the second dose to the mother to give her child the next day at home."
+        },
+        {
+         "title": "If the child can swallow it",
+         "text": "Make sure the child swallows the capsule whole."
+        },
+        {
+         "title": "If the child cannot swallow it, or needs only part",
+         "text": "Open the capsule: tear off or cut across the nipple with a clean tool. If the capsule has no nipple, pierce it with a needle."
+        },
+        {
+         "title": "Record the date",
+         "text": "Record the date each time you give vitamin A to a child. This is important: repeated doses in a short period of time risk an overdose."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Local infections"
+      },
+      {
+       "type": "paragraph",
+       "text": "Local infections include the eye infection and the mouth ulcers that measles may cause. Some treatments for local infections cause discomfort, and children often resist having their eyes, ears or mouth treated. So it is important to hold the child still. But do not hold the child still until immediately before treatment."
+      },
+      {
+       "type": "flip",
+       "title": "Who gives the treatment?",
+       "cards": [
+        {
+         "front": "The child is NOT being referred",
+         "back": "Teach the mother or caregiver to treat the eye infection or mouth ulcers at home. You will learn how in the next lesson."
+        },
+        {
+         "front": "The child WILL be referred and needs eye ointment",
+         "back": "Clean the eye gently. Pull down the lower lid. Squirt the first dose of tetracycline eye ointment onto the lower eyelid. The dose is about the size of a grain of rice."
+        }
+       ]
+      },
+      {
+       "type": "sort",
+       "text": "What does this child with measles need? Sort each child.",
+       "groups": [
+        "Vitamin A and urgent referral",
+        "Vitamin A and treatment at home"
+       ],
+       "items": [
+        {
+         "text": "Clouding of the cornea, not treated before",
+         "group": 0,
+         "why": "SEVERE COMPLICATED MEASLES."
+        },
+        {
+         "text": "Mouth ulcers that are not deep or extensive",
+         "group": 1,
+         "why": "Gentian violet, and follow up in 3 days."
+        },
+        {
+         "text": "Pus draining from the eye",
+         "group": 1,
+         "why": "Tetracycline eye ointment, and follow up in 3 days."
+        },
+        {
+         "text": "Deep and extensive mouth ulcers",
+         "group": 0,
+         "why": "SEVERE COMPLICATED MEASLES."
+        },
+        {
+         "text": "No complications",
+         "group": 1,
+         "why": "MEASLES: vitamin A and feeding advice."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 35,
+     "bookToPage": 37,
+     "title": "Counsel: eye ointment and gentian violet at home",
+     "order": 11,
+     "read": [
+      {
+       "type": "note",
+       "text": "Teach a caregiver to treat an eye infection with tetracycline ointment and mouth ulcers with gentian violet.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Antimalarials are taught with the same steps you use for any oral medicine: determine the medicine and dose, explain the treatment, demonstrate how to measure a dose, let the caregiver practise, ask her to give the first dose, label and package the medicine, and check her understanding. Local treatments use the same three teaching steps: give information, show an example, let her practise."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Treating the eye and the mouth at home",
+       "caption": "Give information, show, then let her practise.",
+       "script": "V5.6"
+      },
+      {
+       "type": "heading",
+       "text": "Tetracycline eye ointment"
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>Give information.</strong> Tell the caregiver:</p><ul><li>Treat both eyes, to prevent damage to the eyes.</li><li>Wash your hands before and after treating the eye.</li><li>Clean the child's eyes immediately before applying the ointment. Use a clean cloth to wipe the eye.</li><li>The ointment will slightly sting the child's eye.</li><li>Repeat the process (cleaning the eye and applying ointment) 3 times a day: in the morning, at mid-day and in the evening.</li></ul>"
+      },
+      {
+       "type": "steps",
+       "title": "Show her how to treat the eye",
+       "steps": [
+        {
+         "title": "Wash your hands",
+         "text": ""
+        },
+        {
+         "title": "Point to the lower lid",
+         "text": "Hold down the lower lid of your own eye and point to it. This is where she should apply the ointment. Tell her to be careful that the tube does not touch the eye or lid."
+        },
+        {
+         "title": "Have someone hold the child still",
+         "text": ""
+        },
+        {
+         "title": "Wipe one of the child's eyes with the cloth",
+         "text": ""
+        },
+        {
+         "title": "Squirt the ointment onto the lower lid",
+         "text": "Make sure she sees where you apply it and the dose: the size of a grain of rice."
+        },
+        {
+         "title": "Ask her to practise on the other eye",
+         "text": "Observe, and give feedback as she practises."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>When she has finished, tell her:</strong></p><ul><li>Treat both eyes until the redness is gone from the infected eye. The eye is improving if there is less pus, or the eyes are not stuck shut in the morning.</li><li>Do not put any other eye ointments, drops or alternative treatments in the child's eyes. They may be harmful and damage the eyes. Putting harmful substances in the eye may cause blindness.</li><li>After 2 days, if there is still pus in the eye, bring the child back to the clinic.</li></ul><p>Give her the same tube you used in the clinic. Then ask checking questions, for example: \"Will you treat one or both eyes?\" \"How much ointment will you put in the eye?\"</p>"
+      },
+      {
+       "type": "heading",
+       "text": "Gentian violet for mouth ulcers"
+      },
+      {
+       "type": "paragraph",
+       "text": "Treating mouth ulcers controls infection and helps the child to eat. Use half-strength gentian violet (0.25%) in the mouth, not full-strength (0.5%)."
+      },
+      {
+       "type": "steps",
+       "title": "Treating mouth ulcers",
+       "steps": [
+        {
+         "title": "Explain why",
+         "text": "The child will start eating normally sooner if she paints the mouth ulcers. It is important that the child eats."
+        },
+        {
+         "title": "Clean the mouth",
+         "text": "Wrap a clean soft cloth around the finger, dip it in salt water, and wipe the mouth."
+        },
+        {
+         "title": "Paint the ulcers",
+         "text": "Use a clean cloth or a cotton-tipped stick with a small amount of gentian violet. It kills the germs that cause the ulcers. Do not let the child drink the gentian violet."
+        },
+        {
+         "title": "How often and how long",
+         "text": "2 times a day, in the morning and evening, for 5 days. Then stop."
+        },
+        {
+         "title": "Show, then let her practise",
+         "text": "Clean the mouth and paint half of it yourself. Tilt the child's head back. Then watch her paint the rest, and comment on what she did well and what to improve."
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "Give her a bottle of half-strength gentian violet to take home. Tell her to return earlier if the mouth ulcers get worse, or if the child is not able to drink or eat. Ask checking questions: \"What will you use to clean the child's mouth?\" \"When will you wash your hands?\" \"How often will you treat the child's mouth?\" \"For how many days?\""
+      },
+      {
+       "type": "sort",
+       "text": "Eye ointment or gentian violet? Sort each instruction.",
+       "groups": [
+        "Tetracycline eye ointment",
+        "Gentian violet"
+       ],
+       "items": [
+        {
+         "text": "3 times a day",
+         "group": 0,
+         "why": "Morning, mid-day and evening."
+        },
+        {
+         "text": "2 times a day for 5 days",
+         "group": 1
+        },
+        {
+         "text": "A dose the size of a grain of rice",
+         "group": 0
+        },
+        {
+         "text": "Clean first with a cloth dipped in salt water",
+         "group": 1,
+         "why": "The mouth is wiped with salt water."
+        },
+        {
+         "text": "Treat both sides even if only one is infected",
+         "group": 0,
+         "why": "Treat both eyes."
+        },
+        {
+         "text": "Use the half-strength (0.25%)",
+         "group": 1
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 38,
+     "bookToPage": 39,
+     "title": "Counsel: when to return, and counselling Miriam",
+     "order": 12,
+     "read": [
+      {
+       "type": "note",
+       "text": "Tell the caregiver of a child with fever when to return, and counsel Miriam on Sami's treatment at home.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "flip",
+       "title": "When should a child with fever return?",
+       "cards": [
+        {
+         "front": "MALARIA",
+         "back": "In 3 days if the fever persists."
+        },
+        {
+         "front": "FEVER: NO MALARIA",
+         "back": "In 3 days if the fever persists."
+        },
+        {
+         "front": "MEASLES WITH EYE OR MOUTH COMPLICATIONS",
+         "back": "In 3 days."
+        },
+        {
+         "front": "Any sick child",
+         "back": "Immediately if the child is not able to drink or breastfeed, becomes sicker, or develops a fever."
+        },
+        {
+         "front": "Fever every day for more than 7 days",
+         "back": "Refer for assessment."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: Follow-up is in 3 days for MALARIA, for FEVER: NO MALARIA (if fever persists) and for MEASLES WITH EYE OR MOUTH COMPLICATIONS. WHO module (page 38): its return table says 2 days for FEVER: NO MALARIA and for measles, while its classification tables and answer key say 3 days.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "story",
+       "title": "Counselling Miriam",
+       "stages": [
+        {
+         "text": "Sami needs artemether-lumefantrine for 3 days. He had 1 tablet in the clinic.",
+         "question": "What do you tell Miriam about the other doses?",
+         "options": [
+          "1 tablet 8 hours after the first, then 1 tablet twice a day on the second and third days",
+          "1 tablet once a day for 3 days",
+          "2 tablets tomorrow and 2 the day after"
+         ],
+         "answer": 0,
+         "explanation": "Six doses in all. You show her how to give the tablet and ask her to practise."
+        },
+        {
+         "text": "You tell Miriam to watch Sami carefully for 30 minutes after she gives a dose at home.",
+         "question": "What should she do if he vomits within 30 minutes?",
+         "options": [
+          "Repeat the dose, and come to the clinic for the extra tablets",
+          "Skip that dose",
+          "Stop the treatment"
+         ],
+         "answer": 0,
+         "explanation": "If he vomits within 30 minutes she repeats the dose. She will need to return to the clinic for extra doses."
+        },
+        {
+         "text": "Sami also has diarrhoea with NO DEHYDRATION, so you counsel Miriam on Plan A too. Then you check her understanding.",
+         "question": "Which is a good checking question?",
+         "options": [
+          "\"How will you give the tablets? What is the schedule?\"",
+          "\"Do you understand how to give the tablets?\"",
+          "\"You will give them with food, won't you?\""
+         ],
+         "answer": 0,
+         "explanation": "You also ask, \"What should you do after giving the tablets to Sami?\" \"How will you mix the ORS?\" \"How will you give the zinc?\" Miriam answers well."
+        },
+        {
+         "text": "You tell Miriam to bring Sami back in 3 days if his fever continues, or in 5 days if his diarrhoea is not improving. You take her Mother's Card and review when to bring Sami back immediately. Miriam takes the AL tablets, the zinc and two packets of ORS. She thanks you for your help."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m5-ex-f",
+       "note": "Exercise F."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 40,
+     "bookToPage": 42,
+     "title": "Follow-up care for fever and malaria",
+     "order": 13,
+     "read": [
+      {
+       "type": "note",
+       "text": "Follow up a child whose fever persists, with and without malaria at the first visit.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "If a fever has been present every day for more than 7 days, refer the child for assessment. This child may have typhoid fever or another serious infection that needs more tests and special treatment.",
+       "label": "Remember"
+      },
+      {
+       "type": "heading",
+       "text": "FEVER: NO MALARIA, fever persists after 3 days"
+      },
+      {
+       "type": "steps",
+       "title": "What you do",
+       "steps": [
+        {
+         "title": "Do a full reassessment",
+         "text": "Assess for other causes of fever."
+        },
+        {
+         "title": "Do a malaria test",
+         "text": "With an RDT or microscopy."
+        },
+        {
+         "title": "If the malaria test is positive",
+         "text": "Treat with the first-line oral antimalarial. Advise the caregiver to return again in 3 days if the fever persists."
+        },
+        {
+         "title": "If the child has another cause of fever",
+         "text": "Give treatment for that cause."
+        },
+        {
+         "title": "If the child has a general danger sign or stiff neck",
+         "text": "Treat as VERY SEVERE FEBRILE DISEASE and refer urgently."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "MALARIA, fever persists after 3 days or returns within 14 days"
+      },
+      {
+       "type": "paragraph",
+       "text": "Any child classified MALARIA should return if the fever persists for 3 days. If the child returns with fever within 14 days of treatment, you give the same follow-up care."
+      },
+      {
+       "type": "steps",
+       "title": "What you do",
+       "steps": [
+        {
+         "title": "Do a full reassessment",
+         "text": "Assess for other causes of fever. If the child also had measles or another cause of fever at the first visit, the fever may be due to that: it is very common for the fever of measles to continue for several days."
+        },
+        {
+         "title": "If there is a general danger sign or stiff neck",
+         "text": "Treat as VERY SEVERE FEBRILE DISEASE and refer urgently. If the child has already been on an antibiotic, the worsening may mean a bacterial infection that does not respond to it: give the pre-referral antibiotic by injection."
+        },
+        {
+         "title": "Do a malaria test by MICROSCOPY",
+         "text": "It is very unusual for malaria fever to persist 3 days after ACT, or to return within 14 days. So confirm with a blood slide before giving second-line treatment."
+        },
+        {
+         "title": "If the test is positive",
+         "text": "Treat with the second-line oral antimalarial. Ask the caregiver to return again in 3 days if the fever persists. If no second-line antimalarial is available, refer the child to hospital."
+        },
+        {
+         "title": "If the child has another cause of fever",
+         "text": "Treat that cause. For example, treat an ear infection, or refer for problems such as urinary tract infection or abscess."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Do not repeat an RDT at follow-up. The commonly used HRP-2 RDTs stay positive for up to 3 weeks after effective treatment. Only microscopy should be used to look for malaria parasites when fever persists or returns within 14 days.",
+       "label": "Key point"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: The second-line oral antimalarial is dihydroartemisinin-piperaquine, once daily for 3 days. For a child who is worse and cannot take oral medicine, the pre-referral antibiotics are IM ampicillin and gentamicin. WHO module (page 41): uses artesunate plus amodiaquine as its example of a second-line antimalarial, and intramuscular chloramphenicol as the injectable antibiotic.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "question",
+       "text": "A child treated for MALARIA 3 days ago still has fever. He has no danger sign and no other cause of fever. How do you check for malaria today?",
+       "options": [
+        "A blood slide by microscopy",
+        "Another RDT",
+        "No test: give the second-line antimalarial at once"
+       ],
+       "answer": 0,
+       "explanation": "The RDT can stay positive for up to 3 weeks after effective treatment."
+      },
+      {
+       "type": "story",
+       "title": "Follow-up for Sami",
+       "stages": [
+        {
+         "text": "You classified Sami's fever as MALARIA and gave Miriam AL tablets for 3 days, with instructions on when to return. You do not see Miriam or Sami in the following days. Hopefully this means the medicine worked and Sami's fever went down within 3 days."
+        },
+        {
+         "text": "Suppose Sami's fever had continued for 3 days, and Miriam had come back.",
+         "question": "What would you do first?",
+         "options": [
+          "A full reassessment, looking for the cause of the fever",
+          "Give a second course of the same tablets",
+          "Give paracetamol only"
+         ],
+         "answer": 0,
+         "explanation": "Look for the cause: possibly pneumonia, meningitis, measles, ear infection or dysentery. Also consider tuberculosis, urinary tract infection, osteomyelitis or abscess."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m5-ex-g",
+       "note": "Exercise G."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 43,
+     "bookToPage": 44,
+     "title": "Follow-up care for measles",
+     "order": 14,
+     "read": [
+      {
+       "type": "note",
+       "text": "Follow up a child with measles with eye or mouth complications.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "When a child classified MEASLES WITH EYE OR MOUTH COMPLICATIONS returns for follow-up, check the eyes and the mouth, and choose the treatment from what you find."
+      },
+      {
+       "type": "steps",
+       "title": "At the follow-up visit",
+       "steps": [
+        {
+         "title": "Look for red eyes and pus draining from the eyes",
+         "text": ""
+        },
+        {
+         "title": "Look at the mouth ulcers",
+         "text": ""
+        },
+        {
+         "title": "Smell the mouth",
+         "text": ""
+        }
+       ]
+      },
+      {
+       "type": "flip",
+       "title": "The eye infection",
+       "cards": [
+        {
+         "front": "No pus or redness",
+         "back": "Stop the treatment. Praise the caregiver for treating the eye well. Tell her the infection is gone."
+        },
+        {
+         "front": "Pus is gone, but redness remains",
+         "back": "Continue the treatment. Tell the caregiver that the treatment is helping, and encourage her to continue until the redness is gone."
+        },
+        {
+         "front": "Pus is still draining: the eye was NOT treated correctly",
+         "back": "Ask her to describe or show how she has been treating the eye. She may not have treated 3 times a day, or not cleaned the eye first, or the child struggled. Teach her the parts she does not know, discuss how to overcome the difficulties, and explain why the treatment matters. Ask her to return if the eye does not improve. If you think she still cannot treat the eye correctly, treat it each day in the clinic or refer."
+        },
+        {
+         "front": "Pus is still draining: the eye WAS treated correctly for 2 days",
+         "back": "Refer the child to hospital."
+        }
+       ]
+      },
+      {
+       "type": "flip",
+       "title": "The mouth ulcers",
+       "cards": [
+        {
+         "front": "Ulcers are worse, or a very foul smell from the mouth",
+         "back": "Refer to hospital. The mouth problem may prevent the child from eating or drinking and may become severe. A very foul smell may mean a serious infection. Mouth problems can be complicated by thrush or herpes."
+        },
+        {
+         "front": "Ulcers are the same or better",
+         "back": "Ask the caregiver to continue the half-strength gentian violet for a total of 5 days. She should continue to feed the child well, to make up for weight lost during the illness and to prevent malnutrition."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "A child with measles has an increased risk of illness for months, because of the immune suppression during and after measles. Make sure the caregiver knows the signs to bring the child back, and how to feed her child: attention to feeding is especially important, because children with measles are at risk of malnutrition.",
+       "label": "Key point"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: The child with MEASLES WITH EYE OR MOUTH COMPLICATIONS is followed up in 3 days. WHO module (page 43): this section says \"in 2 days\", while its classification table and answer key say 3 days.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "sort",
+       "text": "What do you do at follow-up? Sort each finding.",
+       "groups": [
+        "Refer to hospital",
+        "Continue treatment at home",
+        "Stop the treatment"
+       ],
+       "items": [
+        {
+         "text": "Eye: no pus and no redness",
+         "group": 2,
+         "why": "The infection is gone."
+        },
+        {
+         "text": "Eye: pus gone, still red",
+         "group": 1,
+         "why": "Until the redness is gone."
+        },
+        {
+         "text": "Eye: still pus after 2 days of correct treatment",
+         "group": 0
+        },
+        {
+         "text": "Mouth: a very foul smell",
+         "group": 0,
+         "why": "May mean a serious infection."
+        },
+        {
+         "text": "Mouth: ulcers a little better",
+         "group": 1,
+         "why": "Gentian violet for a total of 5 days."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 45,
+     "bookToPage": 46,
+     "title": "Using this module in your clinic",
+     "order": 15,
+     "read": [
+      {
+       "type": "note",
+       "text": "Plan how you will practise these skills in your own clinic.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "How will you begin to apply what you have learned about managing children with fever? In the coming days, focus on these key clinical skills. Practising them will help you to use IMNCI for fever and measles."
+      },
+      {
+       "type": "flip",
+       "title": "Your clinic plan",
+       "cards": [
+        {
+         "front": "MALARIA AND MEASLES",
+         "back": "<ul><li>Find out how malaria changes in your area by season, and from which nearby areas your patients travel.</li><li>Determine what capacity you have to do malaria tests (microscopy or RDTs), and what the procedure is.</li><li>If you have a case of measles, find out the national reporting procedure for measles outbreaks.</li></ul>"
+        },
+        {
+         "front": "ASSESS",
+         "back": "<ul><li>Determine if children have fever by taking their temperature, feeling if they are hot, or asking about history of fever.</li><li>Look and feel for stiff neck.</li><li>Look for runny nose.</li><li>Look for signs of measles: generalized rash, and cough, runny nose or red eyes.</li><li>Look for complications of measles: mouth ulcers, pus draining from the eye, and clouding of the cornea.</li></ul>"
+        },
+        {
+         "front": "CLASSIFY",
+         "back": "<ul><li>Use your chart booklet to classify fever.</li><li>Classify any complications if children have measles now or within the last 3 months.</li></ul>"
+        },
+        {
+         "front": "TREAT",
+         "back": "<ul><li>Determine how to give urgent treatment for very severe febrile disease.</li><li>Determine which antimalarials and which strengths you have, and the dose for each weight group.</li><li>Practise giving oral antimalarials, paracetamol for high fever, and vitamin A treatment.</li></ul>"
+        },
+        {
+         "front": "COUNSEL",
+         "back": "<ul><li>Teach a caregiver how to give antimalarials, eye ointment and gentian violet.</li><li>Counsel a caregiver about when to return for follow-up, and when to return immediately.</li></ul>"
+        }
+       ]
+      },
+      {
+       "type": "reveal",
+       "text": "Before your next clinic day: what will you check about malaria tests?",
+       "answer": "Which test you have (microscopy, RDT or both), whether the stock is in date, and which type of RDT it is, because an HRP-2 RDT stays positive for up to 3 weeks after treatment."
+      },
+      {
+       "type": "heading",
+       "text": "Remember to use your logbook"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Complete the logbook exercises for Module 5.</li><li>Record at least 2 cases on IMNCI recording forms.</li><li>Take notes if you experience anything difficult, confusing or interesting during these cases, to share with your study group and facilitator.</li></ul>"
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 47,
+     "bookToPage": 48,
+     "title": "Review questions and Module 5 test",
+     "order": 16,
+     "read": [
+      {
+       "type": "note",
+       "text": "Test what you have learned in Module 5.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Before the module you answered five questions. Answer them again now, to see what you have learned. Then take the logbook test: you may use your chart booklet, but not the module."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m5-posttest",
+       "note": ""
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m5-logbook",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    }
+   ],
+   "isPublished": true
+  }
+ ],
+ "exercises": [
+  {
+   "id": "dimci-m5-pretest",
+   "order": 501,
+   "title": "Distance learning Module 5: Pre-test",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 5 (2014)",
+   "narrative": [
+    "Before you begin studying this module, check what you know. After the module you will answer the same questions."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "q1",
+     "type": "mcq",
+     "question": "Which of the following children has a fever that requires further investigation?",
+     "options": [
+      "Imrana has an axillary temperature of 37 °C",
+      "Joy's mother says she has been feeling very hot for the past three days",
+      "Samuel's face is very flushed and red"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "History of fever is enough."
+    },
+    {
+     "id": "q2",
+     "type": "mcq",
+     "question": "What are common causes of fever that often kill children?",
+     "options": [
+      "Local infection and malaria",
+      "Meningitis and influenza",
+      "Measles and malaria"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q3",
+     "type": "mcq",
+     "question": "What would you give to children with high fever?",
+     "options": [
+      "Paracetamol",
+      "Amoxicillin or another antibiotic",
+      "Fluids"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q4",
+     "type": "mcq",
+     "question": "What is the recommended treatment for malaria?",
+     "options": [
+      "Chloroquine",
+      "Artemisinin-based combination therapies",
+      "Paracetamol"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q5",
+     "type": "mcq",
+     "question": "Traci has a fever, generalized rash, runny nose and mouth ulcers. How would you classify?",
+     "options": [
+      "She shows signs of local infections of the skin",
+      "She shows clinical signs of AIDS",
+      "Measles with mouth complications"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m5-ex-a",
+   "order": 502,
+   "title": "Distance learning Module 5: Exercise A (assess and classify fever)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 5 (2014)",
+   "narrative": [
+    "Answer the questions about assessing and classifying fever."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "a1",
+     "type": "tf",
+     "question": "All children with a fever should be classified for fever.",
+     "correct": true,
+     "explain": "Children who have a fever AND signs of measles are also classified for measles."
+    },
+    {
+     "id": "a2",
+     "type": "mcq",
+     "question": "When will you do a malaria test?",
+     "options": [
+      "In all children with fever or a history of fever who have no general danger sign and no stiff neck",
+      "Only when the child has a stiff neck",
+      "Only when the temperature is 38.5 °C or above"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "National booklet: test all fever cases. The WHO key says: in high risk areas, all children with fever; in low risk areas, any child without another clear cause of fever."
+    },
+    {
+     "id": "a3",
+     "type": "mcq",
+     "question": "Which signs indicate that a child has VERY SEVERE FEBRILE DISEASE?",
+     "options": [
+      "Fever and any general danger sign, or stiff neck",
+      "Fever and a positive malaria test",
+      "Fever for more than 2 days"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "a4",
+     "type": "mcq",
+     "question": "Reba has a positive P. vivax test and no general danger signs or stiff neck. Her temperature is 38 °C. How will you classify?",
+     "options": [
+      "VERY SEVERE FEBRILE DISEASE",
+      "MALARIA",
+      "FEVER: NO MALARIA"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "a5",
+     "type": "tf",
+     "question": "Reba requires oral antimalarials and paracetamol.",
+     "correct": false,
+     "explain": "She requires oral antimalarials, but not paracetamol, because her fever is not high fever (38.5 °C or above)."
+    },
+    {
+     "id": "a6",
+     "type": "tf",
+     "question": "According to the WHO module, a child who lives in a LOW malaria risk area will never need a malaria test.",
+     "correct": false,
+     "explain": "The child may need a test if there is no other clear cause of fever, or if the child travelled to a high risk area within 2 weeks. In the national booklet, all fever cases are tested."
+    }
+   ]
+  },
+  {
+   "id": "dimci-m5-ex-b",
+   "order": 503,
+   "title": "Distance learning Module 5: Exercise B (assess and classify measles)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 5 (2014)",
+   "narrative": [
+    "Answer the questions about assessing and classifying measles."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "b1",
+     "type": "mcq",
+     "question": "When should a child be classified for measles?",
+     "options": [
+      "If the child has a fever and shows signs of measles now, or has had measles in the last 3 months",
+      "Every child with fever",
+      "Only if the child has mouth ulcers"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "b2",
+     "type": "open",
+     "question": "When you assess a child with fever for measles, what signs will you look for?",
+     "points": [
+      "First, a generalized rash",
+      "If the rash is present, also one of: cough, runny nose, or red eyes"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "b3",
+     "type": "mcq",
+     "question": "Allan has a fever and measles, with deep, extensive mouth ulcers. How will you classify?",
+     "options": [
+      "SEVERE COMPLICATED MEASLES",
+      "MEASLES WITH EYE OR MOUTH COMPLICATIONS",
+      "MEASLES"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "b4",
+     "type": "mcq",
+     "question": "Which signs indicate that a child has MEASLES WITH EYE OR MOUTH COMPLICATIONS?",
+     "options": [
+      "Signs of measles, and also pus draining from the eye or mouth ulcers",
+      "Signs of measles and red eyes",
+      "Signs of measles and clouding of the cornea"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m5-kareem",
+   "order": 504,
+   "title": "Distance learning Module 5: Exercise C (Kareem, 5 months)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 10,
+   "draft": true,
+   "source": "WHO dIMCI Module 5 (2014)",
+   "narrative": [
+    "Kareem is 5 months old. He weighs 5.2 kg. His axillary temperature is 37.5 °C. His mother said he is not eating well. She said he feels hot, and she wants a health worker to help him.",
+    "Kareem is able to drink, has not vomited, does not have convulsions, and is not lethargic or unconscious. Kareem does not have a cough, said his mother. He does not have diarrhoea.",
+    "Because Kareem's temperature is 37.5 °C and he feels hot, the health worker assessed Kareem further for signs related to fever. It is the rainy season. The mother said Kareem's fever began 2 days ago. He has not had measles within the last 3 months. He does not have stiff neck, his nose is not runny, and there are no signs suggesting measles.",
+    "He had a positive RDT test for P. falciparum."
+   ],
+   "expected": {
+    "sections": [
+     "danger",
+     "cough",
+     "diarrhea",
+     "fever"
+    ],
+    "patientData": {
+     "childName": "Kareem",
+     "sex": "male",
+     "ageMonths": 5,
+     "weightKg": 5.2,
+     "tempC": 37.5,
+     "visitType": "initial"
+    },
+    "assessments": {
+     "notAbleToDrink": false,
+     "vomitsEverything": false,
+     "historyOfConvulsions": false,
+     "lethargicUnconscious": false,
+     "convulsingNow": false,
+     "hasCough": false,
+     "hasDiarrhea": false,
+     "hasFever": true,
+     "feverDays": 2,
+     "dailyFever7Days": false,
+     "measles3Months": false,
+     "neckStiffness": false,
+     "measlesRash": false,
+     "malariaTest": "positive",
+     "mouthUlcers": false,
+     "deepExtensiveUlcers": false,
+     "pusFromEye": false,
+     "corneaClouding": false
+    },
+    "classifications": {
+     "danger": [],
+     "cough": [],
+     "diarrhea": [],
+     "fever": [
+      "imci.classifications.malaria"
+     ]
+    },
+    "includeTreatment": false,
+    "treatments": {}
+   },
+   "learningPoints": [
+    "Kareem has fever: his temperature is 37.5 °C and he feels hot.",
+    "He has no general danger sign and no stiff neck, so he does not have the red classification.",
+    "His malaria test is positive: MALARIA.",
+    "He has no signs of measles, so he is not classified for measles."
+   ],
+   "explain": "Kareem has fever: his temperature is 37.5 °C and he feels hot. He has no general danger sign and no stiff neck, so he does not have the red classification. His malaria test is positive: MALARIA. He has no signs of measles, so he is not classified for measles."
+  },
+  {
+   "id": "dimci-m5-dolma",
+   "order": 505,
+   "title": "Distance learning Module 5: Exercise D (Dolma, 12 months)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 10,
+   "draft": true,
+   "source": "WHO dIMCI Module 5 (2014)",
+   "narrative": [
+    "Dolma is 12 months old. She weighs 7.2 kg. Her axillary temperature is 36.5 °C. Her mother brought Dolma to the health centre today because she feels hot.",
+    "Dolma has no general danger signs. She does not have cough or difficult breathing. When asked about diarrhoea, the mother said, \"Yes, Dolma has had diarrhoea for 2 to 3 days.\" She has not seen any blood in the stool. Dolma has not been lethargic or unconscious. Her eyes are not sunken. She drinks normally. Her skin pinch returns immediately.",
+    "The health worker said, \"You brought Dolma today because she feels hot. I will check her for fever.\" Her mother said that Dolma has felt hot for 2 days. She has not had measles within the last 3 months. There is no stiff neck and no runny nose.",
+    "Dolma has a dry, generalized rash. She also has red eyes. She has a negative malaria test."
+   ],
+   "expected": {
+    "sections": [
+     "danger",
+     "cough",
+     "diarrhea",
+     "fever"
+    ],
+    "patientData": {
+     "childName": "Dolma",
+     "sex": "female",
+     "ageMonths": 12,
+     "weightKg": 7.2,
+     "tempC": 36.5,
+     "visitType": "initial"
+    },
+    "assessments": {
+     "notAbleToDrink": false,
+     "vomitsEverything": false,
+     "historyOfConvulsions": false,
+     "lethargicUnconscious": false,
+     "convulsingNow": false,
+     "hasCough": false,
+     "hasDiarrhea": true,
+     "hasFever": true,
+     "feverDays": 2,
+     "dailyFever7Days": false,
+     "measles3Months": false,
+     "neckStiffness": false,
+     "measlesRash": true,
+     "malariaTest": "negative",
+     "mouthUlcers": false,
+     "deepExtensiveUlcers": false,
+     "pusFromEye": false,
+     "corneaClouding": false,
+     "diarrheaDays": 3,
+     "bloodInStool": false,
+     "lethargic": false,
+     "restlessIrritable": false,
+     "sunkenEyes": false,
+     "drinkPoorly": false,
+     "drinkEagerly": false,
+     "pinchVerySlow": false,
+     "pinchSlow": false
+    },
+    "classifications": {
+     "danger": [],
+     "cough": [],
+     "diarrhea": [
+      "imci.classifications.no_dehydration"
+     ],
+     "fever": [
+      "imci.classifications.fever_no_malaria"
+     ]
+    },
+    "includeTreatment": false,
+    "treatments": {}
+   },
+   "learningPoints": [
+    "Dolma has a history of fever (she has felt hot for 2 days), so she is assessed for fever although her temperature is 36.5 °C.",
+    "She has no general danger sign and no stiff neck, and her malaria test is negative: FEVER: NO MALARIA.",
+    "She has a generalized rash and red eyes, so she has signs of measles. With no mouth ulcers, no pus draining from the eye and no clouding of the cornea, she is also classified MEASLES and gets vitamin A.",
+    "Her diarrhoea has no signs of dehydration: NO DEHYDRATION."
+   ],
+   "explain": "Dolma has a history of fever (she has felt hot for 2 days), so she is assessed for fever although her temperature is 36.5 °C. She has no general danger sign and no stiff neck, and her malaria test is negative: FEVER: NO MALARIA. She has a generalized rash and red eyes, so she has signs of measles. With no mouth ulcers, no pus draining from the eye and no clouding of the cornea, she is also classified MEASLES and gets vitamin A. Her diarrhoea has no signs of dehydration: NO DEHYDRATION."
+  },
+  {
+   "id": "dimci-m5-ex-e",
+   "order": 506,
+   "title": "Distance learning Module 5: Exercise E (treat malaria)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 5 (2014)",
+   "narrative": [
+    "Answer the questions about oral antimalarial treatment. Use the dose tables of the national chart booklet."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "e1",
+     "type": "mcq",
+     "question": "Why are chloroquine and sulfadoxine-pyrimethamine (SP) no longer the first-line and second-line antimalarial medicines in the IMNCI guidelines of many countries?",
+     "options": [
+      "Resistance to chloroquine has emerged and grown, and resistance to SP is growing as well",
+      "They are too expensive",
+      "They cannot be given to children"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e2",
+     "type": "mcq",
+     "question": "What does WHO recommend for oral antimalarial treatment?",
+     "options": [
+      "Artemisinin-based combination therapies (ACT)",
+      "Chloroquine alone",
+      "Quinine tablets for every child"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "ACT very quickly reduces the number of malaria parasites and improves the symptoms."
+    },
+    {
+     "id": "e3",
+     "type": "mcq",
+     "question": "A child of 6 months weighs 10 kg and has MALARIA. How do you give artemether-lumefantrine (20/120 mg)?",
+     "options": [
+      "1 tablet now, 1 tablet after 8 hours, then 1 tablet twice a day for the next two days",
+      "2 tablets now, 2 tablets after 8 hours, then 2 tablets twice a day for the next two days",
+      "1 tablet once a day for 3 days"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "5 kg up to 15 kg: 1 tablet per dose, 6 doses."
+    },
+    {
+     "id": "e4",
+     "type": "mcq",
+     "question": "A child weighs 16 kg and has MALARIA. How do you give artemether-lumefantrine (20/120 mg)?",
+     "options": [
+      "1 tablet now, 1 tablet after 8 hours, then 1 tablet twice a day for the next two days",
+      "2 tablets now, 2 tablets after 8 hours, then 2 tablets twice a day for the next two days",
+      "3 tablets once a day for 3 days"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "15 kg up to 25 kg: 2 tablets per dose, 12 tablets in all."
+    },
+    {
+     "id": "e5",
+     "type": "mcq",
+     "question": "A 12 kg child needs the second-line antimalarial of the national booklet, dihydroartemisinin-piperaquine. What do you give?",
+     "options": [
+      "1 tablet (40/320 mg) once daily for 3 days",
+      "1 tablet (20/160 mg) twice daily for 3 days",
+      "1½ tablets (20/160 mg) once daily for 7 days"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "11 kg up to 18 kg: 1 tablet of 40/320 mg once daily for 3 days."
+    },
+    {
+     "id": "e6",
+     "type": "open",
+     "question": "What special instructions are given with artemether-lumefantrine?",
+     "points": [
+      "Give the first dose in the clinic and observe for 1 hour",
+      "If the child vomits within the hour, repeat the dose",
+      "Give the second dose at home 8 hours later",
+      "It must be taken with food"
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m5-ex-f",
+   "order": 507,
+   "title": "Distance learning Module 5: Exercise F (counsel)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 5 (2014)",
+   "narrative": [
+    "Answer the questions about counselling a caregiver about fever."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "f1",
+     "type": "open",
+     "question": "What are the 3 basic teaching steps?",
+     "points": [
+      "Give information",
+      "Demonstrate (show an example)",
+      "Ask the caregiver to practise"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f2",
+     "type": "open",
+     "question": "What are important instructions for the caregiver about treating the eye with ointment? List 5.",
+     "points": [
+      "The dose of tetracycline eye ointment is the size of a grain of rice",
+      "Treat both eyes",
+      "Wash hands before and after treating the eye",
+      "Clean the child's eyes before applying ointment, with a clean cloth",
+      "Do not touch the tube to the eye or lid",
+      "Put the ointment in the lower lid of the eye, holding the lid down",
+      "Apply 3 times a day: morning, mid-day and evening",
+      "Treat until the redness is gone",
+      "If pus remains after 2 days, return to the clinic",
+      "Do not put other drops, ointments or treatments in the eye"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f3",
+     "type": "mcq",
+     "question": "When should children with FEVER: NO MALARIA return for follow-up?",
+     "options": [
+      "The next day",
+      "In 3 days, if the fever persists",
+      "In 7 days, whatever happens"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "National booklet and WHO answer key: 3 days if fever persists."
+    },
+    {
+     "id": "f4",
+     "type": "mcq",
+     "question": "When should children with MEASLES WITH EYE OR MOUTH COMPLICATIONS return for follow-up?",
+     "options": [
+      "The next day",
+      "In 4 days, if signs of measles (rash, runny nose, red eyes) persist",
+      "In 3 days"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m5-ex-g",
+   "order": 508,
+   "title": "Distance learning Module 5: Exercise G (follow-up: Lin and Sindi)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 5 (2014)",
+   "narrative": [
+    "In this clinic, artemether-lumefantrine (AL) is the first-line oral antimalarial and dihydroartemisinin-piperaquine is the second-line oral antimalarial.",
+    "Lin's mother has brought him back to the clinic because he still has fever. Two days ago he was given AL for MALARIA, and a dose of paracetamol. His mother says that he has no new problems, just the fever. He is 3 years old and weighs 14 kg. His axillary temperature is 38.5 °C."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "g1",
+     "type": "mcq",
+     "question": "How would you reassess Lin?",
+     "options": [
+      "Do a full reassessment for other causes of fever, and test again for malaria by microscopy",
+      "Repeat the RDT only",
+      "No reassessment: repeat the AL"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "g2",
+     "type": "mcq",
+     "question": "When you reassess Lin, he has no general danger signs, no cough and no diarrhoea. He has now had fever for 4 days. He has no stiff neck, no runny nose and no generalized rash. The microscopy slide is positive for malaria parasites. He has no ear problem and no other apparent cause of fever. How would you treat Lin?",
+     "options": [
+      "Second-line antimalarial: dihydroartemisinin-piperaquine, 1 tablet (40/320 mg) once daily for 3 days, first dose in the clinic",
+      "A second course of artemether-lumefantrine",
+      "IM quinine, and refer urgently"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "14 kg is in the band 11 kg up to 18 kg. His temperature is 38.5 °C, so he also gets a dose of paracetamol. He returns in 3 days if the fever persists. (The WHO key gives its own second-line example, artesunate plus amodiaquine.)"
+    },
+    {
+     "id": "g3",
+     "type": "mcq",
+     "question": "Sindi's mother has come back because Sindi still has a fever. Three days ago she had a positive rapid malaria test and was given treatment for MALARIA. Her mother says she is sicker now, vomiting and very hot. Sindi is 18 months old and weighs 11 kg. Her axillary temperature is 39 °C. Yesterday she could drink, but she vomited after eating. She has not had convulsions. She will not wake up when her mother tries to wake her: she is unconscious. She has no cough or diarrhoea. She has now had fever for 5 days. She has no stiff neck, runny nose or generalized rash. How do you classify Sindi?",
+     "options": [
+      "VERY SEVERE FEBRILE DISEASE",
+      "MALARIA",
+      "FEVER: NO MALARIA"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "Sindi is unconscious: a general danger sign."
+    },
+    {
+     "id": "g4",
+     "type": "open",
+     "question": "How will you manage Sindi?",
+     "points": [
+      "Refer URGENTLY: she has a general danger sign",
+      "Give the first dose of the antimalarial for severe malaria (IM quinine)",
+      "Give the first dose of antibiotic (IM ampicillin and gentamicin, as she is unconscious)",
+      "Give one dose of paracetamol for high fever",
+      "Treat to prevent low blood sugar: Sindi is unconscious, so give by nasogastric tube if you can"
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m5-posttest",
+   "order": 509,
+   "title": "Distance learning Module 5: Review questions (post-test)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 5 (2014)",
+   "narrative": [
+    "Now that you have finished the module, answer the same questions as before. This will show what you have learned."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "q1",
+     "type": "mcq",
+     "question": "Which of the following children has a fever that requires further investigation?",
+     "options": [
+      "Imrana has an axillary temperature of 37 °C",
+      "Joy's mother says she has been feeling very hot for the past three days",
+      "Samuel's face is very flushed and red"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "History of fever is enough."
+    },
+    {
+     "id": "q2",
+     "type": "mcq",
+     "question": "What are common causes of fever that often kill children?",
+     "options": [
+      "Local infection and malaria",
+      "Meningitis and influenza",
+      "Measles and malaria"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q3",
+     "type": "mcq",
+     "question": "What is a critical treatment for reducing high fever in children?",
+     "options": [
+      "Paracetamol",
+      "Amoxicillin or another antibiotic",
+      "Fluids"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q4",
+     "type": "mcq",
+     "question": "What is the recommended treatment for malaria?",
+     "options": [
+      "Chloroquine",
+      "Artemisinin-based combination therapies",
+      "Paracetamol"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q5",
+     "type": "mcq",
+     "question": "Traci has a fever, generalized rash, runny nose and mouth ulcers. How would you classify?",
+     "options": [
+      "She shows signs of local infections of the skin",
+      "She shows clinical signs of AIDS",
+      "Measles with mouth complications"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m5-logbook",
+   "order": 510,
+   "title": "Distance learning Module 5: Logbook assessment questions",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 15,
+   "draft": true,
+   "source": "WHO dIMCI Module 5 (2014)",
+   "narrative": [
+    "You are allowed to use your chart booklet as you answer these questions. You should not use your study modules."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "l1",
+     "type": "mcq",
+     "question": "Which of the following signs is used in IMNCI to determine if a child has a fever?",
+     "options": [
+      "She is sweating",
+      "She has a rectal temperature of 37.5 °C or above",
+      "She has a history of fever"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l2",
+     "type": "mcq",
+     "question": "One of the possible causes of a fever is:",
+     "options": [
+      "Pneumonia",
+      "Urinary tract infections",
+      "Dehydration"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l3",
+     "type": "mcq",
+     "question": "A malaria test should be done:",
+     "options": [
+      "When a child has a fever and a stiff neck",
+      "Never, you can presume the fever is due to malaria",
+      "In all cases when the child has a fever and no general danger signs or a stiff neck"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l4",
+     "type": "mcq",
+     "question": "According to the WHO module, when should you do a malaria test in an area of LOW malaria risk?",
+     "options": [
+      "When the child has a fever with no other clear causes",
+      "Never, the odds of malaria are too low",
+      "When the child has a fever with a stiff neck"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "The national booklet tests all fever cases."
+    },
+    {
+     "id": "l5",
+     "type": "mcq",
+     "question": "How does measles contribute to malnutrition?",
+     "options": [
+      "Measles is not related to malnutrition",
+      "Measles causes diarrhoea, high fever and mouth ulcers. These problems interfere with feeding",
+      "Measles causes a rash on the skin so the child is not interested in eating"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l6",
+     "type": "mcq",
+     "question": "When assessing for measles, you will look for a generalized rash and:",
+     "options": [
+      "Cough, runny nose and red eyes",
+      "Jaundice and watery eyes",
+      "Chills and a runny nose"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l7",
+     "type": "mcq",
+     "question": "A child with fever and a stiff neck is classified with:",
+     "options": [
+      "Meningitis",
+      "Very severe febrile disease",
+      "Malaria"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l8",
+     "type": "mcq",
+     "question": "A child with measles and pus draining from the eye is classified with:",
+     "options": [
+      "SEVERE COMPLICATED MEASLES",
+      "BACTERIAL INFECTION",
+      "MEASLES WITH EYE COMPLICATIONS"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l9",
+     "type": "mcq",
+     "question": "Signs of measles with complications include:",
+     "options": [
+      "Clouding of the cornea",
+      "Skin pustules",
+      "Scabies"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l10",
+     "type": "tf",
+     "question": "Malaria and measles are two causes of fever. They are two major killers of children under 5.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l11",
+     "type": "tf",
+     "question": "Malaria is caused by parasites called \"plasmodia\" that enter the blood. The parasites are transmitted between people by mosquito bite.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l12",
+     "type": "tf",
+     "question": "The most dangerous species of malaria parasite is P. vivax.",
+     "correct": false,
+     "explain": "P. falciparum."
+    },
+    {
+     "id": "l13",
+     "type": "tf",
+     "question": "Signs of the P. falciparum parasite include fever, sweating, shivering and vomiting.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l14",
+     "type": "tf",
+     "question": "You will mark on your recording form that a malaria test is POSITIVE when there are no malaria parasites seen in the microscopy.",
+     "correct": false,
+     "explain": ""
+    },
+    {
+     "id": "l15",
+     "type": "tf",
+     "question": "Measles is caused by a virus that damages the immune system. It leaves the child vulnerable to other infections for weeks after the onset of measles.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l16",
+     "type": "tf",
+     "question": "Complications of measles occur in about 30% of all measles cases.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l17",
+     "type": "tf",
+     "question": "If you give the first dose of an antimalarial in the clinic, and the child vomits within an hour, give him two doses.",
+     "correct": false,
+     "explain": "Repeat the dose once."
+    },
+    {
+     "id": "l18",
+     "type": "tf",
+     "question": "Vitamin A is an important treatment for measles.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l19",
+     "type": "tf",
+     "question": "Malaria risk can change by region in the country, season, and the extent of malaria control in the country.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l20",
+     "type": "tf",
+     "question": "Children with FEVER: NO MALARIA only need to return for follow-up if the fever persists beyond 3 days.",
+     "correct": true,
+     "explain": "The WHO logbook says 2 days. The national booklet says 3 days."
+    }
+   ]
+  }
+ ]
+}
