@@ -8749,6 +8749,17 @@
       "feeding_status": "Feeding Status:",
       "feeding_problem_btn": "Feeding problem",
       "no_feeding_problem_btn": "No feeding problem"
+    },
+    "whz_chart": {
+      "title_length": "Weight-for-length (under 2 years)",
+      "title_height": "Weight-for-height (2 to 5 years)",
+      "boys": "boys",
+      "girls": "girls",
+      "x_length": "Length (cm)",
+      "x_height": "Height (cm)",
+      "y_weight": "Weight (kg)",
+      "aria": "Weight {{w}} kg at length {{l}} cm plotted on the WHO z-score lines",
+      "out_of_range": "The length is outside the chart ({{lo}} to {{hi}} cm), so the point cannot be plotted."
     }
   },
   "form_pdf": {
