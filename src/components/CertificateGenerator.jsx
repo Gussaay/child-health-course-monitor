@@ -14,7 +14,7 @@ import {
     Button, Card, EmptyState, PageHeader, 
     Spinner, Table, Modal, CardBody, CardFooter, FormGroup, Select, Input, FilterPanel
 } from './CommonComponents'; 
-import { Award, FileSignature, Stamp, CheckCircle, Settings, Upload, ArrowLeft, Plus, Trash2, Layers, Eye, Download, RefreshCw, X, ChevronDown } from 'lucide-react'; 
+import { Award, FileSignature, Stamp, CheckCircle, Settings, Upload, ArrowLeft, Plus, Trash2, Layers, Eye, Download, RefreshCw, X, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react'; 
 
 // Data & Firebase
 import {
@@ -22,6 +22,7 @@ import {
     staleCertificateParticipants,
     certificateDirectorName,
     certificateDirectorSignature,
+    getBuiltinSubCourseTypes
 } from './constants'; 
 import { db } from '../firebase'; 
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc, deleteDoc, serverTimestamp, deleteField } from 'firebase/firestore'; 
@@ -634,13 +635,15 @@ export const newExtraLogoId = () => Math.random().toString(36).slice(2, 8) + Dat
 const getExtraLogoIds = (cfg) => (Array.isArray(cfg?.extraLogoIds) ? cfg.extraLogoIds.filter(Boolean) : []);
 
 // -----------------------------------------------------------------------------
-// TEMPLATE LAYERS: GENERAL → COURSE TYPE → COURSE
+// -----------------------------------------------------------------------------
+// TEMPLATE LAYERS: GENERAL → COURSE TYPE → SUB-COURSE → COURSE
 //
-// A certificate is built from up to three layers, each overriding the one
+// A certificate is built from up to four layers, each overriding the one
 // before it field by field:
 //   1. the GENERAL template        certificateTemplates/general
 //   2. the COURSE-TYPE template    certificateTemplates/type_<courseType>
-//   3. the course's own overrides  courses/<id>.customCertificate
+//   3. the SUB-COURSE template     certificateTemplates/sub_<courseType>__<subCourse>
+//   4. the course's own overrides  courses/<id>.customCertificate
 // A blank value in a higher layer means "inherit", so a course only has to store
 // what is genuinely different about it.
 //
@@ -653,6 +656,8 @@ const getExtraLogoIds = (cfg) => (Array.isArray(cfg?.extraLogoIds) ? cfg.extraLo
 export const CERT_TEMPLATES_COLLECTION = 'certificateTemplates';
 export const GENERAL_TEMPLATE_ID = 'general';
 export const courseTypeTemplateId = (courseType) => `type_${encodeURIComponent((courseType || '').trim())}`;
+export const subCourseTemplateId = (courseType, subCourse) =>
+    `sub_${encodeURIComponent((courseType || '').trim())}__${encodeURIComponent((subCourse || '').trim())}`;
 
 export const TEMPLATE_EXCLUDED_KEYS = [
     'thirdPartySignatureUrl', 'fourthPartySignatureUrl',
@@ -693,7 +698,7 @@ export const mergeCertificateConfigs = (...layers) => {
 export const cleanCertificateConfig = (cfg = {}, scopeKind = 'course') => {
     const excluded = scopeKind === 'general'
         ? GENERAL_TEMPLATE_EXCLUDED_KEYS
-        : scopeKind === 'courseType' ? TEMPLATE_EXCLUDED_KEYS : [];
+        : (scopeKind === 'courseType' || scopeKind === 'subCourse') ? TEMPLATE_EXCLUDED_KEYS : [];
     const out = {};
     Object.entries(cfg).forEach(([k, v]) => {
         if (excluded.includes(k)) return;
@@ -737,25 +742,31 @@ const readTemplateDoc = async (id) => {
     }
 };
 
-/** The config a course inherits before its own overrides (general + its type). */
-export const loadInheritedCertificateConfig = async (courseType) => {
-    const [general, typed] = await Promise.all([
+/** The config a course inherits before its own overrides (general + its type + sub-course). */
+export const loadInheritedCertificateConfig = async (courseType, subCourse = null) => {
+    const [general, typed, sub] = await Promise.all([
         readTemplateDoc(GENERAL_TEMPLATE_ID),
-        courseType ? readTemplateDoc(courseTypeTemplateId(courseType)) : Promise.resolve(null)
+        courseType ? readTemplateDoc(courseTypeTemplateId(courseType)) : Promise.resolve(null),
+        (courseType && subCourse) ? readTemplateDoc(subCourseTemplateId(courseType, subCourse)) : Promise.resolve(null)
     ]);
     // Cleaned on read as well as on save, so a template edited by hand in the
     // console still can't put a signature or a date on every course.
     return mergeCertificateConfigs(
         cleanCertificateConfig(general?.config || {}, 'general'),
-        cleanCertificateConfig(typed?.config || {}, 'courseType')
+        cleanCertificateConfig(typed?.config || {}, 'courseType'),
+        cleanCertificateConfig(sub?.config || {}, 'subCourse')
     );
 };
 
 /** Returns the course with customCertificate replaced by the fully layered config. */
-export const applyCertificateTemplates = async (course) => {
+export const applyCertificateTemplates = async (course, subCourse = null) => {
     if (!course) return course;
     const own = course.__ownCustomCertificate !== undefined ? course.__ownCustomCertificate : (course.customCertificate || {});
-    const inherited = await loadInheritedCertificateConfig(course.course_type);
+    const resolvedSub = subCourse
+        || course.director_imci_sub_type
+        || course.facilitatorAssignments?.find(a => a?.imci_sub_type)?.imci_sub_type
+        || null;
+    const inherited = await loadInheritedCertificateConfig(course.course_type, resolvedSub);
     return {
         ...course,
         __ownCustomCertificate: own,
@@ -764,13 +775,22 @@ export const applyCertificateTemplates = async (course) => {
 };
 
 /** Same layering, synchronously, from template docs already in memory. */
-export const layerCourseWithTemplates = (course, templateDocs = {}) => {
+export const layerCourseWithTemplates = (course, templateDocs = {}, subCourse = null) => {
     if (!course) return course;
+    const resolvedSub = subCourse
+        || course.director_imci_sub_type
+        || course.facilitatorAssignments?.find(a => a?.imci_sub_type)?.imci_sub_type
+        || null;
+    const subDoc = (course.course_type && resolvedSub)
+        ? templateDocs[subCourseTemplateId(course.course_type, resolvedSub)]
+        : null;
+
     return {
         ...course,
         customCertificate: mergeCertificateConfigs(
             cleanCertificateConfig(templateDocs[GENERAL_TEMPLATE_ID]?.config || {}, 'general'),
             course.course_type ? cleanCertificateConfig(templateDocs[courseTypeTemplateId(course.course_type)]?.config || {}, 'courseType') : null,
+            subDoc ? cleanCertificateConfig(subDoc?.config || {}, 'subCourse') : null,
             course.customCertificate
         )
     };
@@ -782,7 +802,7 @@ export const layerCourseWithTemplates = (course, templateDocs = {}) => {
  * and override so nothing course-specific leaks into (or can be deleted from)
  * the template designer.
  */
-export const buildTemplateSampleCourse = (courseType, allCourses = []) => {
+export const buildTemplateSampleCourse = (courseType, allCourses = [], subCourse = null) => {
     const candidates = (allCourses || [])
         .filter(c => !c.isDeleted && (!courseType || c.course_type === courseType))
         .sort((a, b) => new Date(b.start_date || 0) - new Date(a.start_date || 0));
@@ -797,6 +817,7 @@ export const buildTemplateSampleCourse = (courseType, allCourses = []) => {
         ...base,
         id: base.id || 'template-sample',
         course_type: courseType || base.course_type || 'IMNCI',
+        ...(subCourse ? { director_imci_sub_type: subCourse } : {}),
         __templateSample: true
     };
 };
@@ -834,15 +855,19 @@ export const resolveCertificateSignatories = (course = {}, fallbackManagerName =
     const { directorNameAr = null, programManagerNameAr = null } = extra;
 
     const courseDirector = certificateDirectorName(course);
-    const courseManager = firstFilled(course.approvedByManagerName, fallbackManagerName);
+    const courseManager = firstFilled(course.approvedByManagerName, course.program_manager, fallbackManagerName);
 
     const honorificEn = cfg.hideHonorific ? '' : firstFilled(cfg.honorificEn, CERT_DEFAULTS.honorificEn);
     const honorificAr = cfg.hideHonorific ? '' : firstFilled(cfg.honorificAr, CERT_DEFAULTS.honorificAr);
 
-    const directorEn = firstFilled(cfg.directorTitleEn, courseDirector);
-    const directorAr = firstFilled(cfg.directorTitleAr, directorNameAr, courseDirector);
-    const managerEn = firstFilled(cfg.managerTitleEn, courseManager);
-    const managerAr = firstFilled(cfg.managerTitleAr, programManagerNameAr, courseManager);
+    // Course director: Always get the name of the course director from the course first.
+    // When a template is saved with a director name, it becomes the default fallback if the course itself has none.
+    const directorEn = firstFilled(courseDirector, cfg.directorTitleEn);
+    const directorAr = firstFilled(directorNameAr, cfg.directorTitleAr, courseDirector, cfg.directorTitleEn);
+
+    // Program manager: Always get the name from the course / manager fallback, falling back to template manager if blank.
+    const managerEn = firstFilled(courseManager, cfg.managerTitleEn);
+    const managerAr = firstFilled(programManagerNameAr, cfg.managerTitleAr, courseManager, cfg.managerTitleEn);
 
     // --- THIRD SIGNATORY VISIBILITY ---
     // Content-driven, NOT flag-driven. Previously this required cfg.thirdPartyEnabled
@@ -906,10 +931,10 @@ export const resolveCertificateSignatories = (course = {}, fallbackManagerName =
         fourthPartyHasContent,
         // Which fields came from the custom template (used to badge the approval dialog).
         overrides: {
-            directorEn: !!firstFilled(cfg.directorTitleEn),
-            directorAr: !!firstFilled(cfg.directorTitleAr),
-            managerEn: !!firstFilled(cfg.managerTitleEn),
-            managerAr: !!firstFilled(cfg.managerTitleAr),
+            directorEn: !!firstFilled(cfg.directorTitleEn) && !courseDirector,
+            directorAr: !!firstFilled(cfg.directorTitleAr) && !directorNameAr,
+            managerEn: !!firstFilled(cfg.managerTitleEn) && !courseManager,
+            managerAr: !!firstFilled(cfg.managerTitleAr) && !programManagerNameAr,
             directorRoleEn: !!firstFilled(cfg.directorRoleEn),
             directorRoleAr: !!firstFilled(cfg.directorRoleAr),
             managerRoleEn: !!firstFilled(cfg.managerRoleEn),
@@ -928,7 +953,7 @@ export const resolveCertificateSignatories = (course = {}, fallbackManagerName =
  * So: always re-read the course document before drawing, and let the server copy
  * win. Falls back to the passed-in object when offline or on any error.
  */
-const loadAuthoritativeCourse = async (course) => {
+const loadAuthoritativeCourse = async (course, subCourse = null) => {
     if (!course || course.__certCourseResolved) return course;
     let base = course;
     if (course.id) {
@@ -941,8 +966,8 @@ const loadAuthoritativeCourse = async (course) => {
             console.warn('[Certificate] Could not re-read course from Firestore; using the cached copy.', error);
         }
     }
-    // General template → course-type template → this course.
-    const layered = await applyCertificateTemplates(base);
+    // General template → course-type template → sub-course template → this course.
+    const layered = await applyCertificateTemplates(base, subCourse);
     return { ...layered, __certCourseResolved: true };
 };
 
@@ -1609,10 +1634,10 @@ export const saveAndOpenPdf = async (doc, fileName) => {
 
 export const generateCertificatePdf = async (inputCourse, participant, federalProgramManagerName, participantSubCourse, language = 'en', cachedFacilitators = null, cachedCoordinators = null) => {
     // Re-read from Firestore so a stale cached course can't drop customCertificate.
-    const course = await loadAuthoritativeCourse(inputCourse);
+    const course = await loadAuthoritativeCourse(inputCourse, participantSubCourse);
     logThirdPartyDiagnostics(course);
 
-    const finalManagerName = (course.approvedByManagerName || federalProgramManagerName || '').trim();
+    const finalManagerName = (course.approvedByManagerName || course.program_manager || federalProgramManagerName || '').trim();
     const rawManagerSignature = course.approvedByManagerSignatureUrl || null;
 
     const finalDirectorName = certificateDirectorName(course);
@@ -1698,10 +1723,11 @@ export const certificatePdfBase64 = async (course, participant, federalProgramMa
 };
 
 export const generateBlankCertificatePdf = async (inputCourse, federalProgramManagerName, language = 'en', cachedFacilitators = null, cachedCoordinators = null) => {
-    const course = await loadAuthoritativeCourse(inputCourse);
+    const rawSub = inputCourse?.director_imci_sub_type || inputCourse?.facilitatorAssignments?.find(a => a?.imci_sub_type)?.imci_sub_type || null;
+    const course = await loadAuthoritativeCourse(inputCourse, rawSub);
     logThirdPartyDiagnostics(course);
 
-    const finalManagerName = (course.approvedByManagerName || federalProgramManagerName || '').trim();
+    const finalManagerName = (course.approvedByManagerName || course.program_manager || federalProgramManagerName || '').trim();
     const rawManagerSignature = course.approvedByManagerSignatureUrl || null;
 
     const finalDirectorName = certificateDirectorName(course);
@@ -2788,13 +2814,21 @@ export function CertificateDesigner({
     const isTemplateScope = scopeKind !== 'course';
     const templateDocId = scopeKind === 'general'
         ? GENERAL_TEMPLATE_ID
-        : scopeKind === 'courseType' ? courseTypeTemplateId(scope.courseType) : null;
+        : scopeKind === 'subCourse'
+            ? subCourseTemplateId(scope.courseType, scope.subCourse)
+            : scopeKind === 'courseType'
+                ? courseTypeTemplateId(scope.courseType)
+                : null;
     const excludedKeys = scopeKind === 'general'
         ? GENERAL_TEMPLATE_EXCLUDED_KEYS
-        : scopeKind === 'courseType' ? TEMPLATE_EXCLUDED_KEYS : [];
+        : (scopeKind === 'courseType' || scopeKind === 'subCourse') ? TEMPLATE_EXCLUDED_KEYS : [];
     const scopeLabel = scopeKind === 'general'
         ? t('certificates.designer.scope_general', 'General template (all courses)')
-        : scopeKind === 'courseType' ? t('certificates.designer.scope_type', 'Course-type template: {{type}}', { type: scope.courseType }) : t('certificates.designer.scope_course', 'This course only');
+        : scopeKind === 'subCourse'
+            ? t('certificates.designer.scope_sub', 'Sub-course template: {{sub}} ({{type}})', { sub: scope.subCourse, type: scope.courseType })
+            : scopeKind === 'courseType'
+                ? t('certificates.designer.scope_type', 'Course-type template: {{type}} (all sub-courses)', { type: scope.courseType })
+                : t('certificates.designer.scope_course', 'This course only');
 
     const startingOwn = () => (isTemplateScope ? (initialConfig || {}) : (course?.customCertificate || {}));
 
@@ -2843,12 +2877,18 @@ export function CertificateDesigner({
         let alive = true;
         (async () => {
             let cfg = {};
-            if (scopeKind === 'course') cfg = await loadInheritedCertificateConfig(course?.course_type);
-            else if (scopeKind === 'courseType') cfg = await loadInheritedCertificateConfig(null); // general only
+            if (scopeKind === 'course') {
+                const sub = autoSubCourse || course?.director_imci_sub_type || null;
+                cfg = await loadInheritedCertificateConfig(course?.course_type, sub);
+            } else if (scopeKind === 'subCourse') {
+                cfg = await loadInheritedCertificateConfig(scope.courseType, null); // general + courseType
+            } else if (scopeKind === 'courseType') {
+                cfg = await loadInheritedCertificateConfig(null); // general only
+            }
             if (alive) setInherited(cfg || {});
         })();
         return () => { alive = false; };
-    }, [scopeKind, course?.course_type]);
+    }, [scopeKind, course?.course_type, autoSubCourse, scope?.courseType, scope?.subCourse]);
 
     const scale = zoom === 'fit' ? fitScale : Number(zoom);
     useEffect(() => { scaleRef.current = scale; }, [scale]);
@@ -2969,13 +3009,25 @@ export function CertificateDesigner({
     // place. Nothing is stored until the box is actually changed.
     const [editedTexts, setEditedTexts] = useState(() => new Set());
     const currentText = (key) => {
+        const lang = key.endsWith('Ar') ? 'ar' : 'en';
+        const base = key.replace(/(En|Ar)$/, '');
+        // On a course, always prioritize the course's own live director and program manager
+        if (scopeKind === 'course') {
+            if (base === 'directorTitle') {
+                const dir = firstFilled(liveCourse.approvedDirectorName, liveCourse.director);
+                if (dir) return stripHonorific(dir);
+            }
+            if (base === 'managerTitle') {
+                const mgr = firstFilled(liveCourse.approvedByManagerName, liveCourse.program_manager, federalProgramManagerName);
+                if (mgr) return stripHonorific(mgr);
+            }
+        }
         if (firstFilled(inherited[key])) return inherited[key];
         if (TEXT_DEFAULTS[key]) return TEXT_DEFAULTS[key];
         if (typeof CERT_DEFAULTS[key] === 'string') return CERT_DEFAULTS[key];
-        const lang = key.endsWith('Ar') ? 'ar' : 'en';
-        const base = key.replace(/(En|Ar)$/, '');
-        if (base === 'courseTitle') return liveCourse.course_type ? getCertificateCourseTitle(liveCourse.course_type, lang, autoSubCourse) : '';
-        if (base === 'managerTitle') return stripHonorific(firstFilled(liveCourse.approvedByManagerName, federalProgramManagerName));
+        const subForTitle = scopeKind === 'subCourse' ? scope.subCourse : autoSubCourse;
+        if (base === 'courseTitle') return liveCourse.course_type ? getCertificateCourseTitle(liveCourse.course_type, lang, subForTitle) : '';
+        if (base === 'managerTitle') return stripHonorific(firstFilled(liveCourse.approvedByManagerName, liveCourse.program_manager, federalProgramManagerName));
         if (base === 'directorTitle') return stripHonorific(certificateDirectorName(liveCourse));
         if (base === 'place') {
             if (isTemplateScope) return '';
@@ -3285,7 +3337,14 @@ export function CertificateDesigner({
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            const cleaned = cleanCertificateConfig(ownData, scopeKind);
+            let dataToSave = { ...ownData };
+            if (isTemplateScope) {
+                const sampleDir = (course?.approvedDirectorName || course?.director || '').trim();
+                if (!dataToSave.directorTitleEn && sampleDir) {
+                    dataToSave.directorTitleEn = sampleDir;
+                }
+            }
+            const cleaned = cleanCertificateConfig(dataToSave, scopeKind);
 
             // Inline signatures live in this document, so guard the 1 MiB ceiling
             // with a readable message rather than letting Firestore reject it.
@@ -3301,7 +3360,8 @@ export function CertificateDesigner({
             if (isTemplateScope) {
                 await setDoc(doc(db, CERT_TEMPLATES_COLLECTION, templateDocId), {
                     scope: scopeKind,
-                    courseType: scopeKind === 'courseType' ? scope.courseType : null,
+                    courseType: (scopeKind === 'courseType' || scopeKind === 'subCourse') ? scope.courseType : null,
+                    subCourse: scopeKind === 'subCourse' ? scope.subCourse : null,
                     config: cleaned,
                     updatedAt: serverTimestamp()
                 });
@@ -3328,20 +3388,42 @@ export function CertificateDesigner({
     // (signature images and dates stay on the course either way).
     const promoteToTemplate = async (target) => {
         if (!course?.id || isTemplateScope) return;
-        const kind = target === 'general' ? 'general' : 'courseType';
-        if (kind === 'courseType' && !course.course_type) return;
-        const id = kind === 'general' ? GENERAL_TEMPLATE_ID : courseTypeTemplateId(course.course_type);
-        const targetName = kind === 'general' ? t('certificates.designer.target_general', 'the GENERAL template (all courses)') : t('certificates.designer.target_type', 'the "{{type}}" template', { type: course.course_type });
+        const kind = target === 'general' ? 'general' : target === 'subCourse' ? 'subCourse' : 'courseType';
+        if ((kind === 'courseType' || kind === 'subCourse') && !course.course_type) return;
+        const currentSub = autoSubCourse || course.director_imci_sub_type || course.facilitatorAssignments?.find(a => a?.imci_sub_type)?.imci_sub_type;
+        if (kind === 'subCourse' && !currentSub) return;
+
+        const id = kind === 'general'
+            ? GENERAL_TEMPLATE_ID
+            : kind === 'subCourse'
+                ? subCourseTemplateId(course.course_type, currentSub)
+                : courseTypeTemplateId(course.course_type);
+
+        const targetName = kind === 'general'
+            ? t('certificates.designer.target_general', 'the GENERAL template (all courses)')
+            : kind === 'subCourse'
+                ? t('certificates.designer.target_sub', 'the "{{sub}}" template for {{type}}', { sub: currentSub, type: course.course_type })
+                : t('certificates.designer.target_type', 'the "{{type}}" template (all {{type}} courses)', { type: course.course_type });
+
         if (!await confirmDialog(t('certificates.designer.confirm_promote', "Copy this course's layout into {{target}}? Settings already in that template are kept unless this course changes them.", { target: targetName }))) return;
 
         setIsSaving(true);
         try {
             const snap = await getDoc(doc(db, CERT_TEMPLATES_COLLECTION, id));
             const existing = snap.exists() ? (snap.data().config || {}) : {};
-            const config = cleanCertificateConfig(mergeCertificateConfigs(existing, ownData), kind);
+
+            // If template doesn't have a director name, save this course's director as the default
+            const toMerge = { ...ownData };
+            const courseDir = (course.approvedDirectorName || course.director || '').trim();
+            if (courseDir && !toMerge.directorTitleEn) {
+                toMerge.directorTitleEn = courseDir;
+            }
+
+            const config = cleanCertificateConfig(mergeCertificateConfigs(existing, toMerge), kind);
             await setDoc(doc(db, CERT_TEMPLATES_COLLECTION, id), {
                 scope: kind,
-                courseType: kind === 'courseType' ? course.course_type : null,
+                courseType: (kind === 'courseType' || kind === 'subCourse') ? course.course_type : null,
+                subCourse: kind === 'subCourse' ? currentSub : null,
                 config,
                 updatedAt: serverTimestamp()
             });
@@ -3358,7 +3440,7 @@ export function CertificateDesigner({
                 setOwnData(keep);
                 setDirty(false);
             }
-            const fresh = await loadInheritedCertificateConfig(course.course_type);
+            const fresh = await loadInheritedCertificateConfig(course.course_type, currentSub);
             setInherited(fresh || {});
             if (onSaveSuccess) onSaveSuccess();
         } catch (err) {
@@ -3627,7 +3709,16 @@ export function CertificateDesigner({
                             title={t('certificates.designer.promote_title', 'Copy this layout into a shared template')}
                         >
                             <option value="">{t('certificates.designer.save_as_template', 'Save as template…')}</option>
-                            {course?.course_type && <option value="courseType">{t('certificates.designer.for_all_type', 'For all {{type}} courses', { type: course.course_type })}</option>}
+                            {course?.course_type && (
+                                <option value="courseType">
+                                    {t('certificates.designer.for_all_type', 'For all {{type}} courses', { type: course.course_type })}
+                                </option>
+                            )}
+                            {course?.course_type && (autoSubCourse || course?.director_imci_sub_type) && (
+                                <option value="subCourse">
+                                    {t('certificates.designer.for_sub_only', 'For specific sub-course: {{sub}}', { sub: autoSubCourse || course?.director_imci_sub_type })}
+                                </option>
+                            )}
                             <option value="general">{t('certificates.designer.as_general', 'As the general template')}</option>
                         </select>
                     )}
@@ -4999,12 +5090,37 @@ const templateSummary = (tpl, t) => {
     return `${settings}${logos ? ` · ${extra}` : ''}`;
 };
 
-const CertificateTemplatesPanel = ({ templateDocs, courseTypes, activeType = null, canEdit, onEdit, onClear, busy }) => {
+const CertificateTemplatesPanel = ({ templateDocs, courseTypes, activeType = null, canEdit, onEdit, onClear, busy, allCourses = [] }) => {
     const { t } = useTranslation();
     const [newType, setNewType] = useState('');
+    const [expandedTypes, setExpandedTypes] = useState({});
+    const [newSubCourse, setNewSubCourse] = useState({});
     const general = templateDocs[GENERAL_TEMPLATE_ID];
+
+    const getSubCoursesForType = (type) => {
+        const set = new Set(getBuiltinSubCourseTypes(type) || []);
+        (allCourses || []).forEach(c => {
+            if (c.course_type === type) {
+                if (c.director_imci_sub_type) set.add(c.director_imci_sub_type);
+                if (Array.isArray(c.facilitatorAssignments)) {
+                    c.facilitatorAssignments.forEach(a => { if (a?.imci_sub_type) set.add(a.imci_sub_type); });
+                }
+            }
+        });
+        Object.values(templateDocs || {}).forEach(doc => {
+            if (doc?.scope === 'subCourse' && doc?.courseType === type && doc?.subCourse) {
+                set.add(doc.subCourse);
+            }
+        });
+        return Array.from(set).filter(Boolean).sort();
+    };
+
     // Inside a course package only that package's template is relevant.
-    const rows = (activeType ? [activeType] : courseTypes).map(ct => ({ type: ct, tpl: templateDocs[courseTypeTemplateId(ct)] }));
+    const rows = (activeType ? [activeType] : courseTypes).map(ct => ({
+        type: ct,
+        tpl: templateDocs[courseTypeTemplateId(ct)],
+        subCourses: getSubCoursesForType(ct)
+    }));
 
     return (
         <div className="mb-6 rounded-xl border border-violet-200 bg-violet-50/40">
@@ -5012,7 +5128,7 @@ const CertificateTemplatesPanel = ({ templateDocs, courseTypes, activeType = nul
                 <Layers className="h-4 w-4 text-violet-700" />
                 <h3 className="font-bold text-gray-800 text-sm">{t('certificates.templates.title', 'Certificate templates')}</h3>
                 <span className="text-[11px] text-gray-500 hidden md:inline">
-                    {t('certificates.templates.layers', 'Each certificate is built from: General → Course type → the course’s own changes.')}
+                    {t('certificates.templates.layers', 'Each certificate is built from: General → Course type → Sub-course → the course’s own changes.')}
                 </span>
             </div>
 
@@ -5040,7 +5156,7 @@ const CertificateTemplatesPanel = ({ templateDocs, courseTypes, activeType = nul
                     <table className="w-full text-sm">
                         <thead className="bg-gray-50 text-[11px] uppercase tracking-wider text-gray-500">
                             <tr>
-                                <th className="text-left px-3 py-2 font-semibold">{t('certificates.templates.course_type', 'Course type')}</th>
+                                <th className="text-left px-3 py-2 font-semibold">{t('certificates.templates.course_type', 'Course type / Sub-courses')}</th>
                                 <th className="text-left px-3 py-2 font-semibold">{t('certificates.templates.template', 'Template')}</th>
                                 {canEdit && <th className="px-3 py-2" />}
                             </tr>
@@ -5049,28 +5165,138 @@ const CertificateTemplatesPanel = ({ templateDocs, courseTypes, activeType = nul
                             {rows.length === 0 && (
                                 <tr><td colSpan={3} className="px-3 py-3 text-xs text-gray-500">{t('certificates.templates.no_types', 'No course types yet.')}</td></tr>
                             )}
-                            {rows.map(({ type, tpl }) => (
-                                <tr key={type} className="border-t border-gray-100">
-                                    <td className="px-3 py-2 font-medium text-gray-800">{type}</td>
-                                    <td className="px-3 py-2 text-xs">
-                                        {tpl
-                                            ? <span className="text-violet-700 font-semibold">{templateSummary(tpl, t)}</span>
-                                            : <span className="text-gray-400">{t('certificates.templates.uses_general', 'Uses general template')}</span>}
-                                    </td>
-                                    {canEdit && (
-                                        <td className="px-3 py-2 text-right whitespace-nowrap">
-                                            <Button size="sm" variant="secondary" className="text-xs mr-1" disabled={busy} onClick={() => onEdit({ kind: 'courseType', courseType: type })}>
-                                                {tpl ? t('certificates.templates.edit', 'Edit') : t('certificates.templates.create', 'Create')}
-                                            </Button>
-                                            {tpl && (
-                                                <Button size="sm" variant="danger" className="text-xs" disabled={busy} onClick={() => onClear(courseTypeTemplateId(type), t('certificates.templates.the_type', 'the {{type}} template', { type }))}>
-                                                    {t('certificates.common.clear', 'Clear')}
-                                                </Button>
+                            {rows.map(({ type, tpl, subCourses }) => {
+                                const isExpanded = !!expandedTypes[type];
+                                return (
+                                    <React.Fragment key={type}>
+                                        <tr className="border-t border-gray-100 hover:bg-gray-50/50">
+                                            <td className="px-3 py-2 font-medium text-gray-800">
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    {subCourses.length > 0 ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setExpandedTypes(prev => ({ ...prev, [type]: !prev[type] }))}
+                                                            className="p-0.5 rounded hover:bg-violet-100 text-violet-700 transition-colors"
+                                                            title={isExpanded ? t('certificates.templates.collapse_subcourses', 'Collapse sub-courses') : t('certificates.templates.expand_subcourses', 'Expand sub-courses')}
+                                                        >
+                                                            {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                                                        </button>
+                                                    ) : <span className="w-4" />}
+                                                    <span className="font-semibold text-gray-900">{type}</span>
+                                                    <span className="text-[10px] text-gray-500 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded font-normal">
+                                                        {t('certificates.templates.all_type_badge', 'All sub-courses')}
+                                                    </span>
+                                                    {subCourses.length > 0 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setExpandedTypes(prev => ({ ...prev, [type]: !prev[type] }))}
+                                                            className="text-[11px] text-violet-600 hover:underline cursor-pointer"
+                                                        >
+                                                            ({subCourses.length} {t('certificates.templates.subcourses_count', 'sub-courses')})
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-3 py-2 text-xs">
+                                                {tpl
+                                                    ? <span className="text-violet-700 font-semibold">{templateSummary(tpl, t)}</span>
+                                                    : <span className="text-gray-400">{t('certificates.templates.uses_general', 'Uses general template')}</span>}
+                                            </td>
+                                            {canEdit && (
+                                                <td className="px-3 py-2 text-right whitespace-nowrap">
+                                                    <Button size="sm" variant="secondary" className="text-xs mr-1" disabled={busy} onClick={() => onEdit({ kind: 'courseType', courseType: type })}>
+                                                        {tpl ? t('certificates.templates.edit', 'Edit') : t('certificates.templates.create', 'Create')}
+                                                    </Button>
+                                                    {tpl && (
+                                                        <Button size="sm" variant="danger" className="text-xs" disabled={busy} onClick={() => onClear(courseTypeTemplateId(type), t('certificates.templates.the_type', 'the {{type}} template', { type }))}>
+                                                            {t('certificates.common.clear', 'Clear')}
+                                                        </Button>
+                                                    )}
+                                                </td>
                                             )}
-                                        </td>
-                                    )}
-                                </tr>
-                            ))}
+                                        </tr>
+                                        {isExpanded && subCourses.map(sub => {
+                                            const subTpl = templateDocs[subCourseTemplateId(type, sub)];
+                                            return (
+                                                <tr key={`${type}__${sub}`} className="border-t border-gray-100 bg-violet-50/20">
+                                                    <td className="px-3 py-2 pl-8">
+                                                        <div className="flex items-center gap-1.5 text-xs text-gray-700 font-medium">
+                                                            <span className="text-violet-400 font-mono">↳</span>
+                                                            <span>{sub}</span>
+                                                            <span className="text-[9px] text-indigo-700 bg-indigo-50 border border-indigo-200 px-1 py-0.5 rounded font-semibold uppercase">
+                                                                {t('certificates.templates.sub_badge', 'Sub-course')}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-3 py-2 text-xs">
+                                                        {subTpl ? (
+                                                            <span className="text-indigo-700 font-semibold">{templateSummary(subTpl, t)}</span>
+                                                        ) : (
+                                                            <span className="text-gray-400 italic">
+                                                                {tpl ? t('certificates.templates.uses_type', 'Uses {{type}} template', { type }) : t('certificates.templates.uses_general', 'Uses general template')}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    {canEdit && (
+                                                        <td className="px-3 py-2 text-right whitespace-nowrap">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="secondary"
+                                                                className="text-xs mr-1"
+                                                                disabled={busy}
+                                                                onClick={() => onEdit({ kind: 'subCourse', courseType: type, subCourse: sub })}
+                                                            >
+                                                                {subTpl ? t('certificates.templates.edit', 'Edit') : t('certificates.templates.customize', 'Customize')}
+                                                            </Button>
+                                                            {subTpl && (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="danger"
+                                                                    className="text-xs"
+                                                                    disabled={busy}
+                                                                    onClick={() => onClear(subCourseTemplateId(type, sub), t('certificates.templates.the_sub', 'the {{sub}} template', { sub }))}
+                                                                >
+                                                                    {t('certificates.common.clear', 'Clear')}
+                                                                </Button>
+                                                            )}
+                                                        </td>
+                                                    )}
+                                                </tr>
+                                            );
+                                        })}
+                                        {isExpanded && canEdit && (
+                                            <tr className="border-t border-gray-100 bg-violet-50/10">
+                                                <td colSpan={3} className="px-3 py-2 pl-8">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <span className="text-xs text-gray-500">{t('certificates.templates.add_sub_template', 'Add sub-course template:')}</span>
+                                                        <input
+                                                            type="text"
+                                                            value={newSubCourse[type] || ''}
+                                                            onChange={e => setNewSubCourse(prev => ({ ...prev, [type]: e.target.value }))}
+                                                            placeholder={t('certificates.templates.sub_ph', 'Sub-course name, e.g. IMCI in service 6 days')}
+                                                            className="border border-gray-300 rounded px-2 py-1 text-xs bg-white min-w-[200px]"
+                                                        />
+                                                        <Button
+                                                            size="sm"
+                                                            variant="secondary"
+                                                            className="text-xs"
+                                                            disabled={busy || !newSubCourse[type]?.trim()}
+                                                            onClick={() => {
+                                                                const val = newSubCourse[type]?.trim();
+                                                                if (!val) return;
+                                                                setNewSubCourse(prev => ({ ...prev, [type]: '' }));
+                                                                onEdit({ kind: 'subCourse', courseType: type, subCourse: val });
+                                                            }}
+                                                        >
+                                                            <Plus className="inline h-3 w-3 mr-1" />{t('certificates.templates.create', 'Create')}
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
@@ -5274,10 +5500,18 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
 
     const openCourseDesigner = (c) => setDesignTarget({ scope: { kind: 'course' }, course: c, initialConfig: null });
     const openTemplateDesigner = (scope) => {
-        const id = scope.kind === 'general' ? GENERAL_TEMPLATE_ID : courseTypeTemplateId(scope.courseType);
+        const id = scope.kind === 'general'
+            ? GENERAL_TEMPLATE_ID
+            : scope.kind === 'subCourse'
+                ? subCourseTemplateId(scope.courseType, scope.subCourse)
+                : courseTypeTemplateId(scope.courseType);
         setDesignTarget({
             scope,
-            course: buildTemplateSampleCourse(scope.kind === 'courseType' ? scope.courseType : null, allCourses),
+            course: buildTemplateSampleCourse(
+                (scope.kind === 'courseType' || scope.kind === 'subCourse') ? scope.courseType : null,
+                allCourses,
+                scope.kind === 'subCourse' ? scope.subCourse : null
+            ),
             initialConfig: templateDocs[id]?.config || {}
         });
     };
@@ -5363,8 +5597,8 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
 
             // Persist the names that will actually be printed, so approval records
             // and generated certificates never disagree.
-            const approvedManager = sig.managerEn || courseToApprove.approvedByManagerName || managerName || '';
-            const approvedDirector = sig.directorEn || certificateDirectorName(courseToApprove);
+            const approvedManager = courseToApprove.approvedByManagerName || courseToApprove.program_manager || sig.managerEn || managerName || '';
+            const approvedDirector = certificateDirectorName(courseToApprove) || sig.directorEn || '';
 
             const approvalPayload = {
                 isCertificateApproved: true,
@@ -5831,6 +6065,7 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
                         busy={templatesBusy || isProcessing}
                         onEdit={openTemplateDesigner}
                         onClear={clearTemplate}
+                        allCourses={allCourses}
                     />
                 )}
 
