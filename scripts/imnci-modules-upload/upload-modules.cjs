@@ -1,4 +1,4 @@
-// Uploads the WHO distance learning Modules 1 to 9 (no Module 8) course file into the live
+// Uploads the WHO distance learning Modules 1 to 9 course file into the live
 // app, writing exactly what Online courses → Manage → Import → "Import a course
 // file" (new course) writes: the exercises into exerciseDefinitions, then the
 // course, its modules and sections into onlineCourses / onlineCourseItems.

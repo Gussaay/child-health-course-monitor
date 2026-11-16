@@ -439,13 +439,13 @@ describe('short lessons', () => {
     });
 });
 
-describe('WHO distance learning Modules 5, 6, 7 and 9', () => {
+describe('WHO distance learning Modules 5 to 9', () => {
     const read = (name) => JSON.parse(fs.readFileSync(path.join(__dirname, '../course-packages', name), 'utf8'));
-    const each = [5, 6, 7, 9].map((n) => read(`who-dimci-module${n}.imnci.json`));
+    const each = [5, 6, 7, 8, 9].map((n) => read(`who-dimci-module${n}.imnci.json`));
     const lessonsOf = (pkg) => pkg.modules.flatMap((m) => m.sections);
 
     it('are valid course files with every exercise as a draft', () => {
-        const counts = [[16, 10], [16, 11], [11, 9], [16, 10]];
+        const counts = [[16, 10], [16, 11], [11, 9], [27, 19], [16, 10]];
         each.forEach((pkg, i) => {
             const check = checkPackage(pkg, []);
             expect(check.errors).toEqual([]);
@@ -455,11 +455,11 @@ describe('WHO distance learning Modules 5, 6, 7 and 9', () => {
         });
         const later = checkPackage(read('who-dimci-modules-5-9.imnci.json'), []);
         expect(later.errors).toEqual([]);
-        expect(later.summary).toMatchObject({ modules: 4, sections: 59, exercises: 40 });
+        expect(later.summary).toMatchObject({ modules: 5, sections: 86, exercises: 59 });
         const all = read('who-dimci-modules-1-9.imnci.json');
         expect(checkPackage(all, []).errors).toEqual([]);
-        expect(checkPackage(all, []).summary).toMatchObject({ modules: 8, sections: 123, exercises: 88 });
-        expect(all.modules.map((m) => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 9]);
+        expect(checkPackage(all, []).summary).toMatchObject({ modules: 9, sections: 150, exercises: 107 });
+        expect(all.modules.map((m) => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     });
 
     it('have quiz answers that point at real options, and the logbook questions of each module', () => {
@@ -472,7 +472,7 @@ describe('WHO distance learning Modules 5, 6, 7 and 9', () => {
             });
         });
         const ex = each.flatMap((p) => p.exercises);
-        expect([5, 6, 7, 9].map((n) => ex.find((e) => e.id === `dimci-m${n}-logbook`).questions.length)).toEqual([20, 20, 16, 20]);
+        expect([5, 6, 7, 8, 9].map((n) => ex.find((e) => e.id === `dimci-m${n}-logbook`).questions.length)).toEqual([20, 20, 16, 25, 20]);
     });
 
     it('mark each case right when the form is filled as in the answer key', () => {
@@ -503,7 +503,18 @@ describe('WHO distance learning Modules 5, 6, 7 and 9', () => {
             all.filter((b) => b.type === 'booklet')
                 .forEach((b) => b.categories.forEach((c) => expect(NATIONAL_PROTOCOLS[b.part].categories[c], c).toBeTruthy()));
             all.filter((b) => b.type === 'form').forEach((b) => b.sections.forEach((s) => expect(rows).toContain(s)));
+            if (pkg.modules[0].order === 8) return;
             expect(all.filter((b) => b.type === 'note' && b.label === 'Sudan national protocol').length).toBeGreaterThanOrEqual(3);
+        });
+    });
+
+    it('mark every lesson of Module 8 (HIV) as WHO 2014 content, not Sudan guidance', () => {
+        const hiv = lessonsOf(each[3]);
+        expect(each[3].modules[0].order).toBe(8);
+        hiv.forEach((s) => {
+            const notes = s.read.filter((b) => b.type === 'note' && b.label === 'WHO 2014 HIV content');
+            expect(notes.length, s.title).toBe(1);
+            expect(notes[0].text).toMatch(/not Sudan national guidance/);
         });
     });
 

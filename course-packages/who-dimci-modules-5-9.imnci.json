@@ -3963,6 +3963,2360 @@
    "isPublished": true
   },
   {
+   "title": "Module 8: HIV/AIDS",
+   "order": 8,
+   "sections": [
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 6,
+     "bookToPage": 9,
+     "title": "Module overview",
+     "order": 1,
+     "read": [
+      {
+       "type": "note",
+       "text": "See what Module 8 covers, where HIV fits in the IMNCI process, and take the pre-test.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "This module shows how IMNCI helps to give HIV care, treatment, support and prevention to children. Worldwide, 3.4 million children were living with HIV in 2011. Children with suspected or confirmed HIV infection have special needs, so they are cared for differently from children who are not infected."
+      },
+      {
+       "type": "steps",
+       "title": "Where HIV fits in the IMNCI process",
+       "steps": [
+        {
+         "title": "Check",
+         "text": "General danger signs, or signs of serious illness in a young infant."
+        },
+        {
+         "title": "Assess and classify",
+         "text": "The main symptoms."
+        },
+        {
+         "title": "Check",
+         "text": "Malnutrition and feeding problems."
+        },
+        {
+         "title": "Check for HIV infection",
+         "text": "This is the new step in this module, done with the same process: assess, classify, treat, counsel and follow up."
+        },
+        {
+         "title": "Check",
+         "text": "Immunizations and other problems."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "What you will be able to do"
+      },
+      {
+       "type": "rich",
+       "text": "<p>After you study this module, you will be able to:</p><ul><li>Explain in basic terms how HIV affects the immune system, and how children are infected</li><li>Assess and classify a child and a young infant for HIV</li><li>Give follow-up care to HIV exposed and infected children who are not on ART</li><li>Counsel an HIV-infected mother on safe infant feeding, and prevent common illnesses with cotrimoxazole prophylaxis, ARV prophylaxis, immunization and vitamin A</li><li>Explain the criteria for starting ART at first-level facilities, and the recommended ARV regimens for children</li><li>Describe WHO paediatric clinical staging</li><li>Identify the side effects of ARV drugs, and counsel the caregiver on giving ART and adherence</li><li>Give chronic care to children with confirmed HIV infection who are on ART</li></ul>"
+      },
+      {
+       "type": "flip",
+       "title": "The work aids for this module",
+       "cards": [
+        {
+         "front": "Chart booklet",
+         "back": "The IMCI chart booklet for high HIV settings."
+        },
+        {
+         "front": "Recording forms",
+         "back": "The sick young infant and sick child recording forms, with the CHECK FOR HIV INFECTION box."
+        },
+        {
+         "front": "ART initiation form",
+         "back": "New in this module: the five steps of starting ART (2 months up to 5 years)."
+        },
+        {
+         "front": "ART follow-up form",
+         "back": "New in this module: the four steps of each follow-up visit of a child on ART."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Before you begin"
+      },
+      {
+       "type": "paragraph",
+       "text": "What do you know now about HIV care for children? Check quickly with six questions. After the module you will answer the same questions, and see what you have learned."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-pretest",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 10,
+     "bookToPage": 13,
+     "title": "HIV and the immune system",
+     "order": 2,
+     "read": [
+      {
+       "type": "note",
+       "text": "Explain in simple words what the immune system, CD4 cells and opportunistic infections are.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "HIV and the immune system",
+       "caption": "Watch this first.",
+       "script": "V8.2"
+      },
+      {
+       "type": "paragraph",
+       "text": "Every healthy person has a strong system to defend the body against disease: the immune system. White blood cells are an important part of it. They can be thought of as the \"soldiers\" of the body."
+      },
+      {
+       "type": "steps",
+       "title": "What HIV does in the body",
+       "steps": [
+        {
+         "title": "CD4 cells warn the body",
+         "text": "Some white blood cells (lymphocytes) have a marker called CD4. These CD4 cells warn the immune system that germs are trying to invade the body."
+        },
+        {
+         "title": "HIV takes over CD4 cells",
+         "text": "HIV (Human Immunodeficiency Virus) infects cells of the immune system; its main target is the CD4 cell. It hides its material in the nucleus, so the cell makes new copies of the virus."
+        },
+        {
+         "title": "The cells die",
+         "text": "An infected CD4 cell makes many new copies of HIV, then dies. The copies infect other CD4 cells, and this goes on and on."
+        },
+        {
+         "title": "The defence becomes weak",
+         "text": "With fewer CD4 cells the immune system becomes weaker, and germs that would not normally cause illness now do."
+        }
+       ]
+      },
+      {
+       "type": "flip",
+       "title": "Three words to explain to a caregiver",
+       "cards": [
+        {
+         "front": "Immune system",
+         "back": "The immune system protects the body against infections."
+        },
+        {
+         "front": "CD4",
+         "back": "CD4 cells are white blood cells that warn the immune system that germs are trying to invade the body. The CD4 count shows how well the body's defence is still working."
+        },
+        {
+         "front": "Opportunistic infection",
+         "back": "An infection that cannot attack a healthy body, but takes the opportunity when the immune system is weak. Examples are oral thrush and herpes zoster."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Children are different from adults"
+      },
+      {
+       "type": "paragraph",
+       "text": "In adults it usually takes 7 to 10 years after infection before serious illness. HIV progresses much more rapidly in children, because their immune system is not yet well developed, especially if they were infected in the womb or at delivery."
+      },
+      {
+       "type": "paragraph",
+       "text": "As the damage gets worse, children become highly vulnerable to life-threatening illnesses such as PCP pneumonia, lymphoma, recurrent bacterial infections and HIV brain damage (encephalopathy). These are called AIDS-defining diseases. As HIV disease progresses, the CD4 count or percentage falls."
+      },
+      {
+       "type": "question",
+       "text": "Why must HIV be found early in a child?",
+       "options": [
+        "HIV damages a child's immune system much faster than an adult's",
+        "Children always show wasting first, like adults",
+        "Children cannot get opportunistic infections"
+       ],
+       "answer": 0,
+       "explanation": "Children progress from HIV to AIDS much more rapidly than adults, and may become severely ill very quickly."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 13,
+     "bookToPage": 15,
+     "title": "How children get HIV",
+     "order": 3,
+     "read": [
+      {
+       "type": "note",
+       "text": "Explain how mother-to-child transmission happens, how big the risk is, and what HIV exposed means.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "Mother-to-child transmission (MTCT), also called vertical transmission, is the main way young children are infected. Other ways are sexual abuse, unsafe injections, and transfusion of infected blood. Not all HIV-infected women pass the virus to their child."
+      },
+      {
+       "type": "steps",
+       "title": "Three times when HIV can pass from mother to child",
+       "steps": [
+        {
+         "title": "Pregnancy",
+         "text": "The risk is low, because the placenta protects the baby."
+        },
+        {
+         "title": "Labour and delivery",
+         "text": "The risk increases: the baby can suck, absorb or aspirate blood or cervical fluid."
+        },
+        {
+         "title": "Breastfeeding",
+         "text": "HIV can pass in breast milk. Mixed feeding carries a higher risk than exclusive breastfeeding, because other foods and fluids can damage the lining of the baby's gut."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>If 20 HIV-infected women have babies with no intervention</strong></td><td style=\"padding: 4px\"><strong>Babies</strong></td></tr><tr><td style=\"padding: 4px\">Infected during pregnancy, labour or delivery</td><td style=\"padding: 4px\">about 4 (20%)</td></tr><tr><td style=\"padding: 4px\">Infected during breastfeeding</td><td style=\"padding: 4px\">about 3 (15%)</td></tr><tr><td style=\"padding: 4px\">Not infected</td><td style=\"padding: 4px\">about 13</td></tr><tr><td style=\"padding: 4px\"><strong>Overall risk of MTCT</strong></td><td style=\"padding: 4px\"><strong>about 7 of 20 (35%)</strong></td></tr></table>"
+      },
+      {
+       "type": "paragraph",
+       "text": "This risk is lower when the mother or child receives ARV prophylaxis."
+      },
+      {
+       "type": "note",
+       "text": "The term mother-to-child transmission does not imply blame. A woman can acquire HIV from an infected partner, or from contaminated blood or instruments, often without knowing it.",
+       "label": "Remember"
+      },
+      {
+       "type": "note",
+       "text": "HIV EXPOSED: an infant born to a woman known to be HIV-infected. The infant cannot be called HIV-positive or HIV-negative until an appropriate HIV test confirms the status.",
+       "label": "Key point"
+      },
+      {
+       "type": "heading",
+       "text": "Without treatment"
+      },
+      {
+       "type": "paragraph",
+       "text": "If untreated, three-quarters of children infected through MTCT die before the age of 5. Without ART or cotrimoxazole, about one third die by 1 year and half by 2 years, many at home before they ever reach a health facility."
+      },
+      {
+       "type": "flip",
+       "title": "Three ways to prevent these deaths",
+       "cards": [
+        {
+         "front": "1",
+         "back": "Early diagnosis of HIV."
+        },
+        {
+         "front": "2",
+         "back": "Starting antiretroviral therapy (ART)."
+        },
+        {
+         "front": "3",
+         "back": "Other prophylaxis and treatments, such as cotrimoxazole."
+        }
+       ]
+      },
+      {
+       "type": "question",
+       "text": "Twenty HIV-infected women deliver with no intervention and breastfeed. About how many babies will be infected?",
+       "options": [
+        "About 7",
+        "About 10",
+        "About 14"
+       ],
+       "answer": 0,
+       "explanation": "About 7 of 20 (35%): about 4 in pregnancy or delivery and about 3 through breastfeeding."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 17,
+     "bookToPage": 18,
+     "title": "Meet Peter and his mother Lungile",
+     "order": 4,
+     "read": [
+      {
+       "type": "note",
+       "text": "Assess and classify Peter's cough, and see why his mother's HIV status matters.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "You will follow Peter and his mother Lungile through this module, from his first visit to his care on ART."
+      },
+      {
+       "type": "story",
+       "title": "Opening case: Peter",
+       "stages": [
+        {
+         "text": "Peter is 6 months old. His mother Lungile brings him because he has had a cough for 3 days. He weighs 7.2 kg and his temperature is 37.5 °C. He has no general danger signs."
+        },
+        {
+         "text": "Peter breathes 54 times a minute. He has no chest indrawing, no stridor and no wheeze.",
+         "question": "How do you classify Peter's cough?",
+         "options": [
+          "PNEUMONIA",
+          "SEVERE PNEUMONIA OR VERY SEVERE DISEASE",
+          "COUGH OR COLD"
+         ],
+         "answer": 0,
+         "explanation": "At 2 up to 12 months, fast breathing is 50 breaths per minute or more. Fast breathing with no chest indrawing or stridor is PNEUMONIA."
+        },
+        {
+         "text": "Peter has no diarrhoea and no ear problem, and he is not low weight for age. Lungile is worried: she was recently told she has HIV, and she is receiving care at another clinic. She is breastfeeding Peter.",
+         "question": "What does Lungile's HIV status tell you about Peter?",
+         "options": [
+          "He is HIV exposed: his own status is not yet known",
+          "He is HIV-infected",
+          "He cannot be infected because he looks well"
+         ],
+         "answer": 0,
+         "explanation": "A child born to an HIV-infected mother is HIV exposed until a test confirms his status."
+        }
+       ]
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "categories": [
+        "cough"
+       ],
+       "caption": "The national chart booklet: classify cough or difficult breathing"
+      },
+      {
+       "type": "paragraph",
+       "text": "In the next lessons you will learn about HIV tests, and how to assess and classify Peter for HIV."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 18,
+     "bookToPage": 19,
+     "title": "Two kinds of HIV test",
+     "order": 5,
+     "read": [
+      {
+       "type": "note",
+       "text": "Say who should be tested for HIV, and what a serological and a virological (PCR) test detect.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "heading",
+       "text": "Who should be tested?"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>All children born to an HIV-infected mother</li><li>All children with no known test result, whose mother's status you do not know</li><li>In a high HIV setting, every sick child</li></ul>"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong></strong></td><td style=\"padding: 4px\"><strong>Serological tests (including rapid tests)</strong></td><td style=\"padding: 4px\"><strong>Virological tests (DNA or RNA PCR)</strong></td></tr><tr><td style=\"padding: 4px\">What they detect</td><td style=\"padding: 4px\">Antibodies made by immune cells in response to HIV, not the virus itself</td><td style=\"padding: 4px\">The HIV virus itself, or products of the virus, in the blood</td></tr><tr><td style=\"padding: 4px\">How to read them</td><td style=\"padding: 4px\">A mother's antibodies pass to her child. Most are gone by 12 months, but some remain until 18 months, so a positive test under 18 months does not show that the child is infected.</td><td style=\"padding: 4px\">A positive test reliably shows HIV infection at any age. A negative test in a child who has been breastfeeding does not rule out infection: test again 6 weeks or more after breastfeeding has completely stopped.</td></tr></table>"
+      },
+      {
+       "type": "flip",
+       "title": "Which test, at which age?",
+       "cards": [
+        {
+         "front": "Child 18 months or older",
+         "back": "Use a serological test. A positive test (with a confirmatory test) shows the child is HIV-infected."
+        },
+        {
+         "front": "Child under 18 months",
+         "back": "A virological (PCR) test is the only reliable way to find the child's status. Test from 4 to 6 weeks of age."
+        }
+       ]
+      },
+      {
+       "type": "sort",
+       "text": "Is this true of a serological test or a virological (PCR) test?",
+       "groups": [
+        "Serological",
+        "Virological (PCR)"
+       ],
+       "items": [
+        {
+         "text": "Detects antibodies to HIV",
+         "group": 0
+        },
+        {
+         "text": "Detects the virus itself",
+         "group": 1
+        },
+        {
+         "text": "A positive result may be the mother's antibodies in a child under 18 months",
+         "group": 0
+        },
+        {
+         "text": "A positive result shows infection even in a 2-month-old",
+         "group": 1
+        },
+        {
+         "text": "Rapid tests are this kind",
+         "group": 0
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 19,
+     "bookToPage": 23,
+     "title": "Read a test result under 18 months",
+     "order": 6,
+     "read": [
+      {
+       "type": "note",
+       "text": "Interpret an HIV test in a child under 18 months, using the child's breastfeeding status.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "For a child under 18 months, what a result means depends on the test, and on whether the child is still breastfeeding."
+      },
+      {
+       "type": "flip",
+       "title": "If a virological (PCR) test is available (test from 4 to 6 weeks)",
+       "cards": [
+        {
+         "front": "Positive",
+         "back": "The child is infected: the test finds the virus itself."
+        },
+        {
+         "front": "Negative",
+         "back": "The child is not infected now, but could still become infected while breastfeeding."
+        }
+       ]
+      },
+      {
+       "type": "flip",
+       "title": "If only a serological test is available",
+       "cards": [
+        {
+         "front": "Positive",
+         "back": "The child has been exposed to HIV, but may or may not be infected. All HIV-exposed infants should have a virological test."
+        },
+        {
+         "front": "Negative",
+         "back": "Usually the child is not infected, as long as the child has not breastfed in the last 6 weeks."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Serological test, child under 18 months</strong></td><td style=\"padding: 4px\"><strong>POSITIVE</strong></td><td style=\"padding: 4px\"><strong>NEGATIVE</strong></td></tr><tr><td style=\"padding: 4px\">Not breastfeeding, and not in the last 6 weeks</td><td style=\"padding: 4px\">HIV exposed and/or infected: manage as if infected. Repeat the test at 18 months.</td><td style=\"padding: 4px\">HIV negative: the child is not infected.</td></tr><tr><td style=\"padding: 4px\">Breastfeeding</td><td style=\"padding: 4px\">HIV exposed and/or infected: manage as if infected. Repeat at 18 months, or once breastfeeding has stopped for more than 6 weeks.</td><td style=\"padding: 4px\">The child can still be infected by breastfeeding. Repeat once breastfeeding has stopped for more than 6 weeks.</td></tr></table>"
+      },
+      {
+       "type": "note",
+       "text": "Breastfeeding matters. A test can only show that a child is not infected once the child has stopped breastfeeding for at least 6 weeks.",
+       "label": "Key point"
+      },
+      {
+       "type": "steps",
+       "title": "The early infant diagnosis algorithm, in short",
+       "steps": [
+        {
+         "title": "HIV-exposed infant under 18 months",
+         "text": "Do a virological test (for a newborn, at birth or at the first postnatal visit, usually 4 to 6 weeks)."
+        },
+        {
+         "title": "Positive",
+         "text": "The infant is likely infected. Start ART without delay, and repeat the virological test to confirm."
+        },
+        {
+         "title": "Negative, never breastfed",
+         "text": "The infant is not infected."
+        },
+        {
+         "title": "Negative, breastfed",
+         "text": "The infant stays at risk until breastfeeding stops completely. Monitor regularly."
+        },
+        {
+         "title": "Well at 9 months",
+         "text": "Do an antibody test at about 9 months. If positive, do a virological test. Repeat the antibody test at 18 months and/or 6 weeks after breastfeeding stops."
+        },
+        {
+         "title": "Signs suggestive of HIV at any time",
+         "text": "Test. If no virological test is available, assume the child is infected if sick."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-ex-b",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 21,
+     "bookToPage": 22,
+     "title": "Counsel a mother about testing her child",
+     "order": 7,
+     "read": [
+      {
+       "type": "note",
+       "text": "Explain to a mother why her child needs an HIV test, and what to do if she refuses.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "Many mothers, and even health workers, are reluctant to discuss HIV. But the problem will not be solved while there is secrecy. The mother of a child classified HIV EXPOSED needs counselling about an HIV test for her child."
+      },
+      {
+       "type": "steps",
+       "title": "Counselling for the test",
+       "steps": [
+        {
+         "title": "Explain why",
+         "text": "Explain why it is important to test the child, for example because the status is unknown."
+        },
+        {
+         "title": "Explain the benefit",
+         "text": "Testing lets the child get care that improves life: antibiotics to prevent infections, vitamin supplements, growth monitoring, treatment of illness, ART if needed, and feeding counselling under about 2 years."
+        },
+        {
+         "title": "Listen",
+         "text": "Let the mother ask questions, and address her concerns. If she agrees, arrange the test in the normal way."
+        },
+        {
+         "title": "Think of the family",
+         "text": "Since most children are infected by their mother, you may need to discuss testing her and her partner, perhaps even before testing the child."
+        },
+        {
+         "title": "After the test",
+         "text": "Make an appointment for the result and post-test counselling. After a rapid test, counsel straight away if the mother agrees. Keep privacy and confidentiality."
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "HIV can bring feelings of guilt, fear of rejection, and fear of revealing the mother's own status and how she was infected."
+      },
+      {
+       "type": "reveal",
+       "text": "A mother does not want her child tested. What do you do?",
+       "answer": "Listen to and address her concerns and reasons. You are an advocate for the child: negotiate in the child's best interest, and reassure her about the treatment, care and support the child can have once diagnosed. It may help for her to talk without the child present."
+      },
+      {
+       "type": "question",
+       "text": "When is post-test counselling done after a rapid (serological) test?",
+       "options": [
+        "Straight away, if the mother agrees",
+        "Only at the next visit",
+        "Only if the result is positive"
+       ],
+       "answer": 0,
+       "explanation": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 24,
+     "bookToPage": 30,
+     "title": "Assess and classify a sick child for HIV",
+     "order": 8,
+     "read": [
+      {
+       "type": "note",
+       "text": "Ask about HIV tests and feeding, and classify a child's HIV status with the colour-coded chart.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Classify HIV status",
+       "caption": "Watch this first.",
+       "script": "V8.4"
+      },
+      {
+       "type": "paragraph",
+       "text": "For ALL sick children, after checking for malnutrition and anaemia, ask: has the child or mother been tested for HIV? Use this chart if the child is not already enrolled in HIV care."
+      },
+      {
+       "type": "steps",
+       "title": "ASSESS: check for HIV infection",
+       "steps": [
+        {
+         "title": "ASK: has the mother and/or child had an HIV test?",
+         "text": "If YES, note the mother's status (positive or negative) and the child's virological and serological results. A mother who tested negative long ago could be infected now: the more recent the test, the more accurate."
+        },
+        {
+         "title": "If NO test result",
+         "text": "Test the mother. If she is positive, test the child: a serological test from 18 months, a virological test under 18 months."
+        },
+        {
+         "title": "If the mother is positive and the child negative or untested",
+         "text": "ASK: was the child breastfeeding at the time of the test or in the 6 weeks before it? Is the child breastfeeding now? If yes, are the mother and child on ARV prophylaxis?"
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Signs</strong></td><td style=\"padding: 4px\"><strong>Classify as</strong></td><td style=\"padding: 4px\"><strong>Treatment</strong></td></tr><tr><td style=\"padding: 4px\">Positive virological test in the child, OR positive serological test in a child 18 months or older</td><td style=\"padding: 4px\"><strong>CONFIRMED HIV INFECTION</strong> (yellow)</td><td style=\"padding: 4px\">Give cotrimoxazole prophylaxis. Give HIV care and start ART. Assess feeding and counsel. Advise on home care. Refer for TB assessment and INH preventive therapy. Follow up regularly.</td></tr><tr><td style=\"padding: 4px\">Mother positive AND child's virological test negative while breastfeeding or less than 6 weeks after stopping, OR mother positive and child not yet tested, OR positive serological test in a child under 18 months</td><td style=\"padding: 4px\"><strong>HIV EXPOSED</strong> (yellow)</td><td style=\"padding: 4px\">Give cotrimoxazole prophylaxis. Start or continue ARV prophylaxis as recommended. Do a virological test to confirm. Assess feeding and counsel. Advise on home care. Follow up regularly.</td></tr><tr><td style=\"padding: 4px\">Negative HIV test in the mother or child</td><td style=\"padding: 4px\"><strong>HIV INFECTION UNLIKELY</strong> (green)</td><td style=\"padding: 4px\">Treat, counsel and follow up existing infections.</td></tr></table>"
+      },
+      {
+       "type": "note",
+       "text": "If the status of the mother or child is unknown, offer testing, especially if the child has malnutrition, pneumonia, diarrhoea, chronic cough or other signs that suggest HIV. This is provider-initiated testing and counselling.",
+       "label": "Remember"
+      },
+      {
+       "type": "story",
+       "title": "Classify Peter",
+       "stages": [
+        {
+         "text": "Lungile tested positive for HIV. She did not receive ART prophylaxis for PMTCT. Peter is still breastfeeding and has never been tested. You counsel Lungile, and do a serological test. It is positive.",
+         "question": "How do you classify Peter?",
+         "options": [
+          "CONFIRMED HIV INFECTION",
+          "HIV EXPOSED",
+          "HIV INFECTION UNLIKELY"
+         ],
+         "answer": 1,
+         "explanation": "Peter is 6 months old: a positive serological test under 18 months may be Lungile's antibodies. He is HIV EXPOSED. His status can only be confirmed with a virological test, at least 6 weeks after he stops breastfeeding."
+        },
+        {
+         "text": "With the classification HIV EXPOSED, Peter will be followed up every month."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-ex-c",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 31,
+     "bookToPage": 35,
+     "title": "Assess and classify a young infant for HIV",
+     "order": 9,
+     "read": [
+      {
+       "type": "note",
+       "text": "Explain why a young infant is classified only by test results, and classify young infants.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "Young infants with HIV usually have no signs directly related to HIV. They do get ill, but with common illnesses such as pneumonia or diarrhoea. So the assessment and classification of a young infant uses HIV test results only."
+      },
+      {
+       "type": "note",
+       "text": "Young infants with HIV may look well, but can become ill and die very quickly. All infants born to HIV-infected mothers should have a virological test, and the result must come back to the clinic and to the caregiver.",
+       "label": "Key point"
+      },
+      {
+       "type": "steps",
+       "title": "ASSESS the young infant",
+       "steps": [
+        {
+         "title": "After the other checks",
+         "text": "After possible bacterial infection, jaundice and diarrhoea, ASK: has the mother and/or young infant had an HIV test?"
+        },
+        {
+         "title": "Test results known",
+         "text": "Note the mother's status and the infant's virological and serological results."
+        },
+        {
+         "title": "Mother positive, no positive virological test in the infant",
+         "text": "ASK: is the infant breastfeeding now? Was the infant breastfeeding at the time of the test or before it? Are mother and infant on ARV prophylaxis?"
+        },
+        {
+         "title": "No test results",
+         "text": "Test the mother. If she is positive, do a virological test for the infant."
+        }
+       ]
+      },
+      {
+       "type": "flip",
+       "title": "The three classifications in a young infant",
+       "cards": [
+        {
+         "front": "CONFIRMED HIV INFECTION",
+         "back": "A positive virological (PCR) test. Give cotrimoxazole from 4 to 6 weeks of age; the infant is eligible for ART and HIV care."
+        },
+        {
+         "front": "HIV EXPOSED",
+         "back": "Mother HIV-infected and the infant's virological test negative while breastfeeding or stopped less than 6 weeks ago; OR mother infected and no test for the infant; OR a positive serological test. Give cotrimoxazole from 4 to 6 weeks and ARV prophylaxis as recommended."
+        },
+        {
+         "front": "HIV INFECTION UNLIKELY",
+         "back": "The mother's test is negative, or the infant's test is negative and the infant has not breastfed in the 6 weeks before the test. Routine follow-up; cotrimoxazole can be stopped."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Any young infant or child with signs that suggest HIV infection should be offered an HIV test.",
+       "label": "Remember"
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-ex-d",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 36,
+     "bookToPage": 37,
+     "title": "ARV prophylaxis for exposed infants",
+     "order": 10,
+     "read": [
+      {
+       "type": "note",
+       "text": "Say which preventive measures HIV-exposed and infected children need, and give ARV prophylaxis to an exposed infant.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "HIV weakens a child's defences, so infections that would not usually make a child very sick can be severe. Several preventive measures keep the child's immune system as strong as possible."
+      },
+      {
+       "type": "flip",
+       "title": "Preventive care for HIV-exposed and infected children",
+       "cards": [
+        {
+         "front": "ARV prophylaxis",
+         "back": "Nevirapine (NVP) or zidovudine (AZT) for the exposed infant, to prevent mother-to-child transmission (PMTCT)."
+        },
+        {
+         "front": "Cotrimoxazole prophylaxis",
+         "back": "Prevents PCP, other bacterial infections and malaria."
+        },
+        {
+         "front": "Isoniazid preventive therapy",
+         "back": "Prevents TB in children living with HIV."
+        },
+        {
+         "front": "Routine care",
+         "back": "Immunizations, vitamin A and deworming."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Infant ARV prophylaxis (PMTCT)</strong></td><td style=\"padding: 4px\"><strong>Duration</strong></td></tr><tr><td style=\"padding: 4px\">Breastfeeding infant</td><td style=\"padding: 4px\">6 weeks of once-daily NVP</td></tr><tr><td style=\"padding: 4px\">Infant on replacement feeding</td><td style=\"padding: 4px\">4 to 6 weeks of once-daily NVP (or twice-daily AZT)</td></tr></table>"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>If the mother is found positive very late in pregnancy, in labour or while breastfeeding, and starts ART then, the infant's prophylaxis may need to be extended to 12 weeks.</li><li>The dose is in the TREAT chart: consider the birth weight if the infant is under 6 weeks, and change the dose as the infant grows.</li><li>Option B+: every HIV-infected pregnant or breastfeeding woman receives triple ART and continues it for life. Option B: she stops ART when the breastfeeding transmission risk ends.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "WHO now recommends lifelong ART for every pregnant and breastfeeding woman living with HIV, and infant prophylaxis depends on the infant's risk. Use the current national PMTCT guidelines for the regimen and its length.",
+       "label": "Changed since 2014"
+      },
+      {
+       "type": "question",
+       "text": "An HIV-exposed infant is breastfeeding. How long does the WHO 2014 chart give once-daily nevirapine?",
+       "options": [
+        "6 weeks",
+        "2 weeks",
+        "Until 2 years"
+       ],
+       "answer": 0,
+       "explanation": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 37,
+     "bookToPage": 40,
+     "title": "Cotrimoxazole prophylaxis",
+     "order": 11,
+     "read": [
+      {
+       "type": "note",
+       "text": "Decide which children need cotrimoxazole prophylaxis, give the right daily dose, and say when to stop it.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "Daily cotrimoxazole (trimethoprim-sulfamethoxazole) is a simple, cheap and effective way to prevent illness. It can reduce deaths of HIV-infected children by up to 40%. It prevents PCP (pneumocystis pneumonia), a common cause of death in HIV-infected infants, other bacterial infections and malaria. Severe infections often come before the child's HIV status is known."
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Who</strong></td><td style=\"padding: 4px\"><strong>Start</strong></td></tr><tr><td style=\"padding: 4px\">Young infant: CONFIRMED HIV INFECTION or HIV EXPOSED</td><td style=\"padding: 4px\">From 4 to 6 weeks of age</td></tr><tr><td style=\"padding: 4px\">Child with CONFIRMED HIV INFECTION under 12 months</td><td style=\"padding: 4px\">As soon as possible</td></tr><tr><td style=\"padding: 4px\">Child with CONFIRMED HIV INFECTION, 12 months up to 5 years</td><td style=\"padding: 4px\">At WHO clinical stage 2, 3 or 4 whatever the CD4%, OR with CD4 below 25% at any stage, whether or not on ART</td></tr><tr><td style=\"padding: 4px\">Child classified HIV EXPOSED</td><td style=\"padding: 4px\">As soon as possible</td></tr><tr><td style=\"padding: 4px\">Over 5 years</td><td style=\"padding: 4px\">Follow adult guidelines</td></tr></table>"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Cotrimoxazole once daily</strong></td><td style=\"padding: 4px\"><strong>Syrup 40/200 mg per 5 ml</strong></td><td style=\"padding: 4px\"><strong>Paediatric tablet 20/100 mg</strong></td><td style=\"padding: 4px\"><strong>Adult tablet 80/400 mg</strong></td></tr><tr><td style=\"padding: 4px\">Under 6 months</td><td style=\"padding: 4px\">2.5 ml</td><td style=\"padding: 4px\">1</td><td style=\"padding: 4px\">-</td></tr><tr><td style=\"padding: 4px\">6 months up to 5 years</td><td style=\"padding: 4px\">5 ml</td><td style=\"padding: 4px\">2</td><td style=\"padding: 4px\">1/2</td></tr><tr><td style=\"padding: 4px\">5 to 14 years</td><td style=\"padding: 4px\">10 ml</td><td style=\"padding: 4px\">4</td><td style=\"padding: 4px\">1</td></tr><tr><td style=\"padding: 4px\">15 years and over</td><td style=\"padding: 4px\">-</td><td style=\"padding: 4px\">-</td><td style=\"padding: 4px\">2</td></tr></table>"
+      },
+      {
+       "type": "note",
+       "text": "If an HIV-infected child qualifies for cotrimoxazole and ART at the same time, start cotrimoxazole first. A child with confirmed HIV infection continues it indefinitely in resource-limited settings.",
+       "label": "Remember"
+      },
+      {
+       "type": "flip",
+       "title": "When to stop cotrimoxazole",
+       "cards": [
+        {
+         "front": "HIV is ruled out",
+         "back": "An HIV EXPOSED child is confirmed HIV-negative and has not breastfed for at least 6 weeks."
+        },
+        {
+         "front": "Severe drug reaction",
+         "back": "For example Stevens-Johnson syndrome or severe pallor: refer for assessment and another drug. If unsure, refer for advice."
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "Adherence needs counselling over several visits, until the caregiver has understood and agreed to give it every day."
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-ex-e",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 41,
+     "bookToPage": 46,
+     "title": "TB prevention, immunization and vitamin A",
+     "order": 12,
+     "read": [
+      {
+       "type": "note",
+       "text": "Give isoniazid preventive therapy, immunize HIV-exposed and infected children safely, and treat a child with several classifications.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "TB is a major cause of illness and death in children living with HIV, even on ART. HIV makes TB infection more likely, makes it progress faster to disease, and makes old TB come back. Start IPT only if your facility can investigate for TB."
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>The HIV-infected child is</strong></td><td style=\"padding: 4px\"><strong>Action</strong></td></tr><tr><td style=\"padding: 4px\">Exposed to TB (household contact), with no active disease</td><td style=\"padding: 4px\">Isoniazid preventive therapy (IPT) for 6 months</td></tr><tr><td style=\"padding: 4px\">Not exposed to TB (over 12 months, not likely to have active TB)</td><td style=\"padding: 4px\">IPT for 6 months, as part of HIV care</td></tr><tr><td style=\"padding: 4px\">Diagnosed with TB</td><td style=\"padding: 4px\">Start TB treatment now, and start ART as soon as tolerated within the first 8 weeks, whatever the CD4 and stage</td></tr></table>"
+      },
+      {
+       "type": "note",
+       "text": "Isoniazid (INH) for preventive therapy: 10 mg/kg once daily (maximum 300 mg a day) for 6 months.",
+       "label": "Key point"
+      },
+      {
+       "type": "flip",
+       "title": "Immunization of HIV-exposed and infected children",
+       "cards": [
+        {
+         "front": "Routine vaccines",
+         "back": "Give all EPI vaccines on the national schedule, as early as possible."
+        },
+        {
+         "front": "Hib",
+         "back": "HIV raises the risk of invasive Hib disease. An extra dose in the second year may be useful for HIV-infected children."
+        },
+        {
+         "front": "BCG",
+         "back": "HIV-infected infants risk disseminated BCG disease, but infection is hard to identify at birth. Where TB and HIV are common, BCG may be given at birth to all infants."
+        },
+        {
+         "front": "Yellow fever",
+         "back": "Do NOT give yellow fever vaccine to infants with symptomatic HIV infection."
+        },
+        {
+         "front": "Severely ill child",
+         "back": "Do not vaccinate a severely ill child."
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "Vitamin A and routine deworming follow the same schedule as for other children (Module 9)."
+      },
+      {
+       "type": "story",
+       "title": "Treat Peter on his first visit",
+       "stages": [
+        {
+         "text": "Peter is classified PNEUMONIA and HIV EXPOSED, both yellow.",
+         "question": "What is the first step?",
+         "options": [
+          "Oral amoxicillin for 5 days for PNEUMONIA",
+          "Refer urgently",
+          "Start ART today"
+         ],
+         "answer": 0,
+         "explanation": ""
+        },
+        {
+         "text": "After the 5 days of amoxicillin, Peter starts cotrimoxazole prophylaxis, unless he needs another antibiotic.",
+         "question": "What is the daily cotrimoxazole dose for Peter (6 months)?",
+         "options": [
+          "5 ml syrup",
+          "2.5 ml syrup",
+          "10 ml syrup"
+         ],
+         "answer": 0,
+         "explanation": ""
+        },
+        {
+         "text": "You advise Lungile on a safe remedy for the throat, feeding, follow-up for the PNEUMONIA in 3 days, when to come for the HIV test result and when to return immediately. You check immunizations, vitamin A and deworming."
+        },
+        {
+         "text": "Three days later Peter breathes 45 times a minute: the pneumonia is improving. You ask Lungile to finish the amoxicillin and to give extra food. As Lungile is HIV-infected, she also needs counselling on feeding Peter."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-ex-f",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 47,
+     "bookToPage": 50,
+     "title": "Feeding options for an HIV-infected mother",
+     "order": 13,
+     "read": [
+      {
+       "type": "note",
+       "text": "Explain the two national feeding strategies, and the advantages and disadvantages of breastfeeding and formula.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "Infant feeding counselling is critical to prevent mother-to-child transmission. HIV-negative women and women who do not know their status (encourage them to test) should breastfeed exclusively for 6 months, then add complementary foods and continue breastfeeding to 2 years or beyond."
+      },
+      {
+       "type": "flip",
+       "title": "Two words to know",
+       "cards": [
+        {
+         "front": "Exclusive breastfeeding",
+         "back": "Breast milk and nothing more until 6 months."
+        },
+        {
+         "front": "Mixed feeding",
+         "back": "Breast milk and other foods or fluids. It increases the risk of HIV transmission, diarrhoea and other infections."
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "WHO asks national health authorities to choose ONE strategy for HIV-infected mothers, to give infants the greatest chance of HIV-free survival: (1) breastfeed and receive ARV interventions, OR (2) avoid all breastfeeding. The choice depends on the social and cultural context, the health services, HIV prevalence, and the main causes of child undernutrition and death."
+      },
+      {
+       "type": "sort",
+       "text": "Is this an advantage of exclusive breastfeeding or of commercial formula?",
+       "groups": [
+        "Exclusive breastfeeding",
+        "Formula"
+       ],
+       "items": [
+        {
+         "text": "Protects the baby from many serious diseases",
+         "group": 0
+        },
+        {
+         "text": "Carries no risk of passing HIV to the baby",
+         "group": 1
+        },
+        {
+         "text": "Is free, always available, and needs no preparation",
+         "group": 0
+        },
+        {
+         "text": "Others can help feed the baby",
+         "group": 1
+        },
+        {
+         "text": "Lowers the risk of HIV compared with mixed feeding",
+         "group": 0
+        },
+        {
+         "text": "Protects the mother from getting pregnant again too soon",
+         "group": 0
+        }
+       ]
+      },
+      {
+       "type": "reveal",
+       "text": "What are the disadvantages of formula?",
+       "answer": "No antibodies, so the baby is more likely to get diarrhoea, chest infections and malnutrition. It needs a steady supply of fuel and clean, boiled water; takes time to prepare fresh each time; is expensive; makes people wonder why the mother is not breastfeeding; and the mother may get pregnant again too soon."
+      },
+      {
+       "type": "reveal",
+       "text": "What are the disadvantages of exclusive breastfeeding for an HIV-infected mother?",
+       "answer": "The baby is exposed to HIV as long as she breastfeeds. People may pressure her to give water or food (mixed feeding). She needs support, and it may be hard if she works away from home."
+      },
+      {
+       "type": "paragraph",
+       "text": "Where policy is to breastfeed with ARVs, a mother who cannot or will not breastfeed is referred to a feeding counsellor."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 50,
+     "bookToPage": 54,
+     "title": "Feeding recommendations for HIV-exposed children",
+     "order": 14,
+     "read": [
+      {
+       "type": "note",
+       "text": "Give the feeding recommendations by age, when national policy is breastfeeding with ARVs and when it is formula only.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Feeding the HIV-exposed child",
+       "caption": "Watch this first.",
+       "script": "V8.7"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Age</strong></td><td style=\"padding: 4px\"><strong>Policy: breastfeeding with ARVs</strong></td><td style=\"padding: 4px\"><strong>Policy: infant formula only</strong></td></tr><tr><td style=\"padding: 4px\">Up to 6 months</td><td style=\"padding: 4px\">Breastfeed exclusively, as often as the infant wants, day and night, at least 8 times in 24 hours. No other foods or fluids.</td><td style=\"padding: 4px\">Formula feed exclusively, no breast milk. Prepare the correct amount just before use; use within 2 hours. Cup feeding is safer than a bottle.</td></tr><tr><td style=\"padding: 4px\">6 up to 12 months</td><td style=\"padding: 4px\">Breastfeed as often as the infant wants. Give 3 adequate servings of complementary food a day plus 1 snack, 3/4 cup (1 cup = 250 ml) each, with protein, mashed fruit and vegetables, and animal-source food if possible.</td><td style=\"padding: 4px\">Give 1 to 2 cups (250 to 500 ml) of formula or boiled full-cream milk, by cup. Start with 2 to 3 tablespoons of food 2 to 3 times a day, increasing to 1/2 cup, 3 to 4 meals, and 1 to 2 snacks a day.</td></tr><tr><td style=\"padding: 4px\">12 months up to 2 years</td><td style=\"padding: 4px\">Family foods: if breastfeeding, 3 servings a day plus snacks; if not, 5 a day plus about 500 ml of milk by cup.</td><td style=\"padding: 4px\">Family foods 5 times a day, and about 500 ml of full-cream milk or formula a day, by cup.</td></tr></table>"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Age (months)</strong></td><td style=\"padding: 4px\"><strong>Formula per feed</strong></td><td style=\"padding: 4px\"><strong>Feeds a day</strong></td></tr><tr><td style=\"padding: 4px\">0 up to 1</td><td style=\"padding: 4px\">60 ml</td><td style=\"padding: 4px\">8</td></tr><tr><td style=\"padding: 4px\">1 up to 2</td><td style=\"padding: 4px\">90 ml</td><td style=\"padding: 4px\">7</td></tr><tr><td style=\"padding: 4px\">2 up to 4</td><td style=\"padding: 4px\">120 ml</td><td style=\"padding: 4px\">6</td></tr><tr><td style=\"padding: 4px\">4 up to 6</td><td style=\"padding: 4px\">150 ml</td><td style=\"padding: 4px\">6</td></tr></table>"
+      },
+      {
+       "type": "flip",
+       "title": "Where national policy is breastfeeding with ARVs",
+       "cards": [
+        {
+         "front": "Infant confirmed HIV-infected",
+         "back": "Feed like any other child: exclusive breastfeeding for 6 months, complementary foods from 6 months, and breastfeeding up to 2 years or beyond."
+        },
+        {
+         "front": "Infant HIV exposed",
+         "back": "Exclusive breastfeeding for 6 months, complementary foods from 6 months, breastfeeding for the first 12 months, then stop only once a nutritionally adequate and safe diet without breast milk is possible."
+        },
+        {
+         "front": "No ARVs available",
+         "back": "Breastfeeding may still give the infant a greater chance of HIV-free survival, for example in emergencies."
+        }
+       ]
+      },
+      {
+       "type": "reveal",
+       "text": "At follow-up of a mother who breastfeeds, what do you check?",
+       "answer": "That she breastfeeds exclusively with no other milk, water or food; often and as long as the baby wants; any feeding problem (not enough milk, crying, sore nipples); a breastfeed and her breasts if needed; that she is on ART or ARV prophylaxis and adheres; and her health, with a CD4 count in the last 6 months."
+      },
+      {
+       "type": "reveal",
+       "text": "At follow-up of a formula-fed infant, what do you check?",
+       "answer": "Only replacement feeds, never breast milk or unsafe fluids; the right volume and number of feeds; correct measuring; clean preparation (boiled and cooled); fresh feeds each time; cup feeding; cup and utensils cleaned in hot soapy water. Ask the caregiver to show you, and demonstrate if needed."
+      },
+      {
+       "type": "note",
+       "text": "WHO (2016) now recommends that mothers living with HIV breastfeed for at least 12 months and may continue up to 24 months or beyond, fully supported with ART. Follow the current national recommendation.",
+       "label": "Changed since 2014"
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 55,
+     "bookToPage": 58,
+     "title": "Feeding problems and stopping breastfeeding",
+     "order": 15,
+     "read": [
+      {
+       "type": "note",
+       "text": "Advise on feeding an HIV-infected child with special problems, and help a mother stop breastfeeding safely.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "Infections like TB and diarrhoea cause loss of appetite, weight loss and acute malnutrition in HIV-infected children. Always advise the mother to continue feeding and giving fluids during illness, and to feed more after it."
+      },
+      {
+       "type": "flip",
+       "title": "Special feeding problems",
+       "cards": [
+        {
+         "front": "Recurrent or chronic infection",
+         "back": "Treat it. Breastfeed at least 8 times in 24 hours; give small meals at least 5 times a day, with added oil or nuts."
+        },
+        {
+         "front": "Intestinal infection or diarrhoea",
+         "back": "Treat it, feed as above, deworm and give vitamin A if not given in the last 6 months."
+        },
+        {
+         "front": "Oral or oesophageal thrush",
+         "back": "Treat the thrush. Give mashed or pureed food, no spicy food; paracetamol half an hour before feeds may help in extreme cases."
+        },
+        {
+         "front": "Nausea from ARV drugs",
+         "back": "Give small frequent sips and food the child likes, let the child eat before the medicine; for ritonavir, coat the tongue with peanut butter first."
+        },
+        {
+         "front": "Poor appetite or mouth sores",
+         "back": "Soft, varied favourite foods that do not burn the mouth (egg, mashed potato, pumpkin, avocado), small frequent feeds when the child is alert, and active feeding on the mother's lap."
+        }
+       ]
+      },
+      {
+       "type": "steps",
+       "title": "Stopping breastfeeding: gradually, over one month",
+       "steps": [
+        {
+         "title": "Plan ahead",
+         "text": "Discuss why she wants to stop, and what food and milk she will give instead. Crying does not mean she has too little milk."
+        },
+        {
+         "title": "Prepare the baby",
+         "text": "Teach the baby to drink expressed breast milk from a cup (boiled if mother and baby are not on ARVs). Replace one breastfeed with one cup feed, then more every few days. A clean finger can replace the breast for sucking."
+        },
+        {
+         "title": "Stop completely",
+         "text": "Stop as soon as the baby is used to frequent cup feeds. Do not start again: it raises the risk of HIV. Express a little milk and use cold compresses when the breasts feel full."
+        },
+        {
+         "title": "Continue ARV prophylaxis",
+         "text": "Continue it for one week after the baby has had no breast milk at all, and make sure she has enough."
+        },
+        {
+         "title": "Family planning and CD4",
+         "text": "Start family planning before breastfeeding ends. Check she has had a CD4 count in the past 6 months."
+        }
+       ]
+      },
+      {
+       "type": "flip",
+       "title": "Special situations",
+       "cards": [
+        {
+         "front": "Mother too sick to breastfeed",
+         "back": "Help her make a safe and complete change to replacement feeds; arrange formula (under 6 months) or plain milk if she has no resources. Refer her for ART and give cotrimoxazole."
+        },
+        {
+         "front": "Orphan 0 to 6 months",
+         "back": "A suitable breast milk substitute, breast milk from a confirmed HIV-negative woman, or pasteurized milk from a breast milk bank."
+        },
+        {
+         "front": "Orphan 6 to 24 months",
+         "back": "Safe family foods and milk or another animal-source food every day."
+        }
+       ]
+      },
+      {
+       "type": "question",
+       "text": "A mother stopped breastfeeding completely 3 days ago. How long does the baby's ARV prophylaxis continue?",
+       "options": [
+        "Until one week after the last breast milk",
+        "It stops today",
+        "For 6 more weeks"
+       ],
+       "answer": 0,
+       "explanation": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 58,
+     "bookToPage": 62,
+     "title": "Counsel the mother on her own health",
+     "order": 16,
+     "read": [
+      {
+       "type": "note",
+       "text": "Counsel an HIV-infected mother on her own health, and counsel Lungile.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "During a sick child visit, listen for the mother's own problems, and write them at the bottom of the recording form so you remember to help her after the child. Do not make her queue twice or go elsewhere for simple problems."
+      },
+      {
+       "type": "flip",
+       "title": "Counselling topics for the mother",
+       "cards": [
+        {
+         "front": "If sick",
+         "back": "Care for her, or refer her for ART."
+        },
+        {
+         "front": "Breast problems",
+         "back": "Engorgement, sore nipples or infection: give care or refer."
+        },
+        {
+         "front": "Nutrition",
+         "back": "Eat well to keep up her own strength and health."
+        },
+        {
+         "front": "Tetanus toxoid",
+         "back": "Check her immunization and give TT if needed."
+        },
+        {
+         "front": "Family planning",
+         "back": "Discuss methods, offer barrier contraception as well, and give at least 3 months' supply."
+        },
+        {
+         "front": "STIs",
+         "back": "Screen and treat by the national STI protocol; counsel on safe sex."
+        },
+        {
+         "front": "Access to care",
+         "back": "Regular CD4 testing (every 6 months), sexual health services and counselling."
+        },
+        {
+         "front": "Social problems",
+         "back": "Partner, family, housing, childcare, workload: give ongoing counselling, refer if needed."
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "If she is HIV-infected, reassure her that with regular follow-up much can be done to keep her and her child well; stress good hygiene and early treatment of illness."
+      },
+      {
+       "type": "story",
+       "title": "Counsel Lungile",
+       "stages": [
+        {
+         "text": "Peter is 6 months old, breastfeeding, and not low weight for age.",
+         "question": "What feeding advice do you give Lungile?",
+         "options": [
+          "Breastfeed as often as he wants, and give 3 servings of complementary food a day plus 1 snack",
+          "Stop breastfeeding now and give formula",
+          "Breast milk only until 12 months"
+         ],
+         "answer": 0,
+         "explanation": "At 6 up to 12 months: breastfeed on demand, with 3 adequate servings of nutritious complementary foods a day plus one snack, 3/4 cup each. She has eggs, potatoes, squash and some chicken: you show her how to make porridge and feed Peter with a spoon, and ask checking questions."
+        },
+        {
+         "text": "Lungile has just found out she has HIV. She lives alone in a tin shack in the city, fetching water from a tap 200 metres away. Her partner works in another city. Neither he nor her mother knows her status; she is scared to tell her partner.",
+         "question": "What do you discuss today?",
+         "options": [
+          "The most important topics, and encourage her to continue counselling and HIV care",
+          "Everything about HIV in one session",
+          "Nothing: it is not your role"
+         ],
+         "answer": 0,
+         "explanation": "Her health, access to care, feeding and breast problems, immunization, nutrition, STIs, family planning and hygiene. Her other clinic already covers some of these, so you discuss them briefly. She worries she has too little milk, so you discuss that."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-ex-g",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 64,
+     "bookToPage": 66,
+     "title": "What antiretroviral treatment is",
+     "order": 17,
+     "read": [
+      {
+       "type": "note",
+       "text": "Explain what ART does, why three drugs are used, and name the common ARV drugs.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "HIV is a retrovirus, so the drugs against it are antiretroviral drugs (ARVs). They interfere with the life cycle of the virus so it cannot make copies of itself. Giving ARVs correctly, with adherence support, is antiretroviral therapy (ART)."
+      },
+      {
+       "type": "note",
+       "text": "ART does NOT cure HIV. By stopping the virus from multiplying, it prevents damage to the immune system and improves quality of life and life expectancy.",
+       "label": "Key point"
+      },
+      {
+       "type": "paragraph",
+       "text": "Children's bodies handle ARVs differently, so doses are adjusted to weight as the child grows."
+      },
+      {
+       "type": "flip",
+       "title": "Why three drugs together?",
+       "cards": [
+        {
+         "front": "It takes a lot of force",
+         "back": "HIV makes new copies very fast. One drug slows it; three together have a very powerful effect."
+        },
+        {
+         "front": "Different groups, different steps",
+         "back": "ARVs from different groups attack the virus at different steps of making copies."
+        },
+        {
+         "front": "Resistance",
+         "back": "HIV can change so a drug works less well. With three drugs together, it takes much longer for resistance to develop."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Group</strong></td><td style=\"padding: 4px\"><strong>Examples</strong></td></tr><tr><td style=\"padding: 4px\">Nucleoside reverse transcriptase inhibitors (NsRTI)</td><td style=\"padding: 4px\">lamivudine (3TC), stavudine (d4T), zidovudine (AZT), didanosine (ddI), abacavir (ABC)</td></tr><tr><td style=\"padding: 4px\">Nucleotide reverse transcriptase inhibitor (NtRTI)</td><td style=\"padding: 4px\">tenofovir (TDF)</td></tr><tr><td style=\"padding: 4px\">Non-nucleoside reverse transcriptase inhibitors (NNRTI)</td><td style=\"padding: 4px\">nevirapine (NVP), efavirenz (EFV)</td></tr><tr><td style=\"padding: 4px\">Protease inhibitors (PI)</td><td style=\"padding: 4px\">lopinavir (LPV), indinavir, atazanavir, darunavir; ritonavir (RTV) boosts another PI</td></tr></table>"
+      },
+      {
+       "type": "paragraph",
+       "text": "First-line regimens usually include 2 NsRTIs and 1 NNRTI or a boosted PI. Stavudine was used as a first-line drug and many children still take it, but it is no longer preferred."
+      },
+      {
+       "type": "note",
+       "text": "Stavudine is no longer used. Since 2019 to 2021 WHO prefers dolutegravir (DTG)-based regimens for most children. Use the current national ART guidelines.",
+       "label": "Changed since 2014"
+      },
+      {
+       "type": "question",
+       "text": "Which statement about ART is correct?",
+       "options": [
+        "ART stops HIV multiplying but does not cure it",
+        "ART cures HIV after 2 years",
+        "One ARV drug is enough"
+       ],
+       "answer": 0,
+       "explanation": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 66,
+     "bookToPage": 75,
+     "title": "Starting ART: confirm infection and check the caregiver",
+     "order": 18,
+     "read": [
+      {
+       "type": "note",
+       "text": "Follow the first three of the five steps for starting ART, and decide which children are eligible.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "A child with a general danger sign or a severe classification needs URGENT REFERRAL. ART is not urgent: start it once the child is stable (acute illnesses and opportunistic infections treated) and the five steps are completed."
+      },
+      {
+       "type": "steps",
+       "title": "The five steps of starting ART",
+       "steps": [
+        {
+         "title": "Step 1: confirm HIV infection",
+         "text": "Under 18 months: a positive virological (PCR) test, and the child has not breastfed for at least 6 weeks. 18 months or older: two different positive serological tests. If results disagree, refer."
+        },
+        {
+         "title": "Step 2: the caregiver is able to give ART",
+         "text": "She is willing and able, and ideally has disclosed to another adult who can help, or is in a support group. If not: classify CONFIRMED HIV INFECTION not on ART, follow up and support her until she is ready."
+        },
+        {
+         "title": "Step 3: can ART start at your facility?",
+         "text": "If the child weighs less than 3 kg or has TB, refer non-urgently for ART. Otherwise go to step 4."
+        },
+        {
+         "title": "Step 4: record baseline information",
+         "text": "Weight, height and nutrition, pallor, feeding, clinical stage, and laboratory results. Do not wait for results."
+        },
+        {
+         "title": "Step 5: start ART and cotrimoxazole",
+         "text": "With routine treatments, and follow up after one week."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "All children under 5 years with CONFIRMED HIV INFECTION are eligible for ART. From 5 years, WHO 2014 used a CD4 count below 500 (priority below 350) or clinical stage 3 or 4.",
+       "label": "Key point"
+      },
+      {
+       "type": "note",
+       "text": "WHO now recommends ART for every child living with HIV, at any age and any CD4 count.",
+       "label": "Changed since 2014"
+      },
+      {
+       "type": "flip",
+       "title": "Who starts ART at a first-level facility?",
+       "cards": [
+        {
+         "front": "Nurse at the clinic",
+         "back": "A stable child: not ill, and no signs of advanced HIV infection."
+        },
+        {
+         "front": "Refer non-urgently to a doctor",
+         "back": "A child under 3 kg (doses are hard), or a child with TB or suspected TB (needs investigations and dose changes). Non-urgent means soon, but not necessarily the same day."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-ex-h",
+       "note": ""
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-ex-i",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 70,
+     "bookToPage": 74,
+     "title": "Prepare the caregiver for adherence: the 5 As",
+     "order": 19,
+     "read": [
+      {
+       "type": "note",
+       "text": "Use the 5 As to prepare a caregiver to give ART every day.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "note",
+       "text": "Adherence is the cornerstone of ART: at least 95% of doses must be taken.",
+       "label": "Key point"
+      },
+      {
+       "type": "reveal",
+       "text": "Why is adherence harder for children?",
+       "answer": "Children depend on their caregivers; parents may not want to disclose the status; there are few easy child formulations, so mixtures of pills and syrups are needed; and many medicines taste bad."
+      },
+      {
+       "type": "paragraph",
+       "text": "These social criteria are not a barrier to ART, but part of preparing for it: at least one caregiver who can supervise the medicine, and, if possible, disclosure to another adult in the same house who can help."
+      },
+      {
+       "type": "steps",
+       "title": "The 5 As of adherence counselling",
+       "steps": [
+        {
+         "title": "1. ASSESS",
+         "text": "Find a treatment supporter. Check the caregiver understands that ART is lifelong and has side effects."
+        },
+        {
+         "title": "2. ADVISE",
+         "text": "Be open, non-judgmental and patient: \"I have some information about HIV and ART. Would you like to hear it?\" Explain how the illness progresses and that the child's life depends on the correct dose twice a day at the right time. Do not give too much at once: spread the advice over several visits."
+        },
+        {
+         "title": "3. AGREE",
+         "text": "Check she is willing and motivated: \"After hearing all this, how do you think your child will be able to take this treatment?\" Has she kept appointments and given other medicines? Does she take her own treatment?"
+        },
+        {
+         "title": "4. ASSIST",
+         "text": "\"What problems might arise?\" Help with transport and time off work, giving medicine without stigma, family support, disclosure and an adherence support group."
+        },
+        {
+         "title": "5. ARRANGE",
+         "text": "Arrange another session to reinforce key messages, and a support group if she wishes."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Preparing a caregiver usually takes 2 to 3 visits, the clinical team and a treatment supporter.",
+       "label": "Remember"
+      },
+      {
+       "type": "sort",
+       "text": "Which of the 5 As is this?",
+       "groups": [
+        "Assess",
+        "Advise",
+        "Agree",
+        "Assist",
+        "Arrange"
+       ],
+       "items": [
+        {
+         "text": "Ask if there is someone who can help give the medicine",
+         "group": 0
+        },
+        {
+         "text": "Explain that the medicine must be given twice a day at the same time",
+         "group": 1
+        },
+        {
+         "text": "Ask how she thinks her child will manage the treatment",
+         "group": 2
+        },
+        {
+         "text": "Plan how she will get to the clinic each month",
+         "group": 3
+        },
+        {
+         "text": "Book the next counselling session",
+         "group": 4
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 75,
+     "bookToPage": 80,
+     "title": "Starting ART: baseline, regimen and dose",
+     "order": 20,
+     "read": [
+      {
+       "type": "note",
+       "text": "Record baseline information, choose the first-line regimen for the child's age, and find the dose by weight.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "flip",
+       "title": "Step 4: baseline information",
+       "cards": [
+        {
+         "front": "Nutrition",
+         "back": "Assess and classify. A severe classification needs referral; manage others by the charts. Do not delay ART."
+        },
+        {
+         "front": "Feeding",
+         "back": "Assess feeding of all children under 2, children with acute malnutrition, and all young infants."
+        },
+        {
+         "front": "Clinical stage",
+         "back": "Stage the child from 1 to 4 (see the staging lesson)."
+        },
+        {
+         "front": "CD4 count and percentage",
+         "back": "At diagnosis, before ART if possible, and every 6 months on ART. Send it if not done in the last 3 months. Viral load is useful but not essential."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Age</strong></td><td style=\"padding: 4px\"><strong>Preferred first line</strong></td><td style=\"padding: 4px\"><strong>Alternative</strong></td><td style=\"padding: 4px\"><strong>With TB</strong></td></tr><tr><td style=\"padding: 4px\">Birth up to 3 years</td><td style=\"padding: 4px\">ABC or AZT + 3TC + LPV/r</td><td style=\"padding: 4px\">ABC or AZT + 3TC + NVP</td><td style=\"padding: 4px\">ABC or AZT + 3TC + NVP, or AZT + 3TC + ABC</td></tr><tr><td style=\"padding: 4px\">3 years and older</td><td style=\"padding: 4px\">ABC + 3TC + EFV</td><td style=\"padding: 4px\">ABC or AZT + 3TC + EFV or NVP</td><td style=\"padding: 4px\">ABC or AZT + 3TC + EFV, or AZT + 3TC + ABC</td></tr></table>"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Weight</strong></td><td style=\"padding: 4px\"><strong>ABC 20 mg/ml</strong></td><td style=\"padding: 4px\"><strong>3TC 10 mg/ml</strong></td><td style=\"padding: 4px\"><strong>LPV/r 80/20 mg/ml</strong></td></tr><tr><td style=\"padding: 4px\">3 to 5.9 kg</td><td style=\"padding: 4px\">3 ml</td><td style=\"padding: 4px\">3 ml</td><td style=\"padding: 4px\">1 ml</td></tr><tr><td style=\"padding: 4px\">6 to 9.9 kg</td><td style=\"padding: 4px\">4 ml</td><td style=\"padding: 4px\">4 ml</td><td style=\"padding: 4px\">1.5 ml</td></tr><tr><td style=\"padding: 4px\">10 to 13.9 kg</td><td style=\"padding: 4px\">6 ml</td><td style=\"padding: 4px\">6 ml</td><td style=\"padding: 4px\">2 ml</td></tr></table><p>Each twice a day (morning and evening). From the WHO dosing tables in the module annex.</p>"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Weight</strong></td><td style=\"padding: 4px\"><strong>ABC 60 mg tablet</strong></td><td style=\"padding: 4px\"><strong>3TC 30 mg tablet</strong></td><td style=\"padding: 4px\"><strong>EFV 200 mg tablet</strong></td></tr><tr><td style=\"padding: 4px\">10 to 13.9 kg</td><td style=\"padding: 4px\">2 twice a day</td><td style=\"padding: 4px\">2 twice a day</td><td style=\"padding: 4px\">1 once a day</td></tr><tr><td style=\"padding: 4px\">14 to 19.9 kg</td><td style=\"padding: 4px\">2.5 twice a day</td><td style=\"padding: 4px\">2.5 twice a day</td><td style=\"padding: 4px\">1.5 once a day</td></tr><tr><td style=\"padding: 4px\">20 to 24.9 kg</td><td style=\"padding: 4px\">3 twice a day</td><td style=\"padding: 4px\">3 twice a day</td><td style=\"padding: 4px\">1.5 once a day</td></tr></table><p>From 25 kg: ABC 300 mg 1 twice a day, 3TC 150 mg 1 twice a day, EFV 200 mg 2 once a day.</p>"
+      },
+      {
+       "type": "note",
+       "text": "Doses follow the child's weight: check the dose at every visit as the child grows. Switch from syrup to tablets as soon as possible, and make sure the caregiver can use a dosing syringe. Keep LPV/r cool (below 25 °C): it keeps 42 days out of a fridge, so give no more than a month's supply if there is no fridge at home. Do not give LPV/r liquid to full-term babies under 14 days old.",
+       "label": "Remember"
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-ex-j",
+       "note": ""
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-ex-k",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 81,
+     "bookToPage": 85,
+     "title": "Side effects of ARVs",
+     "order": 21,
+     "read": [
+      {
+       "type": "note",
+       "text": "Name the common and the serious side effects of each ARV, and say what to do about each one.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "Most side effects are mild, especially at the start; fewer than 5% of patients have serious ones. Caregivers who know about side effects are less likely to stop the medicine."
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Drug</strong></td><td style=\"padding: 4px\"><strong>Very common (advise how to manage)</strong></td><td style=\"padding: 4px\"><strong>Potentially serious (seek care)</strong></td><td style=\"padding: 4px\"><strong>Later in treatment</strong></td></tr><tr><td style=\"padding: 4px\">Stavudine (d4T)</td><td style=\"padding: 4px\">Nausea, diarrhoea</td><td style=\"padding: 4px\">Urgently: severe abdominal pain and difficulty breathing. Soon: tingling, numb or painful feet, legs or hands</td><td style=\"padding: 4px\">Changes in fat distribution</td></tr><tr><td style=\"padding: 4px\">Abacavir (ABC)</td><td style=\"padding: 4px\"></td><td style=\"padding: 4px\">Urgently: fever, vomiting and rash (hypersensitivity)</td><td style=\"padding: 4px\"></td></tr><tr><td style=\"padding: 4px\">Lamivudine (3TC)</td><td style=\"padding: 4px\">Nausea, diarrhoea</td><td style=\"padding: 4px\"></td><td style=\"padding: 4px\"></td></tr><tr><td style=\"padding: 4px\">Lopinavir/ritonavir</td><td style=\"padding: 4px\">Nausea, vomiting, diarrhoea</td><td style=\"padding: 4px\"></td><td style=\"padding: 4px\">Raised cholesterol and glucose; changes in fat distribution</td></tr><tr><td style=\"padding: 4px\">Nevirapine (NVP)</td><td style=\"padding: 4px\">Nausea, diarrhoea</td><td style=\"padding: 4px\">Urgently: yellow eyes, severe skin rash, fatigue and shortness of breath, fever</td><td style=\"padding: 4px\"></td></tr><tr><td style=\"padding: 4px\">Zidovudine (AZT)</td><td style=\"padding: 4px\">Nausea, diarrhoea, headache, fatigue, muscle pain</td><td style=\"padding: 4px\">Urgently: pallor (anaemia)</td><td style=\"padding: 4px\"></td></tr><tr><td style=\"padding: 4px\">Efavirenz (EFV)</td><td style=\"padding: 4px\">Nausea, diarrhoea, strange dreams, poor sleep, memory problems, headache, dizziness</td><td style=\"padding: 4px\">Urgently: yellow eyes, psychosis or confusion, severe skin rash</td><td style=\"padding: 4px\"></td></tr></table>"
+      },
+      {
+       "type": "note",
+       "text": "Never stop just one or two drugs, or give a lower dose. If a side effect is so bad that the mother wants to stop, she comes to the clinic; if no clinician is available, STOP ALL THREE drugs.",
+       "label": "Key point"
+      },
+      {
+       "type": "flip",
+       "title": "What to do",
+       "cards": [
+        {
+         "front": "Yellow eyes or abdominal pain",
+         "back": "Stop the drugs and REFER URGENTLY."
+        },
+        {
+         "front": "Rash",
+         "back": "On abacavir, assess carefully and call for advice. Severe, generalized or peeling rash, rash on the mucosa, or rash with fever or vomiting: stop the drugs and REFER URGENTLY."
+        },
+        {
+         "front": "Nausea",
+         "back": "Give the drug with food. If it lasts more than 2 weeks or worsens, call for advice or refer."
+        },
+        {
+         "front": "Vomiting",
+         "back": "Repeat the dose if the medicine is seen in the vomit or vomiting was within 30 minutes. Vomiting everything, or with severe abdominal pain or difficult breathing: REFER URGENTLY."
+        },
+        {
+         "front": "Diarrhoea",
+         "back": "Use the diarrhoea charts. If due to ARVs it improves in a few weeks; if not after 2 weeks, call for advice or refer."
+        },
+        {
+         "front": "Headache, poor sleep, nightmares",
+         "back": "Paracetamol for headache. Give efavirenz at night on an empty stomach or with low-fat food. If it lasts more than 2 weeks, call for advice or refer."
+        },
+        {
+         "front": "Tingling or numb feet",
+         "back": "If new or worse on treatment, call for advice or refer."
+        },
+        {
+         "front": "Changes in fat distribution",
+         "back": "Consider switching from stavudine to abacavir; refer if needed."
+        }
+       ]
+      },
+      {
+       "type": "steps",
+       "title": "Good management of side effects",
+       "steps": [
+        {
+         "title": "Introduce",
+         "text": "Discuss common side effects before the child starts."
+        },
+        {
+         "title": "Advise",
+         "text": "Explain how to manage them."
+        },
+        {
+         "title": "Warn",
+         "text": "Name the serious ones that need urgent care."
+        },
+        {
+         "title": "Respond",
+         "text": "Give immediate attention, at the clinic or by phone."
+        },
+        {
+         "title": "Ask",
+         "text": "Ask about side effects at every follow-up, even if not mentioned."
+        },
+        {
+         "title": "Support",
+         "text": "Refer to peer educators."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-ex-l",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 86,
+     "bookToPage": 90,
+     "title": "Peter starts ART",
+     "order": 22,
+     "read": [
+      {
+       "type": "note",
+       "text": "Follow Peter's care from HIV EXPOSED to confirmed infection, and start him on ART.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "story",
+       "title": "Peter's follow-up as HIV EXPOSED",
+       "stages": [
+        {
+         "text": "Each month Peter gets routine care (vitamin A, immunizations, growth monitoring, feeding counselling), continues cotrimoxazole, has new problems treated, and you ask about Lungile's health."
+        },
+        {
+         "text": "Lungile stops breastfeeding when Peter is 9 months old, because she now works away from home. They return 7 weeks after his last breastfeed.",
+         "question": "Which test now confirms Peter's status?",
+         "options": [
+          "A virological (PCR) test",
+          "A serological test",
+          "No test: wait until 18 months"
+         ],
+         "answer": 0,
+         "explanation": "Peter is under 18 months and has not breastfed for more than 6 weeks: a virological test confirms his status."
+        },
+        {
+         "text": "You counsel Lungile, discuss disclosure and send a PCR test. Two and a half weeks later the result is positive. Lungile feels guilty that she made Peter sick; you counsel her that treatment can keep him healthy.",
+         "question": "How do you classify Peter now?",
+         "options": [
+          "CONFIRMED HIV INFECTION",
+          "HIV EXPOSED",
+          "HIV INFECTION UNLIKELY"
+         ],
+         "answer": 0,
+         "explanation": "A positive virological test, more than 6 weeks after the last breastfeed: CONFIRMED HIV INFECTION. All children under 5 with confirmed infection should receive ART."
+        }
+       ]
+      },
+      {
+       "type": "story",
+       "title": "The five steps for Peter",
+       "stages": [
+        {
+         "text": "Peter is stable: he needs no treatment today for an acute illness or opportunistic infection. Step 1: his infection is confirmed."
+        },
+        {
+         "text": "Step 2: you use the 5 As with Lungile: her social situation and understanding of HIV, key information about ART and adherence, whether she can give the medicine every day and come to appointments, her support, and another session."
+        },
+        {
+         "text": "Step 3: Peter has no TB and weighs more than 3 kg.",
+         "question": "Where does Peter start ART?",
+         "options": [
+          "At your clinic",
+          "Non-urgent referral to a doctor",
+          "Urgent referral"
+         ],
+         "answer": 0,
+         "explanation": ""
+        },
+        {
+         "text": "Step 4: Peter is not low weight and not anaemic. He has had pneumonia, persistent diarrhoea and ear infections in the past months, and herpes zoster is starting. You send CD4 and viral load tests."
+        },
+        {
+         "text": "Step 5: Peter is under 3 years and weighs 7.2 kg.",
+         "question": "Which regimen and doses?",
+         "options": [
+          "ABC 4 ml + 3TC 4 ml + LPV/r 1.5 ml, each twice a day",
+          "ABC 6 ml + 3TC 6 ml + LPV/r 2 ml, each twice a day",
+          "ABC + 3TC + EFV 1 tablet a day"
+         ],
+         "answer": 0,
+         "explanation": "Under 3 years: ABC + 3TC + LPV/r. The 6 to 9.9 kg band is 4 ml, 4 ml and 1.5 ml twice a day. He also continues cotrimoxazole. You tell Lungile about side effects, and see him after one week."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-ex-m",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 91,
+     "bookToPage": 95,
+     "title": "Follow-up of exposed infants and good chronic care",
+     "order": 23,
+     "read": [
+      {
+       "type": "note",
+       "text": "Make sure exposed infants are tested and followed up, and use the principles of good chronic care.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "Every child born to an HIV-infected mother needs follow-up for safe feeding, growth and development, HIV testing and other care. Offer a PCR test at 4 to 6 weeks (for example at the immunization visit), start cotrimoxazole, and ask the caregiver to return for the result. Reclassify the child when the result is known, and give care for the new classification."
+      },
+      {
+       "type": "reveal",
+       "text": "How can a clinic find more HIV-exposed infants?",
+       "answer": "Have a system in every clinic to identify infants and offer testing. Integrated maternal and child health clinics see mothers and children together; a family-based model links the records of the whole family, so when a parent comes you ask about the children and partner."
+      },
+      {
+       "type": "paragraph",
+       "text": "HIV is a chronic disease. Good chronic care recognizes that the mother must learn to manage her child's condition, often while coping with her own illness: a double burden."
+      },
+      {
+       "type": "rich",
+       "text": "<ol><li>Develop a treatment partnership with the mother and child</li><li>Focus on their concerns and priorities</li><li>Use IMCI counselling skills and the 5 As</li><li>Support self-management</li><li>Organize proactive follow-up</li><li>Involve expert patients, peer educators and support staff</li><li>Link the family to community resources and support</li><li>Use written information to document, monitor and remind</li><li>Work as a multidisciplinary clinical team</li><li>Assure continuity of care</li></ol>"
+      },
+      {
+       "type": "flip",
+       "title": "Some of the principles explained",
+       "cards": [
+        {
+         "front": "Treatment partnership",
+         "back": "An agreement to work together towards an agreed goal: both share responsibility and treat each other with respect; one partner does not have all the power."
+        },
+        {
+         "front": "Focus on her concerns",
+         "back": "Find out the real reason she came: illness, fear, or a psychosocial need, and address it."
+        },
+        {
+         "front": "Self-management",
+         "back": "Leave the mother as much in charge as possible: she takes responsibility for daily treatment, and feels more in control."
+        },
+        {
+         "front": "Clinical team",
+         "back": "A nurse, clinical officer, an ART aid for education and adherence, and a doctor."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-ex-n",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 95,
+     "bookToPage": 102,
+     "title": "Follow-up of a child on ART: the four steps",
+     "order": 24,
+     "read": [
+      {
+       "type": "note",
+       "text": "Follow up a child on ART in four steps, and know when to refer urgently or non-urgently.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Follow-up of a child on ART",
+       "caption": "Watch this first.",
+       "script": "V8.9"
+      },
+      {
+       "type": "steps",
+       "title": "The four steps of each follow-up visit",
+       "steps": [
+        {
+         "title": "1. Assess and classify",
+         "text": "Ask about problems and care elsewhere since the last visit. Check general danger signs, ART severe signs and the main symptoms."
+        },
+        {
+         "title": "2. Monitor progress on ART and cotrimoxazole",
+         "text": "Growth and nutrition, development, adherence, side effects, clinical stage and laboratory results."
+        },
+        {
+         "title": "3. Continue ART and other medicines",
+         "text": "If stable, continue the same first-line regimen, adjusting doses to weight."
+        },
+        {
+         "title": "4. Counsel",
+         "text": "Progress, feeding, adherence, side effects, disclosure, support for the caregiver; check the family gets care. If well, follow up in one month."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "ART severe signs: severe skin rash; difficulty breathing with severe abdominal pain; yellow eyes; or two of fever, vomiting and rash in a child on abacavir. Give pre-referral treatment and REFER URGENTLY.",
+       "label": "Key point"
+      },
+      {
+       "type": "sort",
+       "text": "How often does the child miss doses?",
+       "groups": [
+        "Takes all doses",
+        "Occasionally misses",
+        "Frequently misses (poor adherence)"
+       ],
+       "items": [
+        {
+         "text": "No dose missed this month",
+         "group": 0
+        },
+        {
+         "text": "One dose missed last week",
+         "group": 1
+        },
+        {
+         "text": "Two doses missed each week",
+         "group": 1
+        },
+        {
+         "text": "Three or more doses missed each week",
+         "group": 2
+        }
+       ],
+       "explanation": "Poor adherence means missing more than two doses a week. Ask kindly when the last dose was missed; a pill count can help. Praise good adherence at every visit."
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Viral load (copies/ml)</strong></td><td style=\"padding: 4px\"><strong>Meaning and action</strong></td></tr><tr><td style=\"padding: 4px\">Below 400</td><td style=\"padding: 4px\">ART is working well. Routine follow-up; repeat after a year.</td></tr><tr><td style=\"padding: 4px\">400 to 1000</td><td style=\"padding: 4px\">Improvement needed. Step up adherence counselling; repeat after 6 months.</td></tr><tr><td style=\"padding: 4px\">Above 1000</td><td style=\"padding: 4px\">ARVs not working well (poor adherence or resistance). Step up counselling, repeat after 3 months; if still above 1000, refer.</td></tr></table>"
+      },
+      {
+       "type": "paragraph",
+       "text": "CD4 count and percentage are repeated after 6 months, after 1 year, then every year. Normal CD4 counts are higher in young children, so they cannot be read like an adult's. Lack of laboratory tests should never stop a child from receiving ART."
+      },
+      {
+       "type": "flip",
+       "title": "Refer NON-URGENTLY if",
+       "cards": [
+        {
+         "front": "Growth",
+         "back": "Not gaining weight for 3 months, or losing milestones."
+        },
+        {
+         "front": "Adherence",
+         "back": "Poor adherence despite counselling."
+        },
+        {
+         "front": "Side effects",
+         "back": "Significant side effects despite good management."
+        },
+        {
+         "front": "Stage and tests",
+         "back": "A higher clinical stage than before, CD4 much lower than before, or viral load above 400 despite counselling (on LPV/r: LDL above 3.5 or triglycerides above 5.6 mmol/L)."
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "A new or recurrent stage 3 or 4 event after at least 24 weeks of ART, in a child who takes the medicine well, may mean treatment failure. Only experienced clinicians change to second-line treatment."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 102,
+     "bookToPage": 109,
+     "title": "Stavudine, disclosure and follow-up practice",
+     "order": 25,
+     "read": [
+      {
+       "type": "note",
+       "text": "Replace stavudine when fat changes appear, support disclosure to the child, and follow up children on ART.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "Nurses at primary level prescribe only first-line regimens and do not change ARVs without an expert, with one exception: stavudine. It causes peripheral neuropathy (tingling in the hands and feet) and lipodystrophy: the arms, legs, buttocks and cheeks become THIN while the breasts, tummy and back of the neck become FAT. This may not go away, so switch early to abacavir. A child doing well on stavudine stays on it."
+      },
+      {
+       "type": "heading",
+       "text": "Disclosure to the child"
+      },
+      {
+       "type": "paragraph",
+       "text": "Disclosing the HIV status to the child is the caregiver's role, with support from the health worker. It is a process, not an event: partial disclosure first (without naming HIV, for example the \"soldier story\"), then full disclosure over time, fitted to the child's understanding, development, health and situation. There is no fixed age; questions about the clinic or the medicine, or refusing treatment, are signs the child wants to know more. Adolescents should know their status."
+      },
+      {
+       "type": "flip",
+       "title": "Why disclose?",
+       "cards": [
+        {
+         "front": "Benefits",
+         "back": "Better adjustment, self-esteem and adherence, fewer risky behaviours, and stronger family ties."
+        },
+        {
+         "front": "Risks of not disclosing",
+         "back": "Less part in treatment, more psychological problems, isolation, hurtful fantasies about the illness, and accidental disclosure that breaks the child's trust in adults."
+        }
+       ]
+      },
+      {
+       "type": "story",
+       "title": "Peter's first visit on ART",
+       "stages": [
+        {
+         "text": "There are no new problems and no care elsewhere. Peter has no general danger sign, no main symptom, and no severe skin rash, difficult breathing, yellow eyes, fever or vomiting. You screen for TB."
+        },
+        {
+         "text": "He has gained a little weight, to 7.4 kg. Lungile has given every dose and brought the containers. There is no change in side effects or stage. His CD4 count is 600 cells/mm3, and the viral load is detectable but not high.",
+         "question": "What do you do?",
+         "options": [
+          "Continue the same ART and cotrimoxazole, praise her, counsel and arrange the next visit",
+          "Change to a second-line regimen",
+          "Refer urgently"
+         ],
+         "answer": 0,
+         "explanation": "Peter is stable. Counsel on his progress, adherence (his viral load is still detectable), side effects, disclosure and support."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-ex-o",
+       "note": ""
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-ex-p",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 121,
+     "bookToPage": 122,
+     "title": "WHO paediatric clinical staging",
+     "order": 26,
+     "read": [
+      {
+       "type": "note",
+       "text": "Stage a child with confirmed HIV infection using the WHO paediatric clinical staging.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "paragraph",
+       "text": "Clinical staging estimates how damaged a child's immune system is, from the child's signs and symptoms (and laboratory tests if possible). Use it only for children with confirmed HIV infection. Choose the highest stage that applies. Stages 1 and 2: the immune system is not yet seriously affected and most conditions are managed at first level. Stages 3 and 4: advanced immune deficiency; most conditions need urgent referral."
+      },
+      {
+       "type": "flip",
+       "title": "The four stages (WHO 2005 revised paediatric staging)",
+       "cards": [
+        {
+         "front": "Stage 1: asymptomatic",
+         "back": "No symptoms, or only persistent generalized lymphadenopathy."
+        },
+        {
+         "front": "Stage 2: mild disease",
+         "back": "Enlarged liver or spleen, enlarged parotid, skin conditions (prurigo, seborrhoeic dermatitis, extensive molluscum or warts, fungal nail infection, herpes zoster), recurrent mouth ulcers, angular cheilitis, gum erythema, recurrent or chronic respiratory infections (sinusitis, ear infections, otorrhoea)."
+        },
+        {
+         "front": "Stage 3: moderate disease",
+         "back": "Moderate unexplained malnutrition not responding to treatment; oral thrush (after the newborn period); oral hairy leukoplakia; unexplained diarrhoea over 14 days or fever over 1 month not responding to treatment; recurrent severe bacterial pneumonia; pulmonary or lymph node TB; symptomatic LIP; necrotizing gingivitis; chronic HIV lung disease; anaemia, neutropenia or low platelets for over a month."
+        },
+        {
+         "front": "Stage 4: severe disease (AIDS)",
+         "back": "Severe unexplained wasting, stunting or malnutrition not responding to treatment; PCP; oesophageal thrush; herpes simplex ulcers for over a month; 2 or more severe bacterial infections a year (not pneumonia); Kaposi's sarcoma; extrapulmonary TB; toxoplasma brain abscess; cryptococcal meningitis; HIV encephalopathy; rectal fistula."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Children are staged even when they are on ART, because a change of stage shows how they respond. A child with suspected severe HIV disease whose infection cannot be confirmed needs referral.",
+       "label": "Remember"
+      },
+      {
+       "type": "sort",
+       "text": "Which stage is this condition?",
+       "groups": [
+        "Stage 1",
+        "Stage 2",
+        "Stage 3",
+        "Stage 4"
+       ],
+       "items": [
+        {
+         "text": "Persistent generalized lymphadenopathy only",
+         "group": 0
+        },
+        {
+         "text": "Herpes zoster",
+         "group": 1
+        },
+        {
+         "text": "Recurrent ear discharge",
+         "group": 1
+        },
+        {
+         "text": "Oral thrush in a 2-year-old",
+         "group": 2
+        },
+        {
+         "text": "Pulmonary TB",
+         "group": 2
+        },
+        {
+         "text": "Pneumocystis pneumonia (PCP)",
+         "group": 3
+        },
+        {
+         "text": "Oesophageal thrush",
+         "group": 3
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-ex-staging",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 110,
+     "bookToPage": 111,
+     "title": "Review and logbook test",
+     "order": 27,
+     "read": [
+      {
+       "type": "note",
+       "text": "Answer the review questions, then the logbook test.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "rich",
+       "text": "<p>Look back at the main points:</p><ul><li>A positive serological test cannot confirm HIV under 18 months; a positive virological test confirms it at any age.</li><li>A negative test only rules out infection once the child has not breastfed for at least 6 weeks.</li><li>Three classifications: CONFIRMED HIV INFECTION, HIV EXPOSED, HIV INFECTION UNLIKELY.</li><li>Cotrimoxazole prophylaxis for exposed and infected children; ARV prophylaxis for exposed infants; IPT, immunization and vitamin A.</li><li>All children under 5 with confirmed infection start ART after the five steps; adherence of at least 95% is essential.</li><li>Each follow-up visit of a child on ART has four steps; ART severe signs need urgent referral.</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Answer the same questions as before the module."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-posttest",
+       "note": ""
+      },
+      {
+       "type": "paragraph",
+       "text": "Then take the logbook test. You may use your chart booklet, but not the module."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m8-logbook",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    }
+   ],
+   "isPublished": true
+  },
+  {
    "title": "Module 9: Care of the well child",
    "order": 9,
    "sections": [
@@ -8238,6 +10592,2026 @@
      "id": "l16",
      "type": "tf",
      "question": "An antibiotic injection before referral is given only in the clinic.",
+     "correct": true,
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-pretest",
+   "order": 801,
+   "title": "Distance learning Module 8: Before you begin (pre-test)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "Answer these questions before you study the module."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "r1",
+     "type": "mcq",
+     "question": "A child is under 16 months old. Which HIV test should be used, and why?",
+     "options": [
+      "Serological, because it detects antibodies to the virus",
+      "Virological (PCR), because it detects the virus itself",
+      "Serological now, then confirm with PCR after 18 months"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "r2",
+     "type": "mcq",
+     "question": "Which follow-up treatment is critical for HIV-exposed and infected infants and children?",
+     "options": [
+      "Cotrimoxazole prophylaxis",
+      "Paracetamol",
+      "Amoxicillin"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "r3",
+     "type": "mcq",
+     "question": "With no prevention, what is the overall risk that a mother passes HIV to her child in pregnancy, delivery and breastfeeding?",
+     "options": [
+      "70%",
+      "10%",
+      "35%"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "r4",
+     "type": "mcq",
+     "question": "A 2-month-old breastfeeding baby has a positive virological (PCR) test. Is the child HIV-infected?",
+     "options": [
+      "Yes, HIV-infected",
+      "No, HIV-negative",
+      "Possibly: he is HIV exposed"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "r5",
+     "type": "mcq",
+     "question": "In the WHO 2014 module, when is a child with HIV eligible for ART?",
+     "options": [
+      "Only at clinical stage 2",
+      "Any child under five with confirmed HIV infection",
+      "Only children over 5 with a CD4 count below 350"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "r6",
+     "type": "mcq",
+     "question": "The mother is HIV-positive and the child is not confirmed infected. Where policy is breastfeeding with ARVs, what feeding is recommended?",
+     "options": [
+      "Exclusive breastfeeding for as long as the child wants",
+      "Breastfeeding and formula together, for extra nutrition",
+      "Exclusive breastfeeding for 6 months, then complementary foods and breastfeeding to 12 months"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "Exclusive breastfeeding for 6 months, complementary foods from 6 months, and breastfeeding for the first 12 months. (The WHO answer, \"exclusive breastfeeding until 12 months\", was reworded: the module says exclusive breastfeeding for 6 months.)"
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-ex-b",
+   "order": 802,
+   "title": "Distance learning Module 8: Exercise B (HIV testing)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "Answer the questions about HIV tests."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "b1",
+     "type": "mcq",
+     "question": "What is the difference between a virological (PCR) and a serological HIV test?",
+     "options": [
+      "PCR detects the virus; serological detects antibodies, which may be the mother's until 18 months",
+      "PCR detects antibodies; serological detects the virus",
+      "There is no difference"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "b2",
+     "type": "mcq",
+     "question": "Which test confirms HIV infection in a child under 18 months?",
+     "options": [
+      "Virological (PCR)",
+      "Serological",
+      "Either"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "b3",
+     "type": "mcq",
+     "question": "A 20-month-old has a positive virological (PCR) test. Is the child HIV-infected?",
+     "options": [
+      "Yes, infected",
+      "No, not infected",
+      "Not yet confirmed"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "b4",
+     "type": "mcq",
+     "question": "A 2-month-old breastfeeding baby has a positive serological test. Is the child HIV-infected?",
+     "options": [
+      "Yes, infected",
+      "No, not infected",
+      "Not yet confirmed"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "HIV EXPOSED: the antibodies may be the mother's. Confirm with a virological test, at least 6 weeks after breastfeeding stops."
+    },
+    {
+     "id": "b5",
+     "type": "mcq",
+     "question": "A 2-month-old has a positive virological (PCR) test. Is the child HIV-infected?",
+     "options": [
+      "Yes, infected",
+      "No, not infected",
+      "Not yet confirmed"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "b6",
+     "type": "mcq",
+     "question": "A 21-month-old has a negative serological test and has not breastfed since 6 months of age. Is the child infected?",
+     "options": [
+      "Yes, infected",
+      "No, not infected",
+      "Not yet confirmed"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "b7",
+     "type": "mcq",
+     "question": "An 18-month-old breastfeeding child has a positive serological test. Is the child infected?",
+     "options": [
+      "Yes, infected",
+      "No, not infected",
+      "Not yet confirmed"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "From 18 months a positive serological test confirms infection, once a second test is also positive. Breastfeeding does not change a positive result. (The WHO key says HIV EXPOSED; this was corrected to match the module's own rule and Exercise H.)"
+    },
+    {
+     "id": "b8",
+     "type": "mcq",
+     "question": "A 9-month-old breastfeeding baby has a negative virological (PCR) test. Is the child infected?",
+     "options": [
+      "Yes, infected",
+      "No, not infected",
+      "Not yet confirmed"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "HIV EXPOSED: the baby can still be infected by breastfeeding. Test again 6 weeks after breastfeeding stops."
+    },
+    {
+     "id": "b9",
+     "type": "mcq",
+     "question": "A 9-month-old has a negative virological test and last breastfed 3 months ago. Is the child confirmed HIV-negative?",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "b10",
+     "type": "mcq",
+     "question": "A 16-month-old has a negative serological test and has not breastfed for more than 6 weeks. Is the child confirmed HIV-negative?",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-ex-c",
+   "order": 803,
+   "title": "Distance learning Module 8: Exercise C (classify a sick child)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "Are these statements true or false?"
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "c1",
+     "type": "tf",
+     "question": "A 10-month-old has a positive virological test. She stopped breastfeeding 30 days ago. She is classified CONFIRMED HIV INFECTION.",
+     "correct": true,
+     "explain": "A positive virological test confirms infection at any age."
+    },
+    {
+     "id": "c2",
+     "type": "tf",
+     "question": "A 9-month-old who is still breastfeeding has a negative PCR test. He is classified HIV INFECTION UNLIKELY.",
+     "correct": false,
+     "explain": "HIV EXPOSED: confirm 6 weeks after breastfeeding stops."
+    },
+    {
+     "id": "c3",
+     "type": "tf",
+     "question": "A 9-week-old's mother is HIV-infected. His serological test is positive. He is classified CONFIRMED HIV INFECTION.",
+     "correct": false,
+     "explain": "HIV EXPOSED: under 18 months a virological test is needed."
+    },
+    {
+     "id": "c4",
+     "type": "tf",
+     "question": "A 16-month-old who stopped breastfeeding at 12 months has a positive PCR test. He is classified CONFIRMED HIV INFECTION.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "c5",
+     "type": "tf",
+     "question": "A 4-month-old breastfeeding baby of an HIV-infected mother has a positive serological test. He is classified HIV EXPOSED.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "c6",
+     "type": "tf",
+     "question": "An 8-month-old breastfeeding girl of an HIV-infected mother had a negative PCR test 2 months ago. She is classified HIV INFECTION UNLIKELY.",
+     "correct": false,
+     "explain": "HIV EXPOSED: she is still breastfeeding."
+    },
+    {
+     "id": "c7",
+     "type": "tf",
+     "question": "A 36-month-old has a positive serological test, confirmed by a second test. She is classified CONFIRMED HIV INFECTION.",
+     "correct": true,
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-ex-d",
+   "order": 804,
+   "title": "Distance learning Module 8: Exercise D (classify young infants and children)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "Classify each child's HIV status."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "d1",
+     "type": "mcq",
+     "question": "A 7-week-old. The mother is HIV-positive.",
+     "options": [
+      "CONFIRMED HIV INFECTION",
+      "HIV EXPOSED",
+      "HIV INFECTION UNLIKELY"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d2",
+     "type": "mcq",
+     "question": "An 8-week-old girl, abandoned at birth and formula fed. Her PCR test at 6 weeks was negative.",
+     "options": [
+      "CONFIRMED HIV INFECTION",
+      "HIV EXPOSED",
+      "HIV INFECTION UNLIKELY"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d3",
+     "type": "mcq",
+     "question": "A 6-week-old with a positive PCR test.",
+     "options": [
+      "CONFIRMED HIV INFECTION",
+      "HIV EXPOSED",
+      "HIV INFECTION UNLIKELY"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d4",
+     "type": "mcq",
+     "question": "A 7-week-old, status unknown. The mother tested negative.",
+     "options": [
+      "CONFIRMED HIV INFECTION",
+      "HIV EXPOSED",
+      "HIV INFECTION UNLIKELY"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d5",
+     "type": "mcq",
+     "question": "A 12-month-old, status unknown, brought by the grandmother, with a positive serological test.",
+     "options": [
+      "CONFIRMED HIV INFECTION",
+      "HIV EXPOSED",
+      "HIV INFECTION UNLIKELY"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-ex-e",
+   "order": 805,
+   "title": "Distance learning Module 8: Exercise E (cotrimoxazole)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "Answer the questions about cotrimoxazole prophylaxis."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "e1",
+     "type": "open",
+     "question": "Which children should receive cotrimoxazole prophylaxis?",
+     "points": [
+      "All young infants with CONFIRMED HIV INFECTION or HIV EXPOSED, from 4 to 6 weeks",
+      "Children with CONFIRMED HIV INFECTION under 12 months",
+      "Children 12 months up to 5 years with confirmed infection at stage 2, 3 or 4, or CD4 below 25%",
+      "All children classified HIV EXPOSED"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e2",
+     "type": "open",
+     "question": "What are possible serious side effects of cotrimoxazole?",
+     "points": [
+      "Stevens-Johnson syndrome (severe skin reaction)",
+      "Severe pallor"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e3",
+     "type": "mcq",
+     "question": "A 6-week-old HIV-exposed girl; PCR result not yet available.",
+     "options": [
+      "No cotrimoxazole",
+      "Yes: 2.5 ml syrup (or 1 paediatric tablet) once daily",
+      "Yes: 5 ml syrup (or 2 paediatric tablets, or 1/2 adult tablet) once daily"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e4",
+     "type": "mcq",
+     "question": "A 6-month-old HIV-exposed girl, PCR positive, not yet on ART.",
+     "options": [
+      "No cotrimoxazole",
+      "Yes: 2.5 ml syrup (or 1 paediatric tablet) once daily",
+      "Yes: 5 ml syrup (or 2 paediatric tablets, or 1/2 adult tablet) once daily"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e5",
+     "type": "mcq",
+     "question": "A 7-month-old HIV-exposed girl, PCR negative at 6 months, stopped breastfeeding at 3 months.",
+     "options": [
+      "No cotrimoxazole",
+      "Yes: 2.5 ml syrup (or 1 paediatric tablet) once daily",
+      "Yes: 5 ml syrup (or 2 paediatric tablets, or 1/2 adult tablet) once daily"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e6",
+     "type": "mcq",
+     "question": "A 4-month-old boy who started ART today.",
+     "options": [
+      "No cotrimoxazole",
+      "Yes: 2.5 ml syrup (or 1 paediatric tablet) once daily",
+      "Yes: 5 ml syrup (or 2 paediatric tablets, or 1/2 adult tablet) once daily"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e7",
+     "type": "mcq",
+     "question": "A 2-week-old HIV-exposed boy, PCR not yet sent.",
+     "options": [
+      "No cotrimoxazole",
+      "Yes: 2.5 ml syrup (or 1 paediatric tablet) once daily",
+      "Yes: 5 ml syrup (or 2 paediatric tablets, or 1/2 adult tablet) once daily"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "Not yet: cotrimoxazole starts at 4 to 6 weeks."
+    },
+    {
+     "id": "e8",
+     "type": "mcq",
+     "question": "An 8-month-old HIV-exposed breastfeeding boy, PCR negative at 6 weeks.",
+     "options": [
+      "No cotrimoxazole",
+      "Yes: 2.5 ml syrup (or 1 paediatric tablet) once daily",
+      "Yes: 5 ml syrup (or 2 paediatric tablets, or 1/2 adult tablet) once daily"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e9",
+     "type": "mcq",
+     "question": "A 3-year-old girl with confirmed HIV infection, clinical stage 3.",
+     "options": [
+      "No cotrimoxazole",
+      "Yes: 2.5 ml syrup (or 1 paediatric tablet) once daily",
+      "Yes: 5 ml syrup (or 2 paediatric tablets, or 1/2 adult tablet) once daily"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e10",
+     "type": "mcq",
+     "question": "A 2-month-old girl with SEVERE PNEUMONIA and a positive PCR.",
+     "options": [
+      "No cotrimoxazole",
+      "Yes: 2.5 ml syrup (or 1 paediatric tablet) once daily",
+      "Yes: 5 ml syrup (or 2 paediatric tablets, or 1/2 adult tablet) once daily"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "And refer her urgently for SEVERE PNEUMONIA."
+    },
+    {
+     "id": "e11",
+     "type": "mcq",
+     "question": "A 9-month-old boy classified HIV EXPOSED; his caregiver declines testing.",
+     "options": [
+      "No cotrimoxazole",
+      "Yes: 2.5 ml syrup (or 1 paediatric tablet) once daily",
+      "Yes: 5 ml syrup (or 2 paediatric tablets, or 1/2 adult tablet) once daily"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e12",
+     "type": "mcq",
+     "question": "A 4-year-old boy with confirmed HIV infection, clinical stage 1, CD4 45%.",
+     "options": [
+      "No cotrimoxazole",
+      "Yes: 2.5 ml syrup (or 1 paediatric tablet) once daily",
+      "Yes: 5 ml syrup (or 2 paediatric tablets, or 1/2 adult tablet) once daily"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e13",
+     "type": "open",
+     "question": "When should cotrimoxazole prophylaxis be stopped?",
+     "points": [
+      "When an HIV EXPOSED child is confirmed HIV-negative and has not breastfed for at least 6 weeks",
+      "When the child has a severe drug reaction"
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-ex-f",
+   "order": 806,
+   "title": "Distance learning Module 8: Exercise F (integrated treatment)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "How will you treat or follow up these children?"
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "f1",
+     "type": "open",
+     "question": "HIV EXPOSED and PNEUMONIA",
+     "points": [
+      "Oral amoxicillin for 5 days",
+      "HIV test suited to age and breastfeeding",
+      "ARV prophylaxis if indicated",
+      "Cotrimoxazole prophylaxis",
+      "Vitamin A and immunizations as needed",
+      "Follow up in 3 days for PNEUMONIA"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f2",
+     "type": "mcq",
+     "question": "When do you follow up a child with PERSISTENT DIARRHOEA and HIV EXPOSED?",
+     "options": [
+      "In 5 days for the persistent diarrhoea",
+      "In 14 days",
+      "Only when the HIV test result is back"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "And repeat the HIV test 6 weeks after breastfeeding stops."
+    },
+    {
+     "id": "f3",
+     "type": "open",
+     "question": "PNEUMONIA with wheeze and HIV EXPOSED",
+     "points": [
+      "Oral amoxicillin for 5 days",
+      "Inhaled bronchodilator for 5 days",
+      "Safe remedy for the throat",
+      "HIV test, ARV prophylaxis if indicated, cotrimoxazole",
+      "Follow up in 3 days for PNEUMONIA"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f4",
+     "type": "open",
+     "question": "PERSISTENT DIARRHOEA and CONFIRMED HIV INFECTION; the father has active TB",
+     "points": [
+      "Zinc and multivitamins as in the chart",
+      "Vitamin A and immunizations as needed",
+      "Cotrimoxazole prophylaxis",
+      "ART once the five steps are completed",
+      "Isoniazid preventive therapy for 6 months",
+      "Follow up in 5 days"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f5",
+     "type": "mcq",
+     "question": "PNEUMONIA, CHRONIC EAR INFECTION, COMPLICATED SEVERE ACUTE MALNUTRITION and CONFIRMED HIV INFECTION. What is the main action?",
+     "options": [
+      "Refer urgently, after pre-referral treatment",
+      "Start ART today",
+      "Treat at home and follow up in 5 days"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "Complicated severe acute malnutrition is a severe classification: treat to prevent low blood sugar, give the first dose of antibiotic, and refer urgently."
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-ex-g",
+   "order": 807,
+   "title": "Distance learning Module 8: Exercise G (infant feeding)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "These questions are about a country that recommends breastfeeding with ARV interventions for HIV-infected mothers."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "g1",
+     "type": "tf",
+     "question": "It is advisable to give children fewer feeds during illness.",
+     "correct": false,
+     "explain": "Children need more feeds and fluids during illness."
+    },
+    {
+     "id": "g2",
+     "type": "tf",
+     "question": "It is best for a 3-month-old HIV-infected child to be exclusively breastfed.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "g3",
+     "type": "tf",
+     "question": "A 2-week-old of unknown status, born to an HIV-negative mother, should never be breastfed.",
+     "correct": false,
+     "explain": "The child should be exclusively breastfed: there is no risk of HIV from this mother."
+    },
+    {
+     "id": "g4",
+     "type": "tf",
+     "question": "A breastfeeding child of an HIV-infected woman can continue breastfeeding up to 12 months of age.",
+     "correct": true,
+     "explain": "Exclusively until 6 months, then with safe complementary foods."
+    },
+    {
+     "id": "g5",
+     "type": "tf",
+     "question": "A 5-month-old whose mother is HIV-negative should breastfeed as often as he wants, day and night.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "g6",
+     "type": "tf",
+     "question": "A 9-month-old with a positive virological test can continue breastfeeding.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "g7",
+     "type": "tf",
+     "question": "All breastfeeding HIV-infected women pass HIV to their infants.",
+     "correct": false,
+     "explain": "Without prevention, about 15% of children are infected through breastfeeding."
+    },
+    {
+     "id": "g8",
+     "type": "tf",
+     "question": "A child born to a mother of unknown HIV status should be given formula.",
+     "correct": false,
+     "explain": "All women of unknown status are counselled to breastfeed exclusively for 6 months (and encouraged to test)."
+    },
+    {
+     "id": "g9",
+     "type": "tf",
+     "question": "ARVs given to an HIV-infected mother or her exposed infant greatly reduce the risk of transmission through breastfeeding.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "g10",
+     "type": "open",
+     "question": "Traci is born to an HIV-positive mother. When should she begin family foods, and which foods?",
+     "points": [
+      "At 6 months of age",
+      "Porridge and a mix of local foods: eggs, mashed vegetables, beans, meat or liver",
+      "Add oil, margarine or peanut paste if she is not growing well",
+      "Increase the number of meals as she grows"
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-ex-h",
+   "order": 808,
+   "title": "Distance learning Module 8: Exercise H (confirming HIV infection)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "Does each child have HIV infection?"
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "h1",
+     "type": "open",
+     "question": "Why is it important to use 3 drugs in ART for children?",
+     "points": [
+      "ARVs work best in combination against HIV",
+      "Combination prevents rapid drug resistance"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "h2",
+     "type": "mcq",
+     "question": "A 2-month-old with a positive PCR test.",
+     "options": [
+      "Yes, infected",
+      "No, not infected",
+      "Not yet confirmed"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "h3",
+     "type": "mcq",
+     "question": "A 12-month-old with a positive PCR test.",
+     "options": [
+      "Yes, infected",
+      "No, not infected",
+      "Not yet confirmed"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "h4",
+     "type": "mcq",
+     "question": "A 2-month-old breastfeeding child with a positive serological test.",
+     "options": [
+      "Yes, infected",
+      "No, not infected",
+      "Not yet confirmed"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "Send a PCR test."
+    },
+    {
+     "id": "h5",
+     "type": "mcq",
+     "question": "An 18-month-old breastfeeding child with two positive serological tests.",
+     "options": [
+      "Yes, infected",
+      "No, not infected",
+      "Not yet confirmed"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "h6",
+     "type": "mcq",
+     "question": "A 9-month-old breastfeeding child with a negative PCR test; the mother is HIV-infected.",
+     "options": [
+      "Yes, infected",
+      "No, not infected",
+      "Not yet confirmed"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "Repeat the test 6 weeks after breastfeeding stops; the test depends on the child's age then."
+    },
+    {
+     "id": "h7",
+     "type": "mcq",
+     "question": "A 19-month-old with a positive serological test; the second test is negative.",
+     "options": [
+      "Yes, infected",
+      "No, not infected",
+      "Not yet confirmed"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "Discordant results: send a confirmatory test as the national procedure says, or refer."
+    },
+    {
+     "id": "h8",
+     "type": "mcq",
+     "question": "A 9-month-old with a negative PCR test, last breastfed 3 months ago.",
+     "options": [
+      "Yes, infected",
+      "No, not infected",
+      "Not yet confirmed"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "h9",
+     "type": "mcq",
+     "question": "An 18-month-old with a negative serological test, last breastfed one week ago.",
+     "options": [
+      "Yes, infected",
+      "No, not infected",
+      "Not yet confirmed"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "Repeat a serological test in 5 weeks, that is 6 weeks after breastfeeding stopped."
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-ex-i",
+   "order": 809,
+   "title": "Distance learning Module 8: Exercise I (ART eligibility)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "Is each child eligible for ART (WHO 2014)?"
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "i1",
+     "type": "mcq",
+     "question": "4 years old, CONFIRMED HIV INFECTION, appears healthy.",
+     "options": [
+      "Eligible: start ART",
+      "Not yet: confirm infection first",
+      "Follow the guidance for children 5 years and older"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "i2",
+     "type": "mcq",
+     "question": "6 months old, HIV EXPOSED; the mother is very sick.",
+     "options": [
+      "Eligible: start ART",
+      "Not yet: confirm infection first",
+      "Follow the guidance for children 5 years and older"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "i3",
+     "type": "mcq",
+     "question": "9 months old, one positive serological test.",
+     "options": [
+      "Eligible: start ART",
+      "Not yet: confirm infection first",
+      "Follow the guidance for children 5 years and older"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "i4",
+     "type": "mcq",
+     "question": "3 years old, two positive serological tests.",
+     "options": [
+      "Eligible: start ART",
+      "Not yet: confirm infection first",
+      "Follow the guidance for children 5 years and older"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "From 18 months two positive serological tests confirm infection. (The WHO exercise gave one test; it was changed to two to match step 1.)"
+    },
+    {
+     "id": "i5",
+     "type": "mcq",
+     "question": "9 years old, CONFIRMED HIV INFECTION.",
+     "options": [
+      "Eligible: start ART",
+      "Not yet: confirm infection first",
+      "Follow the guidance for children 5 years and older"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "WHO 2014: from 5 years, CD4 below 500 or clinical stage 3 or 4. WHO now recommends ART at any age."
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-ex-j",
+   "order": 810,
+   "title": "Distance learning Module 8: Exercise J (ART doses)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "In this clinic the preferred regimens are: under 3 years, ABC 20 mg/ml liquid + 3TC 10 mg/ml liquid + LPV/r 80/20 mg/ml liquid; 3 years and older, ABC 60 mg tablet + 3TC 30 mg tablet + EFV 200 mg tablet. Use the dose tables."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "j1",
+     "type": "mcq",
+     "question": "A 12-month-old child weighing 10 kg.",
+     "options": [
+      "ABC liquid + 3TC liquid + LPV/r liquid: 6 ml + 6 ml + 2 ml, each twice a day",
+      "ABC liquid + 3TC liquid + LPV/r liquid: 4 ml + 4 ml + 1.5 ml, each twice a day",
+      "ABC 2 tablets + 3TC 2 tablets twice a day, EFV 1 tablet a day"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "Under 3 years: the LPV/r regimen. (The WHO key gives efavirenz, which this module says is for 3 years and older.)"
+    },
+    {
+     "id": "j2",
+     "type": "mcq",
+     "question": "A 4-year-old weighing 20 kg.",
+     "options": [
+      "ABC 3 tablets + 3TC 3 tablets twice a day, EFV 1.5 tablets once a day (evening)",
+      "ABC 2 tablets + 3TC 2 tablets twice a day, EFV 1 tablet once a day",
+      "ABC liquid + 3TC liquid + LPV/r liquid: 6 ml + 6 ml + 2 ml twice a day"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "j3",
+     "type": "mcq",
+     "question": "A 4-month-old weighing 5 kg.",
+     "options": [
+      "ABC liquid + 3TC liquid + LPV/r liquid: 3 ml + 3 ml + 1 ml, each twice a day",
+      "ABC liquid + 3TC liquid + LPV/r liquid: 4 ml + 4 ml + 1.5 ml, each twice a day",
+      "ABC 3 ml + 3TC 1 tablet + LPV/r 1 ml twice a day"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "j4",
+     "type": "mcq",
+     "question": "A 13-month-old weighing 12 kg.",
+     "options": [
+      "ABC liquid + 3TC liquid + LPV/r liquid: 6 ml + 6 ml + 2 ml, each twice a day",
+      "ABC 2 tablets + 3TC 2 tablets twice a day, EFV 1 tablet a day",
+      "ABC liquid + 3TC liquid + LPV/r liquid: 3 ml + 3 ml + 1 ml twice a day"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "j5",
+     "type": "mcq",
+     "question": "A 3-year-old weighing 14.5 kg.",
+     "options": [
+      "ABC 2.5 tablets + 3TC 2.5 tablets twice a day, EFV 1.5 tablets once a day",
+      "ABC 2 tablets + 3TC 2 tablets twice a day, EFV 1 tablet once a day",
+      "ABC liquid + 3TC liquid + LPV/r liquid: 6 ml + 6 ml + 2 ml twice a day"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-ex-k",
+   "order": 811,
+   "title": "Distance learning Module 8: Exercise K (where to start ART)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "Sister Bhengu works in a small rural clinic; a doctor visits once a week. All these children have confirmed HIV infection. Decide for each child."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "k1",
+     "type": "mcq",
+     "question": "Leatile, 4 years, has CHRONIC EAR INFECTION and no other problem. His CD4 count is 200 cells/mm3.",
+     "options": [
+      "Urgent referral",
+      "Non-urgent referral for ART",
+      "Start ART at the clinic"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "(The WHO case also said he has signs of severe acute malnutrition, which conflicts with the key; that detail was removed.)"
+    },
+    {
+     "id": "k2",
+     "type": "mcq",
+     "question": "Ofentse, 3 years, has been diagnosed with TB.",
+     "options": [
+      "Urgent referral",
+      "Non-urgent referral for ART",
+      "Start ART at the clinic"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "TB: refer non-urgently for ART."
+    },
+    {
+     "id": "k3",
+     "type": "mcq",
+     "question": "Luke, 2 months, was confirmed HIV-infected in hospital with severe pneumonia. He is well now and weighs 4.5 kg; his CD4 result is not back.",
+     "options": [
+      "Urgent referral",
+      "Non-urgent referral for ART",
+      "Start ART at the clinic"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "Do not wait for the CD4 result."
+    },
+    {
+     "id": "k4",
+     "type": "mcq",
+     "question": "Lentswe, 4 years, still breathes fast (50 a minute) after 5 days of antibiotic for PNEUMONIA. CD4 150.",
+     "options": [
+      "Urgent referral",
+      "Non-urgent referral for ART",
+      "Start ART at the clinic"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "His pneumonia is not improving."
+    },
+    {
+     "id": "k5",
+     "type": "mcq",
+     "question": "Owethu, 11 months, came to start ART today. She has had fever since yesterday, and is lethargic: she does not respond when spoken to or when hands are clapped.",
+     "options": [
+      "Urgent referral",
+      "Non-urgent referral for ART",
+      "Start ART at the clinic"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "Lethargy is a general danger sign."
+    },
+    {
+     "id": "k6",
+     "type": "mcq",
+     "question": "A 3-month-old, well, who weighs 2.8 kg.",
+     "options": [
+      "Urgent referral",
+      "Non-urgent referral for ART",
+      "Start ART at the clinic"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "Under 3 kg: refer non-urgently for ART."
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-ex-l",
+   "order": 812,
+   "title": "Distance learning Module 8: Exercise L (side effects)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "Which drug or drugs cause each side effect? Tick all that apply."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "l1",
+     "type": "mcq",
+     "question": "Severe abdominal pain with difficult breathing (could be pancreatitis)",
+     "options": [
+      "Stavudine (d4T)",
+      "Abacavir (ABC)",
+      "Lamivudine (3TC)",
+      "Lopinavir/ritonavir",
+      "Nevirapine (NVP)",
+      "Zidovudine (AZT)",
+      "Efavirenz (EFV)"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l2",
+     "type": "mcq",
+     "question": "Tingling or numbness in the feet or hands (neuropathy)",
+     "options": [
+      "Stavudine (d4T)",
+      "Abacavir (ABC)",
+      "Lamivudine (3TC)",
+      "Lopinavir/ritonavir",
+      "Nevirapine (NVP)",
+      "Zidovudine (AZT)",
+      "Efavirenz (EFV)"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l3",
+     "type": "mcq",
+     "question": "Yellow eyes (liver toxicity)",
+     "options": [
+      "Stavudine (d4T)",
+      "Abacavir (ABC)",
+      "Lamivudine (3TC)",
+      "Lopinavir/ritonavir",
+      "Nevirapine (NVP)",
+      "Zidovudine (AZT)",
+      "Efavirenz (EFV)"
+     ],
+     "correct": [
+      4,
+      6
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l4",
+     "type": "mcq",
+     "question": "Severe skin rash",
+     "options": [
+      "Stavudine (d4T)",
+      "Abacavir (ABC)",
+      "Lamivudine (3TC)",
+      "Lopinavir/ritonavir",
+      "Nevirapine (NVP)",
+      "Zidovudine (AZT)",
+      "Efavirenz (EFV)"
+     ],
+     "correct": [
+      4,
+      6
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l5",
+     "type": "mcq",
+     "question": "Fever, vomiting and rash together (hypersensitivity)",
+     "options": [
+      "Stavudine (d4T)",
+      "Abacavir (ABC)",
+      "Lamivudine (3TC)",
+      "Lopinavir/ritonavir",
+      "Nevirapine (NVP)",
+      "Zidovudine (AZT)",
+      "Efavirenz (EFV)"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l6",
+     "type": "mcq",
+     "question": "Changes in fat distribution",
+     "options": [
+      "Stavudine (d4T)",
+      "Abacavir (ABC)",
+      "Lamivudine (3TC)",
+      "Lopinavir/ritonavir",
+      "Nevirapine (NVP)",
+      "Zidovudine (AZT)",
+      "Efavirenz (EFV)"
+     ],
+     "correct": [
+      0,
+      3
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l7",
+     "type": "mcq",
+     "question": "Difficulty sleeping and nightmares",
+     "options": [
+      "Stavudine (d4T)",
+      "Abacavir (ABC)",
+      "Lamivudine (3TC)",
+      "Lopinavir/ritonavir",
+      "Nevirapine (NVP)",
+      "Zidovudine (AZT)",
+      "Efavirenz (EFV)"
+     ],
+     "correct": [
+      6
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l8",
+     "type": "mcq",
+     "question": "Pallor (anaemia)",
+     "options": [
+      "Stavudine (d4T)",
+      "Abacavir (ABC)",
+      "Lamivudine (3TC)",
+      "Lopinavir/ritonavir",
+      "Nevirapine (NVP)",
+      "Zidovudine (AZT)",
+      "Efavirenz (EFV)"
+     ],
+     "correct": [
+      5
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-ex-m",
+   "order": 813,
+   "title": "Distance learning Module 8: Exercise M (Akshay and Nancy)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "Read the cases and decide."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "m0",
+     "type": "open",
+     "question": "Akshay is 30 months old, HIV EXPOSED, with severe oral thrush. He weighs 10 kg and is 75 cm long; his weight has not changed for 3 months. He has SOME ANAEMIA (Hb 8 g/dl). Two serological tests are positive. CD4 250 cells/mm3 (12%). His mother has taken ART every day for a year, is supported by her own mother who knows her status, and asks for ART for Akshay. Is he eligible? What do you record?",
+     "points": [
+      "Yes: confirmed infection (two positive serological tests) and under 5",
+      "His mother is willing and has disclosed to an adult",
+      "No TB and over 3 kg",
+      "SOME ANAEMIA: the ART initiation form says to refer; treat the anaemia and thrush",
+      "When ART starts, under 3 years: ABC 6 ml + 3TC 6 ml + LPV/r 2 ml twice a day (10 to 13.9 kg), with cotrimoxazole",
+      "Follow up after one week"
+     ],
+     "explain": "The WHO key starts ART at the clinic with efavirenz and iron. Efavirenz is for 3 years and older, and the form refers SOME ANAEMIA, so this answer follows the module's own rules."
+    },
+    {
+     "id": "m1",
+     "type": "mcq",
+     "question": "Nancy is 6 months old. She was PCR positive at 6 weeks; CD4 800 cells/mm3 (30%). She is breastfeeding and well. Her mother has told no one at home, but attends the clinic support group and is committed to giving ARVs twice a day. Is Nancy eligible for ART?",
+     "options": [
+      "Yes",
+      "No: her CD4 is high",
+      "No: her mother has not disclosed at home"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "She has confirmed infection and is under 5. Being in a support group meets the caregiver step."
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-ex-n",
+   "order": 814,
+   "title": "Distance learning Module 8: Exercise N (follow-up care)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "Are these statements true or false?"
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "n1",
+     "type": "tf",
+     "question": "A child keeps the classification from the first visit, and follow-up care always follows it.",
+     "correct": false,
+     "explain": "Children are reclassified with new test results, and care follows the new classification."
+    },
+    {
+     "id": "n2",
+     "type": "tf",
+     "question": "Only children under 24 months are started on ART.",
+     "correct": false,
+     "explain": "WHO 2014: all children under 5 with confirmed infection."
+    },
+    {
+     "id": "n3",
+     "type": "tf",
+     "question": "All children of HIV-positive women should be identified and offered a PCR test at 4 to 6 weeks.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "n4",
+     "type": "tf",
+     "question": "Sami, 8 months, had a negative PCR while breastfeeding. He is re-tested once breastfeeding has stopped for 4 weeks.",
+     "correct": false,
+     "explain": "After 6 weeks."
+    },
+    {
+     "id": "n5",
+     "type": "tf",
+     "question": "Cotrimoxazole is an important part of follow-up care for HIV-exposed and infected children.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "n6",
+     "type": "tf",
+     "question": "Jyothi is classified HIV EXPOSED. You follow her up and test for HIV as soon as possible.",
+     "correct": true,
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-ex-o",
+   "order": 815,
+   "title": "Distance learning Module 8: Exercise O (follow-up on ART)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "These children are on ART. What will you do?"
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "o1",
+     "type": "mcq",
+     "question": "Mandla, 4 years, has been on stavudine, lamivudine and lopinavir/ritonavir for 3 years. His face and arms look thin and his body fatter.",
+     "options": [
+      "Check his viral load: below 400, replace stavudine with abacavir; above 400, refer non-urgently",
+      "Stop all ARVs and refer urgently",
+      "Reassure the mother; nothing needs to change"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "o2",
+     "type": "mcq",
+     "question": "Ross, 9 months, started ART 2 weeks ago. He does not want to eat and has diarrhoea, with sunken eyes but no other sign of dehydration.",
+     "options": [
+      "Explain it may be the ARVs and should improve in weeks, stress adherence, treat the diarrhoea and follow up",
+      "Stop the ARVs",
+      "Refer urgently"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "Treat the diarrhoea by the chart (continue feeding, extra fluid) and see him again if it does not improve."
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-ex-p",
+   "order": 816,
+   "title": "Distance learning Module 8: Exercise P (follow-up visits)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "Decide what to do at these follow-up visits."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "p1",
+     "type": "mcq",
+     "question": "Nancy, now 12 months, has done well on ART. Since yesterday she vomits after every meal, and her mother sees that her eyes are yellow.",
+     "options": [
+      "Stop the ARVs and refer urgently",
+      "Continue ART and follow up in a month",
+      "Give the ARVs with food"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "Yellow eyes are an ART severe sign."
+    },
+    {
+     "id": "p2",
+     "type": "open",
+     "question": "Akshay has been on ART for 3 months. He is well, developing well, weighs 12.5 kg and never misses a dose. His mother is pregnant again. What do you record and discuss?",
+     "points": [
+      "No problems, no danger signs, no main symptoms",
+      "No malnutrition, developing well, takes all doses",
+      "Continue the same ART at the dose for his weight",
+      "Discuss the pregnancy and PMTCT, nutrition, family planning and adherence",
+      "Follow up in one month"
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-ex-staging",
+   "order": 817,
+   "title": "Distance learning Module 8: Clinical staging",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "Use the WHO paediatric clinical staging. Which stage is each child?"
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "s1",
+     "type": "mcq",
+     "question": "4 years old with many lymph nodes over 0.5 cm in the axilla, groin and neck, without other cause.",
+     "options": [
+      "Stage 1",
+      "Stage 2",
+      "Stage 3",
+      "Stage 4"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "s2",
+     "type": "mcq",
+     "question": "6 months old with severe wasting that has not responded to treatment.",
+     "options": [
+      "Stage 1",
+      "Stage 2",
+      "Stage 3",
+      "Stage 4"
+     ],
+     "correct": [
+      3
+     ],
+     "explain": ""
+    },
+    {
+     "id": "s3",
+     "type": "mcq",
+     "question": "9 months old with PERSISTENT DIARRHOEA not responding to treatment, and herpes zoster.",
+     "options": [
+      "Stage 1",
+      "Stage 2",
+      "Stage 3",
+      "Stage 4"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "Choose the highest stage that applies."
+    },
+    {
+     "id": "s4",
+     "type": "mcq",
+     "question": "3 years old with persistent lymphadenopathy and recurrent SEVERE PNEUMONIA.",
+     "options": [
+      "Stage 1",
+      "Stage 2",
+      "Stage 3",
+      "Stage 4"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "s5",
+     "type": "mcq",
+     "question": "9 years old with Kaposi's sarcoma, otherwise well.",
+     "options": [
+      "Stage 1",
+      "Stage 2",
+      "Stage 3",
+      "Stage 4"
+     ],
+     "correct": [
+      3
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-posttest",
+   "order": 818,
+   "title": "Distance learning Module 8: Review questions",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "Answer the same questions as before the module, and see what you have learned."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "r1",
+     "type": "mcq",
+     "question": "A child is under 16 months old. Which HIV test should be used, and why?",
+     "options": [
+      "Serological, because it detects antibodies to the virus",
+      "Virological (PCR), because it detects the virus itself",
+      "Serological now, then confirm with PCR after 18 months"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "r2",
+     "type": "mcq",
+     "question": "Which follow-up treatment is critical for HIV-exposed and infected infants and children?",
+     "options": [
+      "Cotrimoxazole prophylaxis",
+      "Paracetamol",
+      "Amoxicillin"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "r3",
+     "type": "mcq",
+     "question": "With no prevention, what is the overall risk that a mother passes HIV to her child in pregnancy, delivery and breastfeeding?",
+     "options": [
+      "70%",
+      "10%",
+      "35%"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "r4",
+     "type": "mcq",
+     "question": "A 2-month-old breastfeeding baby has a positive virological (PCR) test. Is the child HIV-infected?",
+     "options": [
+      "Yes, HIV-infected",
+      "No, HIV-negative",
+      "Possibly: he is HIV exposed"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "r5",
+     "type": "mcq",
+     "question": "In the WHO 2014 module, when is a child with HIV eligible for ART?",
+     "options": [
+      "Only at clinical stage 2",
+      "Any child under five with confirmed HIV infection",
+      "Only children over 5 with a CD4 count below 350"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "r6",
+     "type": "mcq",
+     "question": "The mother is HIV-positive and the child is not confirmed infected. Where policy is breastfeeding with ARVs, what feeding is recommended?",
+     "options": [
+      "Exclusive breastfeeding for as long as the child wants",
+      "Breastfeeding and formula together, for extra nutrition",
+      "Exclusive breastfeeding for 6 months, then complementary foods and breastfeeding to 12 months"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "Exclusive breastfeeding for 6 months, complementary foods from 6 months, and breastfeeding for the first 12 months. (The WHO answer, \"exclusive breastfeeding until 12 months\", was reworded: the module says exclusive breastfeeding for 6 months.)"
+    }
+   ]
+  },
+  {
+   "id": "dimci-m8-logbook",
+   "order": 819,
+   "title": "Distance learning Module 8: Logbook test",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 8 (2014)",
+   "narrative": [
+    "You may use your chart booklet, but not the module. Circle the best answer."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "l1",
+     "type": "mcq",
+     "question": "HIV:",
+     "options": [
+      "Attacks red blood cells",
+      "Attacks white blood cells (CD4)",
+      "Attacks the liver"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l2",
+     "type": "mcq",
+     "question": "What is an opportunistic infection?",
+     "options": [
+      "An infection that takes advantage of a weak immune system to cause disease",
+      "An infection that takes advantage of an open wound",
+      "A disease for which home care is the only treatment"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l3",
+     "type": "mcq",
+     "question": "Mother-to-child transmission of HIV can happen:",
+     "options": [
+      "At delivery, and after birth when kissing the child",
+      "In pregnancy, at delivery, and after birth when hugging or holding the child",
+      "In pregnancy, at delivery, and after birth through breastfeeding"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l4",
+     "type": "mcq",
+     "question": "With nothing done to prevent it, the chance of mother-to-child transmission is:",
+     "options": [
+      "About 50%",
+      "About 35%",
+      "About 80%"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l5",
+     "type": "mcq",
+     "question": "20 HIV-positive women with no interventions deliver 20 babies.",
+     "options": [
+      "About 7 babies will be infected if the mothers breastfeed",
+      "About half will be infected if the mothers do not breastfeed at all",
+      "About two-thirds will be infected if the mothers stop breastfeeding at 6 months"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l6",
+     "type": "mcq",
+     "question": "In advising about HIV care, you tell the caregiver and/or child:",
+     "options": [
+      "ART can be taken at any time of day",
+      "ART must be taken every day for life, at the same times",
+      "Double the dose after a forgotten day"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l7",
+     "type": "mcq",
+     "question": "In an infant of an HIV-infected mother, an antibody test can confirm infection when done at or after:",
+     "options": [
+      "6 months",
+      "9 months",
+      "18 months"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l8",
+     "type": "mcq",
+     "question": "Sari, 2 months, breastfeeding, has a positive rapid antibody test. What do you do?",
+     "options": [
+      "Start ART today and give feeding recommendations",
+      "Start cotrimoxazole, do a PCR test (and again at least 6 weeks after breastfeeding stops), and counsel on feeding",
+      "Do a PCR test today and plan a visit to give nevirapine"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l9",
+     "type": "mcq",
+     "question": "Biki, 12 months, has a positive antibody test and is classified HIV EXPOSED. It is important that:",
+     "options": [
+      "Cotrimoxazole is given until HIV is definitely ruled out",
+      "He is staged with the WHO paediatric staging",
+      "He gets nevirapine once a day"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l10",
+     "type": "mcq",
+     "question": "Which of these is an ART severe sign?",
+     "options": [
+      "Fever",
+      "Diarrhoea",
+      "Severe skin rash"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l11",
+     "type": "mcq",
+     "question": "Which of these medicines can cause a severe, possibly fatal skin reaction? Tick all that apply.",
+     "options": [
+      "Cotrimoxazole",
+      "Abacavir (ABC)",
+      "Nevirapine (NVP)",
+      "Zinc"
+     ],
+     "correct": [
+      0,
+      1,
+      2
+     ],
+     "explain": "Cotrimoxazole (Stevens-Johnson syndrome), abacavir (hypersensitivity) and nevirapine. (The WHO key gives only ABC.)"
+    },
+    {
+     "id": "l12",
+     "type": "mcq",
+     "question": "Maria, 4 weeks old, born at home to an HIV-positive woman with no interventions, is HIV EXPOSED and weighs 3.2 kg. Today you:",
+     "options": [
+      "Give nevirapine 1.5 ml once daily only",
+      "Give nevirapine 1.5 ml once daily and cotrimoxazole 2.5 ml once daily",
+      "Give nevirapine 1.0 ml once daily and cotrimoxazole 2.5 ml once daily"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "An exposed infant starts cotrimoxazole from 4 to 6 weeks. (The WHO key gives nevirapine only.)"
+    },
+    {
+     "id": "l13",
+     "type": "mcq",
+     "question": "Maria is later confirmed HIV-positive by PCR. You start:",
+     "options": [
+      "First line: ABC or AZT + 3TC + LPV/r",
+      "Second line, because she is so young",
+      "Nothing: she is not yet eligible"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l14",
+     "type": "mcq",
+     "question": "When Maria turns 3 years old, you:",
+     "options": [
+      "Change her regimen at once",
+      "Keep the same first-line medicines while she is stable",
+      "Start a second-line regimen"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l15",
+     "type": "open",
+     "question": "What are the 5 As, in order?",
+     "points": [
+      "Assess",
+      "Advise",
+      "Agree",
+      "Assist",
+      "Arrange"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l16",
+     "type": "tf",
+     "question": "Cotrimoxazole prophylaxis has reduced deaths of HIV-infected children.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l17",
+     "type": "tf",
+     "question": "All children under five with CONFIRMED HIV INFECTION should start ART, following the five steps.",
+     "correct": true,
+     "explain": "(The logbook says \"all children\" and \"6 steps\"; the module has five steps, for children under 5.)"
+    },
+    {
+     "id": "l18",
+     "type": "tf",
+     "question": "At a follow-up visit on ART, you only re-assess the child if he looks unwell or the mother reports a problem.",
+     "correct": false,
+     "explain": ""
+    },
+    {
+     "id": "l19",
+     "type": "tf",
+     "question": "Tina, 4 weeks old, born to an HIV-positive mother, not yet tested: you start cotrimoxazole today.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l20",
+     "type": "tf",
+     "question": "ART cures HIV after 2 years.",
+     "correct": false,
+     "explain": ""
+    },
+    {
+     "id": "l21",
+     "type": "tf",
+     "question": "WHO recommends that HIV-positive mothers breastfeed exclusively for 6 months, then begin complementary feeding.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l22",
+     "type": "tf",
+     "question": "The CD4 count measures how much damage HIV has done to the immune system.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l23",
+     "type": "tf",
+     "question": "If an HIV-positive caregiver does not understand HIV and its treatment, adherence may be a problem.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l24",
+     "type": "tf",
+     "question": "Antiretroviral therapy is lifelong.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l25",
+     "type": "tf",
+     "question": "ART is given as a combination to fight HIV strongly and reduce the risk of resistance.",
      "correct": true,
      "explain": ""
     }
