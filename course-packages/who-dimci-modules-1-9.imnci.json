@@ -2433,7 +2433,7 @@
         },
         {
          "title": "DETERMINE weight for age",
-         "text": "Use the weight-for-age chart in the chart booklet: find where the lines for weight and age meet. Use the LOW weight-for-age line (not the very low line used for older children). Ages are in weeks. The chart is the same for boys and girls."
+         "text": "Use the weight-for-age chart in the chart booklet, the one for boys or the one for girls (birth to 6 months): find where the lines for weight and age meet. Ages are in weeks up to 13 weeks, then in months. Below the -2 line is low weight for age."
         },
         {
          "title": "LOOK for ulcers or white patches in the mouth (thrush)",
@@ -2443,8 +2443,24 @@
       },
       {
        "type": "note",
-       "text": "A young infant is 6 weeks old and weighs 3 kg. The point where the lines for 6 weeks and 3 kg meet is BELOW the low weight-for-age line: the infant is low weight for age.",
+       "text": "A young infant is 6 weeks old and weighs 3 kg. The point where the lines for 6 weeks and 3 kg meet is BELOW the -2 line: the infant is low weight for age.",
        "label": "Worked example"
+      },
+      {
+       "type": "growthchart",
+       "title": "Plot the worked example yourself",
+       "text": "Plot this young infant on the girls' weight-for-age chart from the chart booklet. Find 6 weeks along the bottom and 3 kg up the side, and tap where they meet.",
+       "chart": "wfa",
+       "sex": "female",
+       "ageWeeks": 6,
+       "weightKg": 3.0,
+       "lowWeightForAge": true,
+       "explanation": "At 6 weeks the -2 line on the girls' chart is close to 3.5 kg, so 3 kg is below it: low weight for age."
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: the September 2023 edition has separate weight-for-age charts for boys and for girls from birth to 6 months, drawn as WHO z-score lines (-3, -2, 0, +2, +3). Low weight for age is below the -2 line. WHO module (page 46): uses one young infant chart for boys and girls, with a line marked \"low weight for age\" (and a \"very low\" line used only for older children).",
+       "label": "Sudan national protocol"
       },
       {
        "type": "exercise",
@@ -2624,7 +2640,7 @@
         },
         {
          "front": "NO FEEDING PROBLEM (green)",
-         "back": "Exclusively and frequently breastfed, and not below the low weight-for-age line. Advise home care and praise the mother. She may still need counselling to make sure the infant gains weight well."
+         "back": "Exclusively and frequently breastfed, and not low weight for age (not below the -2 line). Advise home care and praise the mother. She may still need counselling to make sure the infant gains weight well."
         }
        ]
       },
@@ -2657,7 +2673,7 @@
           "No"
          ],
          "answer": 0,
-         "explanation": "Her weight falls below the low weight-for-age line for young infants."
+         "explanation": "On the girls' weight-for-age chart her weight falls below the -2 line: low weight for age."
         }
        ]
       },
@@ -8781,8 +8797,33 @@
        "label": "Remember"
       },
       {
+       "type": "growthchart",
+       "title": "Plot Ben on the chart",
+       "text": "Ben is a boy of 20 months, so he is measured lying down: his length is 82 cm and he weighs 10.5 kg. Use the boys' weight-for-length chart from the chart booklet.",
+       "sex": "male",
+       "ageMonths": 20,
+       "lengthCm": 82,
+       "weightKg": 10.5,
+       "explanation": "At 82 cm the -2 line is 9.2 kg. Ben's 10.5 kg is above it: -2 z-score or more, so he is not wasted."
+      },
+      {
+       "type": "growthchart",
+       "title": "Plot Amira on the chart",
+       "text": "Amira is a girl of 3 years. She stands to be measured: her height is 89 cm and she weighs 10 kg. Use the girls' weight-for-height chart.",
+       "sex": "female",
+       "ageMonths": 36,
+       "lengthCm": 89,
+       "weightKg": 10.0,
+       "explanation": "At 89 cm the -2 line is 10.4 kg and the -3 line is 9.6 kg. Amira's 10 kg is between them: WFH between -3 and -2 z-scores (moderate acute malnutrition, if she has no other sign of SAM)."
+      },
+      {
+       "type": "growthchart",
+       "title": "Try your own numbers",
+       "text": "Type the sex, age, weight and length or height of a child you have measured, and see the point on the booklet chart. The app picks the length chart under 2 years and the height chart from 2 years."
+      },
+      {
        "type": "note",
-       "text": "The app's recording form works out the z-score from the weight, length or height, age and sex you enter."
+       "text": "The app's recording form works out the z-score from the weight, length or height, age and sex you enter, and plots the child on the same booklet chart."
       },
       {
        "type": "exercise",

@@ -1637,7 +1637,7 @@
         },
         {
          "title": "DETERMINE weight for age",
-         "text": "Use the weight-for-age chart in the chart booklet: find where the lines for weight and age meet. Use the LOW weight-for-age line (not the very low line used for older children). Ages are in weeks. The chart is the same for boys and girls."
+         "text": "Use the weight-for-age chart in the chart booklet, the one for boys or the one for girls (birth to 6 months): find where the lines for weight and age meet. Ages are in weeks up to 13 weeks, then in months. Below the -2 line is low weight for age."
         },
         {
          "title": "LOOK for ulcers or white patches in the mouth (thrush)",
@@ -1647,8 +1647,24 @@
       },
       {
        "type": "note",
-       "text": "A young infant is 6 weeks old and weighs 3 kg. The point where the lines for 6 weeks and 3 kg meet is BELOW the low weight-for-age line: the infant is low weight for age.",
+       "text": "A young infant is 6 weeks old and weighs 3 kg. The point where the lines for 6 weeks and 3 kg meet is BELOW the -2 line: the infant is low weight for age.",
        "label": "Worked example"
+      },
+      {
+       "type": "growthchart",
+       "title": "Plot the worked example yourself",
+       "text": "Plot this young infant on the girls' weight-for-age chart from the chart booklet. Find 6 weeks along the bottom and 3 kg up the side, and tap where they meet.",
+       "chart": "wfa",
+       "sex": "female",
+       "ageWeeks": 6,
+       "weightKg": 3.0,
+       "lowWeightForAge": true,
+       "explanation": "At 6 weeks the -2 line on the girls' chart is close to 3.5 kg, so 3 kg is below it: low weight for age."
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: the September 2023 edition has separate weight-for-age charts for boys and for girls from birth to 6 months, drawn as WHO z-score lines (-3, -2, 0, +2, +3). Low weight for age is below the -2 line. WHO module (page 46): uses one young infant chart for boys and girls, with a line marked \"low weight for age\" (and a \"very low\" line used only for older children).",
+       "label": "Sudan national protocol"
       },
       {
        "type": "exercise",
@@ -1828,7 +1844,7 @@
         },
         {
          "front": "NO FEEDING PROBLEM (green)",
-         "back": "Exclusively and frequently breastfed, and not below the low weight-for-age line. Advise home care and praise the mother. She may still need counselling to make sure the infant gains weight well."
+         "back": "Exclusively and frequently breastfed, and not low weight for age (not below the -2 line). Advise home care and praise the mother. She may still need counselling to make sure the infant gains weight well."
         }
        ]
       },
@@ -1861,7 +1877,7 @@
           "No"
          ],
          "answer": 0,
-         "explanation": "Her weight falls below the low weight-for-age line for young infants."
+         "explanation": "On the girls' weight-for-age chart her weight falls below the -2 line: low weight for age."
         }
        ]
       },

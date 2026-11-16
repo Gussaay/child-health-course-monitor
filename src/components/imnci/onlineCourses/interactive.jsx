@@ -28,13 +28,13 @@ export function useActivity(key) {
     return [ctx.isDone(key), () => ctx.markDone(key)];
 }
 
-const Html = ({ html, className = '' }) => (
+export const Html = ({ html, className = '' }) => (
     /<[a-z][\s\S]*>/i.test(String(html || ''))
         ? <RichText html={html} className={`[&_ul]:list-disc [&_ol]:list-decimal [&_ul]:ps-5 [&_ol]:ps-5 [&_li]:my-0.5 ${className}`} />
         : <span className={`whitespace-pre-line ${className}`}>{html}</span>
 );
 
-function Frame({ icon: Icon, label, tone = 'sky', done, children, title }) {
+export function Frame({ icon: Icon, label, tone = 'sky', done, children, title }) {
     const { t } = useTranslation();
     const tones = {
         sky: 'bg-sky-700', violet: 'bg-violet-700', emerald: 'bg-emerald-700', amber: 'bg-amber-600', indigo: 'bg-indigo-700',

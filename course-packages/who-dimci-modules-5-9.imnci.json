@@ -2155,8 +2155,33 @@
        "label": "Remember"
       },
       {
+       "type": "growthchart",
+       "title": "Plot Ben on the chart",
+       "text": "Ben is a boy of 20 months, so he is measured lying down: his length is 82 cm and he weighs 10.5 kg. Use the boys' weight-for-length chart from the chart booklet.",
+       "sex": "male",
+       "ageMonths": 20,
+       "lengthCm": 82,
+       "weightKg": 10.5,
+       "explanation": "At 82 cm the -2 line is 9.2 kg. Ben's 10.5 kg is above it: -2 z-score or more, so he is not wasted."
+      },
+      {
+       "type": "growthchart",
+       "title": "Plot Amira on the chart",
+       "text": "Amira is a girl of 3 years. She stands to be measured: her height is 89 cm and she weighs 10 kg. Use the girls' weight-for-height chart.",
+       "sex": "female",
+       "ageMonths": 36,
+       "lengthCm": 89,
+       "weightKg": 10.0,
+       "explanation": "At 89 cm the -2 line is 10.4 kg and the -3 line is 9.6 kg. Amira's 10 kg is between them: WFH between -3 and -2 z-scores (moderate acute malnutrition, if she has no other sign of SAM)."
+      },
+      {
+       "type": "growthchart",
+       "title": "Try your own numbers",
+       "text": "Type the sex, age, weight and length or height of a child you have measured, and see the point on the booklet chart. The app picks the length chart under 2 years and the height chart from 2 years."
+      },
+      {
        "type": "note",
-       "text": "The app's recording form works out the z-score from the weight, length or height, age and sex you enter."
+       "text": "The app's recording form works out the z-score from the weight, length or height, age and sex you enter, and plots the child on the same booklet chart."
       },
       {
        "type": "exercise",

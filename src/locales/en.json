@@ -7793,7 +7793,17 @@
         "video_placeholder": "https://www.youtube.com/watch?v=… or a link to an MP4",
         "which_case": "Which case",
         "why_after": "Why (shown after answering)",
-        "why_here": "Why it is here (optional)"
+        "why_here": "Why it is here (optional)",
+        "growth_case": "The case (optional). Leave the weight empty for free practice, where learners type their own numbers.",
+        "growth_chart": "Chart",
+        "growth_by_age": "By age (length under 2 years, height from 2)",
+        "growth_wfl": "Weight-for-length (0 to 2 years)",
+        "growth_wfh": "Weight-for-height (2 to 5 years)",
+        "growth_wfa": "Weight-for-age (0 to 6 months)",
+        "growth_low": "Is the weight low for age?",
+        "growth_low_yes": "Yes, below the -2 line",
+        "growth_low_no": "No",
+        "add_growthchart": "Plot on the chart"
       },
       "exlink": {
         "gone": "This section points at an exercise ({{id}}) that is no longer in Online Exercises.",
@@ -7967,6 +7977,9 @@
         "finish_to_open": "Finish this section to open the next",
         "course_complete": "Course complete",
         "back_to_course": "Back to the course"
+      },
+      "activity": {
+        "kind_growthchart": "Plot on the chart"
       }
     },
     "exercises": {
@@ -8760,6 +8773,43 @@
       "y_weight": "Weight (kg)",
       "aria": "Weight {{w}} kg at length {{l}} cm plotted on the WHO z-score lines",
       "out_of_range": "The length is outside the chart ({{lo}} to {{hi}} cm), so the point cannot be plotted."
+    },
+    "growth_chart": {
+      "source": "WHO chart from the Sudan IMNCI chart booklet",
+      "zoom_in": "Enlarge",
+      "zoom_out": "Fit to screen",
+      "aria": "Point plotted at {{x}} and {{kg}} kg",
+      "aria_empty": "Growth chart",
+      "tab_booklet": "Chart booklet",
+      "tab_closeup": "Close-up",
+      "off_chart": "This weight and length fall outside the printed chart, so the point cannot be plotted on it.",
+      "activity": "Plot on the chart",
+      "free_title": "Try your own numbers",
+      "step1": "Step 1. Tap the chart where this child's point goes.",
+      "step2": "Step 2. Which band is the point in?",
+      "your_mark": "Your mark: {{x}} {{unit}}, {{kg}} kg",
+      "no_mark": "No mark yet.",
+      "check": "Check my point",
+      "well_placed": "Well placed. The solid dot is the exact place; your mark is the ring.",
+      "not_placed": "Not quite. The solid dot shows where {{x}} {{unit}} and {{kg}} kg meet; your mark is the ring. Follow the dashed lines from each axis.",
+      "again": "Plot it again",
+      "low_wfa": "Low weight for age (below the -2 line)",
+      "not_low_wfa": "Not low weight for age",
+      "sex": "Sex",
+      "boy": "Boy",
+      "girl": "Girl",
+      "age": "Age",
+      "weight": "Weight",
+      "length": "Length",
+      "height": "Height",
+      "age_days": "{{n}} days",
+      "age_weeks": "{{n}} weeks",
+      "age_months": "{{n}} months",
+      "weeks_short": "weeks",
+      "age_in_weeks": "Age (weeks)",
+      "age_in_months": "Age (months)",
+      "weight_kg": "Weight (kg)",
+      "length_cm": "Length or height (cm)"
     }
   },
   "form_pdf": {

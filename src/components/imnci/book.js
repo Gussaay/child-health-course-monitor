@@ -377,7 +377,7 @@ export function sectionContent(section) {
 
 // Blocks the learner does something with. Each one counts as an activity in
 // the section's progress bar once it has been done.
-export const ACTIVITY_TYPES = ['question', 'reveal', 'flip', 'sort', 'steps', 'story', 'exercise', 'video'];
+export const ACTIVITY_TYPES = ['question', 'reveal', 'flip', 'sort', 'steps', 'story', 'growthchart', 'exercise', 'video'];
 export const isActivity = (b) => ACTIVITY_TYPES.includes(b?.type);
 
 export function countWords(section) {
@@ -390,7 +390,7 @@ export function countWords(section) {
     return all.reduce((n, b) => {
         if (b.type === 'list') return n + b.items.join(' ').split(/\s+/).filter(Boolean).length;
         if (b.type === 'image' || b.type === 'page' || b.type === 'video') return n;
-        if (['reveal', 'flip', 'sort', 'steps', 'story'].includes(b.type)) {
+        if (['reveal', 'flip', 'sort', 'steps', 'story', 'growthchart'].includes(b.type)) {
             const text = JSON.stringify(b).replace(/"[a-zA-Z]+":/g, ' ').replace(/<[^>]*>/g, ' ').replace(/[{}[\],"]/g, ' ');
             return n + text.split(/\s+/).filter(Boolean).length;
         }
@@ -411,6 +411,8 @@ export const BLOCK_TYPES = [
     // cards, a sort-into-groups task, a step-by-step walk through a
     // procedure, and a case told in stages with a decision at each.
     'reveal', 'flip', 'sort', 'steps', 'story',
+    // A child plotted on the official WHO chart from the chart booklet.
+    'growthchart',
 ];
 
 // ---------------------------------------------------------------------------
@@ -424,7 +426,7 @@ export const BLOCK_TYPES = [
 // every card was moved below the text on the first save.
 // ---------------------------------------------------------------------------
 
-export const CARD_TYPES = ['video', 'question', 'exercise', 'page', 'booklet', 'form', 'reveal', 'flip', 'sort', 'steps', 'story'];
+export const CARD_TYPES = ['video', 'question', 'exercise', 'page', 'booklet', 'form', 'reveal', 'flip', 'sort', 'steps', 'story', 'growthchart'];
 export const isCard = (b) => CARD_TYPES.includes(b?.type) || (b?.type === 'note' && !!b.label);
 export const cardMarker = (key) => `[[card ${key}]]`;
 const MARKER_PARA = /<p[^>]*>\s*\[\[card ([a-z0-9]+)\]\]\s*(?:<br\s*\/?>)?\s*<\/p>/gi;
