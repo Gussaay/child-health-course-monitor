@@ -46,7 +46,7 @@ Nothing is written until the file has been checked and you confirm. If an exerci
 
 Sections show in the order of their `order`. Blocks show in the order they are listed.
 
-**A section is one page.** The app shows `read`, then `see`, then `practise` on the same page, with no tabs, so a learner reads, watches and practises without switching. New files put everything in `read` and leave `see` and `practise` empty; older files with three lists still work. Saving a section in the editor moves all its blocks into `read`.
+**A section is one short lesson on one page.** Keep it to one topic and about 20 blocks or fewer: cut a long section at its headings into several lessons rather than making one long page. Do not number lesson titles; the app numbers them in order. Open each lesson with a `note` labelled `In this lesson` that says what the learner will be able to do. The app shows `read`, then `see`, then `practise` on the same page, with no tabs, so a learner reads, watches and practises without switching. New files put everything in `read` and leave `see` and `practise` empty; older files with three lists still work. Saving a section in the editor moves all its blocks into `read`.
 
 ## Blocks
 
@@ -86,14 +86,18 @@ A case for the young infant form sets `formType: "infant"` and lists its classif
 
 In a section, an exercise card lets the learner work the exercise on the page: it is marked but not recorded. Authors also see **Edit in the case builder**, which opens the same exercise in Manage Exercises.
 
-The `reveal`, `flip`, `sort`, `steps`, `story`, `question` and `video` blocks are activities: the section counts how many the learner has done. Nothing in them is scored or saved on the server.
+The `reveal`, `flip`, `sort`, `steps`, `story`, `question` and `video` blocks are activities: the lesson lists them in a checklist at the top and ticks each one as it is done. Which ones are done is saved to the learner's account. In a course read in order, a lesson can be completed, and the next one opened, only when every activity in it is done, so give every lesson at least one. Their answers are not scored.
 
 ## Files here
 
 WHO IMCI distance learning course (2014), in the Sudan national wording. Where the Sudan national booklet differs from WHO, the text uses the Sudan wording and a "Sudan national protocol" note says what WHO wrote.
 
-- `who-dimci-module1.imnci.json`: Module 1, General danger signs for the sick child (5 sections, 8 exercises).
-- `who-dimci-module2.imnci.json`: Module 2, The sick young infant (14 sections, 16 exercises, including the Henri, Sashi and Mimi cases on the young infant form).
+- `who-dimci-module1.imnci.json`: Module 1, General danger signs for the sick child (8 lessons, 8 exercises).
+- `who-dimci-module2.imnci.json`: Module 2, The sick young infant (25 lessons, 16 exercises, including the Henri, Sashi and Mimi cases on the young infant form).
 - `who-dimci-modules-1-2.imnci.json`: both modules in one file.
+- `who-dimci-module3.imnci.json`: Module 3, Cough or difficult breathing (14 lessons, 10 exercises, including the Gyatsu case).
+- `who-dimci-module4.imnci.json`: Module 4, Diarrhoea (17 lessons, 14 exercises, including the Maya, Rana, Pano and Jane cases).
+- `who-dimci-modules-3-4.imnci.json`: Modules 3 and 4 in one file, to import into the existing course.
+- `who-dimci-modules-1-4.imnci.json`: all four modules in one file. This is the file the upload script writes.
 
 The narration scripts for the video slots are kept outside the course, in a separate Word file.

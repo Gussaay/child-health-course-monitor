@@ -72,7 +72,7 @@ describe('WHO distance learning Module 1', () => {
         const check = checkPackage(PKG, []);
         expect(check.errors).toEqual([]);
         expect(check.warnings).toEqual([]);
-        expect(check.summary).toMatchObject({ modules: 1, sections: 5, exercises: 8 });
+        expect(check.summary).toMatchObject({ modules: 1, sections: 8, exercises: 8 });
         DIMCI_M1_EXERCISES.forEach((e) => expect(e.draft).toBe(true));
     });
 
@@ -125,13 +125,16 @@ describe('WHO distance learning Module 1', () => {
         expect(all.some((b) => b.type === 'form')).toBe(true);
     });
 
-    it('imports as one unpublished course, one module and five sections in order', () => {
+    it('imports as one unpublished course, one module and eight short lessons in order', () => {
         const plan = packagePlan(PKG);
         const mod = plan.items.find((i) => i.kind === 'module');
         const secs = plan.items.filter((i) => i.kind === 'section');
         expect(plan.course.isPublished).toBe(false);
         expect(plan.existingCourseId).toBe(null);
-        expect(secs.map((s) => s.title.slice(0, 3))).toEqual(['1.1', '1.2', '1.3', '1.4', '1.5']);
+        expect(secs.map((s) => s.title)).toEqual([
+            'Module overview', 'Greeting the caregiver', 'Checking for general danger signs',
+            'See the signs and practise with two cases', 'Urgent referral and pre-referral treatment',
+            'How to refer a child urgently', 'Using this module in your clinic', 'Review questions and Module 1 test']);
         secs.forEach((s, i) => { expect(s.legacyModuleKey).toBe(mod.legacyKey); expect(s.order).toBe(i + 1); });
     });
 
@@ -172,7 +175,7 @@ describe('WHO distance learning Module 2', () => {
         const check = checkPackage(PKG2, []);
         expect(check.errors).toEqual([]);
         expect(check.warnings).toEqual([]);
-        expect(check.summary).toMatchObject({ modules: 1, sections: 14 });
+        expect(check.summary).toMatchObject({ modules: 1, sections: 25 });
         PKG2.exercises.forEach((e) => expect(e.draft).toBe(true));
         expect(PKG2.exercises.find((e) => e.id === 'dimci-m2-logbook').questions).toHaveLength(20);
     });
@@ -235,6 +238,110 @@ describe('Modules 1 and 2 together', () => {
     });
 });
 
+describe('WHO distance learning Modules 3 and 4', () => {
+    const read = (name) => JSON.parse(fs.readFileSync(path.join(__dirname, '../course-packages', name), 'utf8'));
+    const PKG3 = read('who-dimci-module3.imnci.json');
+    const PKG4 = read('who-dimci-module4.imnci.json');
+    const PKG34 = read('who-dimci-modules-3-4.imnci.json');
+    const each = [PKG3, PKG4];
+    const lessonsOf = (pkg) => pkg.modules.flatMap((m) => m.sections);
+
+    it('are valid course files with every exercise as a draft', () => {
+        each.forEach((pkg) => {
+            const check = checkPackage(pkg, []);
+            expect(check.errors).toEqual([]);
+            expect(check.warnings).toEqual([]);
+            pkg.exercises.forEach((e) => expect(e.draft).toBe(true));
+        });
+        expect(checkPackage(PKG3, []).summary).toMatchObject({ modules: 1, sections: 14, exercises: 10 });
+        expect(checkPackage(PKG4, []).summary).toMatchObject({ modules: 1, sections: 17, exercises: 14 });
+        const both = checkPackage(PKG34, []);
+        expect(both.errors).toEqual([]);
+        expect(both.summary).toMatchObject({ modules: 2, sections: 31, exercises: 24 });
+        expect(PKG34.modules.map((m) => m.order)).toEqual([3, 4]);
+        const all = checkPackage(read('who-dimci-modules-1-4.imnci.json'), []);
+        expect(all.errors).toEqual([]);
+        expect(all.summary).toMatchObject({ modules: 4, sections: 64, exercises: 48 });
+    });
+
+    it('have quiz answers that point at real options, and 20 logbook questions each', () => {
+        each.flatMap((p) => p.exercises).filter((e) => e.kind === 'quiz').forEach((e) => {
+            expect(e.questions.length, e.id).toBeGreaterThan(0);
+            expect(new Set(e.questions.map((q) => q.id)).size).toBe(e.questions.length);
+            e.questions.forEach((q) => {
+                if (q.type === 'mcq') q.correct.forEach((i) => expect(q.options[i], `${e.id} ${q.id}`).toBeTruthy());
+                if (q.type === 'tf') expect(typeof q.correct).toBe('boolean');
+                if (q.type === 'open') expect(q.points.length).toBeGreaterThan(0);
+            });
+        });
+        ['dimci-m3-logbook', 'dimci-m4-logbook'].forEach((id) =>
+            expect(each.flatMap((p) => p.exercises).find((e) => e.id === id).questions).toHaveLength(20));
+    });
+
+    it('mark each case right when the form is filled as in the answer key', () => {
+        const cases = each.flatMap((p) => p.exercises).filter((e) => e.kind !== 'quiz');
+        expect(cases.map((e) => e.id)).toEqual(['dimci-m3-gyatsu', 'dimci-m4-maya', 'dimci-m4-rana', 'dimci-m4-pano', 'dimci-m4-jane']);
+        cases.forEach((ex) => {
+            const want = ex.expected;
+            Object.entries(want.classifications).forEach(([sec, ids]) => {
+                const offered = CLASSIFY_OPTIONS[sec].map((o) => o.id);
+                ids.forEach((id) => expect(offered, ex.id).toContain(id));
+            });
+            const r = gradeCase(want, {
+                patientData: { ...want.patientData, date: '2026-11-16', problems: 'x' },
+                assessments: want.assessments,
+                chosenClassifications: want.classifications,
+            }, (k) => k, { requiredFields: REQUIRED_PATIENT_FIELDS.child });
+            expect(r.percent, ex.id).toBe(100);
+        });
+    });
+
+    it('link only to exercises in the file, and name chart tables and form rows the protocol has', () => {
+        const rows = NATIONAL_FORMS.form_child.sections.map((s) => s.id);
+        each.forEach((pkg) => {
+            const ids = new Set(pkg.exercises.map((e) => e.id));
+            const all = lessonsOf(pkg).flatMap(blocks);
+            all.filter((b) => b.type === 'exercise').forEach((b) => expect(ids.has(b.exerciseId)).toBe(true));
+            pkg.exercises.forEach((e) => expect(all.some((b) => b.exerciseId === e.id), e.id).toBe(true));
+            all.filter((b) => b.type === 'booklet')
+                .forEach((b) => b.categories.forEach((c) => expect(NATIONAL_PROTOCOLS[b.part].categories[c], c).toBeTruthy()));
+            all.filter((b) => b.type === 'form').forEach((b) => b.sections.forEach((s) => expect(rows).toContain(s)));
+            expect(all.filter((b) => b.type === 'note' && b.label === 'Sudan national protocol').length).toBeGreaterThanOrEqual(3);
+        });
+    });
+
+    it('are short lessons that open with their goal, each with something to do, all on one page', async () => {
+        const { activityKeys } = await import('../src/components/imnci/onlineCourses/activityKeys');
+        each.flatMap(lessonsOf).forEach((s) => {
+            expect(s.read[0]).toMatchObject({ type: 'note', label: 'In this lesson' });
+            expect(s.title).not.toMatch(/^\d/);
+            expect(s.read.length, s.title).toBeLessThanOrEqual(20);
+            expect(activityKeys(s.read).length, s.title).toBeGreaterThan(0);
+            expect(s.see).toEqual([]);
+            expect(s.practise).toEqual([]);
+        });
+        expect(JSON.stringify(each)).not.toMatch(/[Ss]ections? \d\.\d/);
+    });
+
+    it('have answers that point at real options in every question, sorting and story activity', () => {
+        each.flatMap(lessonsOf).flatMap((s) => s.read).forEach((b) => {
+            if (b.type === 'question') expect(b.options[b.answer]).toBeTruthy();
+            if (b.type === 'sort') b.items.forEach((i) => expect(b.groups[i.group]).toBeTruthy());
+            if (b.type === 'story') b.stages.filter((st) => st.question).forEach((st) => expect(st.options[st.answer]).toBeTruthy());
+        });
+    });
+
+    it('render every lesson', async () => {
+        const React = (await import('react')).default;
+        const { renderToStaticMarkup } = await import('react-dom/server');
+        const { ContentBlocks } = await import('../src/components/imnci/onlineCourses/blocks');
+        each.flatMap(lessonsOf).forEach((s) => {
+            const html = renderToStaticMarkup(React.createElement(ContentBlocks, { blocks: s.read }));
+            expect(html.length, s.title).toBeGreaterThan(200);
+        });
+    });
+});
+
 describe('Module 1 sections render', () => {
     it('draws the chart booklet and recording form blocks from the protocol', async () => {
         const React = (await import('react')).default;
@@ -244,11 +351,11 @@ describe('Module 1 sections render', () => {
             const html = renderToStaticMarkup(React.createElement(ContentBlocks, { blocks: s[tab] }));
             expect(html.length).toBeGreaterThan(100);
         }));
-        const s13 = sections.find((s) => s.title.startsWith('1.3'));
+        const s13 = sections.find((s) => s.title.startsWith('Urgent referral'));
         const html = renderToStaticMarkup(React.createElement(ContentBlocks, { blocks: s13.read }));
         expect(html).toContain('Sudan national protocol');
         expect(html.toLowerCase()).toContain('dysentery');
-        const s11 = sections.find((s) => s.title.startsWith('1.1'));
+        const s11 = sections.find((s) => s.title.startsWith('Module overview'));
         expect(renderToStaticMarkup(React.createElement(ContentBlocks, { blocks: s11.read }))).toContain('Vomits everything');
     });
 });
@@ -303,5 +410,31 @@ describe('course files', () => {
 
     it('names the file after the module', () => {
         expect(packageFileName('Module 1: General danger signs')).toBe('module-1-general-danger-signs.imnci.json');
+    });
+});
+
+describe('short lessons', () => {
+    const lessonsOf = (pkg) => pkg.modules.flatMap((m) => m.sections);
+    it('opens every lesson with what the learner will be able to do', () => {
+        [...lessonsOf(PKG), ...lessonsOf(PKG2)].forEach((s) => {
+            expect(s.read[0]).toMatchObject({ type: 'note', label: 'In this lesson' });
+            expect(s.title).not.toMatch(/^\d/);
+        });
+    });
+
+    it('keeps a lesson short and gives each one something to do', async () => {
+        const { activityKeys } = await import('../src/components/imnci/onlineCourses/activityKeys');
+        [...lessonsOf(PKG), ...lessonsOf(PKG2)].forEach((s) => {
+            expect(s.read.length, s.title).toBeLessThanOrEqual(20);
+            expect(activityKeys(s.read).length, s.title).toBeGreaterThan(0);
+        });
+    });
+
+    it('has check-yourself answers that point at real options, and no stale section numbers', () => {
+        const all = [...lessonsOf(PKG), ...lessonsOf(PKG2)];
+        const questions = all.flatMap((s) => s.read.filter((b) => b.type === 'question'));
+        expect(questions.length).toBe(10);
+        questions.forEach((q) => { expect(q.options[q.answer]).toBeTruthy(); expect(q.explanation).toBeTruthy(); });
+        expect(JSON.stringify([PKG, PKG2])).not.toMatch(/[Ss]ections? \d\.\d/);
     });
 });

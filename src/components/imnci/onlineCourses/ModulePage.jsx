@@ -6,7 +6,8 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, ArrowLeft, CheckCircle2, Wand2, Lock, Clock, RefreshCw, FileDown } from 'lucide-react';
 import { Button } from '../../CommonComponents';
-import { sectionContent, isActivity } from '../book';
+import { sectionContent } from '../book';
+import { activityKeys } from './activityKeys';
 import { ConvertBookModal } from './ConvertBookModal';
 import { ItemModal } from './ItemModals';
 import { OfflineSave } from './OfflineSave';
@@ -110,7 +111,11 @@ export function ModulePage() {
                             const done = !!progress.completed?.[s.id];
                             const locked = sectionLocked(secs, i);
                             const all = sectionContent(s);
-                            const activities = all.filter((b) => isActivity(b) && !(b.type === 'video' && !b.url)).length;
+                            const actKeys = activityKeys(all);
+                            const activities = actKeys.length;
+                            const saved = progress.activities?.[s.id] || [];
+                            const activitiesDone = done ? activities : actKeys.filter((k) => saved.includes(k)).length;
+                            const started = !done && activitiesDone > 0;
                             return (
                                 <li key={s.id} className={`flex items-center gap-3 px-4 sm:px-6 py-3.5 transition-colors ${
                                     locked ? 'bg-slate-50' : 'hover:bg-sky-50/60'}`}>
@@ -134,7 +139,13 @@ export function ModulePage() {
                                         <div className={`font-semibold truncate ${locked ? 'text-slate-400' : 'text-slate-800'}`}>{s.title}</div>
                                         <div className="text-xs text-slate-500 flex gap-2 flex-wrap mt-0.5">
                                             {locked ? <span>{t('imnci_ui.courses.main.finish_previous', 'Finish the previous section first')}</span> : (<>
-                                                {activities > 0 && <span>{t('imnci_ui.courses.activity.n_activities', '{{n}} activities', { n: activities })}</span>}
+                                                {activities > 0 && (
+                                                    <span className={started ? 'font-semibold text-sky-700' : undefined}>
+                                                        {started || done
+                                                            ? t('imnci_ui.courses.activity.n_of_done', '{{n}} of {{total}} activities done', { n: activitiesDone, total: activities })
+                                                            : t('imnci_ui.courses.activity.n_activities', '{{n}} activities', { n: activities })}
+                                                    </span>
+                                                )}
                                                 {all.length === 0 && <span>{t('imnci_ui.courses.main.empty', 'empty')}</span>}
                                             </>)}
                                             {minutesById[s.id] > 0 && (

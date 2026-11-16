@@ -1,0 +1,2437 @@
+{
+ "format": "imnci-course-package",
+ "version": 1,
+ "about": "WHO IMCI distance learning course (2014), Module 3, in the Sudan national IMNCI wording. Each WHO section is cut into short lessons of one topic, with the same information as the WHO module, laid out as activities: step-by-step cards, flip cards, sorting, case stories and questions. Where the Sudan national booklet differs from WHO, the Sudan wording is used and a \"Sudan national protocol\" note says what WHO wrote. Chart booklet and recording form blocks are read live from the protocol. Video slots without a link show a placeholder; their narration scripts are in a separate file. Exercises start as drafts and open in the exercise manager.",
+ "course": {
+  "title": "IMNCI distance learning modules",
+  "description": "Self-study modules based on the WHO IMCI distance learning course (2014), in the wording of the Sudan national IMNCI protocol."
+ },
+ "modules": [
+  {
+   "title": "Module 3: Cough or difficult breathing",
+   "order": 3,
+   "sections": [
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 5,
+     "bookToPage": 6,
+     "title": "Module overview",
+     "order": 1,
+     "read": [
+      {
+       "type": "note",
+       "text": "See what Module 3 covers and which part of the recording form it uses, then take the pre-test.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "A cough or difficult breathing is a common reason why a mother will bring a child to your clinic. The problem may be a mild cold, or it may be a serious problem like pneumonia. How can you tell the difference? How should you treat the child? How should you counsel the mother? The choices may seem confusing, but this module will help you make the correct decisions."
+      },
+      {
+       "type": "steps",
+       "title": "Where this module fits",
+       "steps": [
+        {
+         "title": "For ALL sick children",
+         "text": "Ask the caregiver about the child's problems and check for general danger signs."
+        },
+        {
+         "title": "Then ASK: does the child have cough or difficult breathing?",
+         "text": "If NO, go on to the next main symptom. If YES, assess and classify the child using the colour-coded classification chart for cough or difficult breathing."
+        },
+        {
+         "title": "Continue the assessment",
+         "text": "Assess the next main symptoms (next is diarrhoea), check for malnutrition and anaemia, check immunization status and other problems."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "What you will be able to do"
+      },
+      {
+       "type": "rich",
+       "text": "<p>After you study this module, you will be able to:</p><ul><li>Assess cough or difficult breathing using the IMNCI chart booklet</li><li>Recognize the main clinical signs of cough or difficult breathing</li><li>Classify cough or difficult breathing</li><li>Treat a child with cough or difficult breathing according to the IMNCI guidelines</li><li>Counsel the caregiver on home care</li><li>Give appropriate follow-up care for a child with cough or difficult breathing</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Which part of the recording form is used in this module?"
+      },
+      {
+       "type": "form",
+       "part": "child",
+       "sections": [
+        "cough"
+       ],
+       "caption": "The national recording form: cough or difficult breathing"
+      },
+      {
+       "type": "heading",
+       "text": "Before you begin"
+      },
+      {
+       "type": "paragraph",
+       "text": "What do you know now about managing cough or difficult breathing? Check quickly with six questions. After the module you will answer the same questions, and see what you have learned."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m3-pretest",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 7,
+     "bookToPage": 8,
+     "title": "Meet Jacob: greet, then check for danger signs",
+     "order": 2,
+     "read": [
+      {
+       "type": "note",
+       "text": "Start the visit of a child with a breathing problem: greet the caregiver and check for general danger signs.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Cough or difficult breathing",
+       "caption": "Watch this first.",
+       "script": "V3.2"
+      },
+      {
+       "type": "paragraph",
+       "text": "Consider a typical case that you might see in your practice. It will help you start thinking about the problem of a child with a cough or difficult breathing."
+      },
+      {
+       "type": "story",
+       "title": "Opening case: Jacob",
+       "stages": [
+        {
+         "text": "Amira lives in a village two hours' walk from the health centre. She arrives at your clinic and carefully takes Jacob off her back, with a look of panic on her face. She tells you that Jacob is not feeling well and she is worried about him."
+        },
+        {
+         "text": "For the last 3 days Jacob has not seemed himself. He is 6 months old and has started on some solids, but is now refusing them. He is also not breastfeeding as much as he was. One of Amira's other children died at three weeks of age from an illness she is not sure about. She was unsure whether she should come, and hopes her husband does not find out.",
+         "question": "What do you do first?",
+         "options": [
+          "Praise her for bringing Jacob, and reassure her that she did the right thing",
+          "Tell her she should have come 3 days ago",
+          "Start counting Jacob's breathing at once, without speaking"
+         ],
+         "answer": 0,
+         "explanation": "You praise Amira for bringing Jacob: it is a long walk and she must be tired. This establishes good communication. It is important, because she will have a lot of responsibility for Jacob's care. You want her to trust you and understand your directions."
+        },
+        {
+         "text": "When you ask more, Amira tells you that Jacob starts to breastfeed, then pulls off the breast and seems to pant for air before going back for a further suckle. His stomach seems to be going in and out quite quickly. This is her initial visit for this problem. Jacob weighs 5 kg and his temperature is 37 °C."
+        },
+        {
+         "text": "You check for general danger signs. Amira says Jacob will take the breast, but he does not drink well. He does not vomit. He has had no convulsions. Jacob appears very tired, but lifts his hand to Amira. His eyes look up to her and follow you when you snap your fingers.",
+         "question": "Does Jacob have a general danger sign?",
+         "options": [
+          "No",
+          "Yes: he is not able to drink or breastfeed",
+          "Yes: he is lethargic"
+         ],
+         "answer": 0,
+         "explanation": "Jacob is able to breastfeed, does not vomit everything, has had no convulsions, and is awake and watching you. He shows no general danger signs. You will now assess for cough or difficult breathing."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 9,
+     "bookToPage": 10,
+     "title": "Why cough matters, and the two signs of pneumonia",
+     "order": 3,
+     "read": [
+      {
+       "type": "note",
+       "text": "Explain why cough or difficult breathing can be serious, name the two signs of pneumonia, and ask the first two questions.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "heading",
+       "text": "What causes cough or difficult breathing?"
+      },
+      {
+       "type": "paragraph",
+       "text": "Many children who come to your clinic with a cough or difficult breathing have mild respiratory infections: a cold or bronchitis. These children are not seriously ill and do not need antibiotics. They can be treated at home."
+      },
+      {
+       "type": "paragraph",
+       "text": "However, some children with cough or difficult breathing have pneumonia or another serious respiratory infection. Pneumonia is one of the greatest causes of child mortality in the world. Children can die from bacterial pneumonia because they cannot get enough oxygen (hypoxia) or they get a generalized infection (sepsis). Most pneumonia in developing countries is caused by bacteria and can be treated with antibiotics."
+      },
+      {
+       "type": "heading",
+       "text": "How can you identify pneumonia?"
+      },
+      {
+       "type": "paragraph",
+       "text": "You can identify children with pneumonia by checking for two clinical signs. When children develop pneumonia, their lungs become stiff. These two signs show how stiff the lungs have become."
+      },
+      {
+       "type": "flip",
+       "title": "The two signs of pneumonia",
+       "cards": [
+        {
+         "front": "Fast breathing",
+         "back": "One of the body's responses to stiff lungs and hypoxia."
+        },
+        {
+         "front": "Chest indrawing",
+         "back": "Develops when the lungs become even stiffer as the pneumonia becomes more severe."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "ASK: does the child have cough or difficult breathing?"
+      },
+      {
+       "type": "paragraph",
+       "text": "Difficult breathing is any unusual pattern of breathing. Caregivers describe it in different ways: they may say that their child's breathing is \"fast\" or \"noisy\" or \"interrupted\". If a mother answers no, look to see whether you think the child has cough or difficult breathing."
+      },
+      {
+       "type": "reveal",
+       "text": "The mother says her child has no cough or difficult breathing, and the child seems to be breathing regularly. What do you do next?",
+       "answer": "Move to the next main symptom: diarrhoea. You do not need to assess the child further for cough or difficult breathing."
+      },
+      {
+       "type": "heading",
+       "text": "ASK: for how long?"
+      },
+      {
+       "type": "note",
+       "text": "A cough or difficult breathing that lasts for more than 14 days may indicate tuberculosis, asthma, whooping cough or some other problem.",
+       "label": "Key point"
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "categories": [
+        "cough"
+       ],
+       "caption": "Chart booklet: cough or difficult breathing (Sudan national IMNCI booklet)"
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 10,
+     "bookToPage": 11,
+     "title": "Count the breaths: does the child have fast breathing?",
+     "order": 4,
+     "read": [
+      {
+       "type": "note",
+       "text": "Count a child's breaths in one minute and decide whether it is fast breathing for the child's age.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Fast breathing is one sign of pneumonia. To decide whether a child is breathing faster than normal, you count the number of breaths the child takes in one minute."
+      },
+      {
+       "type": "steps",
+       "title": "Counting the breaths in one minute",
+       "steps": [
+        {
+         "title": "Keep the child calm and still",
+         "text": "If the child is moving or crying, you will not get an accurate count. Ask the mother to help keep her child calm."
+        },
+        {
+         "title": "Use a watch",
+         "text": "Use a watch with a second hand or a digital watch."
+        },
+        {
+         "title": "Look for the breathing movement",
+         "text": "Look anywhere on the child's chest or abdomen."
+        },
+        {
+         "title": "Count for one full minute",
+         "text": "Then compare the count with the cut-off for the child's age."
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "The number of breaths for fast breathing depends on the child's age. Younger children normally breathe faster than older children."
+      },
+      {
+       "type": "flip",
+       "title": "Fast breathing is",
+       "cards": [
+        {
+         "front": "2 months up to 12 months",
+         "back": "50 breaths per minute or more"
+        },
+        {
+         "front": "12 months up to 5 years",
+         "back": "40 breaths per minute or more"
+        }
+       ]
+      },
+      {
+       "type": "sort",
+       "text": "Fast breathing or not? Sort each child.",
+       "groups": [
+        "Fast breathing",
+        "Not fast breathing"
+       ],
+       "items": [
+        {
+         "text": "3 years, 36 breaths per minute",
+         "group": 1,
+         "why": "From 12 months the cut-off is 40."
+        },
+        {
+         "text": "12 months, 50 breaths per minute",
+         "group": 0,
+         "why": "At 12 months the cut-off is 40."
+        },
+        {
+         "text": "6 months, 45 breaths per minute",
+         "group": 1,
+         "why": "Under 12 months the cut-off is 50."
+        },
+        {
+         "text": "3 months, 57 breaths per minute",
+         "group": 0,
+         "why": "Under 12 months the cut-off is 50."
+        }
+       ]
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "DVD exercise: count the respiratory rate",
+       "caption": "WHO course DVD, disc 1. Count the breaths of two children and decide whether each has fast breathing. The video reviews the answers with you."
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m3-ex-a",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 12,
+     "bookToPage": 14,
+     "title": "Chest indrawing, stridor and wheezing",
+     "order": 5,
+     "read": [
+      {
+       "type": "note",
+       "text": "Look for chest indrawing, and look and listen for stridor and wheezing, then assess Jacob.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "heading",
+       "text": "LOOK for chest indrawing"
+      },
+      {
+       "type": "paragraph",
+       "text": "Chest indrawing occurs when the child needs to make a greater effort than normal to breathe in. In normal breathing, the whole chest wall (upper and lower) and the abdomen move OUT when the child breathes IN."
+      },
+      {
+       "type": "note",
+       "text": "The child has chest indrawing if the lower chest wall (lower ribs) goes IN when the child breathes IN. It must be clearly visible and present all the time you are observing the child.",
+       "label": "Key point"
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>Tips for seeing chest indrawing</strong></p><ul><li>Ask the caregiver to lift the child's shirt, if you did not when you counted the breaths.</li><li>If the child's body is bent at the waist, it is hard to see the lower chest wall move. Ask the caregiver to change the child's position so that he is lying flat in her lap.</li></ul>"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "DVD exercise: assessing chest indrawing",
+       "caption": "WHO course DVD, disc 1. Five children: does each have chest indrawing?"
+      },
+      {
+       "type": "heading",
+       "text": "LOOK and LISTEN for stridor"
+      },
+      {
+       "type": "paragraph",
+       "text": "Stridor is a harsh noise made when the child breathes IN. It occurs when the larynx, trachea or epiglottis is swollen (these conditions are often called croup). The swelling interferes with air entering the lungs. If it blocks the child's airway, it can be life threatening."
+      },
+      {
+       "type": "steps",
+       "title": "Listening for stridor",
+       "steps": [
+        {
+         "title": "Wait until the child is calm",
+         "text": "A child who is not very ill may have stridor only when he is crying or upset. A child who has stridor when calm is in a dangerous situation."
+        },
+        {
+         "title": "Look to see when the child breathes IN",
+         "text": ""
+        },
+        {
+         "title": "Put your ear near the child's mouth",
+         "text": "Stridor can be difficult to hear."
+        },
+        {
+         "title": "If you hear a wet noise, clear the nose and listen again",
+         "text": "A blocked nose makes a wet noise. This is not stridor."
+        }
+       ]
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "DVD exercise: assessing stridor",
+       "caption": "WHO course DVD, disc 1. Five children: do you hear stridor?"
+      },
+      {
+       "type": "heading",
+       "text": "LOOK and LISTEN for wheezing"
+      },
+      {
+       "type": "paragraph",
+       "text": "Wheeze is a high-pitched whistling or musical sound heard at the end of breathing OUT. The child's small air passages narrow to cause wheezing. To hear it, put your ear near the child's mouth when the child is calm, and look at the breathing while you listen, to check that the sound mainly occurs when the child breathes out."
+      },
+      {
+       "type": "sort",
+       "text": "Breathing IN or breathing OUT? Sort each sign by when you look or listen for it.",
+       "groups": [
+        "When the child breathes IN",
+        "When the child breathes OUT"
+       ],
+       "items": [
+        {
+         "text": "Chest indrawing",
+         "group": 0,
+         "why": "The lower chest wall goes in when the child breathes in."
+        },
+        {
+         "text": "Stridor",
+         "group": 0,
+         "why": "A harsh noise on breathing in."
+        },
+        {
+         "text": "Wheezing",
+         "group": 1,
+         "why": "A whistling or musical sound at the end of breathing out."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "If the child has wheezing and either fast breathing or chest indrawing, give a trial of a rapid-acting inhaled bronchodilator, up to three times. Then count the breaths and look for chest indrawing again, and classify.",
+       "label": "Wheezing with fast breathing or chest indrawing"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Demonstration: cough or difficult breathing",
+       "caption": "WHO course DVD, disc 1. All the steps of assessing for cough or difficult breathing, in the clinical setting."
+      },
+      {
+       "type": "heading",
+       "text": "How will you assess Jacob?"
+      },
+      {
+       "type": "story",
+       "title": "Assessing Jacob for cough or difficult breathing",
+       "stages": [
+        {
+         "text": "You ask Amira whether Jacob has a cough or difficult breathing. She is confused by \"difficult breathing\", so you explain it as breathing that is fast, noisy or interrupted. Amira says yes, she thinks Jacob has been breathing fast. He also moves away from the breast to take breaths. He did not do this in the past. She says this has been present for 1 week."
+        },
+        {
+         "text": "You hold up Jacob's shirt and count his breaths in one minute. When he is calm, he is breathing 70 breaths per minute. He coughs frequently.",
+         "question": "Jacob is 6 months old. Does he have fast breathing?",
+         "options": [
+          "Yes",
+          "No"
+         ],
+         "answer": 0,
+         "explanation": "For a child of 2 months up to 12 months, 50 breaths per minute or more is fast breathing. Jacob has 70."
+        },
+        {
+         "text": "You look at his lower chest wall. When Jacob breathes in, his lower chest wall and abdomen move out. You listen when he breathes in and do not hear any harsh noise. You do not hear wheezing when he breathes out.",
+         "question": "Does Jacob have chest indrawing or stridor?",
+         "options": [
+          "Neither",
+          "Chest indrawing",
+          "Stridor"
+         ],
+         "answer": 0,
+         "explanation": "His lower chest wall moves OUT when he breathes in, so there is no chest indrawing, and there is no harsh noise on breathing in. On the recording form you write: cough or difficult breathing YES, for 7 days, 70 breaths per minute, fast breathing."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 15,
+     "bookToPage": 18,
+     "title": "Classify cough or difficult breathing",
+     "order": 6,
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify a child with cough or difficult breathing as one of three classifications, and say what each one needs.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Classifying cough or difficult breathing",
+       "caption": "Watch this first.",
+       "script": "V3.4"
+      },
+      {
+       "type": "paragraph",
+       "text": "There are three possible classifications for a child with cough or difficult breathing. Open your chart booklet and look at the classification table."
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "categories": [
+        "cough"
+       ],
+       "caption": "Classify: cough or difficult breathing (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "note",
+       "text": "Classifications are colour-coded, and identify treatments. RED: refer urgently. YELLOW: treat in the clinic. GREEN: home treatment.",
+       "label": "Remember"
+      },
+      {
+       "type": "flip",
+       "title": "The three classifications and your actions",
+       "cards": [
+        {
+         "front": "SEVERE PNEUMONIA OR VERY SEVERE DISEASE (red)",
+         "back": "A child with cough or difficult breathing and any general danger sign, or stridor in a calm child. The child is seriously ill and may have another serious acute lower respiratory infection such as bronchiolitis, pertussis or a wheezing problem. He needs urgent referral to hospital for treatments such as oxygen, a bronchodilator or injectable antibiotics. Before the child leaves, give the first dose of an appropriate antibiotic: it helps prevent severe pneumonia from becoming worse, and helps treat other serious bacterial infections such as sepsis or meningitis."
+        },
+        {
+         "front": "PNEUMONIA (yellow)",
+         "back": "A child with cough or difficult breathing who has fast breathing or chest indrawing, with no general danger sign and no stridor. Give oral amoxicillin for 5 days: you begin the treatment in the clinic and it continues at home. If the child has wheezing, he also needs an inhaled bronchodilator."
+        },
+        {
+         "front": "COUGH OR COLD (green)",
+         "back": "A child with cough or difficult breathing and none of the signs above. He does not need an antibiotic: it will not relieve the symptoms and will not prevent the cold from developing into pneumonia. Give the mother advice about good home care, like safe remedies. A cold normally improves in one to two weeks."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: For SEVERE PNEUMONIA OR VERY SEVERE DISEASE, give the first dose of oral amoxicillin if the child can take oral medicine. If the child cannot drink, vomits everything, is convulsing or is lethargic, give the first doses of intramuscular ampicillin and gentamicin. If wheezing, give a rapid-acting inhaled bronchodilator. Treat to prevent low blood sugar, and refer URGENTLY. WHO module (page 15): says \"give first dose of an appropriate antibiotic\" and refer urgently, and adds that if a pulse oximeter is available you refer when the oxygen saturation is below 90%.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: PNEUMONIA is treated with oral amoxicillin for 5 days, and a safe remedy to soothe the throat and relieve the cough. WHO module (page 15): adds that amoxicillin for 3 days could be used for fast breathing without chest indrawing in low HIV settings, and that a child with chest indrawing who is HIV exposed or infected gets a first dose of amoxicillin and is referred.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "note",
+       "text": "A child with a chronic cough (14 days or more) or recurrent wheezing may have tuberculosis, asthma, whooping cough or another problem. Refer the child for further assessment.",
+       "label": "Key point"
+      },
+      {
+       "type": "heading",
+       "text": "How will you classify Jacob?"
+      },
+      {
+       "type": "story",
+       "title": "Classifying Jacob",
+       "stages": [
+        {
+         "text": "You observed one sign in Jacob: fast breathing, 70 breaths per minute. He did not have a general danger sign, chest indrawing or stridor.",
+         "question": "How do you classify Jacob?",
+         "options": [
+          "PNEUMONIA",
+          "SEVERE PNEUMONIA OR VERY SEVERE DISEASE",
+          "COUGH OR COLD"
+         ],
+         "answer": 0,
+         "explanation": "Fast breathing is a sign used to classify PNEUMONIA (yellow). He showed no signs from the red classification. You write PNEUMONIA on the recording form."
+        },
+        {
+         "text": "Now consider a second scenario: you heard a harsh noise when Jacob breathed in, while he sat calmly with Amira.",
+         "question": "How would you classify him then?",
+         "options": [
+          "SEVERE PNEUMONIA OR VERY SEVERE DISEASE",
+          "PNEUMONIA",
+          "COUGH OR COLD"
+         ],
+         "answer": 0,
+         "explanation": "Fast breathing is a sign of PNEUMONIA (yellow), but stridor in a calm child is a sign of the red classification. When you find signs from several classifications, you always classify with the most severe one. Red means severe illness: urgent pre-referral treatment, then referral."
+        },
+        {
+         "text": "In the real visit, after classifying Jacob's cough you go on to assess the next main symptom, diarrhoea, until the full assessment is done. Then you review all the treatments identified for his classifications and decide on his integrated treatment."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m3-ex-b",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 19,
+     "bookToPage": 20,
+     "title": "Practise classifying: Aziz and Gyatsu",
+     "order": 7,
+     "read": [
+      {
+       "type": "note",
+       "text": "Follow a health worker classifying one child, then record and classify a second child yourself.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "story",
+       "title": "Example: how a health worker classified Aziz",
+       "stages": [
+        {
+         "text": "Aziz is 18 months old. He weighs 11.5 kg and his temperature is 37.5 °C. His mother brought him because he has a cough, and she says he is having trouble breathing. This is his first visit for this illness. Aziz is able to drink, has not been vomiting, has not had convulsions, and is not lethargic or unconscious. He has been coughing for 6 or 7 days."
+        },
+        {
+         "text": "Aziz sat quietly on his mother's lap. The health worker counted 41 breaths per minute. He did not see any chest indrawing and did not hear stridor.",
+         "question": "Does Aziz have fast breathing?",
+         "options": [
+          "Yes",
+          "No"
+         ],
+         "answer": 0,
+         "explanation": "Aziz is over 12 months of age, so the cut-off for fast breathing is 40. He has fast breathing."
+        },
+        {
+         "text": "The health worker looked at the classification table. First the top (red) row: does Aziz have any general danger sign, or stridor when calm? No. Next the yellow row: does he have chest indrawing or fast breathing?",
+         "question": "How is Aziz classified?",
+         "options": [
+          "PNEUMONIA",
+          "SEVERE PNEUMONIA OR VERY SEVERE DISEASE",
+          "COUGH OR COLD"
+         ],
+         "answer": 0,
+         "explanation": "He has fast breathing, a sign in the yellow row. The health worker wrote PNEUMONIA on the recording form."
+        }
+       ],
+       "label": "Worked example"
+      },
+      {
+       "type": "heading",
+       "text": "Practise: Exercise C"
+      },
+      {
+       "type": "paragraph",
+       "text": "Now it is your turn. Read the case of Gyatsu, record his signs on the recording form and classify his illness. The case player marks your form."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m3-gyatsu",
+       "note": "Exercise C."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 21,
+     "bookToPage": 24,
+     "title": "Treat: choose the antibiotic and the dose",
+     "order": 8,
+     "read": [
+      {
+       "type": "note",
+       "text": "Read the treatments from the classification table, choose the right antibiotic, and find the dose of amoxicillin.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Treating cough or difficult breathing",
+       "caption": "Watch this first.",
+       "script": "V3.5"
+      },
+      {
+       "type": "heading",
+       "text": "What does the \"identify treatment\" column tell you?"
+      },
+      {
+       "type": "steps",
+       "title": "Three pieces of information",
+       "steps": [
+        {
+         "title": "The treatment for each classification",
+         "text": ""
+        },
+        {
+         "title": "Where the treatment is given",
+         "text": "In hospital (RED), at the clinic (YELLOW) or at home (GREEN)."
+        },
+        {
+         "title": "The pre-referral treatments",
+         "text": "They are identified clearly in bold, and are required if the child needs urgent referral."
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "For cough or difficult breathing the column lists three treatments, which you will learn in this lesson and the next: oral antibiotics (amoxicillin), a remedy for soothing the throat, and inhaler treatment if wheezing. The TREAT THE CHILD section of the chart booklet has detailed instructions for each."
+      },
+      {
+       "type": "heading",
+       "text": "How do you select the appropriate antibiotic?"
+      },
+      {
+       "type": "paragraph",
+       "text": "This is the first time you are learning about antibiotic use within IMNCI. You will come back to it in later modules. Many health facilities have more than one type of antibiotic, and you must select the most appropriate one for the child's illness."
+      },
+      {
+       "type": "flip",
+       "title": "Rules for giving antibiotics",
+       "cards": [
+        {
+         "front": "First line",
+         "back": "Give the first-line oral antibiotic if it is available. It has been chosen because it is effective, easy to give and inexpensive."
+        },
+        {
+         "front": "Second line",
+         "back": "Give the second-line antibiotic only if the first-line antibiotic is not available, or if the child's illness does not respond to the first-line antibiotic."
+        },
+        {
+         "front": "Oral",
+         "back": "If the child is able to drink, give an oral antibiotic. The antibiotics recommended in your country are on the TREAT THE CHILD chart."
+        },
+        {
+         "front": "Two illnesses, one antibiotic",
+         "back": "When one antibiotic treats more than one of the child's illnesses, give the one antibiotic. Do not double the size of each dose, and do not give it for a longer time."
+        },
+        {
+         "front": "Two illnesses, two antibiotics",
+         "back": "Sometimes the antibiotic for one illness is not effective against the other. Then the child must be treated with two antibiotics: for example for PNEUMONIA and for DYSENTERY."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "How do you decide on the dose?"
+      },
+      {
+       "type": "paragraph",
+       "text": "The TREAT THE CHILD chart has the schedule and the dose. The schedule tells you how many days and how many times each day to give the antibiotic."
+      },
+      {
+       "type": "steps",
+       "title": "Finding the correct dose",
+       "steps": [
+        {
+         "title": "Find the column",
+         "text": "Identify the column for the type of tablets or syrup available in your clinic."
+        },
+        {
+         "title": "Find the row",
+         "text": "Choose the row for the child's weight or age. Use weight rather than age when you know it."
+        },
+        {
+         "title": "Read the dose",
+         "text": "The correct dose is where the column and the row meet."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>Amoxicillin</strong>: give two times daily for 5 days for PNEUMONIA.</p><table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Age or weight</strong></td><td style=\"padding: 4px\"><strong>Tablet (250 mg)</strong></td><td style=\"padding: 4px\"><strong>Syrup (250 mg/5 ml)</strong></td></tr><tr><td style=\"padding: 4px\">2 months up to 12 months (4 to under 10 kg)</td><td style=\"padding: 4px\">1</td><td style=\"padding: 4px\">5 ml</td></tr><tr><td style=\"padding: 4px\">12 months up to 3 years (10 to under 14 kg)</td><td style=\"padding: 4px\">2</td><td style=\"padding: 4px\">10 ml</td></tr><tr><td style=\"padding: 4px\">3 years up to 5 years (14 to 19 kg)</td><td style=\"padding: 4px\">3</td><td style=\"padding: 4px\">15 ml</td></tr></table>"
+      },
+      {
+       "type": "note",
+       "text": "Amoxicillin is the first-line antibiotic for pneumonia, because of its efficacy and the increasing resistance to co-trimoxazole. If a tablet has to be crushed before it is given, add a few drops of clean water and wait a minute or so: this softens the tablet and makes it easier to crush.",
+       "label": "Amoxicillin"
+      },
+      {
+       "type": "heading",
+       "text": "How are antibiotics given for pneumonia?"
+      },
+      {
+       "type": "paragraph",
+       "text": "If the child is classified as SEVERE PNEUMONIA OR VERY SEVERE DISEASE, give the first dose of the antibiotic before urgent referral. If the classification is PNEUMONIA, give the first dose of oral amoxicillin in the clinic and teach the caregiver how to give the rest of the 5 days of treatment at home."
+      },
+      {
+       "type": "reveal",
+       "text": "Jacob is 6 months old and weighs 5 kg. He is able to drink, and you have amoxicillin syrup (250 mg/5 ml). What do you prescribe?",
+       "answer": "5 ml of syrup (250 mg/5 ml), given twice a day for 5 days."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 24,
+     "bookToPage": 27,
+     "title": "Treat: inhaler for wheezing, and a safe soothing remedy",
+     "order": 9,
+     "read": [
+      {
+       "type": "note",
+       "text": "Give salbutamol through a spacer, make a spacer, and tell a safe remedy for cough from a harmful one.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "heading",
+       "text": "How will you give an inhaler for wheezing?"
+      },
+      {
+       "type": "paragraph",
+       "text": "If the child has wheezing and needs inhaler treatment in the clinic or at home, follow the TREAT THE CHILD chart for inhaled salbutamol. A spacer is a way of delivering the bronchodilator effectively into the lungs. A spacer works as well as a nebuliser if correctly used."
+      },
+      {
+       "type": "note",
+       "text": "No child under 5 should be given an inhaler without a spacer.",
+       "label": "Key point"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: From a salbutamol metered-dose inhaler (100 micrograms per puff), give 3 puffs through a spacer every 20 minutes, up to 3 times in 1 hour, then reassess. At home the inhaler is given for 5 days. Only if no inhaler is available, give oral salbutamol for 5 days. WHO module (page 24): gives 2 puffs, repeated up to 3 times every 15 to 20 minutes before classifying pneumonia.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "steps",
+       "title": "Making a spacer from a 500 ml drink bottle",
+       "steps": [
+        {
+         "title": "Cut a hole in the bottle base",
+         "text": "Using a sharp knife, cut a hole in the same shape as the mouthpiece of the inhaler."
+        },
+        {
+         "title": "Cut the bottle",
+         "text": "Cut between the upper quarter and the lower three quarters. Discard the upper quarter."
+        },
+        {
+         "title": "Cut a small V",
+         "text": "Cut it in the border of the large open part, to fit the child's nose so that it can be used as a mask."
+        },
+        {
+         "title": "Soften the edge",
+         "text": "Flame the cut edge with a candle or a lighter to soften it."
+        },
+        {
+         "title": "For a small baby",
+         "text": "Make a mask by cutting a similar hole in a plastic (not polystyrene) cup."
+        }
+       ]
+      },
+      {
+       "type": "steps",
+       "title": "Using an inhaler with a spacer",
+       "steps": [
+        {
+         "title": "Remove the inhaler cap and shake the inhaler well",
+         "text": ""
+        },
+        {
+         "title": "Insert the mouthpiece",
+         "text": "Put it through the hole in the bottle or plastic cup."
+        },
+        {
+         "title": "The child breathes through the spacer",
+         "text": "The child puts the opening of the bottle into his mouth and breathes in and out through the mouth. For a younger child, place the cup over the child's mouth."
+        },
+        {
+         "title": "Press the inhaler",
+         "text": "A carer presses down the inhaler and sprays into the bottle while the child continues to breathe normally."
+        },
+        {
+         "title": "Wait for three to four breaths, and repeat",
+         "text": ""
+        },
+        {
+         "title": "First use of a spacer",
+         "text": "Prime it with 4 to 5 extra puffs from the inhaler."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "What is a soothing remedy for the throat?"
+      },
+      {
+       "type": "paragraph",
+       "text": "To soothe the throat or relieve a cough, use a safe remedy. Such remedies can be homemade, given at the clinic or bought at a pharmacy. Homemade remedies are as effective as those bought in a store. Exact dosing is not important with this treatment, so you do not need to watch the mother practise giving it."
+      },
+      {
+       "type": "note",
+       "text": "If the child is exclusively breastfed, do not give other drinks or remedies. Breast milk is the best soothing remedy for an exclusively breastfed child.",
+       "label": "Key point"
+      },
+      {
+       "type": "sort",
+       "text": "Safe or harmful? Sort each remedy.",
+       "groups": [
+        "Safe",
+        "Harmful"
+       ],
+       "items": [
+        {
+         "text": "Breast milk",
+         "group": 0,
+         "why": "The best soothing remedy for an exclusively breastfed child."
+        },
+        {
+         "text": "A remedy containing codeine",
+         "group": 1,
+         "why": "It may sedate the child and interfere with feeding and with coughing up secretions."
+        },
+        {
+         "text": "A remedy containing atropine",
+         "group": 1,
+         "why": "It may sedate the child and interfere with feeding and with coughing up secretions."
+        },
+        {
+         "text": "A remedy containing alcohol",
+         "group": 1,
+         "why": "It may sedate the child."
+        },
+        {
+         "text": "Medicated nose drops",
+         "group": 1,
+         "why": "Nose drops that contain anything other than salt should not be used."
+        }
+       ],
+       "explanation": "Harmful remedies may sedate the child, interfere with the child's feeding, and interfere with the child's ability to cough up secretions from the lungs. Find out which safe and harmful remedies are used in your area."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Case study: Ben",
+       "caption": "WHO course DVD, disc 1. Complete a recording form as you watch. Videos are used to show signs: the classification discussed at the end of the video may not be accurate, because of recent technical updates."
+      },
+      {
+       "type": "heading",
+       "text": "What treatments are identified for Jacob?"
+      },
+      {
+       "type": "story",
+       "title": "Treating Jacob",
+       "stages": [
+        {
+         "text": "You have classified Jacob's problem as PNEUMONIA.",
+         "question": "Which treatments does the classification table identify?",
+         "options": [
+          "An oral antibiotic, a safe remedy for the cough, and advice on when to return",
+          "Urgent referral with a first dose of antibiotic",
+          "A safe remedy only: no antibiotic"
+         ],
+         "answer": 0,
+         "explanation": "An oral antibiotic; soothe the throat and relieve the cough with a safe remedy; and advise Amira when to return: in 3 days for PNEUMONIA, or immediately if he worsens."
+        },
+        {
+         "text": "Jacob is able to drink, so you prescribe amoxicillin as syrup: 5 ml (250 mg/5 ml) twice a day for 5 days.",
+         "question": "Which soothing remedy is right for Jacob?",
+         "options": [
+          "Breast milk",
+          "A cough syrup from the pharmacy",
+          "Tea with honey"
+         ],
+         "answer": 0,
+         "explanation": "Jacob is breastfed, so breast milk is an important remedy for him."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m3-ex-d",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 28,
+     "bookToPage": 30,
+     "title": "Counsel the caregiver: giving medicine at home",
+     "order": 10,
+     "read": [
+      {
+       "type": "note",
+       "text": "Use good communication skills to teach a caregiver to give an oral medicine at home, and label the medicine.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Counselling the caregiver of a child with pneumonia",
+       "caption": "Watch this first.",
+       "script": "V3.6"
+      },
+      {
+       "type": "paragraph",
+       "text": "Counselling is an important opportunity to cover home treatment, feeding, care in the home, and when to return to the clinic. You counsel the caregiver after you have assessed, classified and decided on treatment for all conditions."
+      },
+      {
+       "type": "flip",
+       "title": "APAC: use it as you assess, classify, treat and counsel",
+       "cards": [
+        {
+         "front": "ASK and LISTEN",
+         "back": "Find out what the child's problems are and what the caregiver is already doing for the child."
+        },
+        {
+         "front": "PRAISE",
+         "back": "Praise the caregiver for what she has done well."
+        },
+        {
+         "front": "ADVISE",
+         "back": "Advise her how to care for her child at home."
+        },
+        {
+         "front": "CHECK",
+         "back": "Check the caregiver's understanding, using checking questions."
+        }
+       ]
+      },
+      {
+       "type": "steps",
+       "title": "Three basic teaching steps",
+       "steps": [
+        {
+         "title": "Give information",
+         "text": "Use words the caregiver understands, and focus on the most important messages."
+        },
+        {
+         "title": "Show an example",
+         "text": "Use familiar objects as teaching aids."
+        },
+        {
+         "title": "Let her practise",
+         "text": "Affirm, give feedback, and allow more practice as needed."
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "For cough or difficult breathing you counsel on: giving oral antibiotics at home, giving soothing remedies at home, how to use an inhaler if needed for wheezing, when to return immediately, and when to come for follow-up."
+      },
+      {
+       "type": "heading",
+       "text": "Giving oral medicines at home"
+      },
+      {
+       "type": "paragraph",
+       "text": "Oral medicines are given for different reasons, in different doses and on different schedules, but the way to give each one is similar. If a caregiver learns how to give a medicine correctly, the child will be treated properly."
+      },
+      {
+       "type": "steps",
+       "title": "Teaching a caregiver to give an oral medicine",
+       "steps": [
+        {
+         "title": "Determine the medicine and the dose",
+         "text": "For the child's weight and age."
+        },
+        {
+         "title": "Explain the treatment",
+         "text": "Tell the caregiver why you are giving the medicine to the child."
+        },
+        {
+         "title": "Demonstrate",
+         "text": "Show how to measure a dose."
+        },
+        {
+         "title": "Let her practise",
+         "text": "Watch her measure a dose by herself. Tell her what she has done correctly. If she measured it incorrectly, show her again."
+        },
+        {
+         "title": "Ask her to give the first dose",
+         "text": "She gives it to the child in the clinic."
+        },
+        {
+         "title": "Explain carefully, then label and package",
+         "text": "Tell her how much to give, how many times a day, when to give it (such as early morning, lunch, dinner, before going to bed) and for how many days. Write this on a drug label."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "How do you label and package a medicine?"
+      },
+      {
+       "type": "steps",
+       "title": "Writing a drug label",
+       "steps": [
+        {
+         "title": "Write the full name of the medicine",
+         "text": ""
+        },
+        {
+         "title": "Write the total amount",
+         "text": "The tablets, capsules or syrup needed to complete the course of treatment."
+        },
+        {
+         "title": "Write the daily dose and schedule",
+         "text": "For example: ½ tablet twice daily for 5 days. Write the dose (tablets, capsules, drops or spoonfuls) and when to give it."
+        },
+        {
+         "title": "Package it",
+         "text": "Put the total amount of each medicine into its own labelled, clean container: an envelope, paper, tube or bottle. Then give it to the mother."
+        }
+       ]
+      },
+      {
+       "type": "flip",
+       "title": "Tips for drug labels",
+       "cards": [
+        {
+         "front": "More than one medicine",
+         "back": "Give, collect, count and package each medicine separately."
+        },
+        {
+         "front": "The full course",
+         "back": "Explain that all the tablets or syrup must be used to finish the course of treatment, even if the child gets better."
+        },
+        {
+         "front": "Check understanding",
+         "back": "Ask checking questions to make sure she understands how to treat her child. If a dispenser teaches the caregiver in your clinic, teach these skills to the dispenser."
+        }
+       ]
+      },
+      {
+       "type": "reveal",
+       "text": "A mother tells you that she already knows how to give the treatment. What should you do?",
+       "answer": "Ask her to show you how to measure the dose, and to tell you the schedule for the antibiotic. If she is incorrect, give her the information and demonstrate. If she does know and measures the dose correctly, ask her to give the first dose so that you can observe."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 31,
+     "bookToPage": 34,
+     "title": "Counsel the caregiver: when to return, and counselling Amira",
+     "order": 11,
+     "read": [
+      {
+       "type": "note",
+       "text": "Tell a caregiver when to return for follow-up and when to return immediately, and ask good checking questions.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "heading",
+       "text": "When to return for follow-up"
+      },
+      {
+       "type": "flip",
+       "title": "Follow-up",
+       "cards": [
+        {
+         "front": "A child with PNEUMONIA",
+         "back": "Follow up in 3 days."
+        },
+        {
+         "front": "A child with COUGH OR COLD",
+         "back": "Follow up in 5 days if not improving."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "When to return immediately"
+      },
+      {
+       "type": "paragraph",
+       "text": "Always counsel the caregiver on the signs that mean she should bring the child back to the clinic immediately."
+      },
+      {
+       "type": "flip",
+       "title": "Return immediately if",
+       "cards": [
+        {
+         "front": "Any sick child",
+         "back": "Is not able to drink or breastfeed; becomes sicker; develops a fever."
+        },
+        {
+         "front": "A child with COUGH OR COLD",
+         "back": "Develops fast breathing or difficult breathing."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "How will you counsel Amira about Jacob's pneumonia?"
+      },
+      {
+       "type": "story",
+       "title": "Counselling Amira",
+       "stages": [
+        {
+         "text": "You explain to Amira that Jacob is breathing faster than he normally should, and that you think he has pneumonia. Amira becomes very panicked and says that Jacob is going to die. She says she must run home with him in case he dies away from home and her husband is furious with her.",
+         "question": "What do you do?",
+         "options": [
+          "Ask her to sit down, calm her, and ask why she is so afraid",
+          "Tell her not to be silly",
+          "Let her go, and give her the syrup quickly"
+         ],
+         "answer": 0,
+         "explanation": "You ask Amira to sit down and you try to calm her. She says she is afraid because her other child died so young. You explain that pneumonia is an infection, but there is treatment for him to take, and that she can give it at home. You will teach her the steps."
+        },
+        {
+         "text": "You emphasize that it is really important that Jacob receives the treatment: without it he could become very ill. You explain that the infection can be treated but it will take some time, and she will need to give Jacob the antibiotic regularly. You encourage Amira to discuss this with Jacob's father, to ask him to help with the treatment, and to bring him to the clinic if he has questions."
+        },
+        {
+         "text": "Jacob gets his first dose in the clinic. You show Amira how to measure the correct dose of the syrup, ask her to practise measuring it while you watch, and then ask her to give the first dose to Jacob. You praise her for doing a good job.",
+         "question": "Amira asks whether she can stop the syrup when Jacob looks better. What do you say?",
+         "options": [
+          "She must give it twice a day for the full 5 days, even if Jacob gets better",
+          "She can stop when the cough has gone",
+          "She should keep the rest for the next time he is ill"
+         ],
+         "answer": 0,
+         "explanation": "You give her the bottle and remind her to give it twice a day for the full 5 days, even if Jacob gets better before then. You label the syrup and give her the package."
+        },
+        {
+         "text": "You praise her again for bringing in her sick child, and encourage her to continue breastfeeding: it is the best way to soothe her son if his throat is sore. You ask her to bring Jacob back in 3 days and record the date. Then you take her Mother's Card and review the signs for returning immediately. Amira still seems fearful, but agrees with the plan."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m3-ex-e",
+       "note": ""
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m3-ex-f",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 35,
+     "bookToPage": 37,
+     "title": "Follow-up care for cough or difficult breathing",
+     "order": 12,
+     "read": [
+      {
+       "type": "note",
+       "text": "Reassess a child who returns after pneumonia and decide whether the child is improving, the same or worse.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Follow-up care for pneumonia",
+       "caption": "Watch this first.",
+       "script": "V3.7"
+      },
+      {
+       "type": "paragraph",
+       "text": "A child with PNEUMONIA should come back in 3 days. A child with COUGH OR COLD should come back in 5 days if not improving. During a follow-up visit you do two things."
+      },
+      {
+       "type": "steps",
+       "title": "The follow-up visit",
+       "steps": [
+        {
+         "title": "Check for general danger signs",
+         "text": ""
+        },
+        {
+         "title": "Assess for cough or difficult breathing again",
+         "text": ""
+        },
+        {
+         "title": "ASK three questions",
+         "text": "Is the child breathing slower than on his first visit? Is there less fever? Is the child eating better?"
+        },
+        {
+         "title": "Decide",
+         "text": "Is the child's respiratory condition improving, the same or worsening?"
+        },
+        {
+         "title": "Reassess the child fully",
+         "text": "Use the IMNCI process, with a second recording form, to see whether there are any new problems."
+        }
+       ]
+      },
+      {
+       "type": "sort",
+       "text": "What do you do at follow-up? Sort each finding.",
+       "groups": [
+        "Refer URGENTLY to hospital",
+        "Finish the 5 days of antibiotic"
+       ],
+       "items": [
+        {
+         "text": "The child has a general danger sign",
+         "group": 0,
+         "why": "The child is getting worse."
+        },
+        {
+         "text": "Chest indrawing or breathing rate, fever and eating are the same",
+         "group": 0,
+         "why": "The child is not worse, but is not improving either."
+        },
+        {
+         "text": "The child is breathing slower, without chest indrawing, is eating better and has less fever",
+         "group": 1,
+         "why": "The child is improving. He may still cough, but most children who are improving no longer have fast breathing."
+        }
+       ],
+       "explanation": "When the child is improving, tell the mother that the child should finish taking the 5 days of the antibiotic, and review with her why finishing the entire course matters."
+      },
+      {
+       "type": "note",
+       "text": "If a child needs follow-up for more than one condition, the child should come at the earliest definite follow-up.",
+       "label": "Remember"
+      },
+      {
+       "type": "heading",
+       "text": "How will you provide follow-up care for Jacob?"
+      },
+      {
+       "type": "story",
+       "title": "Jacob's follow-up",
+       "stages": [
+        {
+         "text": "A few days later Amira comes back, and this time her husband is with her. She looks more relaxed. You welcome them and praise them for bringing Jacob back. Amira tells you that she has been giving the antibiotic regularly, and that Jacob seems better."
+        },
+        {
+         "text": "Jacob is coughing much less. His breathing rate is now 40 breaths per minute. Amira says he is eating better: he will take solid foods and is breastfeeding better.",
+         "question": "How is Jacob?",
+         "options": [
+          "Improving",
+          "The same",
+          "Worse"
+         ],
+         "answer": 0,
+         "explanation": "He is breathing slower and eating better. You tell his parents that he is much better. They are relieved."
+        },
+        {
+         "text": "You have decided that Jacob is improving.",
+         "question": "What do you tell Amira to do now?",
+         "options": [
+          "Finish the full 5 days of the antibiotic",
+          "Stop the antibiotic",
+          "Take Jacob to hospital"
+         ],
+         "answer": 0,
+         "explanation": "You remind Amira that Jacob should finish taking the 5 days of the antibiotic, review with her why that matters, and again praise the parents for their good care of Jacob."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Practise"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m3-ex-g",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 38,
+     "bookToPage": 38,
+     "title": "Using this module in your clinic",
+     "order": 13,
+     "read": [
+      {
+       "type": "note",
+       "text": "Plan how you will practise these skills in your own clinic.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "How will you begin to apply what you have learned? In the coming days, focus on these key clinical skills, using your chart booklet and recording form. Practising will help you understand the clinical signs."
+      },
+      {
+       "type": "flip",
+       "title": "Your clinic plan",
+       "cards": [
+        {
+         "front": "ASSESS",
+         "back": "<ul><li>Ask caregivers if their children have a cough or difficult breathing, and for how long. Explain difficult breathing if they do not understand.</li><li>Count the number of breaths in one minute. Decide if it is fast breathing.</li><li>Watch children's chest walls: in normal children the chest wall and abdomen move out when the child breathes in.</li><li>Identify chest indrawing: the lower chest wall moves in when the child breathes in.</li><li>Listen for the different noises of breathing: do you hear stridor or wheezing?</li></ul>"
+        },
+        {
+         "front": "CLASSIFY",
+         "back": "<ul><li>Use your chart booklet to classify the signs you identify.</li><li>Record your classifications and the treatment on your recording form.</li></ul>"
+        },
+        {
+         "front": "TREAT",
+         "back": "<ul><li>Determine the appropriate treatment for a respiratory classification.</li><li>Determine the correct type and dose of antibiotic.</li><li>Determine the safe remedies in your area.</li></ul>"
+        },
+        {
+         "front": "COUNSEL",
+         "back": "<ul><li>Use the key communication skills (APAC and the three teaching steps).</li><li>Teach a caregiver how to give the antibiotic at home.</li><li>Teach a caregiver about making or buying and giving a safe remedy for sore throat or cough.</li><li>Counsel about when to return for follow-up and when to return immediately.</li></ul>"
+        },
+        {
+         "front": "FOLLOW-UP",
+         "back": "<ul><li>Reassess the child's previous classification.</li><li>Determine how you will manage.</li></ul>"
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Remember to use your logbook"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Complete the logbook exercises for Module 3.</li><li>Record at least 2 cases on IMNCI recording forms.</li><li>Take notes if you experience anything difficult, confusing or interesting during these cases, to share with your study group and facilitator.</li></ul>"
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 39,
+     "bookToPage": 43,
+     "title": "Review questions and Module 3 test",
+     "order": 14,
+     "read": [
+      {
+       "type": "note",
+       "text": "Test what you have learned in Module 3.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Before the module you answered six questions. Answer them again now, to see what you have learned. Then take the logbook test: you may use your chart booklet, but not the module."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m3-posttest",
+       "note": ""
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m3-logbook",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    }
+   ],
+   "isPublished": true
+  }
+ ],
+ "exercises": [
+  {
+   "id": "dimci-m3-pretest",
+   "order": 301,
+   "title": "Distance learning Module 3: Pre-test",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 3 (2014)",
+   "narrative": [
+    "Before you begin studying this module, check what you know. After the module you will answer the same questions."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "q1",
+     "type": "mcq",
+     "question": "What clinical signs can help you identify if a child has pneumonia?",
+     "options": [
+      "Wet cough",
+      "Fast breathing",
+      "Chest indrawing"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q2",
+     "type": "mcq",
+     "question": "If a child has pneumonia, how will you treat?",
+     "options": [
+      "Oral antibiotics",
+      "Honey",
+      "Paracetamol"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q3",
+     "type": "mcq",
+     "question": "Why is it important to correctly identify and manage pneumonia?",
+     "options": [
+      "Pneumonia is very common, but it is not so serious for children",
+      "Pneumonia is a major killer of children under 5 around the world, and it requires early management",
+      "Children with pneumonia need to be isolated from all other family members"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q4",
+     "type": "mcq",
+     "question": "Chest indrawing is when:",
+     "options": [
+      "The lower ribs move in when the child breathes out",
+      "The lower ribs move in when the child breathes in",
+      "The lower ribs are always pushed in, no matter if the child is breathing in or out"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q5",
+     "type": "tf",
+     "question": "Children who have a cough, but do not show signs of pneumonia, should immediately receive an antibiotic.",
+     "correct": false,
+     "explain": "A child with COUGH OR COLD does not need an antibiotic."
+    },
+    {
+     "id": "q6",
+     "type": "tf",
+     "question": "The following is a good checking question: \"How will you prepare a safe home remedy for cough?\"",
+     "correct": true,
+     "explain": "It cannot be answered with yes or no."
+    }
+   ]
+  },
+  {
+   "id": "dimci-m3-ex-a",
+   "order": 302,
+   "title": "Distance learning Module 3: Exercise A (assess)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 3 (2014)",
+   "narrative": [
+    "Practise what you have learned about assessing cough or difficult breathing."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "a1",
+     "type": "mcq",
+     "question": "Which two clinical signs help you identify children with pneumonia?",
+     "options": [
+      "Fast breathing",
+      "Chest indrawing",
+      "Runny nose",
+      "Wet cough"
+     ],
+     "correct": [
+      0,
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "a2",
+     "type": "tf",
+     "question": "A child of 3 years with 36 breaths per minute has fast breathing.",
+     "correct": false,
+     "explain": "From 12 months up to 5 years, fast breathing is 40 or more."
+    },
+    {
+     "id": "a3",
+     "type": "tf",
+     "question": "A child of 12 months with 50 breaths per minute has fast breathing.",
+     "correct": true,
+     "explain": "From 12 months up to 5 years, fast breathing is 40 or more."
+    },
+    {
+     "id": "a4",
+     "type": "tf",
+     "question": "A child of 6 months with 45 breaths per minute has fast breathing.",
+     "correct": false,
+     "explain": "From 2 months up to 12 months, fast breathing is 50 or more."
+    },
+    {
+     "id": "a5",
+     "type": "tf",
+     "question": "A child of 3 months with 57 breaths per minute has fast breathing.",
+     "correct": true,
+     "explain": "From 2 months up to 12 months, fast breathing is 50 or more."
+    },
+    {
+     "id": "a6",
+     "type": "open",
+     "question": "Julie arrives at your clinic with her mother. You gather the important information and check Julie for danger signs: she has none. What do you ASK and LOOK for next?",
+     "points": [
+      "ASK: does the child have cough or difficult breathing?",
+      "LOOK: do you notice any issues with breathing?"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "a7",
+     "type": "mcq",
+     "question": "Julie's mother says Julie has no cough or difficult breathing. You watch Julie, and she seems to be breathing regularly. What do you do next?",
+     "options": [
+      "Continue to the next assessment, for diarrhoea",
+      "Count her breaths in one minute",
+      "Give a safe remedy"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m3-ex-b",
+   "order": 303,
+   "title": "Distance learning Module 3: Exercise B (classify)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 8,
+   "draft": true,
+   "source": "WHO dIMCI Module 3 (2014)",
+   "narrative": [
+    "Open your chart booklet and review the classification table for cough or difficult breathing."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "b1",
+     "type": "mcq",
+     "question": "Sal is 9 months old and has a cough. You count 45 breaths per minute. No chest indrawing or stridor.",
+     "options": [
+      "SEVERE PNEUMONIA OR VERY SEVERE DISEASE",
+      "PNEUMONIA",
+      "COUGH OR COLD"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "45 is not fast breathing under 12 months (the cut-off is 50), and there are no other signs."
+    },
+    {
+     "id": "b2",
+     "type": "mcq",
+     "question": "Linus is 3 months old, and you count 65 breaths in one minute. He has had convulsions during the current illness.",
+     "options": [
+      "SEVERE PNEUMONIA OR VERY SEVERE DISEASE",
+      "PNEUMONIA",
+      "COUGH OR COLD"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "Convulsions during this illness are a general danger sign."
+    },
+    {
+     "id": "b3",
+     "type": "mcq",
+     "question": "Jojo is 3 years old. You count 56 breaths in one minute. No indrawing or stridor.",
+     "options": [
+      "SEVERE PNEUMONIA OR VERY SEVERE DISEASE",
+      "PNEUMONIA",
+      "COUGH OR COLD"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "56 is fast breathing from 12 months (the cut-off is 40)."
+    },
+    {
+     "id": "b4",
+     "type": "tf",
+     "question": "You should look for chest indrawing when the child breathes OUT.",
+     "correct": false,
+     "explain": "You look for chest indrawing when the child breathes IN."
+    },
+    {
+     "id": "b5",
+     "type": "tf",
+     "question": "Fast breathing in a child 12 months and older is 40 or more a minute.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "b6",
+     "type": "tf",
+     "question": "Chest indrawing is a sign of pneumonia.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "b7",
+     "type": "tf",
+     "question": "If a child has a cough but no other signs, they probably have pneumonia.",
+     "correct": false,
+     "explain": "A child who shows no signs is classified as COUGH OR COLD."
+    },
+    {
+     "id": "b8",
+     "type": "tf",
+     "question": "A child with chest indrawing will always also have fast breathing.",
+     "correct": false,
+     "explain": "A child with chest indrawing may not have fast breathing."
+    },
+    {
+     "id": "b9",
+     "type": "tf",
+     "question": "Chest indrawing is when the lower ribs move IN when the child breathes IN.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "b10",
+     "type": "tf",
+     "question": "A child 2 up to 12 months has fast breathing if more than 45 breaths a minute.",
+     "correct": false,
+     "explain": "Fast breathing in this age group is 50 or more breaths per minute."
+    },
+    {
+     "id": "b11",
+     "type": "tf",
+     "question": "A child with chest indrawing has a higher risk of death from pneumonia than a child with fast breathing and no chest indrawing.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "b12",
+     "type": "tf",
+     "question": "Difficult breathing can also be described as noisy, interrupted or fast.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "b13",
+     "type": "tf",
+     "question": "If a child has cough, fast breathing and vomits everything, he is classified as PNEUMONIA (yellow).",
+     "correct": false,
+     "explain": "Classify as SEVERE PNEUMONIA OR VERY SEVERE DISEASE. Fast breathing is a sign of PNEUMONIA (yellow), but vomiting everything is a general danger sign (red). When a child has signs from different rows, you always classify with the more severe."
+    }
+   ]
+  },
+  {
+   "id": "dimci-m3-gyatsu",
+   "order": 304,
+   "title": "Distance learning Module 3: Exercise C (Gyatsu, 6 months)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 10,
+   "draft": true,
+   "source": "WHO dIMCI Module 3 (2014)",
+   "narrative": [
+    "Gyatsu is 6 months old and weighs 5.5 kg. His temperature is 38 °C. His mother said he has had cough for 2 days.",
+    "The health worker checked for general danger signs. The mother said that Gyatsu is able to breastfeed. He has not vomited during this illness. He has not had convulsions. Gyatsu is not lethargic or unconscious.",
+    "The health worker said to the mother, \"I want to check Gyatsu's cough. You said he has had cough for 2 days now. I am going to count his breaths. He will need to remain calm while I do this.\"",
+    "The health worker counted 58 breaths per minute. He did not see chest indrawing or hear stridor."
+   ],
+   "expected": {
+    "sections": [
+     "danger",
+     "cough"
+    ],
+    "patientData": {
+     "childName": "Gyatsu",
+     "sex": "male",
+     "ageMonths": 6,
+     "weightKg": 5.5,
+     "tempC": 38,
+     "visitType": "initial"
+    },
+    "assessments": {
+     "notAbleToDrink": false,
+     "vomitsEverything": false,
+     "historyOfConvulsions": false,
+     "lethargicUnconscious": false,
+     "convulsingNow": false,
+     "hasCough": true,
+     "coughDays": 2,
+     "breathRate": 58,
+     "fastBreathing": true,
+     "chestIndrawing": false,
+     "stridor": false,
+     "wheeze": false
+    },
+    "classifications": {
+     "danger": [],
+     "cough": [
+      "imci.classifications.pneumonia"
+     ]
+    },
+    "includeTreatment": false,
+    "treatments": {}
+   },
+   "learningPoints": [
+    "Gyatsu has no general danger sign and no stridor when calm, so he does not have the severe (red) classification.",
+    "58 breaths per minute is fast breathing at 6 months (the cut-off is 50).",
+    "Fast breathing with no red sign is classified PNEUMONIA (yellow)."
+   ],
+   "explain": "Gyatsu has no general danger sign and no stridor when calm, so he does not have the severe (red) classification. 58 breaths per minute is fast breathing at 6 months (the cut-off is 50). Fast breathing with no red sign is classified PNEUMONIA (yellow)."
+  },
+  {
+   "id": "dimci-m3-ex-d",
+   "order": 305,
+   "title": "Distance learning Module 3: Exercise D (treatment)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 10,
+   "draft": true,
+   "source": "WHO dIMCI Module 3 (2014)",
+   "narrative": [
+    "Answer the questions about the treatments you have read about. Use the dosage table for amoxicillin."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "d1",
+     "type": "tf",
+     "question": "You should give a child the first-line antibiotic, unless it is unavailable or the child has not responded to it.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "d2",
+     "type": "tf",
+     "question": "If a child has more than one illness that requires antibiotics, if possible, give one antibiotic for more than one illness.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "d3",
+     "type": "tf",
+     "question": "If a child can drink, it is preferable to give an oral antibiotic.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "d4",
+     "type": "tf",
+     "question": "If a child has two illnesses that require the same antibiotic, you should double the dose or give the treatment for 10 days instead of 5.",
+     "correct": false,
+     "explain": "Do not double the size of each dose or give the antibiotic for a longer period."
+    },
+    {
+     "id": "d5",
+     "type": "mcq",
+     "question": "How often should you give amoxicillin for pneumonia?",
+     "options": [
+      "2 times a day for 5 days",
+      "3 times a day for 3 days",
+      "Once a day for 5 days"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d6",
+     "type": "mcq",
+     "question": "A child is 3 months old, weighs 5 kg and can drink. You have amoxicillin syrup (250 mg/5 ml).",
+     "options": [
+      "5 ml, two times a day, for five days",
+      "10 ml, two times a day, for five days",
+      "2.5 ml, two times a day, for five days"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d7",
+     "type": "mcq",
+     "question": "A child is 9 months old, and you have amoxicillin tablets (250 mg).",
+     "options": [
+      "1 tablet, two times a day, for five days",
+      "2 tablets, two times a day, for five days",
+      "½ tablet, two times a day, for five days"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d8",
+     "type": "mcq",
+     "question": "A child is 13 months old and you do not know her weight. She can drink. You have amoxicillin syrup (250 mg/5 ml).",
+     "options": [
+      "5 ml, two times a day, for five days",
+      "10 ml, two times a day, for five days",
+      "15 ml, two times a day, for five days"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "12 months up to 3 years: 10 ml."
+    },
+    {
+     "id": "d9",
+     "type": "mcq",
+     "question": "A child is 4 years old. You have amoxicillin tablets (250 mg).",
+     "options": [
+      "2 tablets, two times a day, for five days",
+      "3 tablets, two times a day, for five days",
+      "1 tablet, two times a day, for five days"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d10",
+     "type": "open",
+     "question": "What is meant by a \"safe\" remedy? Give an example.",
+     "points": [
+      "Remedies can be homemade, given at the clinic or bought at a pharmacy",
+      "Safe remedies are locally specific and recorded in your chart booklet",
+      "Breast milk is the best remedy for an exclusively breastfed child: do not give other drinks or remedies"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d11",
+     "type": "open",
+     "question": "Give at least 2 examples of remedies that are not safe.",
+     "points": [
+      "Remedies containing atropine",
+      "Remedies containing codeine or codeine derivatives",
+      "Remedies containing alcohol",
+      "Medicated nose drops (anything other than salt)"
+     ],
+     "explain": "They may sedate the child, interfere with feeding, and interfere with the child's ability to cough up secretions from the lungs."
+    }
+   ]
+  },
+  {
+   "id": "dimci-m3-ex-e",
+   "order": 306,
+   "title": "Distance learning Module 3: Exercise E (checking questions)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 3 (2014)",
+   "narrative": [
+    "Rewrite each question as a good checking question. A good checking question is open-ended: it begins with how, what, why, when or where, and cannot be answered yes or no."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "e1",
+     "type": "open",
+     "question": "Do you remember when to give the amoxicillin?",
+     "points": [
+      "For example: When will you give the amoxicillin?"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e2",
+     "type": "open",
+     "question": "Do you understand how much amoxicillin syrup to give your child?",
+     "points": [
+      "For example: How much syrup will you give your child?"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e3",
+     "type": "open",
+     "question": "Did the nurse explain to you how to use an inhaler?",
+     "points": [
+      "For example: How will you give the inhaler?"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e4",
+     "type": "open",
+     "question": "Do you know how to make a remedy for the throat?",
+     "points": [
+      "For example: How will you make a remedy for the throat at home?"
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m3-ex-f",
+   "order": 307,
+   "title": "Distance learning Module 3: Exercise F (counsel)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 3 (2014)",
+   "narrative": [
+    "Nurse Aluka gives some oral antibiotics to a mother for her child, Maria Balana. Before he explains how to give them, Aluka asks the mother if she knows how to give her child the medicine. The mother nods her head yes. So Aluka gives her the antibiotics and says good-bye."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "f1",
+     "type": "open",
+     "question": "If a mother tells you that she already knows how to give a treatment, what should you do?",
+     "points": [
+      "Ask her to show you how to measure the dose, and to tell you the schedule for the antibiotic",
+      "If she is incorrect, give her the information and demonstrate",
+      "If she measures the dose correctly, ask her to give the first dose so you can observe"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f2",
+     "type": "mcq",
+     "question": "Maria Balana is 4 months old and is classified PNEUMONIA. You have amoxicillin tablets (250 mg). What do you write on the drug label?",
+     "options": [
+      "Amoxicillin, 10 tablets: give 1 tablet, two times a day, for 5 days",
+      "Amoxicillin, 5 tablets: give 1 tablet once a day for 5 days",
+      "Amoxicillin, 20 tablets: give 2 tablets, two times a day, for 5 days"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "2 months up to 12 months: 1 tablet (250 mg) twice daily for 5 days, so 10 tablets in all."
+    },
+    {
+     "id": "f3",
+     "type": "mcq",
+     "question": "When should a child classified as COUGH OR COLD return immediately to the clinic?",
+     "options": [
+      "If breathing becomes fast or difficult",
+      "If the child is still coughing after 2 days",
+      "Only if the mother runs out of the remedy"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f4",
+     "type": "mcq",
+     "question": "When should the child come back for follow-up of the cough or cold?",
+     "options": [
+      "In 5 days, only if the cough is not improving",
+      "In 3 days, always",
+      "In 14 days"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m3-ex-g",
+   "order": 308,
+   "title": "Distance learning Module 3: Exercise G (Pandit's follow-up)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 3 (2014)",
+   "narrative": [
+    "Pandit's mother has brought him back for follow-up. He is one year old. Three days ago he was classified as having PNEUMONIA and you gave him amoxicillin. You ask how he is doing and if he has developed any new problems. His mother says that he is much better."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "g1",
+     "type": "open",
+     "question": "How would you reassess Pandit today? List all the signs you would look at and the questions you would ask his mother.",
+     "points": [
+      "Is he able to drink or breastfeed?",
+      "Does he vomit everything?",
+      "Has he had convulsions?",
+      "See if he is lethargic or unconscious",
+      "Is he still coughing? How long has he been coughing?",
+      "Count the breaths in one minute",
+      "Look for chest indrawing",
+      "Look and listen for stridor",
+      "Is he breathing slower?",
+      "Is there less fever?",
+      "Is he eating better?"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "g2",
+     "type": "mcq",
+     "question": "Pandit has no general danger signs. He is still coughing, and has now been coughing for about 10 days. He is breathing 38 breaths per minute and has no chest indrawing and no stridor. He does not have fever. He is breastfeeding well and eating some food: he was refusing all food before. He was playing with his brother this morning. What actions will you take?",
+     "options": [
+      "Tell his mother he is improving, and that she should continue the antibiotic until the 5 days are finished",
+      "Refer him urgently to hospital",
+      "Stop the antibiotic today"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "Tell his mother that he is improving nicely. She should continue giving the medicine as she has been until it is all gone. Ask checking questions about how she has been giving the treatment, and address any concerns."
+    }
+   ]
+  },
+  {
+   "id": "dimci-m3-posttest",
+   "order": 309,
+   "title": "Distance learning Module 3: Review questions (post-test)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 3 (2014)",
+   "narrative": [
+    "Now that you have finished the module, answer the same questions as before."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "q1",
+     "type": "mcq",
+     "question": "What clinical signs can help you identify if a child has pneumonia?",
+     "options": [
+      "Wet cough",
+      "Fast breathing",
+      "Runny nose"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q2",
+     "type": "mcq",
+     "question": "If a child has pneumonia, how will you treat?",
+     "options": [
+      "Oral antibiotics",
+      "Honey",
+      "Paracetamol"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q3",
+     "type": "mcq",
+     "question": "Why is it important to correctly identify and manage pneumonia?",
+     "options": [
+      "Pneumonia is very common, but it is not so serious for children",
+      "Pneumonia is a major killer of children under 5 around the world, and it requires early management",
+      "Children with pneumonia need to be isolated from all other family members"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q4",
+     "type": "mcq",
+     "question": "Chest indrawing is when:",
+     "options": [
+      "The lower ribs move in when the child breathes out",
+      "The lower ribs move in when the child breathes in",
+      "The lower ribs are always pushed in, no matter if the child is breathing in or out"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q5",
+     "type": "tf",
+     "question": "Children who have a cough, but do not show signs of pneumonia, should immediately receive an antibiotic.",
+     "correct": false,
+     "explain": "A child with COUGH OR COLD does not need an antibiotic."
+    },
+    {
+     "id": "q6",
+     "type": "tf",
+     "question": "The following is a good checking question: \"How will you prepare a safe home remedy for cough?\"",
+     "correct": true,
+     "explain": "It cannot be answered with yes or no."
+    }
+   ]
+  },
+  {
+   "id": "dimci-m3-logbook",
+   "order": 310,
+   "title": "Distance learning Module 3: Logbook assessment questions",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 15,
+   "draft": true,
+   "source": "WHO dIMCI Module 3 (2014)",
+   "narrative": [
+    "You are allowed to use your chart booklet as you answer these questions. You should not use your study modules."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "l1",
+     "type": "mcq",
+     "question": "When using IMNCI, what clinical signs help identify pneumonia?",
+     "options": [
+      "Wheeze and wet cough",
+      "Fast breathing and chest indrawing",
+      "Chest indrawing and blood when coughing"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l2",
+     "type": "mcq",
+     "question": "A child is classified with SEVERE PNEUMONIA OR VERY SEVERE DISEASE when which of the following signs is present:",
+     "options": [
+      "Wheeze",
+      "Fast breathing",
+      "Stridor when the child is calm"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l3",
+     "type": "mcq",
+     "question": "Raj is 7 months old. He has fast breathing if:",
+     "options": [
+      "40 or more breaths per minute",
+      "50 or more breaths per minute",
+      "60 or more breaths per minute"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l4",
+     "type": "mcq",
+     "question": "Chest indrawing is when:",
+     "options": [
+      "The lower ribs move in when the child breathes out.",
+      "The lower ribs move in when the child breathes in.",
+      "The lower ribs are always pushed in, no matter when the child is breathing in or out."
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l5",
+     "type": "mcq",
+     "question": "Poorvaja is 3 years old. She has fast breathing if:",
+     "options": [
+      "60 or more breaths per minute",
+      "40 or more breaths per minute",
+      "50 or more breaths per minute"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l6",
+     "type": "mcq",
+     "question": "What is stridor?",
+     "options": [
+      "A wheezing noise when the child breathes out",
+      "A wet noise when the child is sitting still and breathing",
+      "A harsh noise, caused by swelling, heard when the child breathes in"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l7",
+     "type": "mcq",
+     "question": "Ntebo is 12 months old. He has fast breathing if:",
+     "options": [
+      "40 or more breaths per minute",
+      "50 or more breaths per minute",
+      "60 or more breaths per minute"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l8",
+     "type": "mcq",
+     "question": "Roma is 3 months old. You count 57 breaths in one minute. You do not hear stridor. When Roma breathes in, his lower ribs move in. How would you classify Roma's cough?",
+     "options": [
+      "SEVERE PNEUMONIA",
+      "PNEUMONIA",
+      "COUGH OR COLD"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l9",
+     "type": "mcq",
+     "question": "Which of the following are good teaching steps when explaining home treatment for a cough?",
+     "options": [
+      "Give the caregiver some printed information and send the treatment home",
+      "Ask questions like \"Will you give this medicine correctly?\"",
+      "Explain how to give treatment, demonstrate giving treatment, and ask the caregiver to practise while you give feedback"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l10",
+     "type": "mcq",
+     "question": "If the child has had a cough for more than 3 weeks, what steps should be taken?",
+     "options": [
+      "Refer for TB or asthma assessment",
+      "Send the child home with a soothing remedy",
+      "Check for stridor"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l11",
+     "type": "tf",
+     "question": "When giving antibiotics using IMNCI, it is important to consider all four of these issues: schedule, dosage, combining treatment if more than one illness can be treated with a single antibiotic, and only using the second-line medicines if the first line is not available or the child did not respond to the first line.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l12",
+     "type": "tf",
+     "question": "You will only assess a child for a cough or difficult breathing if the caregiver specifically says that cough is the reason they came to the clinic.",
+     "correct": false,
+     "explain": ""
+    },
+    {
+     "id": "l13",
+     "type": "tf",
+     "question": "A child with a cough but no signs of pneumonia can be treated at home.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l14",
+     "type": "tf",
+     "question": "Oral antibiotics are given to children with pneumonia.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l15",
+     "type": "tf",
+     "question": "It is best to count breaths for fast breathing when the child is active and moving around.",
+     "correct": false,
+     "explain": ""
+    },
+    {
+     "id": "l16",
+     "type": "tf",
+     "question": "If a child has fast breathing and no other signs, they are classified PNEUMONIA.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l17",
+     "type": "tf",
+     "question": "A child with chest indrawing can be treated in the clinic.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l18",
+     "type": "tf",
+     "question": "A child with PNEUMONIA should return to the clinic in 2 days.",
+     "correct": false,
+     "explain": "Follow up in 3 days."
+    },
+    {
+     "id": "l19",
+     "type": "tf",
+     "question": "If a child with pneumonia returns for follow-up and has not improved, and they have been receiving the first-line antibiotic correctly, start the second-line antibiotic if it is available.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l20",
+     "type": "tf",
+     "question": "Pneumonia and other acute respiratory infections are major killers of children worldwide.",
+     "correct": true,
+     "explain": ""
+    }
+   ]
+  }
+ ]
+}

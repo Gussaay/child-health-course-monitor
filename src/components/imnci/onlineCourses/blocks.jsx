@@ -9,7 +9,7 @@ import {
     Play, Pencil, Film, BookOpen, Syringe,
 } from 'lucide-react';
 import { severityById } from '../../constants';
-import { videoSource, blockHtml, isActivity } from '../book';
+import { videoSource, blockHtml } from '../book';
 import { RichText, useImnci } from '../shared';
 import { useInPageBack } from '../../CommonComponents';
 import { assetUrl } from './assets';
@@ -34,30 +34,12 @@ const QuizPlayer = lazy(() => import('../exercises.jsx').then((m) => ({ default:
 // coexist while modules are done one at a time.
 // =============================================================================
 
+import { activityKeyList, activityAnchor } from './activityKeys';
+
+export { activityKeyList, activityKeys, activityOutline, activityAnchor } from './activityKeys';
+
 // An icon per tab. Practise is a stethoscope rather than a pencil: what is
 // being practised is examining a child, not writing.
-// An activity is known by its content, not its place in the section, so a
-// block an author inserts or moves later does not inherit another activity's
-// "done". Two identical blocks are told apart by a running count.
-const hash = (str) => {
-    let h = 5381;
-    for (let i = 0; i < str.length; i += 1) h = ((h * 33) ^ str.charCodeAt(i)) >>> 0;
-    return h.toString(36);
-};
-const counts = (b) => isActivity(b) && !(b.type === 'video' && !b.url);
-/** The key of every block (null for one that is not an activity), in order. */
-export function activityKeyList(blocks = []) {
-    const seen = {};
-    return blocks.map((b) => {
-        if (!counts(b)) return null;
-        const base = `${b.type}-${hash(JSON.stringify(b))}`;
-        seen[base] = (seen[base] || 0) + 1;
-        return seen[base] > 1 ? `${base}-${seen[base]}` : base;
-    });
-}
-/** Activities in a list of blocks, by the keys ContentBlocks gives them. */
-export const activityKeys = (blocks = []) => activityKeyList(blocks).filter((k) => k !== null);
-
 export const TAB_ICONS = { read: BookOpenText, see: MonitorPlay, practise: Stethoscope };
 
 export function BookImage({ block }) {
@@ -360,8 +342,12 @@ export function ExerciseLinkBlock({ block, activityKey }) {
     const screen = useCourseScreen();
     const [playing, setPlaying] = useState(false);
     const [done, markDone] = useActivity(activityKey);
+    const ex = exercises?.find((x) => x.id === block.exerciseId);
+    // An exercise that is no longer there cannot be done, so it must not hold
+    // the lesson, and every lesson after it, closed.
+    const gone = !!exercises && !ex;
+    useEffect(() => { if (gone && !done) markDone(); }); // eslint-disable-line react-hooks/exhaustive-deps
     if (!exercises) return <div className="not-prose h-28 bg-slate-100 rounded-xl animate-pulse my-4" />;
-    const ex = exercises.find((x) => x.id === block.exerciseId);
     if (!ex) {
         return (
             <div className="not-prose p-3 border border-dashed border-amber-300 bg-amber-50 rounded text-xs text-amber-900">
@@ -552,6 +538,15 @@ export function ContentBlocks({ blocks, scale = 1, activities = false }) {
             style={{ fontSize: `${scale}rem` }}
         >
             {blocks.map((b, i) => {
+                const el = block(b, i);
+                // An activity carries an anchor, so the lesson's checklist can take the learner to it.
+                return key(i) ? <div key={i} id={activityAnchor(key(i))} className="scroll-mt-24">{el}</div> : el;
+            })}
+        </div>
+    );
+
+    function block(b, i) {
+        {
                 if (b.type === 'list') {
                     return (
                         <ul key={i} className="list-disc ms-6 space-y-1">
@@ -632,9 +627,8 @@ export function ContentBlocks({ blocks, scale = 1, activities = false }) {
                     );
                 }
                 return <RichText key={i} html={blockHtml(b)} />;
-            })}
-        </div>
-    );
+        }
+    }
 }
 
 // =============================================================================

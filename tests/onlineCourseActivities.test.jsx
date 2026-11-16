@@ -8,7 +8,7 @@ import {
     groupsFromText, sortItemsFromText, sortItemsToText, chaptersFromText, chaptersToText, stopsFromText, stopsToText,
 } from '../src/components/imnci/onlineCourses/cardText';
 import { ActivityContext, FlipBlock, SortBlock, RevealBlock } from '../src/components/imnci/onlineCourses/interactive';
-import { activityKeys } from '../src/components/imnci/onlineCourses/blocks';
+import { activityKeys, activityOutline, activityAnchor, ContentBlocks } from '../src/components/imnci/onlineCourses/blocks';
 import { sectionContent, BLOCK_TYPES } from '../src/components/imnci/book';
 import { readingMinutes } from '../src/components/imnci/onlineCourses/search';
 
@@ -67,6 +67,20 @@ describe('one page per section', () => {
         expect(after).toHaveLength(4);
         const twins = activityKeys([{ type: 'flip', cards: [] }, { type: 'flip', cards: [] }]);
         expect(new Set(twins).size).toBe(2);
+    });
+
+    it('lists a lesson\'s activities for its checklist, and anchors each one on the page', async () => {
+        const blocks = [
+            { type: 'paragraph', text: 'p' },
+            { type: 'flip', title: 'Numbers to <b>remember</b>', cards: [{ front: 'a', back: 'b' }] },
+            { type: 'reveal', text: 'How do you classify?', answer: 'x' },
+            { type: 'video', url: '', title: 'Not recorded yet' },
+        ];
+        const outline = activityOutline(blocks);
+        expect(outline.map((a) => [a.type, a.label])).toEqual([['flip', 'Numbers to remember'], ['reveal', 'How do you classify?']]);
+        expect(outline.map((a) => a.key)).toEqual(activityKeys(blocks));
+        const host = await mount(<ContentBlocks blocks={blocks} activities />, new Set());
+        outline.forEach((a) => expect(host.querySelector(`#${activityAnchor(a.key)}`)).not.toBeNull());
     });
 
     it('allows time for videos and cases on a one-page section', () => {

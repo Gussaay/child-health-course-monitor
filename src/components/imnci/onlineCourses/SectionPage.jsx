@@ -8,10 +8,11 @@ import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'reac
 import { useTranslation } from 'react-i18next';
 import {
     Pencil, ArrowLeft, ArrowRight, Columns2, CheckCircle2, ZoomIn, ZoomOut, Clock, Sparkles, Trophy,
+    ListChecks, ChevronDown, Circle,
 } from 'lucide-react';
 import { Button } from '../../CommonComponents';
 import { sectionContent } from '../book';
-import { ContentBlocks, activityKeys } from './blocks';
+import { ContentBlocks, activityOutline, activityAnchor } from './blocks';
 import { ActivityContext } from './interactive';
 import { SectionTabEditor } from './SectionTabEditor';
 import { SectionAiPanel } from './lazyParts';
@@ -25,17 +26,89 @@ const storeKey = (uid, id) => `oc-activities-${uid || 'guest'}-${id}`;
 function readDone(uid, id) {
     try { return new Set(JSON.parse(localStorage.getItem(storeKey(uid, id)) || '[]')); } catch { return new Set(); }
 }
-function useSectionActivities(uid, sectionId) {
-    const [done, setDone] = useState(() => readDone(uid, sectionId));
-    useEffect(() => { setDone(readDone(uid, sectionId)); }, [uid, sectionId]);
-    const markDone = useCallback((key) => setDone((prev) => {
-        if (prev.has(key)) return prev;
-        const next = new Set(prev).add(key);
+//
+// The same tally is saved to the learner's account (`saved`, `save`), so a
+// lesson started on one device carries on where it stopped on another. What
+// is done is the two together: nothing done is ever taken away by a sync.
+function useSectionActivities(uid, sectionId, saved, save) {
+    const [local, setLocal] = useState(() => readDone(uid, sectionId));
+    useEffect(() => { setLocal(readDone(uid, sectionId)); }, [uid, sectionId]);
+    const done = useMemo(() => new Set([...local, ...(saved || [])]), [local, saved]);
+    const markDone = useCallback((key) => {
+        if (done.has(key)) return;
+        const next = new Set(done).add(key);
         try { localStorage.setItem(storeKey(uid, sectionId), JSON.stringify([...next])); } catch { /* private mode */ }
-        return next;
-    }), [uid, sectionId]);
+        setLocal(next);
+        save?.(sectionId, [...next]);
+    }, [uid, sectionId, done, save]);
     const value = useMemo(() => ({ isDone: (k) => done.has(k), markDone }), [done, markDone]);
     return [done, value];
+}
+
+const ACTIVITY_NAMES = {
+    question: ['imnci_ui.courses.activity.kind_question', 'Question'],
+    video: ['imnci_ui.courses.activity.kind_video', 'Video'],
+    exercise: ['imnci_ui.courses.activity.kind_exercise', 'Exercise'],
+    reveal: ['imnci_ui.courses.activity.kind_reveal', 'Think first'],
+    flip: ['imnci_ui.courses.activity.kind_flip', 'Flip cards'],
+    sort: ['imnci_ui.courses.activity.kind_sort', 'Sorting'],
+    steps: ['imnci_ui.courses.activity.kind_steps', 'Step by step'],
+    story: ['imnci_ui.courses.activity.kind_story', 'Case story'],
+};
+const goToActivity = (key) => document.getElementById(activityAnchor(key))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+// The lesson's own checklist: every activity in it, ticked as it is done. It
+// tells the learner what the lesson asks of them before they start, where
+// they stopped when they come back, and what is still to do before the next
+// lesson opens. Touching a line goes to that activity.
+function LessonChecklist({ outline, doneKeys }) {
+    const { t } = useTranslation();
+    const left = outline.filter((a) => !doneKeys.has(a.key));
+    const [open, setOpen] = useState(left.length > 0);
+    const pct = Math.round(((outline.length - left.length) / outline.length) * 100);
+    return (
+        <div className="rounded-xl border border-slate-200 bg-slate-50">
+            <button onClick={() => setOpen(!open)} aria-expanded={open}
+                className="w-full flex items-center gap-3 px-4 py-3 text-start">
+                <span className={`w-9 h-9 rounded-full grid place-items-center shrink-0 text-white ${left.length ? 'bg-sky-700' : 'bg-emerald-600'}`}>
+                    {left.length ? <ListChecks size={18} /> : <Trophy size={18} />}
+                </span>
+                <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-bold text-slate-900">
+                        {left.length
+                            ? t('imnci_ui.courses.activity.checklist_title', 'Your progress in this lesson: {{n}} of {{total}} done', { n: outline.length - left.length, total: outline.length })
+                            : t('imnci_ui.courses.activity.checklist_done', 'Every activity in this lesson is done')}
+                    </span>
+                    <span className="mt-1.5 block h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                        <span className={`block h-full rounded-full transition-all ${left.length ? 'bg-sky-600' : 'bg-emerald-600'}`} style={{ width: `${pct}%` }} />
+                    </span>
+                </span>
+                <ChevronDown size={18} className={`text-slate-500 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+            </button>
+            {open && (
+                <ol className="px-2 pb-2 space-y-0.5">
+                    {outline.map((a) => {
+                        const done = doneKeys.has(a.key);
+                        const [k, name] = ACTIVITY_NAMES[a.type] || ['imnci_ui.courses.activity.kind_other', 'Activity'];
+                        return (
+                            <li key={a.key}>
+                                <button onClick={() => goToActivity(a.key)}
+                                    className="w-full flex items-center gap-2.5 px-2 py-2 min-h-[44px] rounded-lg text-start text-sm hover:bg-white">
+                                    {done
+                                        ? <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+                                        : <Circle size={18} className="text-slate-400 shrink-0" />}
+                                    <span className={`min-w-0 flex-1 ${done ? 'text-slate-500' : 'text-slate-800'}`}>
+                                        <span className="font-semibold">{t(k, name)}</span>
+                                        {a.label && <span className="text-slate-500"> · {a.label}</span>}
+                                    </span>
+                                </button>
+                            </li>
+                        );
+                    })}
+                </ol>
+            )}
+        </div>
+    );
 }
 
 export function SectionPage() {
@@ -43,14 +116,20 @@ export function SectionPage() {
     const {
         back, compare, duration, editingTab, fontScale, go, inOrder, isAdmin,
         minutesById, modules, openModule, openSection, progress, reload, sectionsByModule,
-        setCompare, setEditingTab, setScale, toggleComplete, user,
+        saveActivities, setCompare, setEditingTab, setScale, toggleComplete, user,
     } = useCourseScreen();
 
     const isDone = !!progress.completed?.[openSection.id];
     const content = sectionContent(openSection);
-    const [doneKeys, activityValue] = useSectionActivities(user?.uid, openSection.id);
-    const keys = activityKeys(content);
+    const [doneKeys, activityValue] = useSectionActivities(user?.uid, openSection.id, progress.activities?.[openSection.id], saveActivities);
+    const outline = useMemo(() => activityOutline(content), [openSection]); // eslint-disable-line react-hooks/exhaustive-deps
+    const keys = outline.map((a) => a.key);
     const activitiesDone = keys.filter((k) => doneKeys.has(k)).length;
+    const firstLeft = outline.find((a) => !doneKeys.has(a.key));
+    // A lesson is finished by doing it, not by pressing a button: in a course
+    // read in order, it can be completed once every activity in it is done.
+    // Someone managing the course is not held to that.
+    const canComplete = isAdmin || !inOrder || !firstLeft;
     // Revising the converted text means holding it against the page it came
     // from. The captured pages make that possible without leaving the app.
     const pages = content.filter((b) => b.type === 'page');
@@ -73,6 +152,7 @@ export function SectionPage() {
     // go on. Marking complete is what unlocks the next one, so it is done
     // first and the move follows straight after.
     const completeAndContinue = async () => {
+        if (!canComplete) { goToActivity(firstLeft.key); return; }
         if (!isDone) await toggleComplete(openSection);
         if (next) goTo(next);
     };
@@ -119,6 +199,8 @@ export function SectionPage() {
                         </div>
                     )}
                 </header>
+
+                {!editingTab && outline.length > 0 && <LessonChecklist key={openSection.id} outline={outline} doneKeys={doneKeys} />}
 
                 <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6 space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -227,9 +309,18 @@ export function SectionPage() {
                 section never means scrolling to find the button. */}
             {!editingTab && (
                 <div className="sticky bottom-[var(--bottom-nav,0px)] z-20 -mx-3 sm:mx-0 sm:mb-3 sm:rounded-xl sm:border border-t border-slate-200 shadow-[0_-4px_12px_rgba(15,23,42,0.06)] bg-white/95 backdrop-blur px-3 sm:px-4 py-3">
-                    {!nextAllowed && next && (
+                    {!isDone && !canComplete ? (
+                        <div className="text-xs text-amber-700 text-center mb-2">
+                            {t('imnci_ui.courses.activity.left_to_do', 'Activities still to do before this lesson is complete: {{n}}', { n: keys.length - activitiesDone })}
+                        </div>
+                    ) : !nextAllowed && next && (
                         <div className="text-xs text-amber-700 text-center mb-2">
                             {t('imnci_ui.courses.look.finish_to_open', 'Finish this section to open the next')}
+                        </div>
+                    )}
+                    {!isDone && isAdmin && firstLeft && (
+                        <div className="text-xs text-slate-500 text-center mb-2">
+                            {t('imnci_ui.courses.activity.manager_skip', 'You are managing this course, so you can go on. A learner must do every activity first.')}
                         </div>
                     )}
                     <div className="flex items-center gap-2">
@@ -263,11 +354,18 @@ export function SectionPage() {
                                     <ArrowRight size={18} className="rtl:rotate-180" />
                                 </button>
                             )}
-                            <button onClick={completeAndContinue} disabled={!user?.uid}
-                                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg bg-sky-700 text-white text-sm font-semibold hover:bg-sky-800 disabled:bg-slate-200 disabled:text-slate-400">
-                                {next ? t('imnci_ui.courses.look.complete_continue', 'Complete & continue') : t('imnci_ui.courses.main.mark_complete', 'Mark complete')}
-                                {next ? <ArrowRight size={18} className="rtl:rotate-180" /> : <CheckCircle2 size={18} />}
-                            </button>
+                            {canComplete ? (
+                                <button onClick={completeAndContinue} disabled={!user?.uid}
+                                    className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg bg-sky-700 text-white text-sm font-semibold hover:bg-sky-800 disabled:bg-slate-200 disabled:text-slate-400">
+                                    {next ? t('imnci_ui.courses.look.complete_continue', 'Complete & continue') : t('imnci_ui.courses.main.mark_complete', 'Mark complete')}
+                                    {next ? <ArrowRight size={18} className="rtl:rotate-180" /> : <CheckCircle2 size={18} />}
+                                </button>
+                            ) : (
+                                <button onClick={completeAndContinue}
+                                    className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700">
+                                    <ListChecks size={18} /> {t('imnci_ui.courses.activity.go_to_next', 'Go to the next activity')}
+                                </button>
+                            )}
                         </>)}
                     </div>
                 </div>
