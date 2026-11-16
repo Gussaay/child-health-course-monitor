@@ -54,6 +54,15 @@ const DEFAULT_BLOCK_TOPICS = {
         'followup.fu_anaemia': ['anemia'],
         'followup.fu_sam': ['malnutrition'],
         'followup.fu_mam': ['malnutrition'],
+        'oral.steps': [GENERAL],
+        'clinic.steps': [GENERAL],
+        'clinic.im_antibiotics': ['danger', 'cough', 'fever', 'ear', 'malnutrition'],
+        'clinic.quinine': ['fever'],
+        'clinic.diazepam': ['danger'],
+        'clinic.low_sugar': ['danger', 'fever', 'malnutrition'],
+        'counsel.recommendations': ['malnutrition', 'anemia', GENERAL],
+        'counsel.warnings': [GENERAL],
+        'growth.charts': ['malnutrition'],
     },
     infant: {
         'local.warm': ['bacterial_infection'],
@@ -70,6 +79,11 @@ const DEFAULT_BLOCK_TOPICS = {
         'followup.fu_feeding': ['feeding_problem'],
         'followup.fu_thrush': ['feeding_problem'],
         'followup.fu_lwa': ['feeding_problem'],
+        'clinic.im_antibiotics': ['bacterial_infection'],
+        'clinic.low_sugar': ['bacterial_infection', 'jaundice'],
+        'counsel.cup': ['feeding_problem'],
+        'counsel.warm_home': ['feeding_problem'],
+        'growth.wfa': ['feeding_problem'],
     },
 };
 

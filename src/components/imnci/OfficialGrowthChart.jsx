@@ -9,7 +9,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ZoomIn, ZoomOut } from 'lucide-react';
-import { toPixel, fromPixel, inChart, plotChild } from './growthCharts';
+import { toPixel, fromPixel, inChart, plotChild, getChart, kindForAge } from './growthCharts';
 import { weightForHeight } from './whz';
 import WhzChart from './WhzChart';
 
@@ -124,6 +124,60 @@ export function FormGrowthChart({ child }) {
                     ? <OfficialGrowthChart chart={plot.chart} point={{ x: plot.x, kg: plot.kg, color, label }} />
                     : <p className="text-xs text-slate-500">{t('imci.growth_chart.off_chart', 'This weight and length fall outside the printed chart, so the point cannot be plotted on it.')}</p>
             )}
+        </div>
+    );
+}
+
+const KIND_TITLES = {
+    wfl: ['imci.growth_chart.kind_wfl', 'Weight-for-length (birth to 2 years)'],
+    wfh: ['imci.growth_chart.kind_wfh', 'Weight-for-height (2 to 5 years)'],
+    wfa: ['imci.growth_chart.kind_wfa', 'Weight-for-age (birth to 6 months)'],
+};
+
+/**
+ * The booklet's growth charts in protocol management: pick boys or girls and
+ * the chart, and optionally plot a child by typing their numbers.
+ * kinds: ['wfl', 'wfh'] or ['wfa']. lang: the booklet edition to show.
+ */
+export function GrowthChartsBox({ kinds = ['wfl', 'wfh'], lang = 'en' }) {
+    const { t } = useTranslation();
+    const [sex, setSex] = useState('female');
+    const [kind, setKind] = useState(kinds[0]);
+    const [v, setV] = useState({ age: '', weightKg: '', x: '' });
+    const wfa = kind === 'wfa';
+    const chart = getChart(kind, sex, lang);
+    const age = parseFloat(v.age); const kg = parseFloat(v.weightKg);
+    const x = wfa ? age : parseFloat(v.x);
+    const ready = Number.isFinite(kg) && Number.isFinite(x);
+    // The length/height chart follows the age typed, as on the recording form.
+    const autoKind = !wfa && Number.isFinite(age) ? kindForAge(age) : kind;
+    const status = ready && !wfa && Number.isFinite(age) ? weightForHeight({ sex, ageMonths: age, weightKg: kg, lengthCm: x }).status : null;
+    const show = autoKind !== kind && kinds.includes(autoKind) ? getChart(autoKind, sex, lang) : chart;
+    const point = ready && show && inChart(show, x, kg) ? { x, kg, color: STATUS_COLORS[status] || '#0f172a', label: `${kg} ${t('imci.ui.kg', 'kg')} · ${x} ${wfa ? t('imci.growth_chart.weeks_short', 'weeks') : t('imci.ui.cm', 'cm')}` } : null;
+    const chip = (on, onClick, text) => (
+        <button type="button" onClick={onClick}
+            className={`px-2.5 py-1 text-xs rounded-full border ${on ? 'bg-slate-800 text-white border-slate-800' : 'bg-white border-slate-300 hover:bg-slate-50'}`}>{text}</button>
+    );
+    const set = (k) => (e) => setV((p) => ({ ...p, [k]: e.target.value }));
+    const field = 'w-24 p-1 border border-slate-300 rounded text-xs';
+    return (
+        <div className="space-y-2" data-testid="growth-charts-box">
+            <div className="flex flex-wrap gap-1.5">
+                {chip(sex === 'female', () => setSex('female'), t('imci.growth_chart.girls', 'Girls'))}
+                {chip(sex === 'male', () => setSex('male'), t('imci.growth_chart.boys', 'Boys'))}
+                {kinds.length > 1 && kinds.map((k) => <React.Fragment key={k}>{chip(show?.kind === k, () => { setKind(k); setV((p) => ({ ...p, age: '' })); }, t(...KIND_TITLES[k]))}</React.Fragment>)}
+            </div>
+            <div className="flex flex-wrap items-end gap-2 text-xs text-slate-600">
+                <span className="font-semibold">{t('imci.growth_chart.plot_child', 'Plot a child:')}</span>
+                <label className="flex flex-col">{wfa ? t('imci.growth_chart.age_in_weeks', 'Age (weeks)') : t('imci.growth_chart.age_in_months', 'Age (months)')}
+                    <input type="number" inputMode="decimal" value={v.age} onChange={set('age')} className={field} /></label>
+                <label className="flex flex-col">{t('imci.growth_chart.weight_kg', 'Weight (kg)')}
+                    <input type="number" inputMode="decimal" step="0.1" value={v.weightKg} onChange={set('weightKg')} className={field} /></label>
+                {!wfa && <label className="flex flex-col">{t('imci.growth_chart.length_cm', 'Length or height (cm)')}
+                    <input type="number" inputMode="decimal" step="0.5" value={v.x} onChange={set('x')} className={field} /></label>}
+                {status && point && <span className="font-bold" style={{ color: STATUS_COLORS[status] }}>{t({ 'Less than -3Z': 'imci.child.less_3z', 'Between -3 and -2 Z': 'imci.child.between_3_2', '-2 Z or more': 'imci.child.more_2z' }[status], status)}</span>}
+            </div>
+            <OfficialGrowthChart chart={show} point={point} />
         </div>
     );
 }

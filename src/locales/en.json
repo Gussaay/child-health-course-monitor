@@ -5992,6 +5992,10 @@
         "add_condition": "+ Add Condition",
         "treatments": "Treatments (Editable)",
         "add_std_treatment": "+ Add Standard Treatment"
+      },
+      "new_boxes": {
+        "title": "The national chart booklet has {{count}} box(es) that are not in the saved treatment tables yet",
+        "add": "Add them, then review and save"
       }
     },
     "maternal": {
@@ -8809,7 +8813,13 @@
       "age_in_weeks": "Age (weeks)",
       "age_in_months": "Age (months)",
       "weight_kg": "Weight (kg)",
-      "length_cm": "Length or height (cm)"
+      "length_cm": "Length or height (cm)",
+      "kind_wfl": "Weight-for-length (birth to 2 years)",
+      "kind_wfh": "Weight-for-height (2 to 5 years)",
+      "kind_wfa": "Weight-for-age (birth to 6 months)",
+      "plot_child": "Plot a child:",
+      "girls": "Girls",
+      "boys": "Boys"
     }
   },
   "form_pdf": {

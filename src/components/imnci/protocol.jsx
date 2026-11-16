@@ -13,7 +13,7 @@ import { NATIONAL_PROTOCOLS, NATIONAL_SAVE_ORDER } from './nationalProtocol';
 import { BookletProtocolView, BookletDoseView, SignsPicker, ClassificationPicker, TreatmentEditor, editorLists } from './bookletView';
 import { NATIONAL_FORMS } from './recordingForms';
 import { RecordingFormView } from './recordingFormView';
-import { NATIONAL_GUIDES } from './treatmentGuides';
+import { NATIONAL_GUIDES, missingNationalBoxes, addMissingNationalBoxes } from './treatmentGuides';
 import { GuideBlock, addGuideBox } from './treatmentGuideView';
 import { GENERAL, FORM, topicsFor, drugsForTopic, guideForTopic, groupForNewBox } from './topics';
 import { diffProtocol, currentEditor } from './protocolHistory';
@@ -797,6 +797,12 @@ export default function ProtocolEditor() {
     const topicCats = topicEntry?.page?.categories || [];
     const topicDrugIdx = isFormTab ? [] : drugsForTopic(part, topic, classDoc, doseDoc);
     const knownTopics = topics.map((tp) => tp.id);
+    // Boxes added to the national booklet after this part's tables were saved.
+    const newBoxes = protocols?.[guideKey] ? missingNationalBoxes(guideDoc, NATIONAL_GUIDES[guideKey]) : [];
+    const addNewBoxes = () => {
+        if (!editing) startEditing();
+        setDoc(guideKey, addMissingNationalBoxes(guideDoc, NATIONAL_GUIDES[guideKey]));
+    };
     const topicGuide = isFormTab ? { treat: [], counsel: [], followup: [] } : guideForTopic(part, topic, guideDoc, knownTopics);
     const guideLang = ar ? 'ar' : 'en';
     const addBoxFor = (kind) => {
@@ -1007,6 +1013,20 @@ export default function ProtocolEditor() {
                                     </ul>
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {newBoxes.length > 0 && (
+                        <div className="border border-sky-300 bg-sky-50 rounded-md p-3 text-sm" data-testid="new-national-boxes">
+                            <div className="font-bold text-sky-900">
+                                {t('clinical_ui.protocol.new_boxes.title', 'The national chart booklet has {{count}} box(es) that are not in the saved treatment tables yet', { count: newBoxes.length })}
+                            </div>
+                            <ul className="list-disc ms-5 mt-1 text-xs text-sky-900 max-h-32 overflow-y-auto">
+                                {newBoxes.map((m) => <li key={`${m.group}.${m.block}`}>{ar && m.titleAr ? m.titleAr : m.title}</li>)}
+                            </ul>
+                            <Button onClick={addNewBoxes} className="mt-2 bg-sky-700 hover:bg-sky-800 text-white border-0 text-xs">
+                                <Plus size={14} className="me-1 inline" /> {t('clinical_ui.protocol.new_boxes.add', 'Add them, then review and save')}
+                            </Button>
                         </div>
                     )}
 
