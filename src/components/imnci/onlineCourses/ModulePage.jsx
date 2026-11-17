@@ -1,7 +1,7 @@
 // src/components/imnci/onlineCourses/ModulePage.jsx
 //
 // The sections in one module, in order, with what each holds and how long
-// it takes.
+// it takes. A locked lesson keeps its normal row, with a red "Locked" badge.
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, ArrowLeft, CheckCircle2, Wand2, Lock, Clock, RefreshCw, FileDown } from 'lucide-react';
@@ -12,7 +12,7 @@ import { ConvertBookModal } from './ConvertBookModal';
 import { ItemModal } from './ItemModals';
 import { OfflineSave } from './OfflineSave';
 import { useCourseScreen } from './screen';
-import { LockedBanner } from './ui';
+import { LockedBadge, LockedBanner, Pill } from './ui';
 import { useImnci } from '../shared';
 import { notify } from '../../dialogs';
 import { shareFile } from '../../../utils/sharePdf';
@@ -47,7 +47,8 @@ export function ModulePage() {
     const moduleNo = modules.findIndex((m) => m.id === openModule.id) + 1;
     // A module opened by its link before the one before it is finished.
     const locked = moduleNo > 1 && !!moduleLocked?.(moduleNo - 1);
-    const STRIPES = { backgroundImage: 'repeating-linear-gradient(135deg, rgba(100,116,139,0.10) 0 10px, rgba(100,116,139,0.02) 10px 20px)' };
+    // The lesson to do next: the first one not finished.
+    const firstOpen = secs.findIndex((s) => !progress.completed?.[s.id]);
 
     return (
         <div className="space-y-4 max-w-4xl mx-auto">
@@ -132,14 +133,16 @@ export function ModulePage() {
                             const saved = progress.activities?.[s.id] || [];
                             const activitiesDone = done ? activities : actKeys.filter((k) => saved.includes(k)).length;
                             const started = !done && activitiesDone > 0;
+                            const current = !done && !locked && i === firstOpen;
                             return (
-                                <li key={s.id} style={locked ? STRIPES : undefined} data-locked={locked ? 'true' : 'false'}
+                                <li key={s.id} data-locked={locked ? 'true' : 'false'}
                                     className={`flex items-center gap-3 px-4 sm:px-6 py-3.5 transition-colors ${
-                                    locked ? 'bg-slate-50' : 'hover:bg-sky-50/60'}`}>
-                                    <span className={`w-8 h-8 rounded-full grid place-items-center text-xs font-bold shrink-0 ${
+                                    locked ? '' : 'hover:bg-sky-50/60'} ${current ? 'border-s-4 border-s-sky-600' : ''}`}>
+                                    <span className={`w-9 h-9 rounded-full grid place-items-center text-xs font-bold shrink-0 tabular-nums ${
                                         done ? 'bg-emerald-50 text-emerald-600'
-                                            : locked ? 'bg-slate-200 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
-                                        {done ? <CheckCircle2 size={15} /> : locked ? <Lock size={13} /> : i + 1}
+                                            : locked ? 'bg-red-50 text-red-600 border border-red-200'
+                                                : current ? 'bg-sky-700 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                        {done ? <CheckCircle2 size={16} /> : locked ? <Lock size={14} /> : i + 1}
                                     </span>
                                     <button className="flex-1 text-start min-w-0 disabled:cursor-not-allowed"
                                         disabled={locked}
@@ -148,18 +151,20 @@ export function ModulePage() {
                                             go({ section: s.id, tab: 'read' });
                                             setEditingTab(null);
                                         }}>
-                                        {moduleNo > 0 && (
-                                            <div className="text-xs font-semibold text-slate-500">
-                                                {t('imnci_ui.courses.look.section_n', 'Section {{n}}', { n: `${moduleNo}.${i + 1}` })}
-                                            </div>
-                                        )}
-                                        <div className={`font-semibold truncate ${locked ? 'text-slate-400' : 'text-slate-800'}`}>{s.title}</div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            {moduleNo > 0 && (
+                                                <span className="text-xs font-semibold text-slate-500">
+                                                    {t('imnci_ui.courses.look.section_n', 'Section {{n}}', { n: `${moduleNo}.${i + 1}` })}
+                                                </span>
+                                            )}
+                                            {locked && <LockedBadge>{t('imnci_ui.courses.look.locked', 'Locked')}</LockedBadge>}
+                                            {done && <Pill tone="done">{t('imnci_ui.courses.look.completed', 'Completed')}</Pill>}
+                                            {current && <Pill tone="active">{started ? t('imnci_ui.courses.look.in_progress', 'In progress') : t('imnci_ui.courses.look.up_next', 'Up next')}</Pill>}
+                                        </div>
+                                        <div className="font-semibold text-slate-900 leading-snug mt-0.5">{s.title}</div>
                                         <div className="text-xs text-slate-500 flex gap-2 flex-wrap mt-0.5">
                                             {locked ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-700 text-white text-[10px] font-bold uppercase tracking-wider">
-                                                    <Lock size={10} /> {t('imnci_ui.courses.look.locked', 'Locked')}
-                                                    <span className="normal-case tracking-normal font-semibold">· {t('imnci_ui.courses.main.finish_previous', 'Finish the previous section first')}</span>
-                                                </span>
+                                                <span className="font-semibold text-red-700">{t('imnci_ui.courses.main.finish_previous', 'Finish the previous section first')}</span>
                                             ) : (<>
                                                 {activities > 0 && (
                                                     <span className={started ? 'font-semibold text-sky-700' : undefined}>
