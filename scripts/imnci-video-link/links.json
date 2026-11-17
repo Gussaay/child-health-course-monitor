@@ -1,0 +1,56 @@
+[
+ {
+  "script": "V1.2",
+  "url": "https://youtu.be/4uzeSKgm2nI",
+  "chapters": [
+   {
+    "at": 0,
+    "label": "Signs of serious illness"
+   },
+   {
+    "at": 11,
+    "label": "Opening case: Lebo"
+   },
+   {
+    "at": 28,
+    "label": "Greet the caregiver"
+   },
+   {
+    "at": 50,
+    "label": "What to find out"
+   },
+   {
+    "at": 78,
+    "label": "Back to Lebo"
+   },
+   {
+    "at": 93,
+    "label": "Check for general danger signs"
+   },
+   {
+    "at": 101,
+    "label": "Able to drink or breastfeed?"
+   },
+   {
+    "at": 119,
+    "label": "Vomits everything?"
+   },
+   {
+    "at": 132,
+    "label": "Convulsions?"
+   },
+   {
+    "at": 143,
+    "label": "Lethargic or unconscious?"
+   },
+   {
+    "at": 162,
+    "label": "Lebo's danger signs"
+   },
+   {
+    "at": 174,
+    "label": "Act quickly"
+   }
+  ]
+ }
+]
