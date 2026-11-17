@@ -1,19 +1,18 @@
 // src/components/imnci/onlineCourses/CoursePage.jsx
 //
-// One course: its progress, what to do next, search, and the modules with
-// their sections folded under each one.
+// One course: its progress, what to do next, search, and its modules. Each
+// module opens on its own page, where its lessons are listed.
 //
 // The layout follows the "Clinical Slate & Sky" design: a header with the
 // course's numbers, one large progress figure, an "Up next" card that resumes
-// where the learner stopped, filter chips, and the modules as an accordion so
-// a learner can see the sections of a module without leaving the page. The
-// module page is still there, one tap away, for saving a module for offline
-// use and for the authors' tools.
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
+// where the learner stopped, filter chips, and one card per module. A card
+// opens the module page (its lessons, offline saving, the authors' tools).
+// The modules used to unfold in place, which made this page long and crowded.
+import React, { Suspense, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     BookOpen, Plus, Pencil, ArrowLeft, ArrowRight, CheckCircle2, Lock, Unlock, Clock, Layers, Search, X,
-    CloudDownload, ChevronDown, PlayCircle, Play, RotateCw, Award,
+    CloudDownload, PlayCircle, Award,
 } from 'lucide-react';
 import { Card, Button } from '../../CommonComponents';
 import { ItemModal } from './ItemModals';
@@ -21,7 +20,7 @@ import { searchSections } from './search';
 import { CourseBooks } from './lazyParts';
 import { savedModules } from './offline';
 import { useCourseScreen } from './screen';
-import { Pill } from './ui';
+import { Pill, LockedBanner } from './ui';
 
 export function CoursePage() {
     const { t } = useTranslation();
@@ -52,19 +51,6 @@ export function CoursePage() {
     const modulesDone = moduleInfo.filter((x) => x.status === 'done').length;
 
     const [filter, setFilter] = useState('all');
-    // The module the learner is working in starts open; the rest are folded.
-    const [openIds, setOpenIds] = useState(() => new Set(nextUp?.moduleId ? [nextUp.moduleId] : []));
-    // Progress can arrive after the page has drawn from cached courses, which
-    // moves "Up next" to another module; open that one too when it does.
-    const nextModuleId = nextUp?.moduleId;
-    useEffect(() => {
-        if (nextModuleId) setOpenIds((s) => (s.has(nextModuleId) ? s : new Set(s).add(nextModuleId)));
-    }, [nextModuleId]);
-    const toggleOpen = (id) => setOpenIds((s) => {
-        const n = new Set(s);
-        if (n.has(id)) n.delete(id); else n.add(id);
-        return n;
-    });
     const shown = moduleInfo.filter((x) => filter === 'all'
         || (filter === 'done' ? x.status === 'done' : x.status === 'active'));
 
@@ -253,9 +239,7 @@ export function CoursePage() {
             ) : (
                 <div className="space-y-3">
                     {shown.map((info) => (
-                        <ModuleCard key={info.m.id} info={info} open={openIds.has(info.m.id) && !info.locked}
-                            onToggle={() => toggleOpen(info.m.id)} saved={!!saved[info.m.id]}
-                            isDone={isDone} openSection={openSection} />
+                        <ModuleCard key={info.m.id} info={info} saved={!!saved[info.m.id]} />
                     ))}
                 </div>
             )}
@@ -292,139 +276,54 @@ export function CoursePage() {
     );
 }
 
-// One module in the accordion: its status, and when open, its sections.
-function ModuleCard({ info, open, onToggle, saved, isDone, openSection }) {
+// One module: a card that opens the module on its own page. A locked module
+// carries a striped "Locked" band and cannot be opened.
+function ModuleCard({ info, saved }) {
     const { t } = useTranslation();
-    const { duration, go, minutesById, minutesLeft, nextUp, sectionLocked } = useCourseScreen();
+    const { duration, go, minutesById } = useCourseScreen();
     const { m, i, secs, done, locked, status } = info;
     const mpct = secs.length ? Math.round((done / secs.length) * 100) : 0;
     const total = secs.reduce((n, x) => n + (minutesById[x.id] || 0), 0);
-
     const icon = {
-        done: <span className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 grid place-items-center shrink-0"><CheckCircle2 size={20} /></span>,
-        active: <span className="w-10 h-10 rounded-full bg-sky-50 text-sky-700 grid place-items-center shrink-0"><RotateCw size={18} /></span>,
-        locked: <span className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 grid place-items-center shrink-0"><Lock size={17} /></span>,
-        idle: <span className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 grid place-items-center shrink-0 font-bold tabular-nums">{i + 1}</span>,
+        done: <span className="w-11 h-11 rounded-full bg-emerald-50 text-emerald-600 grid place-items-center shrink-0"><CheckCircle2 size={22} /></span>,
+        active: <span className="w-11 h-11 rounded-full bg-sky-700 text-white grid place-items-center shrink-0 font-bold tabular-nums">{i + 1}</span>,
+        locked: <span className="w-11 h-11 rounded-full bg-slate-200 text-slate-500 grid place-items-center shrink-0"><Lock size={18} /></span>,
+        idle: <span className="w-11 h-11 rounded-full bg-slate-100 text-slate-700 grid place-items-center shrink-0 font-bold tabular-nums">{i + 1}</span>,
     }[status];
-    const pill = {
-        done: <Pill tone="done">{t('imnci_ui.courses.look.completed', 'Completed')}</Pill>,
-        active: <Pill tone="active">{t('imnci_ui.courses.look.in_progress', 'In progress')}</Pill>,
-        locked: <Pill tone="locked">{t('imnci_ui.courses.look.locked', 'Locked')}</Pill>,
-        idle: null,
-    }[status];
-
     return (
         <div className={`rounded-xl border bg-white overflow-hidden transition-shadow ${status === 'active'
             ? 'border-slate-200 border-s-4 border-s-sky-600 shadow-md'
-            : locked ? 'border-slate-200 bg-slate-50/60' : 'border-slate-200 shadow-sm hover:shadow-md'}`}>
-            <button type="button" onClick={onToggle} disabled={locked} aria-expanded={open}
-                className="w-full text-start p-4 flex items-start gap-3 disabled:cursor-not-allowed">
+            : locked ? 'border-slate-200' : 'border-slate-200 shadow-sm hover:shadow-md hover:border-sky-300'}`}
+            data-testid="module-card" data-locked={locked ? 'true' : 'false'}>
+            {locked && (
+                <LockedBanner compact title={t('imnci_ui.courses.look.locked', 'Locked')}
+                    reason={t('imnci_ui.courses.look.requires_module', 'Requires completion of Module {{n}}', { n: i })} />
+            )}
+            <button type="button" disabled={locked} onClick={() => go({ module: m.id, section: null, tab: 'read' })}
+                className={`w-full text-start p-4 flex items-center gap-3 disabled:cursor-not-allowed ${locked ? 'opacity-70' : ''}`}>
                 {icon}
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                             {t('imnci_ui.courses.look.module_n', 'Module {{n}}', { n: i + 1 })}
                         </span>
-                        {pill}
+                        {status === 'done' && <Pill tone="done">{t('imnci_ui.courses.look.completed', 'Completed')}</Pill>}
+                        {status === 'active' && <Pill tone="active">{t('imnci_ui.courses.look.in_progress', 'In progress')}</Pill>}
+                        {saved && <CloudDownload size={13} className="text-emerald-600" aria-label={t('imnci_ui.courses.offline.saved', 'Saved on this device')} />}
                     </div>
                     <div className={`font-bold text-base sm:text-lg leading-snug mt-0.5 ${locked ? 'text-slate-500' : 'text-slate-900'}`}>{m.title}</div>
-                    <div className="text-sm text-slate-500 mt-0.5 tabular-nums">
-                        {locked
-                            ? t('imnci_ui.courses.look.requires_module', 'Requires completion of Module {{n}}', { n: i })
-                            : t('imnci_ui.courses.look.n_of_m_sections', '{{done}} of {{total}} sections finished', { done, total: secs.length })}
+                    <div className="text-xs text-slate-500 mt-1 tabular-nums">
+                        {t('imnci_ui.courses.look.n_of_m_sections', '{{done}} of {{total}} sections finished', { done, total: secs.length })}
                         {total > 0 && ` · ${duration(total)}`}
                     </div>
-                    {saved && (
-                        <div className="text-xs text-emerald-700 mt-1 inline-flex items-center gap-1">
-                            <CloudDownload size={12} /> {t('imnci_ui.courses.offline.saved', 'Saved on this device')}
-                        </div>
-                    )}
-                    {status === 'active' && secs.length > 0 && (
+                    {!locked && secs.length > 0 && done > 0 && (
                         <div className="h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden max-w-xs">
-                            <div className="h-full bg-sky-600 rounded-full" style={{ width: `${mpct}%` }} />
+                            <div className={`h-full rounded-full ${status === 'done' ? 'bg-emerald-500' : 'bg-sky-600'}`} style={{ width: `${mpct}%` }} />
                         </div>
                     )}
                 </div>
-                {status === 'active' && <Pill tone="active" className="hidden sm:inline-flex">{mpct}%</Pill>}
-                {!locked && <ChevronDown size={20} className={`text-slate-400 shrink-0 mt-2 transition-transform ${open ? 'rotate-180' : ''}`} />}
+                {!locked && <ArrowRight size={20} className="text-slate-400 shrink-0 rtl:rotate-180" />}
             </button>
-
-            {open && (
-                <div className="border-t border-slate-100 bg-slate-50/70 p-3 space-y-2">
-                    {secs.length === 0 && (
-                        <div className="text-sm text-slate-500 text-center py-4">{t('imnci_ui.courses.main.no_sections', 'No sections yet.')}</div>
-                    )}
-                    {secs.map((s, si) => {
-                        const sDone = isDone(s);
-                        const sLocked = sectionLocked(secs, si);
-                        const current = !sDone && !sLocked && nextUp?.sectionId === s.id;
-                        const label = t('imnci_ui.courses.look.section_n', 'Section {{n}}', { n: `${i + 1}.${si + 1}` });
-                        const mins = minutesById[s.id];
-                        if (current) {
-                            return (
-                                <div key={s.id} className="rounded-xl border border-sky-300 bg-white p-3 shadow-sm ring-2 ring-sky-100">
-                                    <div className="flex items-start gap-3">
-                                        <span className="w-8 h-8 rounded-full bg-amber-100 text-amber-700 grid place-items-center shrink-0"><Play size={14} /></span>
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <span className="text-xs font-semibold text-slate-500">{label}</span>
-                                                <Pill tone="next">{t('imnci_ui.courses.look.current', 'Current')}</Pill>
-                                            </div>
-                                            <div className="font-bold text-slate-900 mt-0.5">{s.title}</div>
-                                        </div>
-                                    </div>
-                                    <div className="mt-3 flex items-center gap-3 rounded-lg bg-slate-50 border border-slate-200 p-2 ps-3">
-                                        <span className="flex-1 text-xs text-slate-600 inline-flex items-center gap-1.5">
-                                            {mins > 0 && <><Clock size={13} /> {duration(mins)}</>}
-                                        </span>
-                                        <button onClick={() => openSection(s)}
-                                            className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-lg bg-sky-700 text-white text-sm font-semibold hover:bg-sky-800">
-                                            {done ? t('imnci_ui.courses.look.resume_section', 'Resume section') : t('imnci_ui.courses.look.start_section', 'Start section')}
-                                            <ArrowRight size={16} className="rtl:rotate-180" />
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        }
-                        return (
-                            <button key={s.id} type="button" disabled={sLocked} onClick={() => openSection(s)}
-                                className={`w-full text-start rounded-xl border p-3 flex items-center gap-3 transition-colors ${sLocked
-                                    ? 'border-slate-200 bg-white/60 cursor-not-allowed'
-                                    : 'border-slate-200 bg-white hover:border-sky-300'}`}>
-                                <span className={`w-8 h-8 rounded-full grid place-items-center shrink-0 ${sDone
-                                    ? 'bg-emerald-50 text-emerald-600' : sLocked ? 'bg-slate-100 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
-                                    {sDone ? <CheckCircle2 size={16} /> : sLocked ? <Lock size={13} /> : <BookOpen size={14} />}
-                                </span>
-                                <span className="min-w-0 flex-1">
-                                    <span className="flex flex-wrap items-center gap-2">
-                                        <span className="text-xs font-semibold text-slate-500">{label}</span>
-                                        {sDone && <Pill tone="done">{t('imnci_ui.courses.look.completed', 'Completed')}</Pill>}
-                                    </span>
-                                    <span className={`block font-semibold truncate ${sLocked ? 'text-slate-400' : 'text-slate-800'}`}>{s.title}</span>
-                                    {mins > 0 && (
-                                        <span className="text-xs text-slate-500 inline-flex items-center gap-1"><Clock size={11} /> {duration(mins)}</span>
-                                    )}
-                                </span>
-                                {sLocked ? <Lock size={15} className="text-slate-300 shrink-0" /> : (
-                                    <span className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold ${sDone
-                                        ? 'bg-sky-50 text-sky-800' : 'border border-slate-300 text-slate-700'}`}>
-                                        {sDone ? t('imnci_ui.courses.look.review', 'Review') : t('imnci_ui.courses.look.start', 'Start')}
-                                    </span>
-                                )}
-                            </button>
-                        );
-                    })}
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1 px-1">
-                        <span className="text-xs text-slate-500">
-                            {minutesLeft(secs) > 0 && t('imnci_ui.courses.time.left', 'about {{time}} left', { time: duration(minutesLeft(secs)) })}
-                        </span>
-                        <button onClick={() => go({ module: m.id, section: null, tab: 'read' })}
-                            className="text-sm font-semibold text-sky-700 hover:text-sky-900 inline-flex items-center gap-1">
-                            {t('imnci_ui.courses.look.open_module', 'Open module page')} <ArrowRight size={14} className="rtl:rotate-180" />
-                        </button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

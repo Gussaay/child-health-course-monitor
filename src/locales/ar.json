@@ -7995,7 +7995,9 @@
         "start_course": "ابدأ الدورة التدريبية",
         "the_book": "الكتاب",
         "use_edit_tab": "استخدم «تعديل {{tab}}» أعلاه لكتابته.",
-        "use_import": "استخدم «استيراد» لجلب دورة IMNCI من تطبيق Android."
+        "use_import": "استخدم «استيراد» لجلب دورة IMNCI من تطبيق Android.",
+        "smaller_text": "تصغير النص",
+        "larger_text": "تكبير النص"
       },
       "question": {
         "correct": "إجابة صحيحة.",
@@ -8047,10 +8049,20 @@
         "explanation": "التفسير",
         "finish_to_open": "أكمل هذا القسم لفتح القسم التالي",
         "course_complete": "اكتملت الدورة",
-        "back_to_course": "العودة إلى الدورة"
+        "back_to_course": "العودة إلى الدورة",
+        "module_locked": "هذه الوحدة مقفلة",
+        "go_to_module": "انتقل إلى الوحدة {{n}}",
+        "lesson_locked": "هذا الدرس مقفل",
+        "finish_earlier": "أكمل الدروس التي قبله أولاً. تُفتح الدروس بالترتيب.",
+        "go_to_current": "انتقل إلى درسك الحالي"
       },
       "activity": {
         "kind_growthchart": "ارسم على المنحنى"
+      },
+      "link": {
+        "module_n": "الوحدة {{n}}",
+        "open": "افتح في دورة المتدربين",
+        "missing": "هذا الجزء من \"{{course}}\" غير موجود في التطبيق بعد."
       }
     },
     "exercises": {

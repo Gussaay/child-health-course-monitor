@@ -43,6 +43,7 @@ import { ModulePage } from './onlineCourses/ModulePage';
 import { CoursePage } from './onlineCourses/CoursePage';
 import { CourseList } from './onlineCourses/CourseList';
 import { BuilderPane } from './onlineCourses/BuilderPane';
+import { canSeeCourse, followsAnyLesson, isFacilitatorRole } from './onlineCourses/audience';
 
 // Kept importable from here, where they used to live.
 export { ASSET_ROOT, assetPath } from './onlineCourses/assets';
@@ -68,6 +69,7 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [] }) 
     const [mode, setMode] = useState('learn');
     const isAdmin = canManage && mode === 'manage';
     const canSeeProgress = (userRoles || []).some((r) => MANAGER_ROLES.includes(String(r).toLowerCase()));
+    const isFacilitator = isFacilitatorRole(userRoles);
 
     // Reading size, remembered per device. The books are dense and are read on
     // whatever phone the health worker happens to have.
@@ -169,8 +171,11 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [] }) 
         .filter((c) => c.isDeleted !== true)
         // An unpublished course is a draft; only the people who can publish it see it.
         .filter((c) => canManage || c.isPublished)
+        // A course for facilitators (the facilitator guide, with answer keys
+        // and the examination) is not shown to learners.
+        .filter((c) => canSeeCourse(c, { canManage, canSeeProgress, isFacilitator }))
         .sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.title).localeCompare(String(b.title))),
-    [onlineCourses, canManage]);
+    [onlineCourses, canManage, canSeeProgress, isFacilitator]);
 
     const items = useMemo(() => (onlineCourseItems || []).filter((i) => i.isDeleted !== true), [onlineCourseItems]);
 
@@ -250,7 +255,8 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [] }) 
     // A course can open every section at once instead (its author's choice,
     // in the course's settings): a refresher, or a course used in a classroom
     // where the trainer moves around the book.
-    const inOrder = openCourse?.lockOrder !== false;
+    // Facilitators and managers open any lesson, so the guide's links work.
+    const inOrder = openCourse?.lockOrder !== false && !followsAnyLesson({ canSeeProgress, isFacilitator });
 
     const moduleLocked = useCallback((index) => {
         if (isAdmin || !inOrder || index <= 0) return false;
