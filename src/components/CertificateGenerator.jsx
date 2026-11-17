@@ -22,10 +22,13 @@ import {
     staleCertificateParticipants,
     certificateDirectorName,
     certificateDirectorSignature,
-    getBuiltinSubCourseTypes
+    getBuiltinSubCourseTypes,
+    CERT_LANGUAGES, ALL_SUB_COURSES, NO_SUB_COURSE,
+    certificateApprovedFor, certificateApprovedLanguages, certificateFullyApproved,
+    mergeCertificateApprovalScopes
 } from './constants'; 
 import { db } from '../firebase'; 
-import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc, deleteDoc, serverTimestamp, deleteField } from 'firebase/firestore'; 
+import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc, deleteDoc, serverTimestamp, deleteField, FieldPath } from 'firebase/firestore'; 
 import { useDataCache } from '../DataContext';
 import { 
     getParticipantById, 
@@ -758,6 +761,21 @@ export const loadInheritedCertificateConfig = async (courseType, subCourse = nul
     );
 };
 
+// A course's own draft for one sub-course sits on top of its own draft for
+// all sub-courses: course.customCertificateBySub = { [subCourse]: config }.
+const sameSubName = (a, b) => String(a ?? '').replace(/\s+/g, ' ').trim().toLowerCase() === String(b ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+export const subCourseOwnConfig = (course, subCourse) => {
+    const map = course?.customCertificateBySub;
+    if (!subCourse || !map || typeof map !== 'object') return {};
+    const key = Object.keys(map).find(k => sameSubName(k, subCourse));
+    return key !== undefined ? (map[key] || {}) : {};
+};
+/** The key a sub-course's draft is stored under (reuses an existing spelling). */
+export const subCourseOwnKey = (course, subCourse) => {
+    const map = course?.customCertificateBySub || {};
+    return Object.keys(map).find(k => sameSubName(k, subCourse)) ?? String(subCourse || '').trim();
+};
+
 /** Returns the course with customCertificate replaced by the fully layered config. */
 export const applyCertificateTemplates = async (course, subCourse = null) => {
     if (!course) return course;
@@ -770,7 +788,8 @@ export const applyCertificateTemplates = async (course, subCourse = null) => {
     return {
         ...course,
         __ownCustomCertificate: own,
-        customCertificate: mergeCertificateConfigs(inherited, own)
+        __certResolvedSub: resolvedSub,
+        customCertificate: mergeCertificateConfigs(inherited, own, subCourseOwnConfig(course, resolvedSub))
     };
 };
 
@@ -791,7 +810,8 @@ export const layerCourseWithTemplates = (course, templateDocs = {}, subCourse = 
             cleanCertificateConfig(templateDocs[GENERAL_TEMPLATE_ID]?.config || {}, 'general'),
             course.course_type ? cleanCertificateConfig(templateDocs[courseTypeTemplateId(course.course_type)]?.config || {}, 'courseType') : null,
             subDoc ? cleanCertificateConfig(subDoc?.config || {}, 'subCourse') : null,
-            course.customCertificate
+            course.customCertificate,
+            subCourseOwnConfig(course, resolvedSub)
         )
     };
 };
@@ -954,7 +974,14 @@ export const resolveCertificateSignatories = (course = {}, fallbackManagerName =
  * win. Falls back to the passed-in object when offline or on any error.
  */
 const loadAuthoritativeCourse = async (course, subCourse = null) => {
-    if (!course || course.__certCourseResolved) return course;
+    if (!course) return course;
+    if (course.__certCourseResolved) {
+        // A batch resolves the course once; a participant in another
+        // sub-course is layered again (from cache) with that sub-course's
+        // template and the course's own draft for it.
+        if (!subCourse || sameSubName(subCourse, course.__certResolvedSub)) return course;
+        return { ...(await applyCertificateTemplates(course, subCourse)), __certCourseResolved: true };
+    }
     let base = course;
     if (course.id) {
         try {
@@ -2830,7 +2857,17 @@ export function CertificateDesigner({
                 ? t('certificates.designer.scope_type', 'Course-type template: {{type}} (all sub-courses)', { type: scope.courseType })
                 : t('certificates.designer.scope_course', 'This course only');
 
-    const startingOwn = () => (isTemplateScope ? (initialConfig || {}) : (course?.customCertificate || {}));
+    // Course scope only: which sub-course this draft is for ('' = all of them).
+    const [draftSub, setDraftSub] = useState('');
+    // Drafts saved in this session. The `course` prop is the copy the list
+    // handed over and is not refreshed, so switching sub-course after a save
+    // would otherwise reload the old draft.
+    const savedDraftsRef = useRef({});
+    const startingOwn = (sub = draftSub) => {
+        if (isTemplateScope) return initialConfig || {};
+        const c = { ...(course || {}), ...savedDraftsRef.current };
+        return sub ? subCourseOwnConfig(c, sub) : (c.customCertificate || {});
+    };
 
     // ownData = what this layer stores. inherited = the layers beneath it.
     // data = what actually prints (inherited, then ownData on top); every
@@ -2871,24 +2908,8 @@ export function CertificateDesigner({
     const [activeUploadKey, setActiveUploadKey] = useState(null);
     const [uploadingAsset, setUploadingAsset] = useState(null);
 
-    useEffect(() => { setOwnData(startingOwn()); setDirty(false); }, [course, initialConfig]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { savedDraftsRef.current = {}; setOwnData(startingOwn()); setDirty(false); }, [course, initialConfig]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    useEffect(() => {
-        let alive = true;
-        (async () => {
-            let cfg = {};
-            if (scopeKind === 'course') {
-                const sub = autoSubCourse || course?.director_imci_sub_type || null;
-                cfg = await loadInheritedCertificateConfig(course?.course_type, sub);
-            } else if (scopeKind === 'subCourse') {
-                cfg = await loadInheritedCertificateConfig(scope.courseType, null); // general + courseType
-            } else if (scopeKind === 'courseType') {
-                cfg = await loadInheritedCertificateConfig(null); // general only
-            }
-            if (alive) setInherited(cfg || {});
-        })();
-        return () => { alive = false; };
-    }, [scopeKind, course?.course_type, autoSubCourse, scope?.courseType, scope?.subCourse]);
 
     const scale = zoom === 'fit' ? fitScale : Number(zoom);
     useEffect(() => { scaleRef.current = scale; }, [scale]);
@@ -2933,15 +2954,25 @@ export function CertificateDesigner({
     // download looks: participant records first, then group assignments, then the
     // course. Otherwise the designer can hide a line that still prints.
     const [participantSubCourse, setParticipantSubCourse] = useState('');
+    // Every sub-course this course prints, so a draft can be saved for one of them.
+    const [courseSubCourses, setCourseSubCourses] = useState([]);
     useEffect(() => {
         setParticipantSubCourse('');
+        setCourseSubCourses([]);
         if (isTemplateScope || !course?.id) return;
         let alive = true;
         (async () => {
             try {
                 const list = await listAllParticipantsForCourse(course.id, { source: navigator.onLine ? 'default' : 'cache' });
-                const found = (list || []).find(p => !p.isDeleted && p.imci_sub_type)?.imci_sub_type || '';
-                if (alive) setParticipantSubCourse(found);
+                const live = (list || []).filter(p => !p.isDeleted);
+                const found = live.find(p => p.imci_sub_type)?.imci_sub_type || '';
+                const subs = [];
+                const add = (v) => { const n = String(v || '').trim(); if (n && !subs.some(x => sameSubName(x, n))) subs.push(n); };
+                live.forEach(p => add(certificateSubCourseOf(course, p)));
+                (course.facilitatorAssignments || []).forEach(a => add(a?.imci_sub_type));
+                add(course.director_imci_sub_type);
+                Object.keys(course.customCertificateBySub || {}).forEach(add);
+                if (alive) { setParticipantSubCourse(found); setCourseSubCourses(subs); }
             } catch (err) {
                 console.warn('[Certificate designer] Could not check participant sub-courses.', err);
             }
@@ -2949,10 +2980,32 @@ export function CertificateDesigner({
         return () => { alive = false; };
     }, [course?.id, isTemplateScope]);
 
-    const autoSubCourse = participantSubCourse
+    const autoSubCourse = draftSub
+        || participantSubCourse
         || course?.facilitatorAssignments?.find(a => a.imci_sub_type)?.imci_sub_type
         || course?.director_imci_sub_type
         || '';
+    // Declared after autoSubCourse on purpose: reading it in the dependency
+    // list before its `const` line threw on every render and blanked the designer.
+    useEffect(() => {
+        let alive = true;
+        (async () => {
+            let cfg = {};
+            if (scopeKind === 'course') {
+                const sub = autoSubCourse || course?.director_imci_sub_type || null;
+                cfg = await loadInheritedCertificateConfig(course?.course_type, sub);
+                // A sub-course draft sits on top of the course's all-sub-courses draft.
+                if (draftSub) cfg = mergeCertificateConfigs(cfg, savedDraftsRef.current.customCertificate || course?.customCertificate || {});
+            } else if (scopeKind === 'subCourse') {
+                cfg = await loadInheritedCertificateConfig(scope.courseType, null); // general + courseType
+            } else if (scopeKind === 'courseType') {
+                cfg = await loadInheritedCertificateConfig(null); // general only
+            }
+            if (alive) setInherited(cfg || {});
+        })();
+        return () => { alive = false; };
+    }, [scopeKind, course?.course_type, autoSubCourse, draftSub, course?.customCertificate, scope?.courseType, scope?.subCourse]);
+
     const subCourseMode = data.subCourseMode || 'auto';
     const typedSubCourse = !!(data.subCourseEn || data.subCourseAr);
     const hasSubCourse = subCourseMode === 'hide'
@@ -3366,15 +3419,34 @@ export function CertificateDesigner({
                     updatedAt: serverTimestamp()
                 });
                 invalidateCertificateTemplateCache();
+            } else if (draftSub) {
+                // Only this sub-course's draft changes; the others are untouched.
+                const base = { ...course, ...savedDraftsRef.current };
+                const key = subCourseOwnKey(base, draftSub);
+                const projected = { ...base, customCertificateBySub: { ...(base.customCertificateBySub || {}), [key]: cleaned } };
+                if (approxDocBytes(projected) > COURSE_DOC_SAFE_BYTES) {
+                    notify(t('certificates.approvals.record_full', 'This course record has no room for another image. Remove an image you no longer need, or crop this one closer to the signature, then try again.'));
+                    setIsSaving(false);
+                    return;
+                }
+                await updateDoc(doc(db, 'courses', course.id),
+                    new FieldPath('customCertificateBySub', key), cleaned,
+                    'lastUpdatedAt', serverTimestamp());
+                savedDraftsRef.current = { ...savedDraftsRef.current, customCertificateBySub: projected.customCertificateBySub };
             } else {
                 await updateDoc(doc(db, 'courses', course.id), {
                     customCertificate: cleaned,
                     lastUpdatedAt: serverTimestamp()
                 });
+                savedDraftsRef.current = { ...savedDraftsRef.current, customCertificate: cleaned };
             }
             setDirty(false);
             if (onSaveSuccess) onSaveSuccess();
-            notify(t('certificates.designer.template_saved', 'Template saved.'));
+            notify(isTemplateScope
+                ? t('certificates.designer.template_saved', 'Template saved.')
+                : draftSub
+                    ? t('certificates.designer.draft_saved_sub', 'Draft saved for {{sub}} only.', { sub: draftSub })
+                    : t('certificates.designer.draft_saved', 'Draft saved for this course.'));
         } catch (err) {
             console.error(err);
             notify(t('certificates.designer.save_failed', 'Could not save the template. Please try again.'));
@@ -3436,12 +3508,18 @@ export function CertificateDesigner({
                     Object.fromEntries(Object.entries(ownData).filter(([k]) => courseOnlyKeys.includes(k))),
                     'course'
                 );
-                await updateDoc(doc(db, 'courses', course.id), { customCertificate: keep, lastUpdatedAt: serverTimestamp() });
+                if (draftSub) {
+                    await updateDoc(doc(db, 'courses', course.id),
+                        new FieldPath('customCertificateBySub', subCourseOwnKey(course, draftSub)), keep,
+                        'lastUpdatedAt', serverTimestamp());
+                } else {
+                    await updateDoc(doc(db, 'courses', course.id), { customCertificate: keep, lastUpdatedAt: serverTimestamp() });
+                }
                 setOwnData(keep);
                 setDirty(false);
             }
             const fresh = await loadInheritedCertificateConfig(course.course_type, currentSub);
-            setInherited(fresh || {});
+            setInherited(draftSub ? mergeCertificateConfigs(fresh || {}, course.customCertificate || {}) : (fresh || {}));
             if (onSaveSuccess) onSaveSuccess();
         } catch (err) {
             console.error(err);
@@ -3449,6 +3527,14 @@ export function CertificateDesigner({
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const switchDraftSub = async (next) => {
+        if (next === draftSub) return;
+        if (dirty && !await confirmDialog(t('certificates.designer.confirm_switch_sub', 'You have unsaved changes. Switch without saving them?'))) return;
+        setDraftSub(next);
+        setOwnData(startingOwn(next));
+        setDirty(false);
     };
 
     const handleBack = async () => {
@@ -3646,8 +3732,22 @@ export function CertificateDesigner({
                         <Settings className="h-4 w-4" /><span className="hidden sm:inline">{t('certificates.designer.tools', 'Tools')}</span>
                     </button>
                     {dirty && <span className="text-[11px] leading-tight font-semibold text-amber-600 max-w-[5.5rem] lg:max-w-none">{t('certificates.designer.unsaved', 'Unsaved changes')}</span>}
+                    {!isTemplateScope && courseSubCourses.length > 1 && (
+                        <select
+                            value={draftSub}
+                            onChange={e => switchDraftSub(e.target.value)}
+                            disabled={isSaving}
+                            className="h-9 max-w-[11rem] border border-gray-300 rounded px-2 text-xs bg-white"
+                            title={t('certificates.designer.draft_for_title', 'Which sub-course this draft is for')}
+                        >
+                            <option value="">{t('certificates.designer.draft_for_all', 'All sub-courses')}</option>
+                            {courseSubCourses.map(sub => <option key={sub} value={sub}>{sub}</option>)}
+                        </select>
+                    )}
                     <Button variant="primary" onClick={handleSave} disabled={isSaving || !!uploadingAsset} className="px-3 lg:px-4 whitespace-nowrap">
-                        {isSaving ? <Spinner size="sm" /> : t('certificates.common.save_template', 'Save Template')}
+                        {isSaving ? <Spinner size="sm" /> : isTemplateScope
+                            ? t('certificates.common.save_template', 'Save Template')
+                            : t('certificates.designer.save_draft', 'Save draft')}
                     </Button>
                 </div>
 
@@ -4885,6 +4985,10 @@ export function PublicCertificateDownloadView({ participantId }) {
                         i18n.t('certificates.public.awaiting_reapproval_error', "This certificate is waiting to be approved again, because the participant's details were changed after the course was approved. Please contact the course director.")
                     );
                 }
+                // Approved for other sub-courses only.
+                if (!certificateApprovedFor(c, certificateSubCourseOf(c, p))) {
+                    throw new Error(i18n.t('certificates.public.not_approved', 'Certificates for this course are not yet approved or have been revoked.'));
+                }
                 setData({ participant: p, course: c });
             } catch(e) { setError(e.message); }
             finally { setLoading(false); }
@@ -4919,12 +5023,16 @@ export function PublicCertificateDownloadView({ participantId }) {
             <p className="text-gray-500 mb-6 text-sm">{t('certificates.public.participant', 'Participant:')}</p>
             <h3 className="text-xl font-bold text-sky-700 mb-8">{data.participant.name}</h3>
             <div className="flex flex-col gap-3">
-                <Button onClick={() => handleDownload('en')} disabled={downloading} className="w-full justify-center shadow-md">
-                    {downloading ? <Spinner size="sm" /> : t('certificates.public.download_en', 'Download (English)')}
-                </Button>
-                <Button onClick={() => handleDownload('ar')} disabled={downloading} variant="secondary" className="w-full justify-center">
-                    {downloading ? <Spinner size="sm" /> : t('certificates.public.download_ar', 'Download (Arabic - عربي)')}
-                </Button>
+                {certificateApprovalState(data.participant, data.course, 'en').state === 'approved' && (
+                    <Button onClick={() => handleDownload('en')} disabled={downloading} className="w-full justify-center shadow-md">
+                        {downloading ? <Spinner size="sm" /> : t('certificates.public.download_en', 'Download (English)')}
+                    </Button>
+                )}
+                {certificateApprovalState(data.participant, data.course, 'ar').state === 'approved' && (
+                    <Button onClick={() => handleDownload('ar')} disabled={downloading} variant="secondary" className="w-full justify-center">
+                        {downloading ? <Spinner size="sm" /> : t('certificates.public.download_ar', 'Download (Arabic - عربي)')}
+                    </Button>
+                )}
             </div>
         </div>
     );
@@ -4949,7 +5057,7 @@ export function PublicCourseCertificatesView({ courseId }) {
                 // Anyone altered since approval is listed but not downloadable:
                 // removing them from the page entirely would look like a lost
                 // record to the person looking for their own name.
-                const activeParts = parts.filter(p => !p.isDeleted).map(p => ({
+                const activeParts = parts.filter(p => !p.isDeleted && certificateApprovedFor(c, certificateSubCourseOf(c, p))).map(p => ({
                     ...p,
                     awaitingReapproval: certificateApprovalState(p, c).state === 'stale',
                 }));
@@ -4963,6 +5071,10 @@ export function PublicCourseCertificatesView({ courseId }) {
     const handleDownload = async (p, lang) => {
         if (p.awaitingReapproval) {
             notify(t('certificates.public.awaiting_toast', 'This certificate is waiting to be approved again and cannot be downloaded yet.'));
+            return;
+        }
+        if (certificateApprovalState(p, data.course, lang).state !== 'approved') {
+            notify(t('certificates.public.lang_not_approved', 'This certificate is not approved in this language yet.'));
             return;
         }
         setDownloadingId(p.id);
@@ -5002,10 +5114,10 @@ export function PublicCourseCertificatesView({ courseId }) {
                                     <span className="text-xs font-semibold text-amber-700">{t('certificates.public.awaiting', 'Awaiting re-approval')}</span>
                                 ) : (
                                     <div className="flex justify-end gap-2">
-                                        <Button size="sm" onClick={() => handleDownload(p, 'en')} disabled={!!downloadingId}>
+                                        <Button size="sm" onClick={() => handleDownload(p, 'en')} disabled={!!downloadingId || certificateApprovalState(p, data.course, 'en').state !== 'approved'}>
                                             {downloadingId === p.id ? <Spinner size="sm" /> : t('certificates.public.english', 'English')}
                                         </Button>
-                                        <Button size="sm" variant="secondary" onClick={() => handleDownload(p, 'ar')} disabled={!!downloadingId}>
+                                        <Button size="sm" variant="secondary" onClick={() => handleDownload(p, 'ar')} disabled={!!downloadingId || certificateApprovalState(p, data.course, 'ar').state !== 'approved'}>
                                             {downloadingId === p.id ? <Spinner size="sm" /> : 'عربي'}
                                         </Button>
                                     </div>
@@ -5030,10 +5142,10 @@ export function PublicCourseCertificatesView({ courseId }) {
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 gap-2">
-                                <Button onClick={() => handleDownload(p, 'en')} disabled={!!downloadingId} className="w-full justify-center">
+                                <Button onClick={() => handleDownload(p, 'en')} disabled={!!downloadingId || certificateApprovalState(p, data.course, 'en').state !== 'approved'} className="w-full justify-center">
                                     {downloadingId === p.id ? <Spinner size="sm" /> : t('certificates.public.english', 'English')}
                                 </Button>
-                                <Button variant="secondary" onClick={() => handleDownload(p, 'ar')} disabled={!!downloadingId} className="w-full justify-center">
+                                <Button variant="secondary" onClick={() => handleDownload(p, 'ar')} disabled={!!downloadingId || certificateApprovalState(p, data.course, 'ar').state !== 'approved'} className="w-full justify-center">
                                     {downloadingId === p.id ? <Spinner size="sm" /> : 'عربي'}
                                 </Button>
                             </div>
@@ -5048,6 +5160,24 @@ export function PublicCourseCertificatesView({ courseId }) {
 // -----------------------------------------------------------------------------
 // APPROVAL DIALOG: signatory preview row
 // -----------------------------------------------------------------------------
+
+// "Approved: English and Arabic (all sub-courses)" — one line per scope.
+const describeApprovalScopes = (course, t) => {
+    if (!course?.isCertificateApproved) return '';
+    const langName = (l) => (l === 'ar' ? t('certificates.approvals.lang_ar', 'Arabic') : t('certificates.approvals.lang_en', 'English'));
+    const scopes = course.certificateApprovalScopes && typeof course.certificateApprovalScopes === 'object'
+        ? course.certificateApprovalScopes
+        : { [ALL_SUB_COURSES]: CERT_LANGUAGES };
+    const parts = Object.entries(scopes)
+        .filter(([, langs]) => Array.isArray(langs) && langs.length)
+        .map(([sub, langs]) => {
+            const where = sub === ALL_SUB_COURSES
+                ? t('certificates.approvals.all_subs', 'all sub-courses')
+                : (sub || t('certificates.approvals.no_sub', 'no sub-course'));
+            return `${CERT_LANGUAGES.filter(l => langs.includes(l)).map(langName).join(' + ')} (${where})`;
+        });
+    return parts.length ? t('certificates.approvals.approved_scope', 'Approved: {{list}}', { list: parts.join('; ') }) : '';
+};
 
 const ApprovalSignatoryRow = ({ position, roleEn, roleAr, nameEn, nameAr, isCustom, isHidden }) => {
     const { t } = useTranslation();
@@ -5480,6 +5610,50 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
     const [courseToPreview, setCourseToPreview] = React.useState(null);
     // The course whose post-approval changes are being reviewed.
     const [courseToReview, setCourseToReview] = React.useState(null);
+    // What the approval dialog will approve: languages, and either every
+    // sub-course ('*') or the ones ticked.
+    const [approveLangs, setApproveLangs] = React.useState([...CERT_LANGUAGES]);
+    const [approveAllSubs, setApproveAllSubs] = React.useState(true);
+    const [approveSubs, setApproveSubs] = React.useState([]);
+    // The course's sub-courses with their participant counts, read when the dialog opens.
+    const [approveSubList, setApproveSubList] = React.useState([]);
+    const [approveParticipants, setApproveParticipants] = React.useState(null);
+
+    const openApprove = (c) => {
+        setCourseToApprove(c);
+        // Start from what is NOT approved yet, so "Approve" adds the missing part.
+        const missing = CERT_LANGUAGES.filter(l => !c.isCertificateApproved || !(c.certificateApprovalScopes?.[ALL_SUB_COURSES] || (c.certificateApprovalScopes ? [] : CERT_LANGUAGES)).includes(l));
+        setApproveLangs(missing.length ? missing : [...CERT_LANGUAGES]);
+        setApproveAllSubs(true);
+        setApproveSubs([]);
+        setApproveSubList([]);
+        setApproveParticipants(null);
+    };
+
+    React.useEffect(() => {
+        if (!courseToApprove?.id) return;
+        let alive = true;
+        (async () => {
+            try {
+                const parts = (await listAllParticipantsForCourse(courseToApprove.id, { source: navigator.onLine ? 'default' : 'cache' })) || [];
+                const live = parts.filter(p => !p.isDeleted);
+                const counts = new Map();
+                live.forEach(p => {
+                    const sub = (certificateSubCourseOf(courseToApprove, p) || NO_SUB_COURSE).trim();
+                    counts.set(sub, (counts.get(sub) || 0) + 1);
+                });
+                if (alive) {
+                    setApproveParticipants(live);
+                    setApproveSubList([...counts.entries()].map(([name, count]) => ({ name, count }))
+                        .sort((a, b) => a.name.localeCompare(b.name)));
+                }
+            } catch (err) {
+                console.warn('[Certificate] Could not list the sub-courses for approval.', err);
+                if (alive) setApproveParticipants([]);
+            }
+        })();
+        return () => { alive = false; };
+    }, [courseToApprove?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const reloadTemplates = React.useCallback(async () => {
         try {
@@ -5591,8 +5765,14 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
 
     const executeApprove = async () => {
         if (!courseToApprove) return;
+        const subsToApprove = approveAllSubs ? [ALL_SUB_COURSES] : approveSubs;
+        if (!approveLangs.length || !subsToApprove.length) {
+            setToast({ show: true, type: 'error', message: t('certificates.approvals.pick_scope', 'Choose at least one language and one sub-course to approve.') });
+            return;
+        }
         setIsProcessing(true);
         try {
+            const certificateApprovalScopes = mergeCertificateApprovalScopes(courseToApprove, subsToApprove, approveLangs);
             const sig = resolveCertificateSignatories(effective(courseToApprove), managerName);
 
             // Persist the names that will actually be printed, so approval records
@@ -5602,6 +5782,7 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
 
             const approvalPayload = {
                 isCertificateApproved: true,
+                certificateApprovalScopes,
                 approvedByManagerName: approvedManager,
                 approvedDirectorName: approvedDirector,
                 approvedDirectorId: courseToApprove.directorId || null,
@@ -5635,9 +5816,13 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
             // nobody had given for it.
             let signedCount = 0;
             try {
+                const approvedCourse = { ...courseToApprove, ...approvalPayload };
                 const parts = await listAllParticipantsForCourse(courseToApprove.id, { source: 'server' });
-                signedCount = await recordCertificateApprovals(
-                    { ...courseToApprove, ...approvalPayload }, parts, managerName);
+                // Only the sub-courses approved this time get a fresh record of
+                // what was signed; the others are left as they were.
+                const inScope = (parts || []).filter(p => approveAllSubs
+                    || approveSubs.some(s => s.trim().toLowerCase() === (certificateSubCourseOf(approvedCourse, p) || NO_SUB_COURSE).trim().toLowerCase()));
+                signedCount = await recordCertificateApprovals(approvedCourse, inScope, managerName);
             } catch (err) {
                 // The course is approved either way — say plainly that the
                 // per-participant record did not get written, because without
@@ -5802,6 +5987,8 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
         return {
             c,
             isApproved: c.isCertificateApproved === true,
+            isFullyApproved: certificateFullyApproved(c),
+            approvalSummary: describeApprovalScopes(c, t),
             canModify: c.isCertificateApproved === true
                 && (!c.approvedByManagerName || c.approvedByManagerName === managerName || isFederalProgramManager),
             hasCustomTemplate,
@@ -5815,7 +6002,7 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
             hasTypeTemplate: !!(c.course_type && templateDocs[courseTypeTemplateId(c.course_type)]),
             hasGeneralTemplate: !!templateDocs[GENERAL_TEMPLATE_ID],
         };
-    }), [courses, managerName, isFederalProgramManager, effective, templateDocs]);
+    }), [courses, managerName, isFederalProgramManager, effective, templateDocs, t]);
 
     const TemplateBadges = ({ row }) => (
         <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
@@ -5851,10 +6038,13 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
                     <Eye size={12} /> {t('certificates.approvals.preview', 'Preview')}
                 </Button>
 
-                {row.isApproved ? (
+                {!row.isFullyApproved && (
+                    <Button onClick={() => openApprove(c)} disabled={isProcessing} variant="success" className={`${btn} font-bold bg-green-600 text-white hover:bg-green-700 border-transparent`}>
+                        {row.isApproved ? t('certificates.approvals.approve_more', 'Approve more') : t('certificates.approvals.approve', 'Approve')}
+                    </Button>
+                )}
+                {row.isApproved && (
                     <Button onClick={() => handleUnapprove(c)} disabled={!row.canModify || isProcessing} variant="danger" className={btn}>{t('certificates.approvals.revoke', 'Revoke')}</Button>
-                ) : (
-                    <Button onClick={() => setCourseToApprove(c)} disabled={isProcessing} variant="success" className={`${btn} font-bold bg-green-600 text-white hover:bg-green-700 border-transparent`}>{t('certificates.approvals.approve', 'Approve')}</Button>
                 )}
 
                 {/* Only meaningful once something has been signed. */}
@@ -5967,6 +6157,64 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
                 <CardBody className="p-4 sm:p-6 space-y-4">
                     <p className="text-sm text-gray-600">{t('certificates.approvals.confirm_intro', 'These are the exact signatories that will be printed on every certificate for this course, in both languages.')}</p>
 
+                    {/* What this approval covers: languages, then all or some sub-courses. */}
+                    <div className="space-y-3 border border-green-200 bg-green-50/60 rounded-lg p-4">
+                        {courseToApprove?.isCertificateApproved && (
+                            <p className="text-xs font-semibold text-green-800">{describeApprovalScopes(courseToApprove, t)}</p>
+                        )}
+                        <div>
+                            <div className="text-sm font-semibold text-gray-800 mb-1">{t('certificates.approvals.approve_languages', 'Approve in')}</div>
+                            <div className="flex flex-wrap gap-2">
+                                {CERT_LANGUAGES.map(l => {
+                                    const on = approveLangs.includes(l);
+                                    return (
+                                        <button key={l} type="button" aria-pressed={on}
+                                            onClick={() => setApproveLangs(prev => on ? prev.filter(x => x !== l) : CERT_LANGUAGES.filter(x => x === l || prev.includes(x)))}
+                                            className={`px-3 py-1.5 rounded-full border text-sm font-semibold ${on ? 'bg-green-600 border-green-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}>
+                                            {on ? '✓ ' : ''}{l === 'ar' ? t('certificates.approvals.lang_ar', 'Arabic') : t('certificates.approvals.lang_en', 'English')}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        {approveParticipants === null ? (
+                            <div className="text-xs text-gray-500 flex items-center gap-2"><Spinner size="sm" /> {t('certificates.approvals.loading_subs', 'Checking the sub-courses…')}</div>
+                        ) : approveSubList.length > 1 ? (
+                            <div>
+                                <div className="text-sm font-semibold text-gray-800 mb-1">{t('certificates.approvals.approve_subs', 'Sub-courses')}</div>
+                                <label className="flex items-center gap-2 text-sm py-1">
+                                    <input type="radio" checked={approveAllSubs} onChange={() => setApproveAllSubs(true)} />
+                                    {t('certificates.approvals.all_subs_option', 'All sub-courses')}
+                                </label>
+                                <label className="flex items-center gap-2 text-sm py-1">
+                                    <input type="radio" checked={!approveAllSubs} onChange={() => setApproveAllSubs(false)} />
+                                    {t('certificates.approvals.some_subs_option', 'Only the sub-courses I tick')}
+                                </label>
+                                {!approveAllSubs && (
+                                    <div className="ms-6 mt-1 space-y-1">
+                                        {approveSubList.map(({ name, count }) => {
+                                            const done = approveLangs.length > 0 && approveLangs.every(l => certificateApprovedFor(courseToApprove, name, l));
+                                            const already = certificateApprovedLanguages(courseToApprove, name);
+                                            return (
+                                                <label key={name || '(none)'} className="flex items-center gap-2 text-sm">
+                                                    <input type="checkbox" checked={approveSubs.includes(name)}
+                                                        onChange={e => setApproveSubs(prev => e.target.checked ? [...prev, name] : prev.filter(x => x !== name))} />
+                                                    <span>{name || t('certificates.approvals.no_sub', 'no sub-course')}</span>
+                                                    <span className="text-xs text-gray-500">({count})</span>
+                                                    {already.length > 0 && (
+                                                        <span className={`text-[10px] font-bold uppercase ${done ? 'text-green-700' : 'text-sky-700'}`}>
+                                                            {t('certificates.approvals.already_in', 'already: {{langs}}', { langs: already.map(l => l.toUpperCase()).join(' + ') })}
+                                                        </span>
+                                                    )}
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        ) : null}
+                    </div>
+
                     <div className="space-y-3 bg-gray-50 border rounded-lg p-4">
                         <ApprovalSignatoryRow
                             position={t('certificates.designer.course_director', 'Course Director')}
@@ -6048,7 +6296,7 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
                 </CardBody>
                 <CardFooter className="flex flex-col sm:flex-row sm:justify-end gap-2">
                     <Button variant="secondary" onClick={() => setCourseToApprove(null)} disabled={isProcessing} className="w-full sm:w-auto justify-center">{t('certificates.common.cancel', 'Cancel')}</Button>
-                    <Button variant="success" onClick={executeApprove} disabled={isProcessing} className="w-full sm:w-auto justify-center">
+                    <Button variant="success" onClick={executeApprove} disabled={isProcessing || !approveLangs.length || (!approveAllSubs && !approveSubs.length)} className="w-full sm:w-auto justify-center">
                         {isProcessing ? <Spinner size="sm" /> : t('certificates.approvals.confirm_approve', 'Confirm & Approve')}
                     </Button>
                 </CardFooter>
@@ -6132,14 +6380,17 @@ export const CertificateApprovalsView = ({ allCourses: everyCourse, setToast, cu
                                                 {r.c.participants_count > 0 && <span className="shrink-0">👥 {r.c.participants_count}</span>}
                                             </div>
                                         </div>
-                                        <span className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-bold ${r.isApproved ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                                            {r.isApproved ? t('certificates.approvals.approved', 'Approved') : t('certificates.approvals.pending', 'Pending')}
+                                        <span className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-bold ${r.isFullyApproved ? 'bg-green-100 text-green-800' : r.isApproved ? 'bg-sky-100 text-sky-800' : 'bg-amber-100 text-amber-800'}`}>
+                                            {r.isFullyApproved ? t('certificates.approvals.approved', 'Approved') : r.isApproved ? t('certificates.approvals.partly_approved', 'Partly approved') : t('certificates.approvals.pending', 'Pending')}
                                         </span>
                                         <ChevronDown size={18} className={`shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
                                     </button>
                                     {open && (
                                         <div className="border-t border-slate-100 bg-slate-50/60 p-3">
                                             <div className="text-xs text-slate-600 break-words">{place}</div>
+                                            {r.isApproved && r.approvalSummary && (
+                                                <div className="mt-1 text-xs font-semibold text-green-800">{r.approvalSummary}</div>
+                                            )}
                                             <TemplateBadges row={r} />
                                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mt-2">
                                                 <RowActions row={r} block />

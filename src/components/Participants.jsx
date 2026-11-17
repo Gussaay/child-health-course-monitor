@@ -15,7 +15,8 @@ import {
 } from "./CommonComponents";
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EMONC, JOB_TITLES_SSNC,
-    subCourseOfGroup, certificateApprovalState, staleCertificateParticipants, isWithinCoursePeriod
+    subCourseOfGroup, certificateApprovalState, staleCertificateParticipants, isWithinCoursePeriod,
+    certificateApprovedFor, certificateSubCourseOf
 } from './constants.js';
 import { ParticipantExercisesModal } from './imnci';
 import {
@@ -196,6 +197,10 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
             setToast({ show: true, message: t('participants_page.email.held', 'Details changed after approval; the certificate must be approved again.'), type: 'error' });
             return;
         }
+        if (certificateApprovalState(p, course, language).state === 'pending') {
+            setToast({ show: true, message: t('participants_page.cert.not_in_scope', "This certificate is not approved in this language or for this participant's sub-course yet."), type: 'error' });
+            return;
+        }
         setSharingId(p.id);
         try {
             const pdf = await certificatePdfBase64(course, p, managerName, language, facilitators, coordinators);
@@ -265,7 +270,9 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
         // Certificates changed since approval are not sent: what would be
         // attached is not what was signed.
         const held = participants.filter((p) => course && certificateApprovalState(p, course).state === 'stale');
-        const sendable = participants.filter((p) => !held.includes(p));
+        // Not approved in this language, or their sub-course is not approved yet.
+        const notApproved = participants.filter((p) => course && !held.includes(p) && certificateApprovalState(p, course, language).state === 'pending');
+        const sendable = participants.filter((p) => !held.includes(p) && !notApproved.includes(p));
         const makePdf = course
             ? (p) => certificatePdfBase64(course, p, managerName, language, facilitators, coordinators)
             : null;
@@ -273,11 +280,14 @@ const EmailCertificateModal = ({ isOpen, onClose, participants = [], isBulk = fa
         let results = held.map((p) => ({
             id: p.id, name: p.name, ok: false,
             error: t('participants_page.email.held', 'Details changed after approval; the certificate must be approved again.'),
-        }));
+        })).concat(notApproved.map((p) => ({
+            id: p.id, name: p.name, ok: false,
+            error: t('participants_page.cert.not_in_scope', "This certificate is not approved in this language or for this participant's sub-course yet."),
+        })));
         try {
             results = results.concat(await sendCertificateEmails(sendable, language, {
                 makePdf,
-                onProgress: (current) => setProgress((prev) => ({ ...prev, current: held.length + current })),
+                onProgress: (current) => setProgress((prev) => ({ ...prev, current: held.length + notApproved.length + current })),
             }));
         } catch (error) {
             results = participants.map((p) => ({ id: p.id, name: p.name, ok: false, error: error?.message || 'Sending failed.' }));
@@ -2465,6 +2475,13 @@ export function ParticipantsView({
             });
             return;
         }
+        if (certificateApprovalState(p, localCourseData, language).state === 'pending') {
+            setToast({
+                show: true, type: 'error',
+                message: t('participants_page.cert.not_in_scope', "This certificate is not approved in this language or for this participant's sub-course yet.")
+            });
+            return;
+        }
 
         startCertificateDownload({
             kind: 'single',
@@ -2490,7 +2507,22 @@ export function ParticipantsView({
         // that have not moved, and holding all of them back over one correction
         // would be worse than printing the ones that are still good.
         const held = staleCertificateParticipants(filtered, localCourseData);
-        const printable = filtered.filter((p) => !held.some((h) => h.id === p.id));
+        // Approved for other sub-courses or the other language only: left out.
+        const outOfScope = filtered.filter((p) => !held.some((h) => h.id === p.id)
+            && certificateApprovalState(p, localCourseData, language).state === 'pending');
+        const printable = filtered.filter((p) => !held.some((h) => h.id === p.id) && !outOfScope.some((o) => o.id === p.id));
+
+        if (printable.length === 0 && outOfScope.length > 0) {
+            setToast({
+                show: true, type: 'error',
+                message: t('participants_page.cert.none_in_scope', 'None of these certificates are approved in this language or sub-course yet.')
+            });
+            return;
+        }
+
+        if (outOfScope.length > 0 && !await confirmDialog(
+            t('participants_page.cert.out_of_scope_confirm', '{{count}} certificate(s) are not approved in this language or for their sub-course yet and will be left out. Download the other {{remaining}}?', { count: outOfScope.length, remaining: printable.length })
+        )) return;
 
         if (printable.length === 0) {
             setToast({
@@ -2900,7 +2932,7 @@ export function ParticipantsView({
                         {filtered.length > 0 ? filtered.map(p => {
                             const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
                             const canDelete = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
-                            const isCertApproved = localApprovalStatus === true;
+                            const isCertApproved = localApprovalStatus === true && certificateApprovedFor(localCourseData, certificateSubCourseOf(localCourseData, p));
                             // Signed off, then altered: the certificate is held
                             // until it is approved again.
                             const certAwaiting = certificateApprovalState(p, localCourseData).state === 'stale';
@@ -2999,7 +3031,7 @@ export function ParticipantsView({
                 {filtered.length > 0 ? filtered.map(p => {
                     const canEdit = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
                     const canDelete = isCourseActive ? canEditDeleteParticipantActiveCourse : canEditDeleteParticipantInactiveCourse;
-                    const isCertApproved = localApprovalStatus === true;
+                    const isCertApproved = localApprovalStatus === true && certificateApprovedFor(localCourseData, certificateSubCourseOf(localCourseData, p));
                     const certAwaiting = certificateApprovalState(p, localCourseData).state === 'stale';
                     const isExpanded = expandedParticipantId === p.id;
                     let participantSubCourse = p.imci_sub_type || course.facilitatorAssignments?.find((a) => a.group === p.group)?.imci_sub_type;
