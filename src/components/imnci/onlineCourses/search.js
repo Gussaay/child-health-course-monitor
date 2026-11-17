@@ -15,7 +15,7 @@ function blockText(b) {
     if (b.type === 'image' || b.type === 'page' || b.type === 'video' || b.type === 'exercise') return b.caption || b.title || '';
     // The activities hold their text in fields of their own: every string in
     // them is searchable.
-    if (['reveal', 'flip', 'sort', 'steps', 'story'].includes(b.type)) {
+    if (['reveal', 'flip', 'sort', 'steps', 'story', 'growthchart'].includes(b.type)) {
         const strings = [];
         const walk = (v) => { if (typeof v === 'string') strings.push(v); else if (v && typeof v === 'object') Object.values(v).forEach(walk); };
         const { type, ...rest } = b;

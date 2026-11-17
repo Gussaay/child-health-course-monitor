@@ -96,8 +96,8 @@ describe('recording forms', () => {
 describe('treatment and counselling tables', () => {
     const render = (el) => { document.body.innerHTML = renderToStaticMarkup(el); };
     it('has the asked headings under each part', () => {
-        expect(NATIONAL_GUIDES.guide_child.groups.map((g) => g.id)).toEqual(['vaccination', 'inhaler', 'local', 'fluids', 'counsel', 'followup']);
-        expect(NATIONAL_GUIDES.guide_infant.groups.map((g) => g.id)).toEqual(['vaccination', 'local', 'counsel', 'followup']);
+        expect(NATIONAL_GUIDES.guide_child.groups.map((g) => g.id)).toEqual(['vaccination', 'oral', 'inhaler', 'local', 'fluids', 'clinic', 'counsel', 'followup', 'growth']);
+        expect(NATIONAL_GUIDES.guide_infant.groups.map((g) => g.id)).toEqual(['vaccination', 'clinic', 'local', 'counsel', 'followup', 'growth']);
     });
     it('every box is written in both languages, line for line and row for row', () => {
         Object.values(NATIONAL_GUIDES).forEach((guide) => guide.groups.forEach((g) => {

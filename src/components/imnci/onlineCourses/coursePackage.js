@@ -23,6 +23,7 @@
 // Pure functions only: no Firestore, so it can be tested on its own.
 
 import { BLOCK_TYPES } from '../book';
+import { plotChild, kindForAge } from '../growthCharts';
 
 export const PACKAGE_FORMAT = 'imnci-course-package';
 export const PACKAGE_VERSION = 1;
@@ -130,6 +131,7 @@ export function checkPackage(pkg, knownExerciseIds = []) {
             if (!String(s?.title || '').trim()) errors.push(`${sw}: it has no title.`);
             TABS.forEach((tab) => (s?.[tab] || []).forEach((b, bi) => {
                 if (!BLOCK_TYPES.includes(b?.type)) errors.push(`${sw}, ${tab} block ${bi + 1}: unknown block type "${b?.type}".`);
+                if (b?.type === 'growthchart') growthChartErrors(b).forEach((e) => errors.push(`${sw}, ${tab} block ${bi + 1}: ${e}`));
                 if (b?.type === 'exercise' && !fileIds.has(b.exerciseId) && !knownExerciseIds.includes(b.exerciseId)) {
                     warnings.push(`${sw}: links to exercise "${b.exerciseId}", which is not in the file or the app.`);
                 }
@@ -180,3 +182,23 @@ export function exercisesToSave(pkg, knownExerciseIds = [], { replace = false } 
 /** A file name from a title: "Module 1: General danger signs" → module-1-general-danger-signs.imnci.json */
 export const packageFileName = (title) =>
     `${String(title || 'course').toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'course'}.imnci.json`;
+
+// A "Plot on the chart" activity must place its child on a printed chart.
+// One without a weight is free practice and needs nothing more.
+export function growthChartErrors(b) {
+    const out = [];
+    if (b.chart && !['wfl', 'wfh', 'wfa'].includes(b.chart)) out.push(`the chart "${b.chart}" is not weight-for-length, weight-for-height or weight-for-age.`);
+    if (b.weightKg === undefined || b.weightKg === '') return out;
+    if (!['male', 'female'].includes(b.sex)) out.push('the child\'s sex is not set.');
+    const kind = b.chart || (b.ageMonths !== undefined ? kindForAge(b.ageMonths) : null);
+    if (!kind) { out.push('the age is missing.'); return out; }
+    if (kind !== 'wfa' && b.chart && b.ageMonths !== undefined && kindForAge(b.ageMonths) !== b.chart) {
+        out.push(`a child of ${b.ageMonths} months is plotted on the ${kindForAge(b.ageMonths) === 'wfl' ? 'weight-for-length' : 'weight-for-height'} chart, not this one.`);
+    }
+    if (kind !== 'wfa' && (b.ageMonths === undefined || b.ageMonths === '')) out.push('the age in months is missing (it decides length or height).');
+    if (kind === 'wfa' && typeof b.lowWeightForAge !== 'boolean') out.push('whether the weight is low for age is not set.');
+    const p = plotChild(b, { kind });
+    if (p && p.x === null) out.push(kind === 'wfa' ? 'the age is missing.' : 'the length or height is missing.');
+    else if (p && !p.inRange) out.push('the point falls outside the printed chart.');
+    return out;
+}

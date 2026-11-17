@@ -98,6 +98,13 @@ WHO IMCI distance learning course (2014), in the Sudan national wording. Where t
 - `who-dimci-module3.imnci.json`: Module 3, Cough or difficult breathing (14 lessons, 10 exercises, including the Gyatsu case).
 - `who-dimci-module4.imnci.json`: Module 4, Diarrhoea (17 lessons, 14 exercises, including the Maya, Rana, Pano and Jane cases).
 - `who-dimci-modules-3-4.imnci.json`: Modules 3 and 4 in one file, to import into the existing course.
-- `who-dimci-modules-1-4.imnci.json`: all four modules in one file. This is the file the upload script writes.
+- `who-dimci-modules-1-4.imnci.json`: Modules 1 to 4 in one file.
+- `who-dimci-module5.imnci.json`: Module 5, Fever (16 lessons, 10 exercises, including the Kareem and Dolma cases).
+- `who-dimci-module6.imnci.json`: Module 6, Malnutrition and anaemia (16 lessons, 11 exercises, including the Noah case).
+- `who-dimci-module7.imnci.json`: Module 7, Ear problems (11 lessons, 9 exercises, including the Dana and Telisa cases).
+- `who-dimci-module8.imnci.json`: Module 8, HIV/AIDS (27 lessons, 19 exercises). The national booklet has no HIV section, so this module keeps the WHO 2014 text for high HIV settings, and every lesson carries a "WHO 2014 HIV content" note saying it is not Sudan national guidance and that HIV recommendations have changed since 2014.
+- `who-dimci-module9.imnci.json`: Module 9, Care of the well child (16 lessons, 10 exercises).
+- `who-dimci-modules-5-9.imnci.json`: Modules 5 to 9 in one file.
+- `who-dimci-modules-1-9.imnci.json`: all the modules above in one file. This is the file the upload script writes.
 
 The narration scripts for the video slots are kept outside the course, in a separate Word file.

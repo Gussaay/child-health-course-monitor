@@ -54,6 +54,7 @@ const ACTIVITY_NAMES = {
     sort: ['imnci_ui.courses.activity.kind_sort', 'Sorting'],
     steps: ['imnci_ui.courses.activity.kind_steps', 'Step by step'],
     story: ['imnci_ui.courses.activity.kind_story', 'Case story'],
+    growthchart: ['imnci_ui.courses.activity.kind_growthchart', 'Plot on the chart'],
 };
 const goToActivity = (key) => document.getElementById(activityAnchor(key))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 

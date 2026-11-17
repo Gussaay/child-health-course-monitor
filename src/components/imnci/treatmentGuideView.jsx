@@ -7,7 +7,10 @@
 // Tables wrap their text instead of scrolling sideways, and with more than
 // three columns become one card per row on a phone. Editing keeps the layout.
 // ============================================================================
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
+
+// The booklet's growth charts, with a plotter, only loaded when a box shows one.
+const GrowthChartsBox = lazy(() => import('./OfficialGrowthChart').then((m) => ({ default: m.GrowthChartsBox })));
 import { useTranslation } from 'react-i18next';
 
 const inputCls = 'w-full p-1.5 border border-sky-300 rounded bg-sky-50/60 text-[13px] focus:ring-1 focus:ring-sky-500 focus:outline-none';
@@ -22,6 +25,9 @@ const GROUP_COLORS = {
     fluids: 'bg-cyan-100 border-cyan-700',
     counsel: 'bg-violet-100 border-violet-700',
     followup: 'bg-rose-100 border-rose-700',
+    oral: 'bg-lime-100 border-lime-700',
+    clinic: 'bg-red-100 border-red-700',
+    growth: 'bg-teal-100 border-teal-700',
 };
 
 const LinesBox = ({ value, onChange, label }) => (
@@ -58,7 +64,7 @@ const GuideTable = ({ side, edit, setColumn, setCell, addRow, removeRow, t }) =>
             <tbody>
                 {rows.map((row, r) => (
                     <tr key={r} className={r % 2 ? 'bg-slate-50' : ''}>
-                        {columns.map((_, c) => <td key={c} className={`border border-slate-300 p-1.5 align-top break-words ${c === 0 ? 'font-bold' : ''}`}>{cell(r, c)}</td>)}
+                        {columns.map((_, c) => <td key={c} className={`border border-slate-300 p-1.5 align-top break-words whitespace-pre-line ${c === 0 ? 'font-bold' : ''}`}>{cell(r, c)}</td>)}
                         {edit && (
                             <td className="border border-slate-300 p-1 text-center align-top">
                                 <button type="button" onClick={() => removeRow(r)} className="text-xs font-bold text-red-700 hover:underline">{t('clinical_ui.protocol.booklet.remove_band', 'Remove')}</button>
@@ -77,7 +83,7 @@ const GuideTable = ({ side, edit, setColumn, setCell, addRow, removeRow, t }) =>
                         {rows.map((row, r) => (
                             <div key={r} className="p-2 space-y-1 text-[13px]">
                                 {columns.map((col, c) => (
-                                    <div key={c}><span className="text-[11px] font-bold text-slate-500">{col}: </span>{cell(r, c)}</div>
+                                    <div key={c} className="whitespace-pre-line"><span className="text-[11px] font-bold text-slate-500">{col}: </span>{cell(r, c)}</div>
                                 ))}
                                 {edit && <button type="button" onClick={() => removeRow(r)} className="text-xs font-bold text-red-700 hover:underline">{t('clinical_ui.protocol.booklet.remove_band', 'Remove')}</button>}
                             </div>
@@ -138,6 +144,9 @@ export const GuideBlock = ({ guide, gi, bi, lang, edit, onChange, t }) => {
                             {s.lines.map((l, k) => <li key={k} className="flex gap-1.5 leading-snug"><span className="text-slate-500 shrink-0">►</span><span>{l}</span></li>)}
                         </ul>
                     )}
+                {(b.charts || []).length > 0 && (
+                    <Suspense fallback={null}><GrowthChartsBox kinds={b.charts} lang={lang} /></Suspense>
+                )}
                 {hasTable && (
                     <GuideTable
                         side={s}

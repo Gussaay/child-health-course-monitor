@@ -20,14 +20,16 @@
 
 // ---- authoring helpers ------------------------------------------------------
 const side = (pairs, i) => (pairs || []).map((p) => p[i]);
-const block = (id, title, { lines, columns, rows } = {}) => {
+const block = (id, title, { lines, columns, rows, charts } = {}) => {
     const make = (i) => ({
         title: title[i],
         ...(lines ? { lines: side(lines, i) } : {}),
         ...(columns ? { columns: side(columns, i) } : {}),
         ...(rows ? { rows: rows.map((r) => side(r, i)) } : {}),
     });
-    return { id, en: make(0), ar: make(1) };
+    // `charts`: the WHO growth charts of the booklet shown in this box, with a
+    // plotter (OfficialGrowthChart): 'wfl', 'wfh' or 'wfa'.
+    return { id, ...(charts ? { charts } : {}), en: make(0), ar: make(1) };
 };
 const group = (id, title, blocks) => ({ id, en: { title: title[0] }, ar: { title: title[1] }, blocks });
 
@@ -92,6 +94,23 @@ export const NATIONAL_CHILD_GUIDE = {
                 rows: [
                     [['6 months up to 12 months', '6 أشهر إلى أقل من 12 شهراً'], ['100 000 IU', '100,000 وحدة دولية']],
                     [['12 months up to 5 years', '12 شهراً إلى أقل من 5 سنوات'], ['200 000 IU', '200,000 وحدة دولية']],
+                ],
+            }),
+        ]),
+
+        group('oral', ['Teach the mother to give oral drugs at home', 'علّم الأم إعطاء الأدوية بالفم في المنزل'], [
+            block('steps', ['Follow these instructions for every oral drug given at home', 'اتبع هذه الإرشادات لكل دواء يُعطى بالفم في المنزل'], {
+                lines: [
+                    ['Also follow the instructions listed with each drug\'s dosage table.', 'اتبع أيضاً الإرشادات المكتوبة مع جدول جرعات كل دواء.'],
+                    ['Determine the appropriate drugs and dosage for the child\'s age or weight.', 'حدّد الأدوية والجرعات المناسبة لعمر الطفل أو وزنه.'],
+                    ['Tell the mother the reason for giving the drug to the child.', 'أخبر الأم بسبب إعطاء الدواء للطفل.'],
+                    ['Demonstrate how to measure a dose.', 'وضّح لها كيف تقيس الجرعة.'],
+                    ['Watch the mother practise measuring a dose by herself.', 'راقب الأم وهي تتدرب على قياس الجرعة بنفسها.'],
+                    ['Ask the mother to give the first dose to her child.', 'اطلب من الأم أن تعطي طفلها الجرعة الأولى.'],
+                    ['Explain carefully how to give the drug, then label and package the drug.', 'اشرح بعناية كيف يُعطى الدواء، ثم ضع عليه بطاقة وغلّفه.'],
+                    ['If more than one drug will be given, collect, count and package each drug separately.', 'إذا كان سيُعطى أكثر من دواء، اجمع كل دواء وعُدّه وغلّفه على حدة.'],
+                    ['Explain that all the oral drug tablets or syrups must be used to finish the course of treatment, even if the child gets better.', 'اشرح أن كل الأقراص أو الشراب يجب أن تُستعمل حتى نهاية الكورس العلاجي، حتى إذا تحسن الطفل.'],
+                    ['Check the mother\'s understanding before she leaves the clinic.', 'تأكد من فهم الأم قبل أن تغادر الوحدة الصحية.'],
                 ],
             }),
         ]),
@@ -250,6 +269,77 @@ export const NATIONAL_CHILD_GUIDE = {
             }),
         ]),
 
+        group('clinic', ['Give these treatments in clinic only', 'أعطِ هذه العلاجات في الوحدة الصحية فقط'], [
+            block('steps', ['Before giving a treatment in the clinic', 'قبل إعطاء العلاج في الوحدة الصحية'], {
+                lines: [
+                    ['Explain to the mother why the drug is given.', 'اشرح للأم لماذا يُعطى الدواء.'],
+                    ['Determine the dose appropriate for the child\'s weight (or age).', 'حدّد الجرعة المناسبة لوزن الطفل (أو عمره).'],
+                    ['Use a sterile needle and sterile syringe when giving an injection.', 'استعمل إبرة معقمة وحقنة معقمة عند إعطاء الحقن.'],
+                    ['Measure the dose accurately.', 'قِس الجرعة بدقة.'],
+                    ['Give the drug as an intramuscular injection.', 'أعطِ الدواء حقناً في العضل.'],
+                    ['If the child cannot be referred, follow the instructions provided.', 'إذا تعذّر تحويل الطفل، اتبع الإرشادات الموضحة.'],
+                ],
+            }),
+            block('im_antibiotics', ['Give intramuscular antibiotics', 'أعطِ المضادات الحيوية بالحقن في العضل'], {
+                lines: [
+                    ['Give to children who are referred URGENTLY and are not able to take oral medications.', 'تُعطى للأطفال المحوّلين بصورة عاجلة وغير القادرين على تناول الأدوية بالفم.'],
+                    ['AMPICILLIN (50 mg/kg/day): dilute a 500 mg vial with 2.1 ml of sterile water (500 mg/2.5 ml).', 'الأمبيسلين (50 ملغ/كجم/يوم): خفّف فيال 500 ملغ بـ 2.1 مل ماء معقم (500 ملغ/2.5 مل).'],
+                    ['Where there is a strong suspicion of meningitis, the dose of ampicillin should be increased 4 times.', 'عند الاشتباه القوي في الالتهاب السحائي تُزاد جرعة الأمبيسلين 4 مرات.'],
+                    ['GENTAMICIN 7.5 mg/kg/day once daily (80 mg/2 ml vial).', 'الجنتامايسين 7.5 ملغ/كجم/يوم مرة واحدة يومياً (فيال 80 ملغ/2 مل).'],
+                    ['IF REFERRAL IS NOT POSSIBLE OR DELAYED: repeat the ampicillin injection every 6 hours, and the gentamicin injection once daily, for 5 days; then, if improved, change to oral antibiotics.', 'إذا تعذّر التحويل أو تأخر: كرّر حقنة الأمبيسلين كل 6 ساعات وحقنة الجنتامايسين مرة يومياً لمدة 5 أيام، ثم إذا تحسن الطفل حوّل إلى مضاد حيوي بالفم.'],
+                ],
+                columns: [['Age (weight)', 'العمر (الوزن)'], ['Ampicillin', 'الأمبيسلين'], ['Gentamicin', 'الجنتامايسين']],
+                rows: [
+                    [['2 up to 4 months (4 - 6 kg)', '2 إلى أقل من 4 أشهر (4 - 6 كجم)'], ['1.0 ml', '1.0 مل'], ['0.75 - 1.0 ml', '0.75 - 1.0 مل']],
+                    [['4 up to 12 months (6 - 10 kg)', '4 إلى أقل من 12 شهراً (6 - 10 كجم)'], ['2.0 ml', '2.0 مل'], ['1.1 - 1.8 ml', '1.1 - 1.8 مل']],
+                    [['1 up to 3 years (10 - 14 kg)', 'سنة إلى أقل من 3 سنوات (10 - 14 كجم)'], ['3.0 ml', '3.0 مل'], ['1.9 - 2.7 ml', '1.9 - 2.7 مل']],
+                    [['3 up to 5 years (14 - 19 kg)', '3 إلى أقل من 5 سنوات (14 - 19 كجم)'], ['5.0 ml', '5.0 مل'], ['2.8 - 3.5 ml', '2.8 - 3.5 مل']],
+                ],
+            }),
+            block('quinine', ['Give quinine for VERY SEVERE FEBRILE DISEASE', 'أعطِ الكينين للمرض الحموي الشديد جداً'], {
+                lines: [
+                    ['Check the quinine formulation available in your clinic. Be sure the child is well hydrated.', 'تأكد من تركيز الكينين المتوفر في وحدتك. تأكد من أن الطفل لا يعاني من الجفاف.'],
+                    ['Give the first dose of intramuscular quinine and refer the child urgently to hospital.', 'أعطِ الجرعة الأولى من الكينين في العضل وحوّل الطفل بصورة عاجلة إلى المستشفى.'],
+                    ['Intramuscular quinine 300 mg/ml (600 mg in 2 ml ampoules), diluted with normal saline to 60 mg/ml as in the table.', 'الكينين للحقن في العضل 300 ملغ/مل (600 ملغ في أمبول 2 مل)، يُخفّف بالمحلول الملحي إلى 60 ملغ/مل كما في الجدول.'],
+                    ['IF REFERRAL IS NOT POSSIBLE: give the first dose of intramuscular quinine. The child should remain lying down for one hour.', 'إذا تعذّر التحويل: أعطِ الجرعة الأولى من الكينين في العضل، ويبقى الطفل مستلقياً لمدة ساعة.'],
+                    ['Repeat the quinine injection every 8 hours until the child is able to take orally, then continue quinine orally to complete 7 days.', 'كرّر حقنة الكينين كل 8 ساعات حتى يستطيع الطفل تناوله بالفم، ثم أكمل الكينين بالفم حتى تمام 7 أيام.'],
+                    ['Do not continue injections for more than one week.', 'لا تستمر في الحقن لأكثر من أسبوع.'],
+                ],
+                columns: [['Weight', 'الوزن'], ['Undiluted quinine (ml)', 'الكينين غير المخفف (مل)'], ['Normal saline to add (ml)', 'المحلول الملحي المضاف (مل)'], ['Total diluted solution to give (60 mg/ml)', 'المحلول المخفف الذي يُعطى (60 ملغ/مل)']],
+                rows: [
+                    [['4 - 6 kg', '4 - 6 كجم'], ['0.2', '0.2'], ['0.8', '0.8'], ['1.0 ml', '1.0 مل']],
+                    [['6 - 10 kg', '6 - 10 كجم'], ['0.3', '0.3'], ['1.2', '1.2'], ['1.5 ml', '1.5 مل']],
+                    [['10 - 12 kg', '10 - 12 كجم'], ['0.4', '0.4'], ['1.6', '1.6'], ['2.0 ml', '2.0 مل']],
+                    [['12 - 14 kg', '12 - 14 كجم'], ['0.5', '0.5'], ['2.0', '2.0'], ['2.5 ml', '2.5 مل']],
+                    [['14 - 19 kg', '14 - 19 كجم'], ['0.6', '0.6'], ['2.4', '2.4'], ['3.0 ml', '3.0 مل']],
+                ],
+            }),
+            block('diazepam', ['Give diazepam to stop convulsions', 'أعطِ الديازيبام لإيقاف التشنجات'], {
+                lines: [
+                    ['Turn the child to his or her side and clear the airway. Avoid putting things in the mouth.', 'ضع الطفل على جنبه ونظّف مجرى الهواء. تجنب وضع أي شيء في فمه.'],
+                    ['Give 0.5 mg/kg diazepam injection solution per rectum, using a small syringe without a needle (like a tuberculin syringe) or a catheter. Then flush with 2 ml normal saline.', 'أعطِ 0.5 ملغ/كجم من محلول حقن الديازيبام عن طريق الشرج باستعمال حقنة صغيرة بدون إبرة (مثل حقنة التيوبركلين) أو قسطرة، ثم اشطف بـ 2 مل محلول ملحي.'],
+                    ['If convulsions have not stopped after 10 minutes, repeat the diazepam dose.', 'إذا لم تتوقف التشنجات بعد 10 دقائق، كرّر جرعة الديازيبام.'],
+                    ['Treat and prevent low blood sugar.', 'عالج وامنع انخفاض سكر الدم.'],
+                ],
+                columns: [['Age (weight)', 'العمر (الوزن)'], ['Diazepam 10 mg/2 ml', 'الديازيبام 10 ملغ/2 مل']],
+                rows: [
+                    [['2 up to 6 months (5 - 7 kg)', '2 إلى أقل من 6 أشهر (5 - 7 كجم)'], ['0.5 ml', '0.5 مل']],
+                    [['6 up to 12 months (7 - <10 kg)', '6 إلى أقل من 12 شهراً (7 - أقل من 10 كجم)'], ['1.0 ml', '1.0 مل']],
+                    [['1 up to 3 years (10 - <14 kg)', 'سنة إلى أقل من 3 سنوات (10 - أقل من 14 كجم)'], ['1.5 ml', '1.5 مل']],
+                    [['3 up to 5 years (14 - 19 kg)', '3 إلى أقل من 5 سنوات (14 - 19 كجم)'], ['2.0 ml', '2.0 مل']],
+                ],
+            }),
+            block('low_sugar', ['Treat the child to prevent low blood sugar', 'عالج الطفل لمنع انخفاض سكر الدم'], {
+                lines: [
+                    ['If the child is able to breastfeed: ask the mother to breastfeed the child.', 'إذا كان الطفل قادراً على الرضاعة: اطلب من الأم أن ترضعه.'],
+                    ['If the child is not able to breastfeed but is able to swallow: give expressed breast milk or another milk. If neither is available, give sugar water. Give 30 - 50 ml of milk or sugar water before departure.', 'إذا لم يستطع الرضاعة لكنه يستطيع البلع: أعطه لبن الأم المعصور أو حليباً آخر، وإذا لم يتوفر أي منهما أعطه ماءً مُحلّى بالسكر. أعطِ 30 - 50 مل من الحليب أو الماء المُحلّى قبل المغادرة.'],
+                    ['If the child is not able to swallow: give 50 ml of milk or sugar water by nasogastric tube.', 'إذا لم يستطع البلع: أعطِ 50 مل من الحليب أو الماء المُحلّى بأنبوب أنفي معدي.'],
+                    ['If no nasogastric tube is available, give 1 teaspoon of sugar moistened with 1 - 2 drops of water under the tongue, and repeat every 20 minutes to prevent relapse.', 'إذا لم يتوفر الأنبوب الأنفي المعدي، أعطِ ملعقة صغيرة من السكر مبللة بـ 1 - 2 نقطة ماء تحت اللسان، وكرّرها كل 20 دقيقة لمنع الانتكاس.'],
+                    ['To make sugar water: dissolve 4 level teaspoons of sugar (20 grams) in a 200 ml cup of clean water.', 'لتحضير الماء المُحلّى: أذب 4 ملاعق صغيرة مستوية من السكر (20 جراماً) في كوب 200 مل من الماء النظيف.'],
+                ],
+            }),
+        ]),
+
         group('counsel', ['Counselling', 'نصح الأم'], [
             block('appetite', ['Assess the child\'s appetite (severe acute malnutrition, 6 months or more)', 'تقييم شهية الطفل (سوء التغذية الحاد الشديد، 6 أشهر فأكثر)'], {
                 lines: [
@@ -278,6 +368,37 @@ export const NATIONAL_CHILD_GUIDE = {
                 lines: [
                     ['For any sick child: breastfeed more frequently and for longer; if on breast-milk substitutes increase the amount; give more soup, rice water, yoghurt drinks or clean water.', 'لأي طفل مريض: أرضعيه أكثر ولفترة أطول؛ وإذا كان يتناول بدائل لبن الأم زيدي الكمية؛ وأعطيه شوربة أو ماء أرز أو زبادي أو ماء نظيفاً.'],
                     ['For a child with diarrhoea: extra fluid can be lifesaving; give fluid according to Plan A or Plan B.', 'للطفل المصاب بالإسهال: السوائل الإضافية قد تنقذ حياته؛ أعطيه السوائل حسب الخطة أ أو الخطة ب.'],
+                ],
+            }),
+            block('recommendations', ['Feeding recommendations in sickness and health (mother card)', 'إرشادات التغذية في حالة الصحة والمرض (كرت الأم)'], {
+                lines: [
+                    ['Counsel the mother on feeding using the mother card. At every age: keep up the child\'s growth monitoring at the nearest health facility.', 'انصحي الأم عن التغذية باستعمال كرت الأم. في كل الأعمار: واظبي على متابعة نموه بأقرب وحدة صحية.'],
+                    ['A good daily diet should be adequate in quantity and include energy-rich foods (for example thick cereal porridge with a little oil added), meat, fish, eggs or legumes, and fruit and vegetables.', 'الأطعمة اليومية الجيدة يجب أن تكون كافية وتحتوي على مواد غنية بالطاقة (مثال مديدة مكونة من الحبوب مع إضافة قليل من الزيت) لحمة، سمك، بيض، أو أي بقوليات بالإضافة للفاكهة والخضروات الطازجة.'],
+                ],
+                columns: [['Age', 'العمر'], ['Feeding advice', 'إرشادات التغذية']],
+                rows: [
+                    [['Up to the end of 6 months', 'حتى نهاية الشهر السادس'], [
+                        'Breastfeed as often as the child wants, day and night, at least 8 times a day.\nDo not give any other food or drink.',
+                        'أرضعي الطفل حسب رغبته نهاراً وليلاً على الأقل 8 مرات يومياً.\nلا تعطيه أي طعام أو شراب آخر.']],
+                    [['From 6 months up to 9 months', 'من بداية الشهر الـ 6 إلى أقل من 9 شهور'], [
+                        'Breastfeed as often as the child wants, day and night, at least 8 times a day.\nIntroduce complementary foods gradually, one kind at a time; start with mashed foods with the husks and seeds removed.\nIf the child is not breastfed, give 1 - 2 cups of milk a day and two extra meals during the day.\nGive a small amount of complementary food (start with 1 or 2 small spoonfuls and increase gradually) in addition to breastfeeding.\nGive orange, lemon or tomato juice with a little water and sugar added.\nCustard or rice with milk, banana, boiled potato or biscuits, well mashed, with milk added.\nMashed legumes (ful masri, lubia, lentils) with a few drops of lemon, or\nmashed and strained vegetables and fruit.\nGive small amounts of complementary food 3 - 4 times a day.',
+                        'أرضعي الطفل حسب رغبته نهاراً وليلاً على الأقل 8 مرات يومياً.\nأدخلي التغذية التكميلية تدريجياً بنوع واحد في البداية، الأطعمة المهروسة بعد إزالة القشور والبذور.\nإذا كان الطفل لا يرضع رضاعة طبيعية أعطِ 1 - 2 كوب من الحليب يومياً زائداً وجبتين إضافيتين خلال اليوم.\nأعطِ الطفل كمية قليلة من الأطعمة التكميلية (ابدئي بإعطائه ملعقة صغيرة أو اثنتين مع زيادة الكمية تدريجياً) بالإضافة للرضاعة الطبيعية.\nأعطيه عصير برتقال، ليمون، أو طماطم مع إضافة قليل من الماء والسكر.\nكاستر أو أرز باللبن، موز، بطاطس مسلوق أو بسكويت بعد هرسه جيداً وإضافة اللبن.\nبقوليات مهروسة (فول مصري، لوبيا، عدس) مع إضافة قطرات الليمون أو\nخضروات وفاكهة مهروسة ومصفاة.\nأعطِ الطفل كميات قليلة من الأطعمة التكميلية 3 - 4 مرات يومياً.']],
+                    [['From 9 months up to 12 months', 'من بداية الشهر الـ 9 إلى أقل من 12 شهراً'], [
+                        'Breastfeed as often as the child wants.\nGive adequate amounts of: kisra, aseeda, gurasa, bread or rice, with\nmullah (free of spices, seeds and fibre),\nminced meat (sharmout), chicken or minced fish, or\nful masri, lentils or lubia, with\nmashed vegetables and fruit.\nAdd a small spoon or two of oil to the child\'s food.\nGive small, frequent meals 5 - 6 times a day.',
+                        'أرضعي الطفل حسب رغبته.\nأعطِ الطفل كميات كافية من: كسرة، عصيدة، قراصة، رغيف، أرز مع\nملاح (خالي من البهارات والبذور والألياف)\nلحم مفروم (شرموط)، فراخ، سمك مفروم أو\nفول مصري، عدس، لوبيا مع\nخضروات وفاكهة مهروسة.\nأضف ملعقة صغيرة أو ملعقتين من الزيت إلى طعام الطفل.\nأعطِ الطفل وجبات صغيرة متقاربة 5 - 6 مرات يومياً.']],
+                    [['From 12 months up to 24 months', 'من بداية الشهر الـ 12 إلى أقل من 24 شهراً'], [
+                        'Breastfeed as often as the child wants.\nKisra, aseeda, gurasa, bread or rice, with\nmullah (free of spices, seeds and fibre),\nfresh milk, yoghurt or rob, or\neggs, or\nminced meat (sharmout), chicken or minced fish, or\nful masri, lentils or lubia, with\nmashed vegetables and fruit.\nAdd a small spoon or two of oil to the child\'s food.\nGive small, frequent meals 5 - 6 times a day.',
+                        'أرضعي الطفل حسب رغبته.\nكسرة، عصيدة، قراصة، رغيف، أرز مع\nملاح (خالي من البهارات والبذور والألياف)\nلبن طازج، زبادي، روب أو\nبيض أو\nلحم مفروم (شرموط)، فراخ، سمك مفروم أو\nفول مصري، عدس، لوبيا مع\nخضروات وفاكهة مهروسة.\nأضف ملعقة صغيرة أو ملعقتين من الزيت إلى طعام الطفل.\nأعطِ الطفل وجبات صغيرة متقاربة 5 - 6 مرات يومياً.']],
+                    [['24 months and older', '24 شهراً فأكثر'], [
+                        'Give the child the usual family food 3 times a day.\nGive two nutritious snacks between the main meals, for example fresh milk or milk products, fruit or vegetables.',
+                        'أعطِ الطفل غذاء الأسرة العادي 3 مرات يومياً.\nأعطِ وجبتين مغذيتين بين الوجبات الرئيسية مثال: لبن طازج أو منتجاته، فواكه أو خضروات.']],
+                ],
+            }),
+            block('warnings', ['Warning (mother card)', 'تحذير (كرت الأم)'], {
+                lines: [
+                    ['Do not give the child any medicine without consulting the doctor.', 'لا تعطي الطفل أي أدوية دون استشارة الطبيب.'],
+                    ['Follow the doctor\'s instructions on when to give the medicines and the doses.', 'اتبعي إرشادات الطبيب بالنسبة لمواعيد إعطاء الأدوية والجرعات.'],
+                    ['Continue giving the medicines as the doctor instructed, even if the child gets better.', 'استمري في إعطاء الأدوية حسب إرشادات الطبيب حتى إذا تحسنت حالة الطفل.'],
                 ],
             }),
             block('mother', ['Counsel the mother about her own health', 'نصح الأم عن صحتها'], {
@@ -391,6 +512,16 @@ export const NATIONAL_CHILD_GUIDE = {
                 ],
             }),
         ]),
+
+        group('growth', ['Growth charts', 'منحنيات النمو'], [
+            block('charts', ['Weight-for-length and weight-for-height (WHO z-scores)', 'الوزن بالنسبة للطول والوزن بالنسبة للطول وقوفاً (منحنى الانحراف المعياري)'], {
+                charts: ['wfl', 'wfh'],
+                lines: [
+                    ['Weight-for-length for children from birth to 2 years (measured lying down); weight-for-height for children 2 to 5 years (measured standing). Separate charts for boys and girls.', 'الوزن بالنسبة للطول للأطفال من الولادة حتى سنتين (يُقاس استلقاءً)، والوزن بالنسبة للطول وقوفاً للأطفال من سنتين إلى 5 سنوات. منحنيات منفصلة للأولاد والبنات.'],
+                    ['Find where the weight and the length or height meet. Below the -3 line: WFH/L less than -3 z-scores. Between the -3 and -2 lines: WFH/L between -3 and -2 z-scores. On or above the -2 line: -2 z-scores or more.', 'حدّد نقطة التقاء الوزن مع الطول. تحت خط -3: أقل من -3 انحراف معياري. بين خطي -3 و-2: بين -3 و-2 انحراف معياري. على خط -2 أو فوقه: -2 انحراف معياري أو أكثر.'],
+                ],
+            }),
+        ]),
     ],
 };
 
@@ -416,6 +547,33 @@ export const NATIONAL_INFANT_GUIDE = {
                     ['Include sick infants unless being referred.', 'يشمل ذلك الرضع المرضى إلا إذا كانوا سيُحوّلون.'],
                     ['Advise the caretaker when to return for the next dose.', 'انصح مقدم الرعاية بموعد العودة للجرعة التالية.'],
                     ['Mother: advise her to receive vitamin A immediately after delivery.', 'الأم: انصحها بأخذ فيتامين أ مباشرة بعد الولادة.'],
+                ],
+            }),
+        ]),
+
+        group('clinic', ['Give these treatments in clinic only', 'أعطِ هذه العلاجات في الوحدة الصحية فقط'], [
+            block('im_antibiotics', ['Give first dose of intramuscular antibiotics', 'أعطِ الجرعة الأولى من المضادات الحيوية بالحقن في العضل'], {
+                lines: [
+                    ['Give the first dose of intramuscular gentamicin and ampicillin. Avoid using undiluted 40 mg/ml gentamicin.', 'أعطِ الجرعة الأولى من الجنتامايسين والأمبيسلين في العضل. تجنب استعمال الجنتامايسين 40 ملغ/مل غير المخفف.'],
+                    ['Ampicillin 50 mg/kg: add 2.1 ml sterile water to a 250 mg vial = 250 mg/2.5 ml.', 'الأمبيسلين 50 ملغ/كجم: أضف 2.1 مل ماء معقم إلى فيال 250 ملغ = 250 ملغ/2.5 مل.'],
+                    ['Gentamicin: add 6 ml sterile water to a 2 ml vial containing 80 mg; total volume 8 ml, concentration 10 mg/ml. Dose 5 mg per kg under 7 days of age; 7.5 mg per kg at 7 days or older.', 'الجنتامايسين: أضف 6 مل ماء معقم إلى فيال 2 مل يحتوي 80 ملغ؛ الحجم الكلي 8 مل بتركيز 10 ملغ/مل. الجرعة 5 ملغ لكل كجم تحت عمر 7 أيام، و7.5 ملغ لكل كجم من عمر 7 أيام فأكثر.'],
+                    ['Referral is the best option for a young infant classified with VERY SEVERE DISEASE. If referral is not possible, continue ampicillin and gentamicin for at least 5 days: ampicillin two times daily under one week of age and 3 times daily from one week; gentamicin once daily for 5 days.', 'التحويل هو الخيار الأفضل للرضيع المصنف مرضاً شديداً جداً. إذا تعذّر التحويل، استمر في الأمبيسلين والجنتامايسين 5 أيام على الأقل: الأمبيسلين مرتين يومياً تحت عمر أسبوع و3 مرات يومياً من عمر أسبوع، والجنتامايسين مرة يومياً لمدة 5 أيام.'],
+                ],
+                columns: [['Weight', 'الوزن'], ['Ampicillin (250 mg/2.5 ml)', 'الأمبيسلين (250 ملغ/2.5 مل)'], ['Gentamicin, age under 7 days', 'الجنتامايسين، العمر أقل من 7 أيام'], ['Gentamicin, age 7 days or more', 'الجنتامايسين، العمر 7 أيام فأكثر']],
+                rows: [
+                    [['1 kg', '1 كجم'], ['0.5 ml', '0.5 مل'], ['0.5 ml', '0.5 مل'], ['0.8 ml', '0.8 مل']],
+                    [['2 kg', '2 كجم'], ['1.0 ml', '1.0 مل'], ['1.0 ml', '1.0 مل'], ['1.5 ml', '1.5 مل']],
+                    [['3 kg', '3 كجم'], ['1.5 ml', '1.5 مل'], ['1.5 ml', '1.5 مل'], ['2.25 ml', '2.25 مل']],
+                    [['4 kg', '4 كجم'], ['2.0 ml', '2.0 مل'], ['2.0 ml', '2.0 مل'], ['3.0 ml', '3.0 مل']],
+                    [['5 kg', '5 كجم'], ['2.5 ml', '2.5 مل'], ['2.5 ml', '2.5 مل'], ['3.75 ml', '3.75 مل']],
+                ],
+            }),
+            block('low_sugar', ['Treat the young infant to prevent low blood sugar', 'عالج الرضيع الصغير لمنع انخفاض سكر الدم'], {
+                lines: [
+                    ['If the young infant is able to breastfeed: ask the mother to breastfeed the young infant.', 'إذا كان الرضيع قادراً على الرضاعة: اطلب من الأم أن ترضعه.'],
+                    ['If not able to breastfeed but able to swallow: give 20 - 50 ml (10 ml/kg) of expressed breast milk before departure. If not possible, give 20 - 50 ml (10 ml/kg) of sugar water.', 'إذا لم يستطع الرضاعة لكنه يستطيع البلع: أعطه 20 - 50 مل (10 مل/كجم) من لبن الأم المعصور قبل المغادرة، وإذا لم يكن ذلك ممكناً أعطه 20 - 50 مل (10 مل/كجم) من الماء المُحلّى بالسكر.'],
+                    ['If not able to swallow: give 20 - 50 ml (10 ml/kg) of expressed breast milk or sugar water by nasogastric tube.', 'إذا لم يستطع البلع: أعطِ 20 - 50 مل (10 مل/كجم) من لبن الأم المعصور أو الماء المُحلّى بأنبوب أنفي معدي.'],
+                    ['To make sugar water: dissolve 4 level teaspoons of sugar (20 grams) in a 200 ml cup of clean water.', 'لتحضير الماء المُحلّى: أذب 4 ملاعق صغيرة مستوية من السكر (20 جراماً) في كوب 200 مل من الماء النظيف.'],
                 ],
             }),
         ]),
@@ -479,6 +637,27 @@ export const NATIONAL_INFANT_GUIDE = {
                     ['Place the thumb on top and the first finger under the breast, opposite each other, at least 4 cm from the nipple tip.', 'ضعي الإبهام أعلى الثدي والسبابة أسفله مقابلين لبعضهما على بعد 4 سم على الأقل من طرف الحلمة.'],
                     ['Compress and release a few times; if no milk, move closer to the nipple. Go all the way around the breast without squeezing the nipple or rubbing the skin.', 'اضغطي وأرخي عدة مرات؛ وإذا لم يخرج اللبن قربي الأصابع من الحلمة. تحركي حول الثدي كله دون عصر الحلمة أو فرك الجلد.'],
                     ['Express one breast until the milk just drips, then the other; alternate 5 or 6 times for at least 20 to 30 minutes.', 'اعصري ثدياً حتى يقطر اللبن ثم الآخر؛ وبدّلي 5 أو 6 مرات لمدة 20 إلى 30 دقيقة على الأقل.'],
+                ],
+            }),
+            block('cup', ['Teach the mother how to feed by a cup', 'علّم الأم كيف تُرضع بالكوب'], {
+                lines: [
+                    ['Put a cloth on the infant\'s front to protect his clothes, as some milk can spill.', 'ضعي قطعة قماش على صدر الرضيع لحماية ملابسه لأن بعض الحليب قد ينسكب.'],
+                    ['Hold the infant semi-upright on the lap.', 'احملي الرضيع في وضع شبه قائم على حجرك.'],
+                    ['Put a measured amount of milk in the cup.', 'ضعي كمية مقاسة من الحليب في الكوب.'],
+                    ['Hold the cup so that it rests lightly on the infant\'s lower lip.', 'أمسكي الكوب بحيث يستند بخفة على الشفة السفلى للرضيع.'],
+                    ['Tip the cup so that the milk just reaches the infant\'s lips.', 'أميلي الكوب حتى يصل الحليب بالكاد إلى شفتي الرضيع.'],
+                    ['Allow the infant to take the milk himself. DO NOT pour the milk into the infant\'s mouth.', 'اتركي الرضيع يأخذ الحليب بنفسه. لا تصبّي الحليب في فمه.'],
+                ],
+            }),
+            block('warm_home', ['Teach the mother how to keep the low weight infant warm at home', 'علّم الأم كيف تحافظ على دفء الرضيع ناقص الوزن في المنزل'], {
+                lines: [
+                    ['Keep the young infant in the same bed with the mother.', 'أبقي الرضيع في نفس السرير مع الأم.'],
+                    ['Keep the room warm (at least 25 °C) with a home heating device, and make sure there is no draught of cold air.', 'حافظي على دفء الغرفة (25 درجة مئوية على الأقل) بجهاز تدفئة منزلي، وتأكدي من عدم وجود تيار هواء بارد.'],
+                    ['Avoid bathing the low weight infant. When washing or bathing, do it in a very warm room with warm water, dry immediately and thoroughly, and clothe the young infant immediately. Change clothes (e.g. nappies) whenever they are wet.', 'تجنبي استحمام الرضيع ناقص الوزن. عند الغسل أو الاستحمام افعلي ذلك في غرفة دافئة جداً بماء دافئ، وجففيه فوراً وجيداً وألبسيه فوراً. غيّري الملابس (مثل الحفاضات) كلما ابتلت.'],
+                    ['Provide skin to skin contact as much as possible, day and night: dress the infant in a warm shirt open at the front, a nappy, hat and socks; place the infant on the mother\'s chest between her breasts with the head turned to one side; cover the infant with the mother\'s clothes (and an extra warm blanket in cold weather).', 'وفّري التلامس جلداً لجلد أكبر قدر ممكن ليلاً ونهاراً: ألبسي الرضيع قميصاً دافئاً مفتوحاً من الأمام وحفاضة وطاقية وجوارب، وضعيه على صدر الأم بين الثديين مع إمالة رأسه إلى جانب، وغطّيه بملابس الأم (وبطانية دافئة إضافية في الطقس البارد).'],
+                    ['When not in skin to skin contact, keep the young infant clothed or covered as much as possible at all times: extra clothing including hat and socks, loosely wrapped in a soft dry cloth and covered with a blanket.', 'عندما لا يكون في تلامس جلداً لجلد، أبقيه مكسواً أو مغطى قدر الإمكان طوال الوقت: ملابس إضافية تشمل الطاقية والجوارب، ولفّه بخفة في قطعة قماش ناعمة جافة وغطّيه ببطانية.'],
+                    ['Check frequently that the hands and feet are warm. If cold, re-warm the baby using skin to skin contact.', 'تحققي كثيراً من دفء اليدين والقدمين، وإذا كانت باردة أعيدي تدفئة الطفل بالتلامس جلداً لجلد.'],
+                    ['Breastfeed the infant frequently (or give expressed breast milk by cup).', 'أرضعي الرضيع كثيراً (أو أعطيه لبن الأم المعصور بالكوب).'],
                 ],
             }),
             block('mother', ['Assess the mother\'s own health', 'تقييم صحة الأم'], {
@@ -562,7 +741,67 @@ export const NATIONAL_INFANT_GUIDE = {
                 ],
             }),
         ]),
+
+        group('growth', ['Growth charts', 'منحنيات النمو'], [
+            block('wfa', ['Weight-for-age, birth to 6 months (WHO z-scores)', 'الوزن بالنسبة للعمر من الولادة حتى 6 أشهر (منحنى الانحراف المعياري)'], {
+                charts: ['wfa'],
+                lines: [
+                    ['Separate charts for boys and girls. Age is in weeks up to 13 weeks, then in months.', 'منحنيات منفصلة للأولاد والبنات. العمر بالأسابيع حتى 13 أسبوعاً ثم بالأشهر.'],
+                    ['Find where the weight and age meet. Below the -2 line: low weight for age.', 'حدّد نقطة التقاء الوزن مع العمر. تحت خط -2: وزن منخفض بالنسبة للعمر.'],
+                ],
+            }),
+        ]),
     ],
 };
 
 export const NATIONAL_GUIDES = { guide_child: NATIONAL_CHILD_GUIDE, guide_infant: NATIONAL_INFANT_GUIDE };
+
+// ---- boxes added to the national booklet after a part was saved --------------
+// A saved treatment-table document is what clinicians see, so boxes added here
+// later (growth charts, drugs given in the clinic, feeding by cup, ...) do not
+// reach it on their own. These find them and add them in booklet order; the
+// person managing the protocol reviews and saves.
+
+/** National boxes the document lacks: [{ group, block, title }]. */
+export function missingNationalBoxes(doc, national) {
+    if (!doc || !national) return [];
+    const out = [];
+    national.groups.forEach((ng) => {
+        const g = (doc.groups || []).find((x) => x.id === ng.id);
+        ng.blocks.forEach((nb) => {
+            if (!g || !(g.blocks || []).some((b) => b.id === nb.id)) out.push({ group: ng.id, block: nb.id, title: nb.en?.title || nb.id, titleAr: nb.ar?.title });
+        });
+    });
+    return out;
+}
+
+/** The document with every missing national box added, next to its neighbours in the booklet. */
+export function addMissingNationalBoxes(doc, national) {
+    const next = JSON.parse(JSON.stringify(doc || { groups: [] }));
+    next.groups = next.groups || [];
+    national.groups.forEach((ng, ngi) => {
+        let g = next.groups.find((x) => x.id === ng.id);
+        if (!g) {
+            g = { ...JSON.parse(JSON.stringify(ng)), blocks: [] };
+            // After the nearest earlier national group the document has.
+            let at = next.groups.length;
+            for (let k = ngi - 1; k >= 0; k -= 1) {
+                const i = next.groups.findIndex((x) => x.id === national.groups[k].id);
+                if (i !== -1) { at = i + 1; break; }
+            }
+            if (ngi === 0) at = 0;
+            next.groups.splice(at, 0, g);
+        }
+        g.blocks = g.blocks || [];
+        ng.blocks.forEach((nb, nbi) => {
+            if (g.blocks.some((b) => b.id === nb.id)) return;
+            let at = nbi === 0 ? 0 : g.blocks.length;
+            for (let k = nbi - 1; k >= 0; k -= 1) {
+                const i = g.blocks.findIndex((b) => b.id === ng.blocks[k].id);
+                if (i !== -1) { at = i + 1; break; }
+            }
+            g.blocks.splice(at, 0, JSON.parse(JSON.stringify(nb)));
+        });
+    });
+    return next;
+}

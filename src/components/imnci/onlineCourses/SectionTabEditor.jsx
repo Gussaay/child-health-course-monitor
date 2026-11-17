@@ -1,7 +1,7 @@
 // src/components/imnci/onlineCourses/SectionTabEditor.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, Stethoscope, Film, BookOpen, ClipboardList, Flag, Lightbulb, Layers, Shuffle, ListOrdered, BookOpenCheck } from 'lucide-react';
+import { Plus, Trash2, Stethoscope, Film, BookOpen, ClipboardList, Flag, Lightbulb, Layers, Shuffle, ListOrdered, BookOpenCheck, LineChart } from 'lucide-react';
 import { ref as storageRef, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { Button, Modal, Input, Select, Textarea } from '../../CommonComponents';
 import { notify } from '../../dialogs';
@@ -66,12 +66,14 @@ const newCard = (type) => (
                                 : type === 'sort' ? { type: 'sort', text: '', groups: [], items: [], explanation: '' }
                                     : type === 'steps' ? { type: 'steps', title: '', steps: [] }
                                         : type === 'story' ? { type: 'story', title: '', stages: [{ text: '', question: '', options: [], answer: 0, explanation: '' }] }
+                                            : type === 'growthchart' ? { type: 'growthchart', title: '', text: '', sex: 'female', ageMonths: 12, weightKg: 8, lengthCm: 72, explanation: '' }
                                             : { type: 'video', url: '', title: '', caption: '' });
 
 const CARD_NAMES = {
     booklet: 'Chart booklet table', form: 'Recording form', note: 'Note', video: 'Video',
     question: 'Question', exercise: 'Case or exercise', page: 'Book page',
     reveal: 'Think first', flip: 'Flip cards', sort: 'Sort it', steps: 'Step by step', story: 'Case in stages',
+    growthchart: 'Plot on the chart',
 };
 
 // A list written as lines. It keeps what is typed as typed and hands the
@@ -422,6 +424,49 @@ export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
                             </div>
                         )}
 
+                        {b.type === 'growthchart' && (
+                            <div className="space-y-2">
+                                <Input label={t('imnci_ui.courses.editor.title', 'Title')} value={b.title || ''} onChange={(e) => updateExtra(i, { title: e.target.value })} />
+                                <Textarea rows={2} value={b.text || ''} dir="auto" placeholder={t('imnci_ui.courses.editor.growth_case', 'The case (optional). Leave the weight empty for free practice, where learners type their own numbers.')}
+                                    onChange={(e) => updateExtra(i, { text: e.target.value })} />
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                    <Select label={t('imnci_ui.courses.editor.growth_chart', 'Chart')} value={b.chart || ''}
+                                        onChange={(e) => updateExtra(i, { chart: e.target.value || undefined })}>
+                                        <option value="">{t('imnci_ui.courses.editor.growth_by_age', 'By age (length under 2 years, height from 2)')}</option>
+                                        <option value="wfl">{t('imnci_ui.courses.editor.growth_wfl', 'Weight-for-length (0 to 2 years)')}</option>
+                                        <option value="wfh">{t('imnci_ui.courses.editor.growth_wfh', 'Weight-for-height (2 to 5 years)')}</option>
+                                        <option value="wfa">{t('imnci_ui.courses.editor.growth_wfa', 'Weight-for-age (0 to 6 months)')}</option>
+                                    </Select>
+                                    <Select label={t('imci.growth_chart.sex', 'Sex')} value={b.sex || 'female'} onChange={(e) => updateExtra(i, { sex: e.target.value })}>
+                                        <option value="female">{t('imci.growth_chart.girl', 'Girl')}</option>
+                                        <option value="male">{t('imci.growth_chart.boy', 'Boy')}</option>
+                                    </Select>
+                                    {b.chart === 'wfa' ? (
+                                        <Input type="number" label={t('imci.growth_chart.age_in_weeks', 'Age (weeks)')} value={b.ageWeeks ?? ''}
+                                            onChange={(e) => updateExtra(i, { ageWeeks: e.target.value === '' ? undefined : Number(e.target.value) })} />
+                                    ) : (
+                                        <Input type="number" label={t('imci.growth_chart.age_in_months', 'Age (months)')} value={b.ageMonths ?? ''}
+                                            onChange={(e) => updateExtra(i, { ageMonths: e.target.value === '' ? undefined : Number(e.target.value) })} />
+                                    )}
+                                    <Input type="number" label={t('imci.growth_chart.weight_kg', 'Weight (kg)')} value={b.weightKg ?? ''}
+                                        onChange={(e) => updateExtra(i, { weightKg: e.target.value === '' ? undefined : Number(e.target.value) })} />
+                                    {b.chart !== 'wfa' && (
+                                        <Input type="number" label={t('imci.growth_chart.length_cm', 'Length or height (cm)')} value={b.lengthCm ?? ''}
+                                            onChange={(e) => updateExtra(i, { lengthCm: e.target.value === '' ? undefined : Number(e.target.value) })} />
+                                    )}
+                                    {b.chart === 'wfa' && (
+                                        <Select label={t('imnci_ui.courses.editor.growth_low', 'Is the weight low for age?')} value={b.lowWeightForAge ? 'yes' : 'no'}
+                                            onChange={(e) => updateExtra(i, { lowWeightForAge: e.target.value === 'yes' })}>
+                                            <option value="yes">{t('imnci_ui.courses.editor.growth_low_yes', 'Yes, below the -2 line')}</option>
+                                            <option value="no">{t('imnci_ui.courses.editor.growth_low_no', 'No')}</option>
+                                        </Select>
+                                    )}
+                                </div>
+                                <Input label={t('imnci_ui.courses.editor.why_after', 'Why (shown after answering)')} value={b.explanation || ''}
+                                    onChange={(e) => updateExtra(i, { explanation: e.target.value })} />
+                            </div>
+                        )}
+
                         {b.type === 'question' && (
                             <div className="space-y-2">
                                 <Textarea rows={2} value={b.text || ''} placeholder={t('imnci_ui.courses.editor.the_question', 'The question')}
@@ -487,7 +532,7 @@ export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
                     </button>
                 )}
                 {whole && [
-                    ['reveal', Lightbulb], ['flip', Layers], ['sort', Shuffle], ['steps', ListOrdered], ['story', BookOpenCheck],
+                    ['reveal', Lightbulb], ['flip', Layers], ['sort', Shuffle], ['steps', ListOrdered], ['story', BookOpenCheck], ['growthchart', LineChart],
                 ].map(([type, Icon]) => (
                     <button key={type} onClick={() => addExtra(type)}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">

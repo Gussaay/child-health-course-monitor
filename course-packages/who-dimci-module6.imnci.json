@@ -1,0 +1,2659 @@
+{
+ "format": "imnci-course-package",
+ "version": 1,
+ "about": "WHO IMCI distance learning course (2014), Module 6, in the Sudan national IMNCI wording. Each WHO section is cut into short lessons of one topic, with the same information as the WHO module, laid out as activities: step-by-step cards, flip cards, sorting, case stories and questions. Where the Sudan national booklet differs from WHO, the Sudan wording is used and a \"Sudan national protocol\" note says what WHO wrote. Chart booklet and recording form blocks are read live from the protocol. Video slots without a link show a placeholder; their narration scripts are in a separate file. Exercises start as drafts and open in the exercise manager.",
+ "course": {
+  "title": "IMNCI distance learning modules",
+  "description": "Self-study modules based on the WHO IMCI distance learning course (2014), in the wording of the Sudan national IMNCI protocol."
+ },
+ "modules": [
+  {
+   "title": "Module 6: Malnutrition and anaemia",
+   "order": 6,
+   "sections": [
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 5,
+     "bookToPage": 7,
+     "title": "Module overview",
+     "order": 1,
+     "read": [
+      {
+       "type": "note",
+       "text": "See what Module 6 covers and which part of the recording form it uses, then take the pre-test.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Malnutrition is an underlying cause of much illness, so this is a very important assessment. After you have asked about the child's problems, checked for general danger signs and assessed the main symptoms, you CHECK ALL CHILDREN FOR MALNUTRITION AND ANAEMIA. Then you check immunization status and other problems."
+      },
+      {
+       "type": "steps",
+       "title": "How this module is organized",
+       "steps": [
+        {
+         "title": "Malnutrition",
+         "text": "Check all children for malnutrition and assess, classify malnutrition, treat malnutrition."
+        },
+        {
+         "title": "Anaemia",
+         "text": "Check all children for anaemia, classify anaemia, treat anaemia."
+        },
+        {
+         "title": "Follow-up",
+         "text": "Follow-up care for nutrition problems."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "What you will be able to do"
+      },
+      {
+       "type": "rich",
+       "text": "<p>After you study this module, you will be able to:</p><ul><li>Explain why it is necessary to check all children for malnutrition and anaemia</li><li>Determine weight for height or length</li><li>Measure a child's mid-upper arm circumference (MUAC)</li><li>Recognize clinical signs of severe acute malnutrition</li><li>Conduct an appetite test for a child with acute malnutrition</li><li>Recognize clinical signs of anaemia</li><li>Classify malnutrition and anaemia using the IMNCI charts</li><li>Provide ready-to-use therapeutic food (RUTF) and counsel the caregiver on giving it</li><li>Give iron and mebendazole</li><li>Counsel caregivers on home treatments</li><li>Follow up a child with malnutrition or anaemia</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Which part of the recording form is used in this module?"
+      },
+      {
+       "type": "form",
+       "part": "child",
+       "sections": [
+        "anemia",
+        "malnutrition"
+       ],
+       "caption": "The national recording form: anaemia and malnutrition"
+      },
+      {
+       "type": "heading",
+       "text": "Before you begin"
+      },
+      {
+       "type": "paragraph",
+       "text": "What do you know now about managing malnutrition and anaemia? Check quickly with seven questions. After the module you will answer the same questions, and see what you have learned."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m6-pretest",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 8,
+     "bookToPage": 9,
+     "title": "Meet Noah: start the visit",
+     "order": 2,
+     "read": [
+      {
+       "type": "note",
+       "text": "Start the visit of a child brought for cough, and see why every child is checked for malnutrition and anaemia.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Malnutrition and anaemia",
+       "caption": "Watch this first.",
+       "script": "V6.2"
+      },
+      {
+       "type": "paragraph",
+       "text": "Consider a typical case that you might see in your practice. You will follow Noah and his mother Rachel through the whole module."
+      },
+      {
+       "type": "story",
+       "title": "Opening case: Noah",
+       "stages": [
+        {
+         "text": "A young mother, Rachel, brings her child Noah on a quiet morning. She looks tired: she waited a long time for a bus, and the trip is on a rough, hot road. She was worried about Noah getting sicker on the way. You praise Rachel for bringing Noah in, especially because the trip is difficult and costs her money. Noah is at an important age of growth and development."
+        },
+        {
+         "text": "Rachel tells you Noah is 2 years and 4 months old. He has had a cough for 3 days. This is their first visit for the cough. Noah weighs 12.7 kg and his temperature is 37 °C. He is able to drink, he is not vomiting and has had no convulsions. He sits on Rachel's lap, kicks his legs against her skirt, coughs and looks around the room.",
+         "question": "Does Noah have a general danger sign?",
+         "options": [
+          "No",
+          "Yes: he is lethargic",
+          "Yes: he vomits everything"
+         ],
+         "answer": 0,
+         "explanation": "He drinks, does not vomit, has had no convulsions and is alert."
+        },
+        {
+         "text": "You count 35 breaths in one minute. His chest wall and abdomen move out when he breathes in, and you hear no stridor.",
+         "question": "How do you classify Noah's cough?",
+         "options": [
+          "COUGH OR COLD",
+          "PNEUMONIA",
+          "SEVERE PNEUMONIA OR VERY SEVERE DISEASE"
+         ],
+         "answer": 0,
+         "explanation": "At 12 months up to 5 years, fast breathing is 40 breaths per minute or more. 35 is not fast, and there is no chest indrawing or stridor. You tell Rachel the cough can be treated at home with a safe remedy to soothe the throat."
+        },
+        {
+         "text": "Noah has no diarrhoea. His temperature is below 37.5 °C, and Rachel says he has not felt hot or had a fever recently. You have assessed the main symptoms.",
+         "question": "What do you do next?",
+         "options": [
+          "Check Noah for malnutrition and anaemia",
+          "Finish the visit: he only came for a cough",
+          "Check for malnutrition only if Rachel says he eats poorly"
+         ],
+         "answer": 0,
+         "explanation": "You check every child for malnutrition and anaemia, whatever the reason for the visit."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 10,
+     "bookToPage": 12,
+     "title": "Why check every child, and what severe acute malnutrition looks like",
+     "order": 3,
+     "read": [
+      {
+       "type": "note",
+       "text": "Explain why every child is checked, what causes malnutrition, and recognize the signs of marasmus and kwashiorkor.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "heading",
+       "text": "Why do you check every child for malnutrition?"
+      },
+      {
+       "type": "paragraph",
+       "text": "Malnutrition is a major underlying cause of death and illness in children. Even children with mild and moderate malnutrition have an increased risk of death. More than one out of three child deaths are linked to malnutrition."
+      },
+      {
+       "type": "paragraph",
+       "text": "A caregiver may bring her child to clinic because of an acute illness, with no complaint that points to malnutrition or anaemia. A child can be malnourished without you or the family noticing. Identifying and treating these children helps prevent many severe diseases and deaths. Some cases can be treated at home; severe cases need referral to hospital for special feeding, blood transfusion for severe anaemia, or treatment of a disease contributing to the malnutrition."
+      },
+      {
+       "type": "heading",
+       "text": "What causes malnutrition?"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>A diet that lacks enough essential vitamins, minerals or other nutrients: the child may not be breastfeeding efficiently, or not eating enough protein and calories, or not getting enough vitamin A or iron.</li><li>Frequent illnesses, HIV infection or tuberculosis: the child's appetite decreases, and the food eaten is not used efficiently.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "What is severe acute malnutrition (SAM)?"
+      },
+      {
+       "type": "paragraph",
+       "text": "Severe acute malnutrition develops when the child does not get enough energy, protein and other nutrients from food to meet his needs. The child may become severely wasted (a sign of marasmus), or may develop oedema (a sign of kwashiorkor)."
+      },
+      {
+       "type": "flip",
+       "title": "Two pictures of severe acute malnutrition",
+       "cards": [
+        {
+         "front": "Marasmus (severe wasting)",
+         "back": "Very thin body with reduced fat under the skin, especially on the arms, legs and buttocks. The belly may be distended. The face may look the same."
+        },
+        {
+         "front": "Kwashiorkor (oedema)",
+         "back": "Thin, sparse, pale (yellowish or reddish) hair that falls out easily. Dry, scaly skin, especially on the arms and legs. A puffy or \"moon\" face. Swelling of the ankles and feet."
+        }
+       ]
+      },
+      {
+       "type": "sort",
+       "text": "Is this a common sign of severe acute malnutrition? Sort each finding.",
+       "groups": [
+        "Common sign of SAM",
+        "Not a sign of SAM"
+       ],
+       "items": [
+        {
+         "text": "Puffy face",
+         "group": 0
+        },
+        {
+         "text": "Distended abdomen",
+         "group": 0
+        },
+        {
+         "text": "Extremely thin body",
+         "group": 0
+        },
+        {
+         "text": "Oedema of the feet",
+         "group": 0
+        },
+        {
+         "text": "Scaly skin on the legs",
+         "group": 0
+        },
+        {
+         "text": "Rash on the belly",
+         "group": 1
+        },
+        {
+         "text": "Lack of fat on the buttocks and arms",
+         "group": 0
+        },
+        {
+         "text": "Child is crying from hunger",
+         "group": 1,
+         "why": "Children with SAM often have a poor appetite."
+        },
+        {
+         "text": "Thin hair that may fall out",
+         "group": 0
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m6-ex-a",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 13,
+     "bookToPage": 14,
+     "title": "Look and feel for oedema of both feet",
+     "order": 4,
+     "read": [
+      {
+       "type": "note",
+       "text": "Know the steps of the malnutrition assessment, and check a child for oedema of both feet.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "The assessment for malnutrition has two parts. First you assess for severe acute malnutrition (SAM). Then, if there is SAM, you assess for complications."
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "categories": [
+        "malnutrition"
+       ],
+       "caption": "Chart booklet: check for acute malnutrition (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "steps",
+       "title": "Part 1: assess for SAM",
+       "steps": [
+        {
+         "title": "Step 1, all children",
+         "text": "Look and feel for oedema of both feet."
+        },
+        {
+         "title": "Step 2, all children",
+         "text": "Determine weight-for-height or length (WFH/L) z-score."
+        },
+        {
+         "title": "Step 3, 6 months and older",
+         "text": "Measure MUAC."
+        }
+       ]
+      },
+      {
+       "type": "steps",
+       "title": "Part 2: if SAM, assess for complications",
+       "steps": [
+        {
+         "title": "All children",
+         "text": "Check for a medical complication: any general danger sign, any severe classification, or pneumonia with chest indrawing."
+        },
+        {
+         "title": "Under 6 months",
+         "text": "Does the child have a breastfeeding problem? Use the FEEDING PROBLEM classification of the young infant."
+        },
+        {
+         "title": "6 months and older",
+         "text": "Offer RUTF to eat within 30 minutes: the appetite test."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Severely malnourished infants under 6 months need special care and are always treated as inpatients until full recovery. MUAC cannot be used for children under 6 months."
+      },
+      {
+       "type": "heading",
+       "text": "Step 1: oedema of both feet"
+      },
+      {
+       "type": "paragraph",
+       "text": "Oedema is an unusually large amount of fluid in the child's tissues. The tissues look swollen or puffed up."
+      },
+      {
+       "type": "steps",
+       "title": "How to check",
+       "steps": [
+        {
+         "title": "Press",
+         "text": "With your thumbs, press gently on the top of both feet at the same time for 3 seconds."
+        },
+        {
+         "title": "Look",
+         "text": "The child has oedema if a dent remains in both feet when you lift your thumbs."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Oedema of both feet means severe acute malnutrition. All children with oedema of both feet are referred to hospital.",
+       "label": "Remember"
+      },
+      {
+       "type": "question",
+       "text": "A child has a swollen right foot only, and is very thin. Does the swelling count as the SAM sign oedema of both feet?",
+       "options": [
+        "No: the sign is oedema of BOTH feet",
+        "Yes: any swelling counts"
+       ],
+       "answer": 0,
+       "explanation": "Oedema of one foot is not the SAM sign. The child's thinness is checked with WFH/L and MUAC."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 15,
+     "bookToPage": 19,
+     "title": "Weight-for-height or length, and the z-score",
+     "order": 5,
+     "read": [
+      {
+       "type": "note",
+       "text": "Measure length or height correctly, and find a child's weight-for-height/length z-score on the chart.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Comparing a child's weight to his height or length shows how thin the child is. If weight-for-height or length is low, the child is wasted: an important measurement of acute malnutrition, and a sign of marasmus. Weight-for-age and height-for-age do not show acute malnutrition in the same way; you will meet them in the well child module."
+      },
+      {
+       "type": "flip",
+       "title": "Length or height?",
+       "cards": [
+        {
+         "front": "LENGTH: lying down",
+         "back": "For children under 2 years, or a child too weak to stand. An assistant holds the head over the ears; the measurer keeps the knees straight with one hand and reads the length at the foot-piece with the other. The child lies flat."
+        },
+        {
+         "front": "HEIGHT: standing",
+         "back": "For children 2 years and older. The assistant holds the knees straight and the heels against the board. The measurer holds the chin, keeps the eyes level, and reads the height at the head-piece."
+        },
+        {
+         "front": "Measured lying, but 2 years or older?",
+         "back": "Height is 0.7 cm shorter than length. If you measure a child of 2 years or older lying down, subtract 0.7 cm."
+        }
+       ]
+      },
+      {
+       "type": "steps",
+       "title": "Find the z-score on the chart",
+       "steps": [
+        {
+         "title": "Choose the chart",
+         "text": "There are separate charts for length (birth to 2 years) and height (2 to 5 years), and separate charts for girls and boys. They cannot be used interchangeably."
+        },
+        {
+         "title": "Mark the point",
+         "text": "Find the weight (kg) up the side and the height or length (cm) along the bottom. Mark where they meet. For example, Ben is 10.5 kg and 82 cm."
+        },
+        {
+         "title": "Read the zone",
+         "text": "Think of the z-score lines as zones. Between the -2 and -3 lines is moderate malnutrition. Below the -3 line is severe malnutrition. Above -2 the child is not wasted."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "WFH/L below -3 z-score means severe acute malnutrition. Children above -2 are not malnourished, but check them routinely: nutrition status can change quickly.",
+       "label": "Remember"
+      },
+      {
+       "type": "growthchart",
+       "title": "Plot Ben on the chart",
+       "text": "Ben is a boy of 20 months, so he is measured lying down: his length is 82 cm and he weighs 10.5 kg. Use the boys' weight-for-length chart from the chart booklet.",
+       "sex": "male",
+       "ageMonths": 20,
+       "lengthCm": 82,
+       "weightKg": 10.5,
+       "explanation": "At 82 cm the -2 line is 9.2 kg. Ben's 10.5 kg is above it: -2 z-score or more, so he is not wasted."
+      },
+      {
+       "type": "growthchart",
+       "title": "Plot Amira on the chart",
+       "text": "Amira is a girl of 3 years. She stands to be measured: her height is 89 cm and she weighs 10 kg. Use the girls' weight-for-height chart.",
+       "sex": "female",
+       "ageMonths": 36,
+       "lengthCm": 89,
+       "weightKg": 10.0,
+       "explanation": "At 89 cm the -2 line is 10.4 kg and the -3 line is 9.6 kg. Amira's 10 kg is between them: WFH between -3 and -2 z-scores (moderate acute malnutrition, if she has no other sign of SAM)."
+      },
+      {
+       "type": "growthchart",
+       "title": "Try your own numbers",
+       "text": "Type the sex, age, weight and length or height of a child you have measured, and see the point on the booklet chart. The app picks the length chart under 2 years and the height chart from 2 years."
+      },
+      {
+       "type": "note",
+       "text": "The app's recording form works out the z-score from the weight, length or height, age and sex you enter, and plots the child on the same booklet chart."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m6-ex-b",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 20,
+     "bookToPage": 22,
+     "title": "Measure MUAC",
+     "order": 6,
+     "read": [
+      {
+       "type": "note",
+       "text": "Measure the mid-upper arm circumference of a child 6 months or older, and read the colour and number.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "The measurement around the middle of the upper arm is an important indicator of acute malnutrition. It is called mid-upper arm circumference (MUAC). The MUAC strip is a flexible tape in millimetres, with green, yellow and red zones. MUAC is used only for children 6 months up to 5 years."
+      },
+      {
+       "type": "steps",
+       "title": "How to measure MUAC",
+       "steps": [
+        {
+         "title": "Find the midpoint",
+         "text": "Find the midpoint of the upper arm, between the shoulder and the elbow, and mark it."
+        },
+        {
+         "title": "Place the strip",
+         "text": "Hold the large end of the strip against the arm at the midpoint. Put the other end around the arm and thread it through the second small slit, so the end comes from behind."
+        },
+        {
+         "title": "Tighten",
+         "text": "Pull both ends until the strip fits closely: not so tight that it folds the skin, and not loose."
+        },
+        {
+         "title": "Read",
+         "text": "Gently press the window and note the measurement and the colour."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>MUAC</strong></td><td style=\"padding: 4px\"><strong>Colour</strong></td><td style=\"padding: 4px\"><strong>Means</strong></td></tr><tr><td style=\"padding: 4px\">Less than 115 mm (11.5 cm)</td><td style=\"padding: 4px\">Red</td><td style=\"padding: 4px\">Severe acute malnutrition</td></tr><tr><td style=\"padding: 4px\">115 up to 125 mm</td><td style=\"padding: 4px\">Yellow</td><td style=\"padding: 4px\">Moderate acute malnutrition</td></tr><tr><td style=\"padding: 4px\">125 mm or more</td><td style=\"padding: 4px\">Green</td><td style=\"padding: 4px\">No acute malnutrition</td></tr></table>"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: The national booklet and recording form write MUAC in centimetres: less than 11.5 cm, 11.5 up to 12.5 cm, 12.5 cm or more. WHO module (page 20): The WHO module writes millimetres (115 mm, 125 mm). The cut-offs are the same.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "note",
+       "text": "MUAC below 115 mm (red) means severe acute malnutrition.",
+       "label": "Remember"
+      },
+      {
+       "type": "sort",
+       "text": "Which children have a sign of SAM?",
+       "groups": [
+        "Sign of SAM",
+        "No sign of SAM"
+       ],
+       "items": [
+        {
+         "text": "MUAC 112 mm",
+         "group": 0
+        },
+        {
+         "text": "MUAC 113.5 mm",
+         "group": 0
+        },
+        {
+         "text": "Z-score between -2 and -3",
+         "group": 1,
+         "why": "It must be below -3."
+        },
+        {
+         "text": "Swollen right foot, very skinny",
+         "group": 1,
+         "why": "The sign is oedema of both feet; check WFH/L and MUAC for the thinness."
+        },
+        {
+         "text": "Too weak to stand",
+         "group": 1,
+         "why": "A child can be weak for many reasons; this alone is not a sign of SAM."
+        },
+        {
+         "text": "Oedema of both feet",
+         "group": 0
+        },
+        {
+         "text": "MUAC 120 mm and irritable",
+         "group": 1,
+         "why": "MUAC must be under 115 mm."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m6-ex-c",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 23,
+     "bookToPage": 26,
+     "title": "If there is SAM: complications and the appetite test",
+     "order": 7,
+     "read": [
+      {
+       "type": "note",
+       "text": "Check a child with SAM for medical complications, and do the appetite test with RUTF.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>Signs of severe acute malnutrition</strong></p><ul><li>Under 6 months: oedema of both feet, or weight-for-length below -3 z-score</li><li>6 months and older: oedema of both feet, or WFH/L below -3 z-score, or MUAC below 115 mm</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "If none is present, go on to classify. If any is present, look for complications."
+      },
+      {
+       "type": "flip",
+       "title": "Complications to look for",
+       "cards": [
+        {
+         "front": "Medical complication (all ages)",
+         "back": "Any general danger sign or sign of severe illness, any severe (red) classification, or pneumonia with chest indrawing."
+        },
+        {
+         "front": "Under 6 months",
+         "back": "A breastfeeding or feeding problem, from the young infant chart."
+        },
+        {
+         "front": "6 months and older",
+         "back": "No appetite: the child does not finish the RUTF in the appetite test."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "The appetite test"
+      },
+      {
+       "type": "paragraph",
+       "text": "A child may refuse RUTF because it is unfamiliar or the place is strange. Move the caregiver and child to a quiet, private area; you go too, because you must watch the child eat before you classify."
+      },
+      {
+       "type": "steps",
+       "title": "How to do the appetite test",
+       "steps": [
+        {
+         "title": "Prepare",
+         "text": "Use a separate quiet area. Explain the purpose of the test and how it is done. The caregiver washes her hands."
+        },
+        {
+         "title": "Offer",
+         "text": "The caregiver sits comfortably with the child on her lap and offers RUTF from the packet, or on her finger."
+        },
+        {
+         "title": "Encourage, never force",
+         "text": "She encourages the child gently all the time. If the child refuses she keeps quietly encouraging, and takes her time. The child must not be forced."
+        },
+        {
+         "title": "Water",
+         "text": "Give plenty of water from a cup while the child takes the RUTF."
+        },
+        {
+         "title": "Pass",
+         "text": "The child passes if he eats the amount in the table within 30 minutes."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Weight of the child</strong></td><td style=\"padding: 4px\"><strong>Minimum sachet (92 g) to eat in 30 minutes</strong></td><td style=\"padding: 4px\"><strong>Maximum</strong></td></tr><tr><td style=\"padding: 4px\">Under 4 kg</td><td style=\"padding: 4px\">1/8</td><td style=\"padding: 4px\">1/4</td></tr><tr><td style=\"padding: 4px\">4 up to 6.9 kg</td><td style=\"padding: 4px\">1/4</td><td style=\"padding: 4px\">1/3</td></tr><tr><td style=\"padding: 4px\">7 up to 9.9 kg</td><td style=\"padding: 4px\">1/3</td><td style=\"padding: 4px\">1/2</td></tr><tr><td style=\"padding: 4px\">10 up to 14.9 kg</td><td style=\"padding: 4px\">1/2</td><td style=\"padding: 4px\">3/4</td></tr><tr><td style=\"padding: 4px\">15 kg and above</td><td style=\"padding: 4px\">3/4</td><td style=\"padding: 4px\">1 or more</td></tr></table>"
+      },
+      {
+       "type": "note",
+       "text": "No appetite test is done if the child has a general danger sign, or pneumonia, persistent diarrhoea, dysentery, measles or malaria. If RUTF is not available for the test, refer."
+      },
+      {
+       "type": "question",
+       "text": "Boniface weighs 9.9 kg and has a MUAC of 110 mm. What is the least RUTF he must eat to pass?",
+       "options": [
+        "1/3 sachet in 30 minutes",
+        "1/2 sachet in 30 minutes",
+        "A whole sachet"
+       ],
+       "answer": 0,
+       "explanation": "7 up to 9.9 kg: at least 1/3 of a 92 g sachet."
+      },
+      {
+       "type": "story",
+       "title": "Check Noah for acute malnutrition",
+       "stages": [
+        {
+         "text": "Noah has no oedema of both feet. He weighs 12.7 kg and stands to be measured: 104 cm. His MUAC is 116 mm. You explain each step to Rachel as you go.",
+         "question": "On the boys' height chart, the -3 line at 104 cm is 13.0 kg. What does Noah's weight tell you?",
+         "options": [
+          "WFH below -3 z-score: a sign of SAM",
+          "Between -3 and -2: moderate",
+          "Normal"
+         ],
+         "answer": 0,
+         "explanation": "12.7 kg is below the -3 line. His MUAC (116 mm) is above 115 mm, but one sign is enough."
+        },
+        {
+         "text": "You check for medical complications. His cough is COUGH OR COLD, not pneumonia; he has no danger sign and no severe classification.",
+         "question": "What else do you do, as Noah is over 6 months?",
+         "options": [
+          "An appetite test with RUTF",
+          "Refer at once",
+          "Nothing: he has no complication"
+         ],
+         "answer": 0,
+         "explanation": ""
+        },
+        {
+         "text": "Noah weighs 12.7 kg, so he must eat at least 1/2 sachet in 30 minutes. Rachel washes her hands and gives RUTF from the packet with a cup of water, without forcing. After about 20 minutes Noah has eaten more than 1/2 sachet. He passed. You tell Rachel he has done well and need not eat more."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m6-ex-d",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 27,
+     "bookToPage": 30,
+     "title": "Classify malnutrition",
+     "order": 8,
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify a child as complicated or uncomplicated severe acute malnutrition, moderate acute malnutrition, or no acute malnutrition.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "There are four classifications for acute malnutrition. Read them in your chart booklet."
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "categories": [
+        "malnutrition"
+       ],
+       "caption": "Chart booklet: classify acute malnutrition (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "flip",
+       "title": "The four classifications",
+       "cards": [
+        {
+         "front": "COMPLICATED SEVERE ACUTE MALNUTRITION (pink)",
+         "back": "Oedema of both feet, OR a SAM sign (WFH/L below -3 or MUAC below 115 mm) with a medical complication, or a breastfeeding problem under 6 months, or not able to finish the RUTF at 6 months or older. High risk of death from pneumonia, diarrhoea, measles and other severe diseases: refer urgently."
+        },
+        {
+         "front": "UNCOMPLICATED SEVERE ACUTE MALNUTRITION (yellow)",
+         "back": "MUAC below 115 mm or WFH/L below -3, with no complication and the appetite test passed. Needs RUTF and oral antibiotics; at risk of death from serious disease."
+        },
+        {
+         "front": "MODERATE ACUTE MALNUTRITION (yellow)",
+         "back": "MUAC 115 up to 125 mm, or WFH/L between -3 and -2, and no oedema. Higher risk of severe disease."
+        },
+        {
+         "front": "NO ACUTE MALNUTRITION (green)",
+         "back": "MUAC 125 mm or more, or WFH/L -2 or more, and no oedema. Under 2 years, assess feeding."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: Pre-referral treatment for COMPLICATED SEVERE ACUTE MALNUTRITION: the first dose of antibiotic (oral amoxicillin if the child can take oral medicine, or IM ampicillin and gentamicin), treat to prevent low blood sugar, keep the child warm, refer urgently. UNCOMPLICATED SEVERE ACUTE MALNUTRITION: oral amoxicillin for 5 days, refer to the outpatient therapeutic programme (OTP) and give RUTF if 6 months or older, assess feeding and counsel, follow up in 14 days. MODERATE ACUTE MALNUTRITION: refer to the supplementary feeding programme, assess feeding and counsel, follow up in 30 days. Feeding problem: follow up in 7 days. WHO module (page 27): Complicated SAM: first dose of amoxicillin, 50 ml of 10% glucose or sugar water, keep warm, refer. Uncomplicated SAM: oral antibiotics for 5 days, RUTF, assess for possible TB, follow up in 7 days. Moderate: assess feeding and counsel, assess for possible TB, follow up in 30 days (the text says 5 days if there is a feeding problem).",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "sort",
+       "text": "Classify each child.",
+       "groups": [
+        "COMPLICATED SEVERE ACUTE MALNUTRITION",
+        "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+        "MODERATE ACUTE MALNUTRITION",
+        "NO ACUTE MALNUTRITION"
+       ],
+       "items": [
+        {
+         "text": "MUAC 112 mm, no complications, passed the appetite test",
+         "group": 1
+        },
+        {
+         "text": "WFH/L below -3 and failed the appetite test",
+         "group": 0
+        },
+        {
+         "text": "MUAC 117 mm and no oedema",
+         "group": 2
+        },
+        {
+         "text": "WFH/L between -1 and -2",
+         "group": 3
+        },
+        {
+         "text": "WFH/L between -3 and -2",
+         "group": 2
+        },
+        {
+         "text": "MUAC 113 mm and signs of shock",
+         "group": 0,
+         "why": "Shock is a medical complication."
+        },
+        {
+         "text": "Under 6 months, WFL below -3, not breastfeeding effectively",
+         "group": 0,
+         "why": "A breastfeeding problem under 6 months."
+        },
+        {
+         "text": "Oedema of both feet",
+         "group": 0,
+         "why": "Oedema of both feet is always referred."
+        }
+       ]
+      },
+      {
+       "type": "story",
+       "title": "Classify Noah",
+       "stages": [
+        {
+         "text": "Noah has one sign of SAM (WFH below -3), no oedema, no medical complication, and he passed the appetite test.",
+         "question": "How do you classify him?",
+         "options": [
+          "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+          "COMPLICATED SEVERE ACUTE MALNUTRITION",
+          "MODERATE ACUTE MALNUTRITION"
+         ],
+         "answer": 0,
+         "explanation": ""
+        },
+        {
+         "text": "You look at the treatment column.",
+         "question": "Which treatments does Noah need for his malnutrition?",
+         "options": [
+          "Oral amoxicillin for 5 days and RUTF from the OTP",
+          "Urgent referral",
+          "Feeding counselling only"
+         ],
+         "answer": 0,
+         "explanation": ""
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m6-ex-e",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 31,
+     "bookToPage": 34,
+     "title": "Treat severe acute malnutrition with RUTF",
+     "order": 9,
+     "read": [
+      {
+       "type": "note",
+       "text": "Give the right amount of RUTF for the child's weight, counsel the caregiver, and know when RUTF is stopped.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "A child with UNCOMPLICATED SEVERE ACUTE MALNUTRITION must receive RUTF. RUTF is the only food that thin children need for their recovery. If the child is still breastfeeding, breastfeeding continues. RUTF is a treatment: it must be given in the correct quantity, by weight."
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Weight (kg)</strong></td><td style=\"padding: 4px\"><strong>Sachets (92 g) a day</strong></td><td style=\"padding: 4px\"><strong>Sachets a week</strong></td></tr><tr><td style=\"padding: 4px\">4.0 – 4.9</td><td style=\"padding: 4px\">2</td><td style=\"padding: 4px\">14</td></tr><tr><td style=\"padding: 4px\">5.0 – 6.9</td><td style=\"padding: 4px\">2½</td><td style=\"padding: 4px\">18</td></tr><tr><td style=\"padding: 4px\">7.0 – 8.4</td><td style=\"padding: 4px\">3</td><td style=\"padding: 4px\">21</td></tr><tr><td style=\"padding: 4px\">8.5 – 9.4</td><td style=\"padding: 4px\">3½</td><td style=\"padding: 4px\">25</td></tr><tr><td style=\"padding: 4px\">9.5 – 10.4</td><td style=\"padding: 4px\">4</td><td style=\"padding: 4px\">28</td></tr><tr><td style=\"padding: 4px\">10.5 – 11.9</td><td style=\"padding: 4px\">4½</td><td style=\"padding: 4px\">32</td></tr><tr><td style=\"padding: 4px\">12 and above</td><td style=\"padding: 4px\">5</td><td style=\"padding: 4px\">35</td></tr></table>"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: RUTF by weight from the national dose table: 10.5 up to 12 kg, 4½ sachets a day (32 a week); 12 kg and above, 5 sachets a day (35 a week). Noah (12.7 kg) gets 5 sachets a day, 35 a week. WHO module (page 32): The WHO table goes on: 10.5–14.9 kg, 4½ sachets a day (32 a week); 15–19.9 kg, 5 a day (35 a week); 20–29.9 kg, 6 a day (40 a week). WHO also gives paste amounts in grams. In the WHO module Noah gets 4½ sachets a day, 32 a week.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "flip",
+       "title": "Counsel the caregiver on RUTF",
+       "cards": [
+        {
+         "front": "Clean hands",
+         "back": "Wash hands before giving RUTF."
+        },
+        {
+         "front": "Gently",
+         "back": "Sit with the child on the lap and gently offer RUTF. Encourage, without forced feeding."
+        },
+        {
+         "front": "Often",
+         "back": "Give small, regular meals of RUTF: 5 to 6 meals a day."
+        },
+        {
+         "front": "Breastfeeding",
+         "back": "If still breastfeeding, continue, and offer breast milk first before every RUTF feed."
+        },
+        {
+         "front": "Water",
+         "back": "Offer plenty of clean water to drink from a cup when the child eats RUTF."
+        },
+        {
+         "front": "Not to share",
+         "back": "RUTF is a special food for thin children only. It should not be shared with the family."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "When is RUTF stopped?"
+      },
+      {
+       "type": "paragraph",
+       "text": "RUTF is given until the weight-for-height is above -2 z-score for 2 consecutive visits, OR the child has gained 15% weight, and the child is well and alert. A child with oedema loses weight as the swelling goes down; RUTF is not stopped until the weight gain above is reached AND the oedema has been gone for at least 2 weeks."
+      },
+      {
+       "type": "question",
+       "text": "Sheena's weight has changed from 32.5 kg to 38.0 kg on RUTF. Should she stop?",
+       "options": [
+        "Yes: she has gained more than 15%",
+        "No: continue"
+       ],
+       "answer": 0,
+       "explanation": "15% of 32.5 kg is about 4.9 kg; she gained 5.5 kg."
+      },
+      {
+       "type": "question",
+       "text": "Rakim's weight has changed from 20.5 kg to 23 kg. Should he stop?",
+       "options": [
+        "No: he has not gained 15%",
+        "Yes"
+       ],
+       "answer": 0,
+       "explanation": "15% of 20.5 kg is about 3.1 kg; he gained 2.5 kg."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m6-ex-f",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 35,
+     "bookToPage": 35,
+     "title": "Severe acute malnutrition with dehydration",
+     "order": 10,
+     "read": [
+      {
+       "type": "note",
+       "text": "Treat SOME DEHYDRATION in a child with severe acute malnutrition with ReSoMal, not normal ORS.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "A child with severe acute malnutrition and dehydration is managed differently. A child with SEVERE DEHYDRATION is referred urgently. A child with SOME DEHYDRATION can be treated in the health facility, but NOT with normal ORS: normal ORS has high sodium and low potassium, which does not suit a severely malnourished child."
+      },
+      {
+       "type": "steps",
+       "title": "Which fluid?",
+       "steps": [
+        {
+         "title": "Preferred: ReSoMal",
+         "text": "5 ml/kg every 30 minutes for the first 2 hours, then 5–10 ml/kg per hour for the next 4–10 hours, on alternate hours with RUTF."
+        },
+        {
+         "title": "No ReSoMal: half-strength ORS",
+         "text": "Prepare half-strength ORS with concentrated electrolyte/mineral solution, in the same doses."
+        },
+        {
+         "title": "Neither available",
+         "text": "Refer urgently to the nearest hospital."
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "The child is not sent home before improvement is seen. Assess every 30 minutes for the first 2 hours, then every hour for the next 4–10 hours. If the child improves, send the caregiver home with ReSoMal or half-strength ORS for two days: 50–100 ml after each loose stool. She returns urgently if the child does not improve, and for follow-up after two days. If the child gets worse or does not improve, refer urgently."
+      },
+      {
+       "type": "question",
+       "text": "Lisa has SOME DEHYDRATION and SEVERE ACUTE MALNUTRITION. What do you do now?",
+       "options": [
+        "Give ReSoMal in the clinic",
+        "Give ORS and zinc as in the diarrhoea chart",
+        "Send her home with half-strength ORS and RUTF"
+       ],
+       "answer": 0,
+       "explanation": "She is treated in the facility, and goes home only once she improves."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 36,
+     "bookToPage": 39,
+     "title": "Assess and classify anaemia",
+     "order": 11,
+     "read": [
+      {
+       "type": "note",
+       "text": "Look for palmar pallor and classify a child as severe anaemia, anaemia, or no anaemia.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Anaemia is a reduced number of red cells, or a reduced amount of haemoglobin in each red cell. Iron deficiency is the most common cause; folate, vitamin B12 and vitamin A deficiency are others. A child can also become anaemic from:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Parasites such as hookworm or whipworm, which cause blood loss from the gut</li><li>Malaria, which destroys red cells quickly; repeated or badly treated malaria can cause slow-developing anaemia. Anaemia is often due to both malnutrition and malaria.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Look for palmar pallor"
+      },
+      {
+       "type": "paragraph",
+       "text": "Pallor is unusual paleness of the skin, a sign of anaemia. Look at the skin of the child's palm. Hold the palm open by grasping it gently from the side. Do not stretch the fingers backwards: this can cause pallor by blocking the blood supply. Compare the colour with your own palm and with other children's palms."
+      },
+      {
+       "type": "flip",
+       "title": "Some or severe?",
+       "cards": [
+        {
+         "front": "Some palmar pallor",
+         "back": "The skin of the palm is pale."
+        },
+        {
+         "front": "Severe palmar pallor",
+         "back": "The skin of the palm is very pale, or so pale that it looks white."
+        }
+       ]
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "categories": [
+        "anemia"
+       ],
+       "caption": "Chart booklet: anaemia (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "flip",
+       "title": "Three classifications",
+       "cards": [
+        {
+         "front": "SEVERE ANAEMIA (pink)",
+         "back": "Severe palmar pallor. Refer urgently."
+        },
+        {
+         "front": "ANAEMIA (yellow)",
+         "back": "Some palmar pallor. Give iron (not if the child is on RUTF), give mebendazole, assess feeding, follow up in 14 days."
+        },
+        {
+         "front": "NO ANAEMIA (green)",
+         "back": "No palmar pallor. Under 2 years, assess feeding and counsel."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: ANAEMIA: give iron for 14 days, but not if sickle cell anaemia is known or suspected or the child is on RUTF; mebendazole if 1 year or older with no dose in the last 6 months; assess feeding and counsel; follow up in 14 days. The national anaemia box has no malaria-risk step: every child with fever has a malaria test in the fever assessment. WHO module (page 36): In a high malaria risk area, do a malaria test when there is some pallor, and give an oral antimalarial if it is positive (even without fever). If no test is available in a high risk area, give an oral antimalarial.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Demonstration: assess malnutrition and anaemia",
+       "caption": "WHO course DVD, disc 2: \"Assess for malnutrition, anaemia and ear problems\". It also covers feeding problems, which you will learn in the well child module."
+      },
+      {
+       "type": "story",
+       "title": "Check Noah for anaemia",
+       "stages": [
+        {
+         "text": "You take Noah's hand and look at his palm, and Rachel puts her hand out to compare. Noah's palms are quite a bit paler than his mother's. They are pale, but not white.",
+         "question": "How do you classify Noah?",
+         "options": [
+          "ANAEMIA",
+          "SEVERE ANAEMIA",
+          "NO ANAEMIA"
+         ],
+         "answer": 0,
+         "explanation": "Some palmar pallor. If his palms were white, it would be SEVERE ANAEMIA."
+        },
+        {
+         "text": "Noah's form now shows: COUGH OR COLD, UNCOMPLICATED SEVERE ACUTE MALNUTRITION and ANAEMIA."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m6-ex-g",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 40,
+     "bookToPage": 42,
+     "title": "Treat anaemia: iron and mebendazole",
+     "order": 12,
+     "read": [
+      {
+       "type": "note",
+       "text": "Give iron by age or weight, give mebendazole, and counsel the caregiver about iron at home.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "heading",
+       "text": "Iron"
+      },
+      {
+       "type": "paragraph",
+       "text": "A child with some palmar pallor needs iron. Do not give iron to a child receiving RUTF: RUTF has enough iron and folic acid to treat mild anaemia. Give the caregiver enough iron for 14 days: one dose daily, and return for more iron in 14 days."
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Age or weight</strong></td><td style=\"padding: 4px\"><strong>Ferrous sulphate 200 mg + folate tablet</strong></td><td style=\"padding: 4px\"><strong>Ferrous fumarate syrup 100 mg/5 ml</strong></td><td style=\"padding: 4px\"><strong>Iron polymaltose syrup 50 mg/5 ml</strong></td></tr><tr><td style=\"padding: 4px\">2 up to 4 months (4 – <6 kg)</td><td style=\"padding: 4px\"></td><td style=\"padding: 4px\">1 ml</td><td style=\"padding: 4px\">2 ml</td></tr><tr><td style=\"padding: 4px\">4 up to 12 months (6 – <10 kg)</td><td style=\"padding: 4px\"></td><td style=\"padding: 4px\">1.25 ml</td><td style=\"padding: 4px\">2.5 ml</td></tr><tr><td style=\"padding: 4px\">12 months up to 3 years (10 – <14 kg)</td><td style=\"padding: 4px\">½ tablet</td><td style=\"padding: 4px\">2 ml</td><td style=\"padding: 4px\">4 ml</td></tr><tr><td style=\"padding: 4px\">3 up to 5 years (14 – <20 kg)</td><td style=\"padding: 4px\">½ tablet</td><td style=\"padding: 4px\">2.5 ml</td><td style=\"padding: 4px\">5 ml</td></tr></table>"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: The national dose table adds iron polymaltose syrup (50 mg/5 ml) and says not to give iron when sickle cell anaemia is known or suspected. WHO module (page 41): The WHO table gives ferrous sulphate tablets and ferrous fumarate syrup only.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "flip",
+       "title": "Tell the caregiver",
+       "cards": [
+        {
+         "front": "Every day",
+         "back": "One dose daily for 14 days, then come back for more."
+        },
+        {
+         "front": "Black stools",
+         "back": "Iron may make the stools black. This is expected; do not stop the iron."
+        },
+        {
+         "front": "Out of reach",
+         "back": "Keep iron out of the child's reach. An overdose of iron can be fatal or make the child very ill."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "Mebendazole"
+      },
+      {
+       "type": "paragraph",
+       "text": "Hookworm and whipworm cause iron loss through bleeding in the gut. A child with anaemia who is 1 year or older and has not had mebendazole in the last 6 months is given mebendazole."
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: Mebendazole syrup 100 mg/5 ml: 5 ml morning and evening for 3 days, and repeat the course after 2 weeks (1 year or older). WHO module (page 41): 500 mg as a single dose in the clinic (one 500 mg tablet or five 100 mg tablets). The WHO chart says 2 years or older; the text says 1 year or older.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "story",
+       "title": "Treat Noah",
+       "stages": [
+        {
+         "text": "Noah has COUGH OR COLD, UNCOMPLICATED SEVERE ACUTE MALNUTRITION and ANAEMIA, and has had no mebendazole in the last 6 months.",
+         "question": "Which treatments do you identify?",
+         "options": [
+          "Cough remedy, oral amoxicillin, RUTF, mebendazole",
+          "Cough remedy, RUTF, iron, mebendazole",
+          "Referral"
+         ],
+         "answer": 0,
+         "explanation": "No iron: Noah is taking RUTF."
+        },
+        {
+         "text": "You start oral amoxicillin today for 5 days. Noah weighs 12.7 kg, so he gets 5 sachets of RUTF a day, 35 for the week. You give mebendazole. You explain to Rachel that his cough is not severe, and that getting Noah to a healthier weight is very important to protect him from serious disease. She looks frightened, and you reassure her that RUTF and some changes to his diet should help."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 42,
+     "bookToPage": 43,
+     "title": "Counsel Rachel",
+     "order": 13,
+     "read": [
+      {
+       "type": "note",
+       "text": "Counsel a caregiver on several home treatments, teach with the three steps, and check understanding.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "steps",
+       "title": "Five topics to counsel Rachel on today",
+       "steps": [
+        {
+         "title": "1. Cough",
+         "text": "Home care, with a safe local remedy to soothe the throat."
+        },
+        {
+         "title": "2. Oral amoxicillin",
+         "text": "The dose and schedule for 5 days."
+        },
+        {
+         "title": "3. RUTF at home",
+         "text": "The amount, schedule and how to give it: clean hands, on the lap, gently without forcing, small meals 5 to 6 times a day, water from a cup, not shared."
+        },
+        {
+         "title": "4. Feeding",
+         "text": "Feeding recommendations for his age (you will learn them in the well child module)."
+        },
+        {
+         "title": "5. When to return",
+         "text": "The signs to return immediately, including if Noah does not eat RUTF, and the follow-up visit."
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "Use the 3 basic teaching steps: give information, demonstrate, and let Rachel practise. Show her how to give RUTF from the sachet, with water in a cup."
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>Checking questions</strong></p><ul><li>How will you prepare a safe cough remedy at home?</li><li>How will you give the RUTF to Noah?</li><li>What are important things to remember about giving RUTF at home?</li><li>What foods can you give Noah? Can you give me an example of one day's feeding?</li><li>When will you come back to the clinic with Noah?</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "How can \"Will you give your child more nutritious foods?\" be asked as a checking question?",
+       "options": [
+        "What foods will you give your child so that he gets more of the vitamins his body needs?",
+        "Do you have nutritious foods at home?",
+        "Do you understand the recommendations I just gave you?"
+       ],
+       "answer": 0,
+       "explanation": "A good checking question cannot be answered with yes or no."
+      },
+      {
+       "type": "story",
+       "title": "Teach and reassure Rachel",
+       "stages": [
+        {
+         "text": "Rachel is a little confused when she explains how to give RUTF, but she remembers the tips, especially not giving RUTF to others in the house.",
+         "question": "What do you do?",
+         "options": [
+          "Explain again, demonstrate, let her practise, and ask again",
+          "Give her the sachets and let her go",
+          "Tell her she is wrong"
+         ],
+         "answer": 0,
+         "explanation": "After a second round, you are satisfied with her answers."
+        },
+        {
+         "text": "Rachel worries she will forget something, because Noah has many treatments. You give her a written dose schedule. You tell her she is a good mother for noticing Noah's illness and bringing him, and that the treatments should help him."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 44,
+     "bookToPage": 46,
+     "title": "Follow-up care for nutrition",
+     "order": 14,
+     "read": [
+      {
+       "type": "note",
+       "text": "Follow up a child with severe or moderate acute malnutrition, anaemia or a feeding problem.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: Follow-up times in the national booklet: UNCOMPLICATED SEVERE ACUTE MALNUTRITION, 14 days (the OTP gives RUTF at its own visits); MODERATE ACUTE MALNUTRITION, 30 days; ANAEMIA, 14 days; a feeding problem, 7 days. WHO module (page 44): Uncomplicated SAM receiving RUTF: every week. Feeding problem: 5 days. Moderate acute malnutrition: 14 days in the follow-up section (30 days in the classification table).",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "flip",
+       "title": "Anaemia (pallor) follow-up",
+       "cards": [
+        {
+         "front": "At the visit",
+         "back": "Give iron for 14 more days, and ask the caregiver to come back in 14 days."
+        },
+        {
+         "front": "For 2 months",
+         "back": "Keep giving iron every 14 days for 2 months."
+        },
+        {
+         "front": "Still pale after 2 months",
+         "back": "Refer the child for assessment."
+        }
+       ]
+      },
+      {
+       "type": "steps",
+       "title": "Each follow-up visit for SAM on RUTF",
+       "steps": [
+        {
+         "title": "Measure",
+         "text": "Weight and MUAC at each visit, height every 4 weeks; WFH z-score at every visit."
+        },
+        {
+         "title": "Look",
+         "text": "Oedema of both feet; temperature, pulse, breathing rate and a medical check."
+        },
+        {
+         "title": "Appetite",
+         "text": "Appetite test with RUTF."
+        },
+        {
+         "title": "Supply and counsel",
+         "text": "Give the RUTF ration and review the counselling messages."
+        }
+       ]
+      },
+      {
+       "type": "flip",
+       "title": "What did you find?",
+       "cards": [
+        {
+         "front": "No longer severely malnourished",
+         "back": "MUAC and/or WFH have improved. Praise the caregiver. Continue RUTF until WFH is above -2 or the child has gained 15%."
+        },
+        {
+         "front": "Still severely malnourished",
+         "back": "A home visit may show problems with care or sharing of food. Ask the caregiver to come back. After one month with no response, refer for medical review and tests for an underlying illness."
+        },
+        {
+         "front": "Losing weight",
+         "back": "Refer to hospital or a feeding programme."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>Common reasons a child does not respond</strong></p><ul><li>Quality of treatment: missed medical complication, poor appetite test, poor home-care instructions, wrong amount of RUTF, routine medicines not given, a facility far from home</li><li>Home or child: few visits, RUTF shared or too little, medicines not taken, sharing of family food, micronutrient deficiency, malabsorption, psychological trauma, infection or underlying disease, an unwilling caregiver</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "A child can be discharged from outpatient treatment when there has been no oedema for at least 2 weeks, AND the child has gained 15% or has been above -2 z-score for two consecutive visits.",
+       "label": "Remember"
+      },
+      {
+       "type": "story",
+       "title": "Noah's follow-up visit",
+       "stages": [
+        {
+         "text": "Rachel brings Noah back as agreed. Noah has no new symptoms and his cough has cleared. He now weighs 13 kg, still 104 cm. His MUAC is 117 mm. On the chart, 13.0 kg at 104 cm is on the -3 line.",
+         "question": "Do you stop RUTF?",
+         "options": [
+          "No: continue the same amount",
+          "Yes: he is no longer below -3"
+         ],
+         "answer": 0,
+         "explanation": "He has improved, but RUTF stops only when he is above -2 for 2 consecutive visits or has gained 15%."
+        },
+        {
+         "text": "His palms look improved, and you reclassify NO ANAEMIA. You give new RUTF supplies, and ask Rachel to explain and show how she gives it: you are pleased. You talk about the foods she gave in the past week, and other options for any that were too expensive or not available. Rachel hoped Noah would be better by now; you explain that gaining weight takes time and a lot of nutrition, and praise her progress."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 47,
+     "bookToPage": 47,
+     "title": "Using this module in your clinic",
+     "order": 15,
+     "read": [
+      {
+       "type": "note",
+       "text": "Plan how to practise the skills of this module in your own clinic.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "flip",
+       "title": "Practise in the coming days",
+       "cards": [
+        {
+         "front": "Assess and classify",
+         "back": "What causes malnutrition in your area? Does it change by season or region? Check every child: oedema of both feet, WFH/L z-score, MUAC; complications and the appetite test if SAM; palmar pallor. Classify with your chart booklet."
+        },
+        {
+         "front": "Treat",
+         "back": "Prevent low blood sugar before referral; give RUTF; give iron and mebendazole. Find the nutrition resources in your area: nutrition counselling, OTP and supplementary feeding programmes, and food support."
+        },
+        {
+         "front": "Counsel",
+         "back": "Counsel on giving RUTF safely at home and on feeding recommendations. Use clinic materials to teach about food."
+        },
+        {
+         "front": "Follow up",
+         "back": "Use the IMNCI follow-up instructions for malnutrition and anaemia."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Complete the logbook exercises for Module 6.</li><li>Record at least 2 cases on IMNCI recording forms.</li><li>Take notes if you experience anything difficult, confusing or interesting during these cases, to share with your study group and facilitator.</li></ul>"
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 48,
+     "bookToPage": 49,
+     "title": "Review questions and Module 6 test",
+     "order": 16,
+     "read": [
+      {
+       "type": "note",
+       "text": "Test what you have learned in Module 6.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Before the module you answered seven questions. Answer them again now, to see what you have learned. Then take the logbook test, and fill in Noah's recording form."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m6-posttest",
+       "note": ""
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m6-noah",
+       "note": ""
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m6-logbook",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    }
+   ],
+   "isPublished": true
+  }
+ ],
+ "exercises": [
+  {
+   "id": "dimci-m6-pretest",
+   "order": 601,
+   "title": "Distance learning Module 6: Pre-test",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 6 (2014)",
+   "narrative": [
+    "Before you begin studying this module, check what you know. After the module you will answer the same questions."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "q1",
+     "type": "mcq",
+     "question": "When is it necessary to check a child for malnutrition and anaemia?",
+     "options": [
+      "If the child appears low weight for age",
+      "Every child, as problems sometimes go unnoticed",
+      "If the caregiver tells you about a feeding problem"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q2",
+     "type": "mcq",
+     "question": "Sami has a MUAC of 112 mm. What does this tell you?",
+     "options": [
+      "Sami is healthy",
+      "112 mm is low, so you will advise on feeding recommendations",
+      "Sami shows a sign of severe acute malnutrition"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q3",
+     "type": "mcq",
+     "question": "A child with anaemia needs:",
+     "options": [
+      "Vitamin A",
+      "Iron",
+      "Glucose"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q4",
+     "type": "mcq",
+     "question": "Traci has oedema of both feet. What do you do?",
+     "options": [
+      "Sit Traci and raise her legs, to drain the swelling",
+      "Advise her mother to cut down salt and fat in her diet",
+      "Refer urgently: this is a sign of severe malnutrition"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q5",
+     "type": "mcq",
+     "question": "What is palmar pallor?",
+     "options": [
+      "A sign of anaemia",
+      "A sign of local infection",
+      "A sign of severe wasting"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q6",
+     "type": "mcq",
+     "question": "What is marasmus?",
+     "options": [
+      "A common skin infection in malnourished children",
+      "Malnutrition where the child is very thin and lacks fat",
+      "Malnutrition with a puffy moon face and thin hair"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q7",
+     "type": "mcq",
+     "question": "Which is an important measurement of wasting?",
+     "options": [
+      "Weight-for-age",
+      "Percentage weight gain since the last visit",
+      "Weight-for-height (or length)"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m6-ex-a",
+   "order": 602,
+   "title": "Distance learning Module 6: Exercise A (introduction)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 6 (2014)",
+   "narrative": [
+    "Answer the questions about malnutrition and anaemia."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "a1",
+     "type": "open",
+     "question": "What is malnutrition?",
+     "points": [
+      "It develops when a child's diet lacks enough essential vitamins, minerals and other nutrients",
+      "Illness and disease can often cause it",
+      "There are many types, and the causes vary by country"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "a2",
+     "type": "open",
+     "question": "Why do you check every child for malnutrition and anaemia?",
+     "points": [
+      "Malnutrition is an underlying cause in about one in three child deaths",
+      "Children often have no specific complaint that suggests malnutrition or anaemia",
+      "You or the family may not notice that the child is malnourished or anaemic"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "a3",
+     "type": "tf",
+     "question": "A puffy face is a common presentation of severe acute malnutrition.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "a4",
+     "type": "tf",
+     "question": "A distended abdomen is a common presentation of severe acute malnutrition.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "a5",
+     "type": "tf",
+     "question": "A rash on the belly is a common presentation of severe acute malnutrition.",
+     "correct": false,
+     "explain": ""
+    },
+    {
+     "id": "a6",
+     "type": "tf",
+     "question": "A child crying from hunger is a common presentation of severe acute malnutrition.",
+     "correct": false,
+     "explain": "Children with SAM often have a poor appetite."
+    },
+    {
+     "id": "a7",
+     "type": "tf",
+     "question": "Thin hair that may fall out is a common presentation of severe acute malnutrition.",
+     "correct": true,
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m6-ex-b",
+   "order": 603,
+   "title": "Distance learning Module 6: Exercise B (weight-for-height z-score)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 6 (2014)",
+   "narrative": [
+    "Use the WHO weight-for-height/length chart for the child's sex and age in your chart booklet. Each child below is a boy under 2 years, measured lying down."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "b1",
+     "type": "mcq",
+     "question": "76 cm, 9 kg",
+     "options": [
+      "Below -3",
+      "Between -3 and -2",
+      "Between -2 and -1",
+      "Between -1 and 0",
+      "Above 0"
+     ],
+     "correct": [
+      3
+     ],
+     "explain": ""
+    },
+    {
+     "id": "b2",
+     "type": "mcq",
+     "question": "80 cm, 7.5 kg",
+     "options": [
+      "Below -3",
+      "Between -3 and -2",
+      "Between -2 and -1",
+      "Between -1 and 0",
+      "Above 0"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "The -3 line at 80 cm is 8.2 kg."
+    },
+    {
+     "id": "b3",
+     "type": "mcq",
+     "question": "90 cm, 11.2 kg",
+     "options": [
+      "Below -3",
+      "Between -3 and -2",
+      "Between -2 and -1",
+      "Between -1 and 0",
+      "Above 0"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "b4",
+     "type": "mcq",
+     "question": "85 cm, 9.5 kg",
+     "options": [
+      "Below -3",
+      "Between -3 and -2",
+      "Between -2 and -1",
+      "Between -1 and 0",
+      "Above 0"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "Between the -3 line (9.1 kg) and the -2 line (9.8 kg)."
+    },
+    {
+     "id": "b5",
+     "type": "mcq",
+     "question": "78 cm, 10.5 kg",
+     "options": [
+      "Below -3",
+      "Between -3 and -2",
+      "Between -2 and -1",
+      "Between -1 and 0",
+      "Above 0"
+     ],
+     "correct": [
+      4
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m6-ex-c",
+   "order": 604,
+   "title": "Distance learning Module 6: Exercise C (signs of SAM)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 6 (2014)",
+   "narrative": [
+    "Decide whether each child has a sign of severe acute malnutrition."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "c1",
+     "type": "mcq",
+     "question": "Boy, 18 months, length 75 cm, weight 8.5 kg. What is his z-score?",
+     "options": [
+      "Below -3",
+      "Between -3 and -2",
+      "Between -2 and -1",
+      "Between -1 and 0",
+      "Above 0"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "c2",
+     "type": "mcq",
+     "question": "Girl, 11 months, length 70 cm, weight 6 kg. What is her z-score?",
+     "options": [
+      "Below -3",
+      "Between -3 and -2",
+      "Between -2 and -1",
+      "Between -1 and 0",
+      "Above 0"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "c3",
+     "type": "mcq",
+     "question": "Girl, 27 months, height 95 cm, weight 11 kg. What is her z-score?",
+     "options": [
+      "Below -3",
+      "Between -3 and -2",
+      "Between -2 and -1",
+      "Between -1 and 0",
+      "Above 0"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "c4",
+     "type": "mcq",
+     "question": "Boy, 26 months, height 113 cm, weight 14.5 kg. What is his z-score?",
+     "options": [
+      "Below -3",
+      "Between -3 and -2",
+      "Between -2 and -1",
+      "Between -1 and 0",
+      "Above 0"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "c5",
+     "type": "tf",
+     "question": "A child with a MUAC of 112 mm has a sign of severe acute malnutrition.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "c6",
+     "type": "tf",
+     "question": "A child with a z-score between -2 and -3 has a sign of severe acute malnutrition.",
+     "correct": false,
+     "explain": "It must be below -3."
+    },
+    {
+     "id": "c7",
+     "type": "tf",
+     "question": "A child with a swollen right foot who is very skinny has the SAM sign oedema.",
+     "correct": false,
+     "explain": "The sign is oedema of BOTH feet."
+    },
+    {
+     "id": "c8",
+     "type": "tf",
+     "question": "A child with a MUAC of 120 mm who is irritable has a sign of severe acute malnutrition.",
+     "correct": false,
+     "explain": "MUAC must be under 115 mm."
+    },
+    {
+     "id": "c9",
+     "type": "tf",
+     "question": "A girl of 32 months is measured lying down at 111 cm. You subtract 0.7 cm before you use the height chart.",
+     "correct": true,
+     "explain": "Height is 0.7 cm shorter than length."
+    }
+   ]
+  },
+  {
+   "id": "dimci-m6-ex-d",
+   "order": 605,
+   "title": "Distance learning Module 6: Exercise D (complications and appetite test)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 6 (2014)",
+   "narrative": [
+    "Answer the questions about children with signs of SAM."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "d1",
+     "type": "open",
+     "question": "What are the three signs of severe acute malnutrition?",
+     "points": [
+      "MUAC less than 115 mm (6 months or older)",
+      "Weight-for-height/length below -3 z-score",
+      "Oedema of both feet"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d2",
+     "type": "tf",
+     "question": "Aram is 5 months old with a z-score below -3. You begin an appetite test at once.",
+     "correct": false,
+     "explain": "The appetite test is not done under 6 months; check for a breastfeeding problem instead."
+    },
+    {
+     "id": "d3",
+     "type": "tf",
+     "question": "The child must eat the RUTF within 30 minutes, so the caregiver should hurry the child.",
+     "correct": false,
+     "explain": "The child is encouraged, never forced."
+    },
+    {
+     "id": "d4",
+     "type": "tf",
+     "question": "Shock is an important medical complication of SAM to look for.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "d5",
+     "type": "mcq",
+     "question": "Boniface weighs 9.9 kg. What is the least RUTF he must eat to pass the appetite test?",
+     "options": [
+      "1/3 of a 92 g sachet in 30 minutes",
+      "1/2 of a sachet in 30 minutes",
+      "1/4 of a sachet in 30 minutes"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d6",
+     "type": "mcq",
+     "question": "When is an appetite test NOT done?",
+     "options": [
+      "When the child has a general danger sign, or pneumonia, persistent diarrhoea, dysentery, measles or malaria",
+      "When the MUAC is below 115 mm",
+      "When the child is 2 years or older"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m6-ex-e",
+   "order": 606,
+   "title": "Distance learning Module 6: Exercise E (classify malnutrition)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 6 (2014)",
+   "narrative": [
+    "Classify each child."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "e1",
+     "type": "mcq",
+     "question": "MUAC 112 mm, no complications, passed the appetite test",
+     "options": [
+      "COMPLICATED SEVERE ACUTE MALNUTRITION",
+      "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+      "MODERATE ACUTE MALNUTRITION",
+      "NO ACUTE MALNUTRITION"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e2",
+     "type": "mcq",
+     "question": "WFH z-score below -3, failed the appetite test",
+     "options": [
+      "COMPLICATED SEVERE ACUTE MALNUTRITION",
+      "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+      "MODERATE ACUTE MALNUTRITION",
+      "NO ACUTE MALNUTRITION"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e3",
+     "type": "mcq",
+     "question": "MUAC 117 mm and no oedema",
+     "options": [
+      "COMPLICATED SEVERE ACUTE MALNUTRITION",
+      "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+      "MODERATE ACUTE MALNUTRITION",
+      "NO ACUTE MALNUTRITION"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e4",
+     "type": "mcq",
+     "question": "WFH z-score between -1 and -2",
+     "options": [
+      "COMPLICATED SEVERE ACUTE MALNUTRITION",
+      "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+      "MODERATE ACUTE MALNUTRITION",
+      "NO ACUTE MALNUTRITION"
+     ],
+     "correct": [
+      3
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e5",
+     "type": "mcq",
+     "question": "MUAC 113 mm and signs of shock",
+     "options": [
+      "COMPLICATED SEVERE ACUTE MALNUTRITION",
+      "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+      "MODERATE ACUTE MALNUTRITION",
+      "NO ACUTE MALNUTRITION"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e6",
+     "type": "mcq",
+     "question": "Under 6 months, WFL below -3, not breastfeeding effectively",
+     "options": [
+      "COMPLICATED SEVERE ACUTE MALNUTRITION",
+      "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+      "MODERATE ACUTE MALNUTRITION",
+      "NO ACUTE MALNUTRITION"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e7",
+     "type": "open",
+     "question": "What treatments does the national booklet give for UNCOMPLICATED SEVERE ACUTE MALNUTRITION?",
+     "points": [
+      "Oral amoxicillin for 5 days",
+      "If 6 months or older, refer to the OTP and give RUTF",
+      "Assess feeding and counsel the mother",
+      "Advise when to return immediately",
+      "Follow up in 14 days"
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m6-ex-f",
+   "order": 607,
+   "title": "Distance learning Module 6: Exercise F (RUTF)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 6 (2014)",
+   "narrative": [
+    "Use the RUTF table of the national chart booklet."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "f1",
+     "type": "mcq",
+     "question": "How many sachets for one week for a child of 4.5 kg?",
+     "options": [
+      "14",
+      "18",
+      "21"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f2",
+     "type": "mcq",
+     "question": "How many sachets for one week for a child of 16.7 kg?",
+     "options": [
+      "32",
+      "35",
+      "40"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f3",
+     "type": "mcq",
+     "question": "How many sachets for one week for a child of 7.8 kg?",
+     "options": [
+      "18",
+      "21",
+      "25"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f4",
+     "type": "mcq",
+     "question": "How many sachets for one week for a child of 11.6 kg?",
+     "options": [
+      "28",
+      "32",
+      "35"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f5",
+     "type": "open",
+     "question": "List three important counselling messages about giving RUTF at home.",
+     "points": [
+      "RUTF is a special food for thin children only; it should not be shared",
+      "It is the only food thin children need to recover",
+      "Continue breastfeeding",
+      "Give plenty of clean water to drink when giving RUTF",
+      "Wash hands before feeding the child"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f6",
+     "type": "tf",
+     "question": "Tsepi has been above -2 z-score for two consecutive visits. He can stop RUTF.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "f7",
+     "type": "tf",
+     "question": "Angie gained 1 kg but is still below -2 z-score. She can stop RUTF.",
+     "correct": false,
+     "explain": ""
+    },
+    {
+     "id": "f8",
+     "type": "tf",
+     "question": "Maria is above -2 z-score at this visit only. She can stop RUTF.",
+     "correct": false,
+     "explain": "She needs two consecutive visits."
+    }
+   ]
+  },
+  {
+   "id": "dimci-m6-ex-g",
+   "order": 608,
+   "title": "Distance learning Module 6: Exercise G (anaemia)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 6 (2014)",
+   "narrative": [
+    "Answer the questions about anaemia."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "g1",
+     "type": "mcq",
+     "question": "Which is the definition of oedema?",
+     "options": [
+      "An unusually large amount of fluid in the tissues, which look swollen",
+      "Unusual paleness of the skin",
+      "A reduced number of red cells"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "g2",
+     "type": "mcq",
+     "question": "Ned has severe palmar pallor: his hands are nearly white. How do you classify him?",
+     "options": [
+      "SEVERE ANAEMIA",
+      "ANAEMIA",
+      "NO ANAEMIA"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "Refer urgently."
+    },
+    {
+     "id": "g3",
+     "type": "open",
+     "question": "A child is classified ANAEMIA. Which treatments does the national booklet give?",
+     "points": [
+      "Iron for 14 days (not with sickle cell anaemia or on RUTF)",
+      "Mebendazole if 1 year or older and none in the last 6 months",
+      "Assess feeding and counsel",
+      "Follow up in 14 days"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "g4",
+     "type": "mcq",
+     "question": "Lisa is classified SOME DEHYDRATION and severe acute malnutrition. What do you do now?",
+     "options": [
+      "Give ORS and zinc as in the diarrhoea chart",
+      "Give ReSoMal in the clinic",
+      "Advise the caregiver to give half-strength ORS and RUTF at home"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "g5",
+     "type": "tf",
+     "question": "Iron is given to a child with anaemia who is taking RUTF.",
+     "correct": false,
+     "explain": "RUTF has enough iron and folic acid."
+    }
+   ]
+  },
+  {
+   "id": "dimci-m6-posttest",
+   "order": 609,
+   "title": "Distance learning Module 6: Review questions",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 6 (2014)",
+   "narrative": [
+    "Answer the same questions as before the module, and see what you have learned."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "q1",
+     "type": "mcq",
+     "question": "When is it necessary to check a child for malnutrition and anaemia?",
+     "options": [
+      "If the child appears low weight for age",
+      "Every child, as problems sometimes go unnoticed",
+      "If the caregiver tells you about a feeding problem"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q2",
+     "type": "mcq",
+     "question": "Sami has a MUAC of 112 mm. What does this tell you?",
+     "options": [
+      "Sami is healthy",
+      "112 mm is low, so you will advise on feeding recommendations",
+      "Sami shows a sign of severe acute malnutrition"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q3",
+     "type": "mcq",
+     "question": "A child with anaemia needs:",
+     "options": [
+      "Vitamin A",
+      "Iron",
+      "Glucose"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q4",
+     "type": "mcq",
+     "question": "Traci has oedema of both feet. What do you do?",
+     "options": [
+      "Sit Traci and raise her legs, to drain the swelling",
+      "Advise her mother to cut down salt and fat in her diet",
+      "Refer urgently: this is a sign of severe malnutrition"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q5",
+     "type": "mcq",
+     "question": "What is palmar pallor?",
+     "options": [
+      "A sign of anaemia",
+      "A sign of local infection",
+      "A sign of severe wasting"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q6",
+     "type": "mcq",
+     "question": "What is marasmus?",
+     "options": [
+      "A common skin infection in malnourished children",
+      "Malnutrition where the child is very thin and lacks fat",
+      "Malnutrition with a puffy moon face and thin hair"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q7",
+     "type": "mcq",
+     "question": "Which is an important measurement of wasting?",
+     "options": [
+      "Weight-for-age",
+      "Percentage weight gain since the last visit",
+      "Weight-for-height (or length)"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m6-noah",
+   "order": 610,
+   "title": "Distance learning Module 6: Recording form (Noah, 28 months)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 10,
+   "draft": true,
+   "source": "WHO dIMCI Module 6 (2014)",
+   "narrative": [
+    "Noah is 2 years and 4 months old. He weighs 12.7 kg and is 104 cm tall (standing). His temperature is 37 °C. His mother says he has had a cough for 3 days. This is the first visit.",
+    "He is able to drink, is not vomiting, has had no convulsions, and is alert.",
+    "He breathes 35 times a minute, with no chest indrawing and no stridor. He has no diarrhoea and no fever.",
+    "He has no oedema of both feet. His MUAC is 11.6 cm. He has no medical complication, and he passes the appetite test.",
+    "His palms are pale, but not white."
+   ],
+   "expected": {
+    "sections": [
+     "danger",
+     "cough",
+     "diarrhea",
+     "fever",
+     "anemia",
+     "malnutrition"
+    ],
+    "patientData": {
+     "childName": "Noah",
+     "sex": "male",
+     "ageMonths": 28,
+     "weightKg": 12.7,
+     "lengthCm": 104,
+     "tempC": 37,
+     "visitType": "initial"
+    },
+    "assessments": {
+     "notAbleToDrink": false,
+     "vomitsEverything": false,
+     "historyOfConvulsions": false,
+     "lethargicUnconscious": false,
+     "convulsingNow": false,
+     "hasCough": true,
+     "coughDays": 3,
+     "breathRate": 35,
+     "fastBreathing": false,
+     "chestIndrawing": false,
+     "stridor": false,
+     "hasDiarrhea": false,
+     "hasFever": false,
+     "pallor": "somePallor",
+     "edema": false,
+     "muacCm": 11.6,
+     "medicalComplication": false,
+     "appetiteTest": "passed"
+    },
+    "classifications": {
+     "danger": [],
+     "cough": [
+      "imci.classifications.cough_cold"
+     ],
+     "diarrhea": [],
+     "fever": [],
+     "anemia": [
+      "imci.classifications.anemia"
+     ],
+     "malnutrition": [
+      "imci.classifications.uncomplicated_sam"
+     ]
+    },
+    "includeTreatment": false,
+    "treatments": {}
+   },
+   "learningPoints": [
+    "35 breaths a minute is not fast at 12 months up to 5 years, with no chest indrawing or stridor: COUGH OR COLD.",
+    "12.7 kg at 104 cm is below the -3 z-score line (13.0 kg): a sign of severe acute malnutrition, although his MUAC is above 11.5 cm.",
+    "No oedema, no medical complication, and he passed the appetite test: UNCOMPLICATED SEVERE ACUTE MALNUTRITION.",
+    "Some palmar pallor: ANAEMIA. He gets no iron, because he is taking RUTF."
+   ],
+   "explain": "35 breaths a minute is not fast at 12 months up to 5 years, with no chest indrawing or stridor: COUGH OR COLD. 12.7 kg at 104 cm is below the -3 z-score line (13.0 kg): a sign of severe acute malnutrition, although his MUAC is above 11.5 cm. No oedema, no medical complication, and he passed the appetite test: UNCOMPLICATED SEVERE ACUTE MALNUTRITION. Some palmar pallor: ANAEMIA. He gets no iron, because he is taking RUTF."
+  },
+  {
+   "id": "dimci-m6-logbook",
+   "order": 611,
+   "title": "Distance learning Module 6: Logbook test",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 6 (2014)",
+   "narrative": [
+    "You may use your chart booklet, but not the module. Circle the best answer."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "l1",
+     "type": "mcq",
+     "question": "Why do you check every child for malnutrition and anaemia?",
+     "options": [
+      "Malnutrition is a major underlying cause of death, though many children have no complaint that points to it",
+      "Only if you have found a feeding problem, or the child looks too small",
+      "All children are malnourished, and most have anaemia"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l2",
+     "type": "mcq",
+     "question": "What is malnutrition?",
+     "options": [
+      "When a child is always hungry or thirsty",
+      "A condition with several causes, including too little food, poor use of nutrients, and infection",
+      "When the child does not want to eat"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l3",
+     "type": "mcq",
+     "question": "Which sign do you use when assessing for malnutrition?",
+     "options": [
+      "The child is restless or irritable",
+      "Oedema of both feet",
+      "The child looks pale"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l4",
+     "type": "mcq",
+     "question": "What is palmar pallor?",
+     "options": [
+      "Paleness of the skin of the legs",
+      "Cloudiness of the cornea",
+      "Unusual paleness of the palms"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l5",
+     "type": "mcq",
+     "question": "Palmar pallor is a sign of:",
+     "options": [
+      "HIV",
+      "Anaemia",
+      "Vitamin A deficiency"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l6",
+     "type": "mcq",
+     "question": "A child with severe wasting may have which sign?",
+     "options": [
+      "A large or round abdomen",
+      "A very puffy, swollen face",
+      "Looks thinner than usual"
+     ],
+     "correct": [
+      0,
+      2
+     ],
+     "explain": "The belly of a wasted child may be distended, and the body is very thin. A puffy face goes with oedema (kwashiorkor)."
+    },
+    {
+     "id": "l7",
+     "type": "mcq",
+     "question": "A child with a MUAC of 119 mm and no other signs is classified:",
+     "options": [
+      "SEVERE ACUTE MALNUTRITION",
+      "MODERATE ACUTE MALNUTRITION",
+      "NO ACUTE MALNUTRITION"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "115 up to 125 mm is moderate acute malnutrition."
+    },
+    {
+     "id": "l8",
+     "type": "mcq",
+     "question": "A child with oedema of both feet is classified:",
+     "options": [
+      "COMPLICATED SEVERE ACUTE MALNUTRITION",
+      "SEVERE ACUTE MALNUTRITION",
+      "SEVERE ANAEMIA"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l9",
+     "type": "mcq",
+     "question": "Which treatment is identified for a child with severe acute malnutrition?",
+     "options": [
+      "Iron supplements",
+      "Therapeutic feeding",
+      "A vitamin A dose"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l10",
+     "type": "mcq",
+     "question": "An 18-month-old child has no signs of acute malnutrition or anaemia. You will:",
+     "options": [
+      "Look more closely at nutrition at the next visit",
+      "Do nothing: the child is fine",
+      "Assess the child's feeding and counsel on the feeding recommendations"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "Under 2 years, always assess feeding."
+    },
+    {
+     "id": "l11",
+     "type": "mcq",
+     "question": "A child with anaemia needs:",
+     "options": [
+      "Salt",
+      "Iron",
+      "Vitamin A"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l12",
+     "type": "mcq",
+     "question": "How can \"Will you give your child more nutritious foods?\" be asked as a checking question?",
+     "options": [
+      "Do you have nutritious foods at home?",
+      "What foods will you give your child so that he gets more of the vitamins his body needs?",
+      "Do you understand the recommendations I just gave you?"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l13",
+     "type": "mcq",
+     "question": "Why is mebendazole given to a child with anaemia?",
+     "options": [
+      "To prevent anaemia in children without it",
+      "It provides iron",
+      "It deworms the child"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l14",
+     "type": "tf",
+     "question": "Jiva is a 26-month-old boy who weighs 9.3 kg and is 83 cm tall. He is classified MODERATE ACUTE MALNUTRITION.",
+     "correct": true,
+     "explain": "At 83 cm the -3 line is 8.8 kg and the -2 line 9.5 kg."
+    },
+    {
+     "id": "l15",
+     "type": "tf",
+     "question": "Severe anaemia can be treated in the clinic with iron.",
+     "correct": false,
+     "explain": "SEVERE ANAEMIA is referred urgently."
+    },
+    {
+     "id": "l16",
+     "type": "tf",
+     "question": "Maria has a z-score below -3 and did not eat enough RUTF in her appetite test. She is classified UNCOMPLICATED SEVERE ACUTE MALNUTRITION.",
+     "correct": false,
+     "explain": "Failing the appetite test makes it COMPLICATED SEVERE ACUTE MALNUTRITION."
+    },
+    {
+     "id": "l17",
+     "type": "tf",
+     "question": "Malnutrition is linked to more than one in three child deaths.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l18",
+     "type": "tf",
+     "question": "A child with low weight for height should stop breastfeeding.",
+     "correct": false,
+     "explain": ""
+    },
+    {
+     "id": "l19",
+     "type": "tf",
+     "question": "A boy is 107 cm tall and weighs 10.2 kg. His z-score is below -3.",
+     "correct": true,
+     "explain": "At 107 cm the -3 line is 13.7 kg."
+    },
+    {
+     "id": "l20",
+     "type": "tf",
+     "question": "Infants should be exclusively breastfed until 6 months of age, on demand.",
+     "correct": true,
+     "explain": ""
+    }
+   ]
+  }
+ ]
+}

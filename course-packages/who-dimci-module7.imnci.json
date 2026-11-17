@@ -1,0 +1,1708 @@
+{
+ "format": "imnci-course-package",
+ "version": 1,
+ "about": "WHO IMCI distance learning course (2014), Module 7, in the Sudan national IMNCI wording. Each WHO section is cut into short lessons of one topic, with the same information as the WHO module, laid out as activities: step-by-step cards, flip cards, sorting, case stories and questions. Where the Sudan national booklet differs from WHO, the Sudan wording is used and a \"Sudan national protocol\" note says what WHO wrote. Chart booklet and recording form blocks are read live from the protocol. Video slots without a link show a placeholder; their narration scripts are in a separate file. Exercises start as drafts and open in the exercise manager.",
+ "course": {
+  "title": "IMNCI distance learning modules",
+  "description": "Self-study modules based on the WHO IMCI distance learning course (2014), in the wording of the Sudan national IMNCI protocol."
+ },
+ "modules": [
+  {
+   "title": "Module 7: Ear problems",
+   "order": 7,
+   "sections": [
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 5,
+     "bookToPage": 6,
+     "title": "Module overview",
+     "order": 1,
+     "read": [
+      {
+       "type": "note",
+       "text": "See what Module 7 covers and which part of the recording form it uses, then take the pre-test.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Ear problems are a common reason for coming to the clinic. You check all children for ear problems."
+      },
+      {
+       "type": "steps",
+       "title": "Where this module fits",
+       "steps": [
+        {
+         "title": "For ALL sick children",
+         "text": "Ask about the child's problems, check for general danger signs, and assess cough, diarrhoea and fever."
+        },
+        {
+         "title": "Then ASK: does the child have an ear problem?",
+         "text": "If NO, go on. If YES, assess and classify with the colour-coded ear chart."
+        },
+        {
+         "title": "Continue the assessment",
+         "text": "Check for malnutrition and anaemia, immunization status and other problems."
+        }
+       ]
+      },
+      {
+       "type": "heading",
+       "text": "What you will be able to do"
+      },
+      {
+       "type": "rich",
+       "text": "<p>After you study this module, you will be able to:</p><ul><li>Explain why it is necessary to check all children for ear problems</li><li>Explain why ear problems can cause long-term ear damage and deafness</li><li>Recognize tender swelling behind the ear, the clinical sign of mastoiditis</li><li>Decide whether an ear infection is acute or chronic</li><li>Classify ear problems using the IMNCI charts</li><li>Counsel caregivers on drying an ear by wicking</li><li>Follow up a child with an ear problem</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Which part of the recording form is used in this module?"
+      },
+      {
+       "type": "form",
+       "part": "child",
+       "sections": [
+        "ear"
+       ],
+       "caption": "The national recording form: ear problem"
+      },
+      {
+       "type": "heading",
+       "text": "Before you begin"
+      },
+      {
+       "type": "paragraph",
+       "text": "What do you know now about managing ear problems? Check quickly with five questions. After the module you will answer the same questions, and see what you have learned."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m7-pretest",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 7,
+     "bookToPage": 9,
+     "title": "Meet Telisa: start the visit",
+     "order": 2,
+     "read": [
+      {
+       "type": "note",
+       "text": "Start the visit of a child with fever and ear pain, and assess the main symptoms before the ear.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Ear problems",
+       "caption": "Watch this first.",
+       "script": "V7.2"
+      },
+      {
+       "type": "paragraph",
+       "text": "You will follow Telisa and her mother Sara through the module."
+      },
+      {
+       "type": "story",
+       "title": "Opening case: Telisa",
+       "stages": [
+        {
+         "text": "Sara and her daughter Telisa live some distance from the clinic; they came by taxi and on foot. Telisa is small and looks very tired. Sara puts her on her lap and holds a wet cloth on her neck: she says Telisa has been feeling hot."
+        },
+        {
+         "text": "Telisa is 3 years old and weighs 13 kg. Her temperature is 37.5 °C. She has felt hot for 3 days, and for the past 2 nights she woke complaining of ear pain. You praise Sara for bringing her. Telisa drinks with no trouble, is not vomiting and has had no convulsions. She sits on Sara's lap, holding her mother's arm and looking around the room.",
+         "question": "Does Telisa have a general danger sign?",
+         "options": [
+          "No",
+          "Yes: she is lethargic"
+         ],
+         "answer": 0,
+         "explanation": ""
+        },
+        {
+         "text": "Telisa has no cough and no diarrhoea. She has fever: 37.5 °C and feels hot. She bends her neck easily to look at her mother's shoes, so there is no stiff neck. She has no runny nose, rash or red eyes, and no measles in the last 3 months. Her malaria test is negative.",
+         "question": "How do you classify Telisa's fever?",
+         "options": [
+          "FEVER: NO MALARIA",
+          "MALARIA",
+          "VERY SEVERE FEBRILE DISEASE"
+         ],
+         "answer": 0,
+         "explanation": "No danger sign, no stiff neck, negative test."
+        },
+        {
+         "text": "Now you will check Telisa for the next main symptom: an ear problem. You check every child for an ear problem."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 7,
+     "bookToPage": 7,
+     "title": "Why ear problems matter",
+     "order": 3,
+     "read": [
+      {
+       "type": "note",
+       "text": "Explain how an ear infection can cause deafness, and when it becomes a severe disease.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Ear infections rarely cause death, but they cause many days of illness. They are the main cause of deafness in developing countries, and deafness causes learning problems at school. Assessing, classifying and treating ear problems prevents pain now, and more serious consequences later."
+      },
+      {
+       "type": "steps",
+       "title": "How an ear infection develops",
+       "steps": [
+        {
+         "title": "Pus behind the eardrum",
+         "text": "Pus collects behind the eardrum and causes pain, and often fever."
+        },
+        {
+         "title": "The eardrum bursts",
+         "text": "If the infection is not treated, the eardrum may burst. The pus discharges and the pain lessens; the fever may stop, but the child hears poorly because the eardrum has a hole."
+        },
+        {
+         "title": "Heals, or keeps draining",
+         "text": "Usually the eardrum heals by itself. Sometimes the discharge continues, the eardrum does not heal, and the child becomes deaf in that ear."
+        }
+       ]
+      },
+      {
+       "type": "flip",
+       "title": "When an ear problem becomes a severe disease",
+       "cards": [
+        {
+         "front": "Mastoiditis",
+         "back": "The infection spreads to the bone behind the ear (the mastoid). Urgent referral."
+        },
+        {
+         "front": "Meningitis",
+         "back": "The infection spreads from the ear to the brain. Urgent referral."
+        }
+       ]
+      },
+      {
+       "type": "question",
+       "text": "Why are ear problems important in IMNCI?",
+       "options": [
+        "They are common, and can cause deafness and serious infection",
+        "They are a major killer of children",
+        "They are always a sign of brain infection"
+       ],
+       "answer": 0,
+       "explanation": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 10,
+     "bookToPage": 11,
+     "title": "Assess an ear problem",
+     "order": 4,
+     "read": [
+      {
+       "type": "note",
+       "text": "Ask about ear pain and discharge, look for pus and feel for tender swelling behind the ear.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Ask about an ear problem for ALL sick children. If the caregiver says NO, go on to malnutrition and anaemia. If YES, ask, look and feel."
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "categories": [
+        "ear"
+       ],
+       "caption": "Chart booklet: ear problem (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "flip",
+       "title": "Ask, look and feel",
+       "cards": [
+        {
+         "front": "ASK: ear pain?",
+         "back": "Ear pain can mean an ear infection. If the caregiver is not sure, ask if the child has been irritable and rubbing the ear."
+        },
+        {
+         "front": "ASK: ear discharge? For how long?",
+         "back": "Use words the caregiver understands, and give her time to remember when it started. Discharge for 14 days or more is treated as chronic; less than 14 days as acute."
+        },
+        {
+         "front": "LOOK: pus draining from the ear?",
+         "back": "Look inside the ear. Draining pus is a sign of infection, even if the child has no pain."
+        },
+        {
+         "front": "FEEL: tender swelling behind the ear?",
+         "back": "Feel behind both ears and compare. Tenderness AND swelling may be mastoiditis, a deep infection of the mastoid bone. In infants the swelling may be above the ear. Do not confuse it with swollen lymph nodes."
+        }
+       ]
+      },
+      {
+       "type": "question",
+       "text": "The mother says the child has no ear problem. What do you do?",
+       "options": [
+        "Continue to malnutrition and anaemia",
+        "Assess the ear anyway",
+        "Classify NO EAR INFECTION"
+       ],
+       "answer": 0,
+       "explanation": ""
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m7-ex-a",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 12,
+     "bookToPage": 16,
+     "title": "Classify an ear problem",
+     "order": 5,
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify a child as mastoiditis, acute ear infection, chronic ear infection or no ear infection, and classify Telisa.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "There are four classifications for an ear problem. In order of seriousness:"
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "categories": [
+        "ear"
+       ],
+       "caption": "Chart booklet: classify ear problem (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "flip",
+       "title": "The four classifications",
+       "cards": [
+        {
+         "front": "MASTOIDITIS (pink)",
+         "back": "Tender swelling behind the ear. Refer urgently; the child may need injectable antibiotics or surgery."
+        },
+        {
+         "front": "ACUTE EAR INFECTION (yellow)",
+         "back": "Pus seen draining from the ear and discharge for less than 14 days, OR ear pain."
+        },
+        {
+         "front": "CHRONIC EAR INFECTION (yellow)",
+         "back": "Pus seen draining from the ear and discharge for 14 days or more."
+        },
+        {
+         "front": "NO EAR INFECTION (green)",
+         "back": "No ear pain and no pus seen draining from the ear."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Ear pain counts when it wakes the child at night, the child tells you the ear hurts, or the child is or was distressed with pain. If the only history is scratching or pulling the ear and the child does not seem in pain, do not classify ear pain: children often rub their ears."
+      },
+      {
+       "type": "note",
+       "text": "An infant who is irritable and slightly feverish may have an ear infection without being able to show where it hurts. The fever has no obvious cause, so ask the caregiver to bring the child back if there is no improvement: by then pus may be draining."
+      },
+      {
+       "type": "sort",
+       "text": "Classify each child.",
+       "groups": [
+        "MASTOIDITIS",
+        "ACUTE EAR INFECTION",
+        "CHRONIC EAR INFECTION",
+        "NO EAR INFECTION"
+       ],
+       "items": [
+        {
+         "text": "Pus draining from Ben's ear for about 3 months",
+         "group": 2
+        },
+        {
+         "text": "Leboheng cannot sleep because his ears hurt; discharge for less than 1 week",
+         "group": 1
+        },
+        {
+         "text": "Akiiki has fever, swelling behind her ear, and cries when you touch it",
+         "group": 0
+        },
+        {
+         "text": "Khotso wakes at night crying because his right ear hurts",
+         "group": 1
+        },
+        {
+         "text": "Jamie says his ears hurt but does not wake at night; no discharge",
+         "group": 3,
+         "why": "Pain that does not wake him, and no pus."
+        }
+       ]
+      },
+      {
+       "type": "story",
+       "title": "Assess and classify Telisa's ear",
+       "stages": [
+        {
+         "text": "Telisa cried most of the night because her ear hurt. Sara says there has been discharge on and off for about a year. You look, and see no pus draining. You feel behind her ears, and find tender swelling behind one ear.",
+         "question": "How do you classify?",
+         "options": [
+          "MASTOIDITIS",
+          "ACUTE EAR INFECTION",
+          "CHRONIC EAR INFECTION"
+         ],
+         "answer": 0,
+         "explanation": "Tender swelling behind the ear is MASTOIDITIS, the most serious classification."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m7-ex-b",
+       "note": ""
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m7-dana",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 17,
+     "bookToPage": 18,
+     "title": "Treat an ear problem, and refer Telisa",
+     "order": 6,
+     "read": [
+      {
+       "type": "note",
+       "text": "Give the treatments for each ear classification, and prepare a child with mastoiditis for referral.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: MASTOIDITIS: first dose of antibiotic (oral amoxicillin if the child can take oral medicine, or IM ampicillin and gentamicin), first dose of paracetamol for pain, refer urgently. ACUTE EAR INFECTION: oral amoxicillin for 5 days, paracetamol for pain, dry the ear by wicking, follow up in 5 days. CHRONIC EAR INFECTION: dry the ear by wicking, then ciprofloxacin ear drops 3 times daily for 14 days, follow up in 5 days. Refer for assessment if there is a hearing problem. WHO module (page 17): Mastoiditis: first dose of an appropriate antibiotic (the text names IM ceftriaxone) and paracetamol, refer. Chronic ear infection: wicking and topical quinolone ear drops for 14 days (the text says no antibiotic, and acetic acid drops if available).",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "flip",
+       "title": "Why each treatment",
+       "cards": [
+        {
+         "front": "Amoxicillin for acute infection",
+         "back": "The antibiotics that treat pneumonia also work against the bacteria that cause most acute ear infections."
+        },
+        {
+         "front": "Paracetamol",
+         "back": "Relieves ear pain (or high fever, 38.5 °C or above)."
+        },
+        {
+         "front": "No oral antibiotic for chronic infection",
+         "back": "The bacteria of chronic ear infection are different. The most important and effective treatment is keeping the ear dry by wicking; the drops are put in after wicking, whenever pus is seen."
+        }
+       ]
+      },
+      {
+       "type": "story",
+       "title": "Prepare Telisa for referral",
+       "stages": [
+        {
+         "text": "Telisa has MASTOIDITIS, a red classification.",
+         "question": "What do you give before she leaves?",
+         "options": [
+          "The first dose of antibiotic and the first dose of paracetamol",
+          "Ear drops and wicking",
+          "Nothing: refer at once"
+         ],
+         "answer": 0,
+         "explanation": ""
+        },
+        {
+         "text": "You write a referral note. Sara is confused: all children have fevers and ear problems, and her husband thinks ear pain goes away by itself. Telisa is moving around fine.",
+         "question": "How do you respond first?",
+         "options": [
+          "Agree that ear problems are common, and explain that Telisa's infection is now outside the ear, in the bone",
+          "Tell her she is wrong",
+          "Let her decide later"
+         ],
+         "answer": 0,
+         "explanation": ""
+        },
+        {
+         "text": "Sara is still unsure. You explain that untreated, the infection could damage Telisa's hearing, or spread to her brain; her fever is her body fighting the infection. Sara looks afraid. You tell her not to be afraid: you explain so she understands. You are firm: if she goes to the hospital now, they can treat the infection."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 19,
+     "bookToPage": 21,
+     "title": "Counsel: dry the ear by wicking",
+     "order": 7,
+     "read": [
+      {
+       "type": "note",
+       "text": "Teach a caregiver to wick an ear dry, with the three teaching steps and checking questions.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "flip",
+       "title": "Counsel with ASK, PRAISE, ADVISE, CHECK",
+       "cards": [
+        {
+         "front": "ASK",
+         "back": "Find out what the caregiver is already doing for the child."
+        },
+        {
+         "front": "PRAISE",
+         "back": "Praise what she has done well. Never be judgemental."
+        },
+        {
+         "front": "ADVISE",
+         "back": "Advise how to treat the child at home, with the teaching steps."
+        },
+        {
+         "front": "CHECK",
+         "back": "Check her understanding with checking questions."
+        }
+       ]
+      },
+      {
+       "type": "steps",
+       "title": "The three teaching steps",
+       "steps": [
+        {
+         "title": "1. Give information",
+         "text": "How to give the treatment, how much, for how long, and why it is important."
+        },
+        {
+         "title": "2. Show an example",
+         "text": "For example, how to hold the child still and wick the ear."
+        },
+        {
+         "title": "3. Let her practise",
+         "text": "She wicks the child's ear while you watch: the most important part of teaching a task."
+        }
+       ]
+      },
+      {
+       "type": "steps",
+       "title": "How to wick an ear dry",
+       "steps": [
+        {
+         "title": "Make a wick",
+         "text": "Use clean, absorbent cotton cloth or soft, strong tissue paper (clinic paper towels are suitable). Do not use a cotton-tipped applicator, a stick, or flimsy paper that falls apart in the ear."
+        },
+        {
+         "title": "Wick",
+         "text": "Clean the ear with the wick, then place a clean wick in the ear until it is wet."
+        },
+        {
+         "title": "Replace",
+         "text": "Replace the wet wick with a clean one."
+        },
+        {
+         "title": "Repeat",
+         "text": "Repeat until the wick stays dry. Then the ear is dry."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>Tell the caregiver</strong></p><ul><li>Wick the ear dry 3 times daily, for as many days as it takes until the wick no longer gets wet and no pus drains.</li><li>Do not put anything (oil, fluid or anything else) in the ear between wickings, except the recommended ear drops.</li><li>Do not plug the ear: it needs air to dry. Do not let the child go swimming; no water should get in the ear.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: For CHRONIC EAR INFECTION, after wicking give ciprofloxacin ear drops 3 times daily for 14 days. WHO module (page 20): Recommended drops (1% acetic acid) are used if available; if not, nothing is put in the ear.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>Checking questions</strong></p><ul><li>What materials will you use to make the wick at home?</li><li>How many times a day will you dry the ear with a wick?</li><li>What else will you put in your child's ear?</li></ul>"
+      },
+      {
+       "type": "sort",
+       "text": "Is this good wicking advice?",
+       "groups": [
+        "Good advice",
+        "Wrong"
+       ],
+       "items": [
+        {
+         "text": "Use a stiff piece of newspaper as a wick",
+         "group": 1,
+         "why": "Use soft, absorbent cloth or tissue."
+        },
+        {
+         "text": "Wick 3 times a day until the wick stays dry",
+         "group": 0
+        },
+        {
+         "text": "Plug the ear with cotton between wickings",
+         "group": 1,
+         "why": "The ear needs air to dry."
+        },
+        {
+         "text": "Put warm oil in the ear at night",
+         "group": 1,
+         "why": "Nothing goes in the ear except the recommended drops."
+        },
+        {
+         "text": "Keep the child from swimming",
+         "group": 0
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m7-ex-d",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 21,
+     "bookToPage": 26,
+     "title": "Counselling skills that build confidence",
+     "order": 8,
+     "read": [
+      {
+       "type": "note",
+       "text": "Use five skills that help a caregiver feel confident: accept, praise, inform, use simple words, and suggest.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "A caregiver who feels confident, informed and supported cares better for her child, gives treatment better and feeds better. These skills help."
+      },
+      {
+       "type": "flip",
+       "title": "Five skills",
+       "cards": [
+        {
+         "front": "1. Accept how she thinks and feels",
+         "back": "Do not disagree, and do not agree with a mistaken idea: respond neutrally. \"My milk is weak and thin\": not \"Oh no, milk is never weak\", not \"Yes, thin milk can be a problem\", but \"I see, you are worried about your milk.\""
+        },
+        {
+         "front": "2. Praise what she does right",
+         "back": "Look for good practices and praise them. It builds confidence, encourages her to continue, and makes it easier to accept suggestions later."
+        },
+        {
+         "front": "3. Give a little relevant information",
+         "back": "One or two pieces at a time, relevant to her situation now, said in a positive way. Wait to correct a mistaken idea until you have accepted and praised."
+        },
+        {
+         "front": "4. Use simple language",
+         "back": "Not technical terms. \"Every time your baby suckles, your breast makes more milk.\""
+        },
+        {
+         "front": "5. Suggest, do not command",
+         "back": "Avoid always, never, must, should. Try: \"Have you considered...?\", \"Would it be possible...?\", \"What about trying...?\""
+        }
+       ]
+      },
+      {
+       "type": "question",
+       "text": "A caregiver says: \"My baby has a cold and a blocked nose and just cries all the time.\" Which response accepts how she feels?",
+       "options": [
+        "You are upset about him, aren't you?",
+        "Don't worry, your baby is doing very well.",
+        "Don't cry, it's not serious."
+       ],
+       "answer": 0,
+       "explanation": ""
+      },
+      {
+       "type": "question",
+       "text": "A baby is exclusively breastfed. He gained some weight last month, but his growth line is rising too slowly. Which remark builds the mother's confidence?",
+       "options": [
+        "Your baby gained weight last month just on your breast milk",
+        "Your baby's growth line is going up too slowly",
+        "I don't think your baby is gaining enough weight"
+       ],
+       "answer": 0,
+       "explanation": ""
+      },
+      {
+       "type": "question",
+       "text": "Which is a suggestion, not a command?",
+       "options": [
+        "You may wish to try feeding him with a cup.",
+        "Use a cup to feed your baby.",
+        "You must use a cup."
+       ],
+       "answer": 0,
+       "explanation": ""
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m7-ex-e",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 27,
+     "bookToPage": 28,
+     "title": "Follow-up care for ear problems",
+     "order": 9,
+     "read": [
+      {
+       "type": "note",
+       "text": "Reassess a child with an ear infection at follow-up and decide what to do.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: Follow up ACUTE and CHRONIC EAR INFECTION in 5 days. WHO module (page 27): Acute ear infection: 5 days if discharge persists, otherwise 14 days. Chronic ear infection: 14 days.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "paragraph",
+       "text": "At the follow-up visit, reassess the ear problem and check for fever. Then choose the treatment from the child's signs."
+      },
+      {
+       "type": "note",
+       "text": "Tender swelling behind the ear, or high fever (38.5 °C or above), means the child has become worse: refer URGENTLY.",
+       "label": "Remember"
+      },
+      {
+       "type": "flip",
+       "title": "Acute ear infection",
+       "cards": [
+        {
+         "front": "No ear pain or discharge",
+         "back": "Praise the caregiver. She comes back immediately if the ear becomes painful or discharges again."
+        },
+        {
+         "front": "Pain or discharge persists",
+         "back": "Give 5 more days of the same antibiotic. Continue wicking if there is discharge. Ask her to show how she wicks, how often, and what problems she has; correct and encourage. Explain that drying is the only effective treatment of a draining ear, and that hearing loss can follow if it is not wicked. See the child again to make sure mastoiditis has not developed."
+        },
+        {
+         "front": "Still discharging after 2 weeks of good wicking",
+         "back": "Refer."
+        }
+       ]
+      },
+      {
+       "type": "flip",
+       "title": "Chronic ear infection",
+       "cards": [
+        {
+         "front": "No ear pain or discharge",
+         "back": "Praise the caregiver, and advise when to return immediately."
+        },
+        {
+         "front": "Pain or discharge persists",
+         "back": "Check that she wicks correctly, and explain why it matters."
+        },
+        {
+         "front": "No improvement despite drops and good wicking",
+         "back": "Persistent pain, offensive discharge or reduced hearing: refer."
+        }
+       ]
+      },
+      {
+       "type": "question",
+       "text": "At follow-up, a child with ACUTE EAR INFECTION now has tender swelling behind the ear. What do you do?",
+       "options": [
+        "Refer urgently",
+        "Give 5 more days of amoxicillin",
+        "Continue wicking"
+       ],
+       "answer": 0,
+       "explanation": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 29,
+     "bookToPage": 29,
+     "title": "Using this module in your clinic",
+     "order": 10,
+     "read": [
+      {
+       "type": "note",
+       "text": "Plan how to practise the skills of this module in your own clinic.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "flip",
+       "title": "Practise in the coming days",
+       "cards": [
+        {
+         "front": "Assess",
+         "back": "Ask every child about an ear problem. Look for draining pus, feel for tender swelling behind the ear, and ask how long the ear has been draining."
+        },
+        {
+         "front": "Classify",
+         "back": "Use your chart booklet, and identify pre-referral treatments."
+        },
+        {
+         "front": "Treat and counsel",
+         "back": "Give paracetamol and amoxicillin. Give the pre-referral antibiotic before urgent referral. Teach wicking: demonstrate, let the caregiver practise, give feedback."
+        },
+        {
+         "front": "Follow up",
+         "back": "Follow the IMNCI follow-up instructions for ear problems."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Complete the logbook exercises for Module 7.</li><li>Record at least 2 cases on IMNCI recording forms.</li><li>Take notes of anything difficult, confusing or interesting, to share with your study group and facilitator.</li></ul>"
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 30,
+     "bookToPage": 31,
+     "title": "Review questions and Module 7 test",
+     "order": 11,
+     "read": [
+      {
+       "type": "note",
+       "text": "Test what you have learned in Module 7.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Answer the five questions again, then fill in Telisa's recording form and take the logbook test."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m7-posttest",
+       "note": ""
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m7-telisa",
+       "note": ""
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m7-logbook",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    }
+   ],
+   "isPublished": true
+  }
+ ],
+ "exercises": [
+  {
+   "id": "dimci-m7-pretest",
+   "order": 701,
+   "title": "Distance learning Module 7: Pre-test",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 7 (2014)",
+   "narrative": [
+    "Before you begin studying this module, check what you know. After the module you will answer the same questions."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "q1",
+     "type": "mcq",
+     "question": "What is mastoiditis?",
+     "options": [
+      "Infection of the eardrum, which can cause deafness",
+      "Infection that has spread from the ear to the brain",
+      "Infection of the bone behind the ear"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q2",
+     "type": "mcq",
+     "question": "What is a clinical sign of mastoiditis?",
+     "options": [
+      "A lot of pus draining from the ear",
+      "Tender swelling behind the ear",
+      "A very bad smell from the ear"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q3",
+     "type": "mcq",
+     "question": "Why are ear problems important in IMNCI?",
+     "options": [
+      "They are common, and can cause deafness and serious infection",
+      "They are a major killer of children",
+      "They are a sign of serious brain or bone infections"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q4",
+     "type": "mcq",
+     "question": "What is an acute ear infection?",
+     "options": [
+      "A local infection of one part of the ear, like the ear lobe",
+      "Ear pain, or pus draining from the ear for less than 14 days",
+      "Pus draining from the ear for over a month"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q5",
+     "type": "mcq",
+     "question": "What is an important care measure for ear infections?",
+     "options": [
+      "Wicking the ear regularly to keep it dry",
+      "Rinsing the ear with salt water",
+      "Antiseptic ointment"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m7-ex-a",
+   "order": 702,
+   "title": "Distance learning Module 7: Exercise A (assess)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 7 (2014)",
+   "narrative": [
+    "Answer the questions about assessing an ear problem."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "a1",
+     "type": "mcq",
+     "question": "Ear problems can be the result of: (choose all that apply)",
+     "options": [
+      "Acute or chronic ear infections",
+      "Mastoiditis",
+      "Fever"
+     ],
+     "correct": [
+      0,
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "a2",
+     "type": "open",
+     "question": "What is mastoiditis, and what sign do you look for?",
+     "points": [
+      "A deep infection of the mastoid bone, behind the ear",
+      "Feel for tender swelling behind the ear",
+      "Do not confuse it with swollen lymph nodes"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "a3",
+     "type": "mcq",
+     "question": "What is an acute ear infection?",
+     "options": [
+      "Ear pain, or pus draining with discharge for less than 14 days",
+      "Discharge for 14 days or more",
+      "Any ear rubbing"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "a4",
+     "type": "mcq",
+     "question": "What is a chronic ear infection?",
+     "options": [
+      "Pus draining with discharge for 14 days or more",
+      "Ear pain at night",
+      "Discharge for less than 14 days"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m7-ex-b",
+   "order": 703,
+   "title": "Distance learning Module 7: Exercise B (classify)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 7 (2014)",
+   "narrative": [
+    "How will you classify these children?"
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "b1",
+     "type": "mcq",
+     "question": "You see pus draining from Ben's ear. His grandmother says it has been happening for about 3 months.",
+     "options": [
+      "MASTOIDITIS",
+      "ACUTE EAR INFECTION",
+      "CHRONIC EAR INFECTION",
+      "NO EAR INFECTION"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "b2",
+     "type": "mcq",
+     "question": "Leboheng cannot sleep because his ears hurt. There has been discharge for less than 1 week.",
+     "options": [
+      "MASTOIDITIS",
+      "ACUTE EAR INFECTION",
+      "CHRONIC EAR INFECTION",
+      "NO EAR INFECTION"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "b3",
+     "type": "mcq",
+     "question": "Akiiki has a fever. You feel swelling behind her ear, and she cries when you touch it.",
+     "options": [
+      "MASTOIDITIS",
+      "ACUTE EAR INFECTION",
+      "CHRONIC EAR INFECTION",
+      "NO EAR INFECTION"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "b4",
+     "type": "mcq",
+     "question": "Khotso wakes up at night crying because his right ear hurts.",
+     "options": [
+      "MASTOIDITIS",
+      "ACUTE EAR INFECTION",
+      "CHRONIC EAR INFECTION",
+      "NO EAR INFECTION"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "b5",
+     "type": "mcq",
+     "question": "Jamie says his ears hurt, but he does not wake at night from the pain. You see no discharge, and his mother says there is no pus.",
+     "options": [
+      "MASTOIDITIS",
+      "ACUTE EAR INFECTION",
+      "CHRONIC EAR INFECTION",
+      "NO EAR INFECTION"
+     ],
+     "correct": [
+      3
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m7-dana",
+   "order": 704,
+   "title": "Distance learning Module 7: Exercise C (Dana, 18 months)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 10,
+   "draft": true,
+   "source": "WHO dIMCI Module 7 (2014)",
+   "narrative": [
+    "Dana is 18 months old. She weighs 9 kg. Her temperature is 37 °C. Her mother says Dana has had discharge from her ear for the last 3 days.",
+    "Dana has no general danger signs. She has no cough or difficult breathing, no diarrhoea and no fever.",
+    "The mother says Dana has no ear pain, but the discharge has been coming for 3 or 4 days. The health worker sees pus draining from the right ear, and feels no tender swelling behind either ear."
+   ],
+   "expected": {
+    "sections": [
+     "danger",
+     "cough",
+     "diarrhea",
+     "fever",
+     "ear"
+    ],
+    "patientData": {
+     "childName": "Dana",
+     "sex": "female",
+     "ageMonths": 18,
+     "weightKg": 9,
+     "tempC": 37,
+     "visitType": "initial"
+    },
+    "assessments": {
+     "notAbleToDrink": false,
+     "vomitsEverything": false,
+     "historyOfConvulsions": false,
+     "lethargicUnconscious": false,
+     "convulsingNow": false,
+     "hasCough": false,
+     "hasDiarrhea": false,
+     "hasFever": false,
+     "hasEarProblem": true,
+     "earPain": false,
+     "earDischarge": true,
+     "earDischargeDays": 4,
+     "tenderSwelling": false,
+     "pusFromEar": true
+    },
+    "classifications": {
+     "danger": [],
+     "cough": [],
+     "diarrhea": [],
+     "fever": [],
+     "ear": [
+      "imci.classifications.acute_ear_infection"
+     ]
+    },
+    "includeTreatment": false,
+    "treatments": {}
+   },
+   "learningPoints": [
+    "Pus is seen draining from the ear and the discharge is less than 14 days: ACUTE EAR INFECTION.",
+    "No tender swelling behind the ear, so not mastoiditis."
+   ],
+   "explain": "Pus is seen draining from the ear and the discharge is less than 14 days: ACUTE EAR INFECTION. No tender swelling behind the ear, so not mastoiditis."
+  },
+  {
+   "id": "dimci-m7-ex-d",
+   "order": 705,
+   "title": "Distance learning Module 7: Exercise D (treat and counsel)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 7 (2014)",
+   "narrative": [
+    "Answer the questions about treatment."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "d1",
+     "type": "mcq",
+     "question": "Paracetamol is given for high fever when the temperature is:",
+     "options": [
+      "38.5 °C or above",
+      "37.5 °C or above",
+      "39.5 °C or above"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d2",
+     "type": "mcq",
+     "question": "How often should a caregiver wick the ear dry?",
+     "options": [
+      "3 times a day until the ear is dry",
+      "Once a day",
+      "Only when pus drains"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d3",
+     "type": "open",
+     "question": "What important information do you give a caregiver about wicking?",
+     "points": [
+      "Use clean absorbent cotton cloth or soft strong tissue; no cotton-tipped applicator, stick or flimsy paper",
+      "Clean the ear with the wick, then place a clean wick until it is wet",
+      "Replace the wet wick with a clean one",
+      "Repeat until the wick stays dry"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d4",
+     "type": "mcq",
+     "question": "In the national booklet, when does a child with an acute or chronic ear infection return for follow-up?",
+     "options": [
+      "In 5 days",
+      "In 14 days",
+      "In 2 days"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "The WHO module says 14 days (5 days if acute discharge persists)."
+    }
+   ]
+  },
+  {
+   "id": "dimci-m7-ex-e",
+   "order": 706,
+   "title": "Distance learning Module 7: Exercise E (counselling skills)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 7 (2014)",
+   "narrative": [
+    "Choose the response that uses the counselling skill."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "e1",
+     "type": "mcq",
+     "question": "Caregiver: \"It is so hot that I am giving him water.\" Which response accepts what she thinks?",
+     "options": [
+      "I can understand that you want to give him water when it is so hot.",
+      "You must not give water.",
+      "Yes, water is good."
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e2",
+     "type": "mcq",
+     "question": "Caregiver of an 11-month-old: \"I never give him egg or meat, he will get an allergy.\" Which response accepts it?",
+     "options": [
+      "Yes, it is a common belief that meat or eggs cause an allergy.",
+      "That is wrong.",
+      "You are right, avoid them."
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e3",
+     "type": "mcq",
+     "question": "A mother bottle-feeds by day while at work and breastfeeds when she gets home, but the baby suckles less. Which response praises what she does right?",
+     "options": [
+      "You are very wise to breastfeed whenever you are at home.",
+      "It would be better to give artificial feeds by cup, not by bottle.",
+      "Babies often stop wanting breastfeeds when you give bottles."
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e4",
+     "type": "mcq",
+     "question": "A 15-month-old breastfeeds and has thin porridge, sometimes tea and bread; he has not gained weight for 6 months. Which response praises?",
+     "options": [
+      "It is good that you continue to breastfeed him at this age, as well as giving other food.",
+      "He needs a more balanced diet.",
+      "You should give him more than breast milk and thin porridge."
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e5",
+     "type": "mcq",
+     "question": "Lerato, 2 months, exclusively breastfed and growing well, suddenly wants to feed more often. Her mother thinks she has too little milk. Which response gives a little relevant information?",
+     "options": [
+      "Lerato is growing fast. Healthy babies have hungry times when they grow fast; her growth chart shows she gets all the milk she needs. She will settle in a few days.",
+      "Don't worry about your milk. Breastfeed exclusively for 6 months, then start complementary feeds."
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e6",
+     "type": "mcq",
+     "question": "Joseph, 3 months, has started some bottle feeds and now has diarrhoea. His mother asks if she should stop breastfeeding.",
+     "options": [
+      "It is good that you asked before deciding. Diarrhoea usually stops sooner if you continue breastfeeding.",
+      "Oh no, don't stop breastfeeding. He may get worse."
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e7",
+     "type": "mcq",
+     "question": "Which says \"When your baby suckles, prolactin is released which makes the breasts secrete more milk\" in simple words?",
+     "options": [
+      "Every time your baby suckles, your breast makes more milk.",
+      "Suckling releases prolactin for lactation."
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "e8",
+     "type": "mcq",
+     "question": "Which is a suggestion, not a command?",
+     "options": [
+      "As your child grows he needs more food. Five meals a day with a little oil should be just right.",
+      "Give your child 5 meals a day and add a teaspoon of oil to each feed."
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m7-posttest",
+   "order": 707,
+   "title": "Distance learning Module 7: Review questions",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 7 (2014)",
+   "narrative": [
+    "Answer the same questions as before the module, and see what you have learned."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "q1",
+     "type": "mcq",
+     "question": "What is mastoiditis?",
+     "options": [
+      "Infection of the eardrum, which can cause deafness",
+      "Infection that has spread from the ear to the brain",
+      "Infection of the bone behind the ear"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q2",
+     "type": "mcq",
+     "question": "What is a clinical sign of mastoiditis?",
+     "options": [
+      "A lot of pus draining from the ear",
+      "Tender swelling behind the ear",
+      "A very bad smell from the ear"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q3",
+     "type": "mcq",
+     "question": "Why are ear problems important in IMNCI?",
+     "options": [
+      "They are common, and can cause deafness and serious infection",
+      "They are a major killer of children",
+      "They are a sign of serious brain or bone infections"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q4",
+     "type": "mcq",
+     "question": "What is an acute ear infection?",
+     "options": [
+      "A local infection of one part of the ear, like the ear lobe",
+      "Ear pain, or pus draining from the ear for less than 14 days",
+      "Pus draining from the ear for over a month"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q5",
+     "type": "mcq",
+     "question": "What is an important care measure for ear infections?",
+     "options": [
+      "Wicking the ear regularly to keep it dry",
+      "Rinsing the ear with salt water",
+      "Antiseptic ointment"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m7-telisa",
+   "order": 708,
+   "title": "Distance learning Module 7: Recording form (Telisa, 3 years)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 10,
+   "draft": true,
+   "source": "WHO dIMCI Module 7 (2014)",
+   "narrative": [
+    "Telisa is 3 years old. She weighs 13 kg. Her temperature is 37.5 °C. She has felt hot for 3 days, and woke the past 2 nights with ear pain. This is the first visit.",
+    "She drinks with no trouble, is not vomiting, has had no convulsions, and is alert. She has no cough and no diarrhoea.",
+    "She has no stiff neck, no runny nose, no rash and no red eyes, and has not had measles in the last 3 months. Her malaria test is negative.",
+    "She cried most of last night with ear pain. Her mother says there was discharge on and off in the past, but you see no pus draining now. You feel tender swelling behind one ear."
+   ],
+   "expected": {
+    "sections": [
+     "danger",
+     "cough",
+     "diarrhea",
+     "fever",
+     "ear"
+    ],
+    "patientData": {
+     "childName": "Telisa",
+     "sex": "female",
+     "ageMonths": 36,
+     "weightKg": 13,
+     "tempC": 37.5,
+     "visitType": "initial"
+    },
+    "assessments": {
+     "notAbleToDrink": false,
+     "vomitsEverything": false,
+     "historyOfConvulsions": false,
+     "lethargicUnconscious": false,
+     "convulsingNow": false,
+     "hasCough": false,
+     "hasDiarrhea": false,
+     "hasFever": true,
+     "hasEarProblem": true,
+     "earPain": true,
+     "earDischarge": false,
+     "earDischargeDays": 0,
+     "tenderSwelling": true,
+     "pusFromEar": false,
+     "feverDays": 3,
+     "dailyFever7Days": false,
+     "measles3Months": false,
+     "neckStiffness": false,
+     "measlesRash": false,
+     "malariaTest": "negative",
+     "mouthUlcers": false,
+     "deepExtensiveUlcers": false,
+     "pusFromEye": false,
+     "corneaClouding": false
+    },
+    "classifications": {
+     "danger": [],
+     "cough": [],
+     "diarrhea": [],
+     "fever": [
+      "imci.classifications.fever_no_malaria"
+     ],
+     "ear": [
+      "imci.classifications.mastoiditis"
+     ]
+    },
+    "includeTreatment": false,
+    "treatments": {}
+   },
+   "learningPoints": [
+    "Fever, no danger sign, no stiff neck and a negative malaria test: FEVER: NO MALARIA.",
+    "Tender swelling behind the ear: MASTOIDITIS. Give the first dose of antibiotic and of paracetamol, and refer urgently."
+   ],
+   "explain": "Fever, no danger sign, no stiff neck and a negative malaria test: FEVER: NO MALARIA. Tender swelling behind the ear: MASTOIDITIS. Give the first dose of antibiotic and of paracetamol, and refer urgently."
+  },
+  {
+   "id": "dimci-m7-logbook",
+   "order": 709,
+   "title": "Distance learning Module 7: Logbook test",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 7 (2014)",
+   "narrative": [
+    "You may use your chart booklet, but not the module. Circle the best answer."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "l1",
+     "type": "mcq",
+     "question": "Why do you check every child for ear problems?",
+     "options": [
+      "Ear infections can become serious if the eardrum bursts, or the infection spreads to the bone behind the ear or the brain",
+      "Ear infections usually clear up without treatment",
+      "Only if the caregiver mentions a problem"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l2",
+     "type": "mcq",
+     "question": "What is an acute ear infection?",
+     "options": [
+      "Discharge for up to 30 days",
+      "Discharge or pain for less than 2 weeks",
+      "Ear pain and discharge for up to a year"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l3",
+     "type": "mcq",
+     "question": "What sign do you look for to identify mastoiditis?",
+     "options": [
+      "Bulging fontanelle",
+      "Pus draining from the ear",
+      "Tender swelling behind the ear"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l4",
+     "type": "mcq",
+     "question": "What is a chronic ear infection?",
+     "options": [
+      "Ear pain and discharge for 1 week",
+      "The ear is always in terrible pain",
+      "Discharge from the ear for 2 weeks or more"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l5",
+     "type": "mcq",
+     "question": "The mother says \"no, the child has no ear problem\". What do you do?",
+     "options": [
+      "Continue to malnutrition and anaemia",
+      "Assess the child for ear problems",
+      "Classify the ear problem"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l6",
+     "type": "mcq",
+     "question": "When you assess an ear problem, which step is included?",
+     "options": [
+      "Check if the child has a fever",
+      "Feel for tender swelling behind the ear",
+      "Observe the child for irritability"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l7",
+     "type": "mcq",
+     "question": "A child has pus draining from the ear and ear pain at night. Classify:",
+     "options": [
+      "MASTOIDITIS",
+      "ACUTE EAR INFECTION",
+      "CHRONIC EAR INFECTION"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l8",
+     "type": "mcq",
+     "question": "Thebo has pus draining from the ear, on and off for 2 months. Classify:",
+     "options": [
+      "CHRONIC EAR INFECTION",
+      "ACUTE EAR INFECTION",
+      "NO EAR INFECTION"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l9",
+     "type": "mcq",
+     "question": "Liam has pus draining from the ear for 3 days. Classify:",
+     "options": [
+      "MASTOIDITIS",
+      "ACUTE EAR INFECTION",
+      "CHRONIC EAR INFECTION"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l10",
+     "type": "mcq",
+     "question": "You feel tender swelling of the mastoid bone. Classify:",
+     "options": [
+      "MASTOIDITIS",
+      "ACUTE EAR INFECTION",
+      "NO EAR INFECTION"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l11",
+     "type": "mcq",
+     "question": "How often should a caregiver wick the ear?",
+     "options": [
+      "Once a day",
+      "Only when pus begins draining",
+      "3 times a day"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l12",
+     "type": "tf",
+     "question": "A child classified MASTOIDITIS needs urgent pre-referral treatment and referral.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l13",
+     "type": "tf",
+     "question": "A caregiver should use a stiff piece of newspaper to wick the ear.",
+     "correct": false,
+     "explain": ""
+    },
+    {
+     "id": "l14",
+     "type": "tf",
+     "question": "Three important steps when teaching caregivers are: give information, show an example, and let her practise.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l15",
+     "type": "tf",
+     "question": "A child with an acute ear infection is followed up in 14 days.",
+     "correct": false,
+     "explain": "National booklet: 5 days. (The WHO module gives 14 days if the discharge has stopped.)"
+    },
+    {
+     "id": "l16",
+     "type": "tf",
+     "question": "An antibiotic injection before referral is given only in the clinic.",
+     "correct": true,
+     "explain": ""
+    }
+   ]
+  }
+ ]
+}

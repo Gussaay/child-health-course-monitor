@@ -5,7 +5,7 @@ import { rememberProtocols } from './vocabulary';
 import { SECTION_LABELS, INFANT_SECTION_LABELS } from './exercises';
 import { Card, PageHeader, Button, IS_NATIVE, useInPageBack, FormActions } from '../CommonComponents'; 
 import { AlertCircle, Baby, User, ClipboardList, CheckSquare, CalendarDays, UserSquare2, Ruler, Weight, Thermometer, Building, LayoutDashboard, Activity, Syringe, ArrowRight, CheckCircle, XCircle, FileText, X, Check, Stethoscope, Users, ArrowLeft } from 'lucide-react';
-import zScoreData from '../zscore_reference_data.json'; 
+import { weightForHeight } from './whz';
 import { STATE_LOCALITIES } from '../constants'; 
 
 // --- Firebase & Context Imports ---
@@ -27,6 +27,7 @@ const BackArrow = (props) => {
 // so the two live in one module rather than in separate places that have to be
 // kept in step by whoever remembers.
 const ProtocolEditor = lazy(() => import('./protocol'));
+const FormGrowthChart = lazy(() => import('./OfficialGrowthChart').then((m) => ({ default: m.FormGrowthChart })));
 
 // ============================================================================
 // RECORD DETAILS MODAL
@@ -879,36 +880,7 @@ export function ChildForm({ selectedState, selectedLocality, selectedFacility, o
     const handleRadioChange = (e) => setAssessments(prev => ({ ...prev, [e.target.name]: e.target.value }));
     const toggleTreatment = (tItem) => setSelectedTreatments(prev => ({ ...prev, [tItem]: !prev[tItem] }));
 
-    const zScoreResult = useMemo(() => {
-        const { sex, ageMonths, weightKg, lengthCm } = childData;
-        const weight = parseFloat(weightKg); const length = parseFloat(lengthCm); const age = parseFloat(ageMonths);
-        if (!weight || !length || !age || !sex) return { zScore: null, status: 'Incomplete Data' };
-
-        let groupKey = (sex === 'male') ? (age < 24 ? "boys_0_2" : "boys_2_5") : (age < 24 ? "girls_0_2" : "girls_2_5");
-        const groupData = zScoreData[groupKey];
-        if (!groupData) return { zScore: null, status: 'Group Error' };
-
-        const lengthKey = (Math.round(length * 2) / 2).toFixed(1);
-        const row = groupData[lengthKey];
-        if (!row) return { zScore: null, status: 'Length out of range' };
-
-        const thresholds = ["-3", "-2", "-1", "0", "1", "2", "3"];
-        let z = null;
-
-        if (weight <= row["-3"]) z = -3;
-        else if (weight >= row["3"]) z = 3;
-        else {
-            for (let i = 0; i < thresholds.length - 1; i++) {
-                if (weight >= row[thresholds[i]] && weight <= row[thresholds[i + 1]]) {
-                    z = parseFloat(thresholds[i]) + (weight - row[thresholds[i]]) / (row[thresholds[i + 1]] - row[thresholds[i]]);
-                    break;
-                }
-            }
-        }
-        let status = '-2 Z or more';
-        if (z !== null) { if (z < -3) status = 'Less than -3Z'; else if (z < -2) status = 'Between -3 and -2 Z'; }
-        return { zScore: z?.toFixed(2), status };
-    }, [childData]);
+    const zScoreResult = useMemo(() => weightForHeight(childData), [childData]);
 
     const results = useMemo(() => {
         const findings = computeChildFindings(assessments, zScoreResult.status);
@@ -1089,6 +1061,7 @@ export function ChildForm({ selectedState, selectedLocality, selectedFacility, o
                             <span className="font-bold min-w-[70px]">{t('imci.child.z_score')}</span>
                             <div className="flex flex-wrap gap-4"><label className="flex items-center space-x-1"><input type="radio" readOnly checked={zScoreResult.status === 'Less than -3Z'} className="text-slate-400 w-4 h-4" /><span className={zScoreResult.status === 'Less than -3Z' ? 'font-bold text-red-600' : ''}>{t('imci.child.less_3z')}</span></label><label className="flex items-center space-x-1"><input type="radio" readOnly checked={zScoreResult.status === 'Between -3 and -2 Z'} className="text-slate-400 w-4 h-4" /><span className={zScoreResult.status === 'Between -3 and -2 Z' ? 'font-bold text-yellow-600' : ''}>{t('imci.child.between_3_2')}</span></label><label className="flex items-center space-x-1"><input type="radio" readOnly checked={zScoreResult.status === '-2 Z or more'} className="text-slate-400 w-4 h-4" /><span className={zScoreResult.status === '-2 Z or more' ? 'font-bold text-green-600' : ''}>{t('imci.child.more_2z')}</span></label></div>
                         </div>
+                        <Suspense fallback={null}><FormGrowthChart child={childData} /></Suspense>
                         <div className="text-sm flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-slate-50 p-2 rounded">
                             <span className="font-bold min-w-[70px]">{t('imci.child.muac')}</span>
                             <div className="flex flex-wrap gap-4 items-center"><input type="number" inputMode="decimal" step="0.1" name="muacCm" placeholder="cm" value={assessments.muacCm} onChange={(e) => setAssessments(prev => ({...prev, muacCm: e.target.value}))} className="w-24 rounded-md border-slate-300 sm:text-sm p-1.5" /><span className="text-xs text-slate-500">{t('imci.child.enter_muac')}</span></div>

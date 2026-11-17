@@ -1,0 +1,2300 @@
+{
+ "format": "imnci-course-package",
+ "version": 1,
+ "about": "WHO IMCI distance learning course (2014), Module 9, in the Sudan national IMNCI wording. Each WHO section is cut into short lessons of one topic, with the same information as the WHO module, laid out as activities: step-by-step cards, flip cards, sorting, case stories and questions. Where the Sudan national booklet differs from WHO, the Sudan wording is used and a \"Sudan national protocol\" note says what WHO wrote. Chart booklet and recording form blocks are read live from the protocol. Video slots without a link show a placeholder; their narration scripts are in a separate file. Exercises start as drafts and open in the exercise manager.",
+ "course": {
+  "title": "IMNCI distance learning modules",
+  "description": "Self-study modules based on the WHO IMCI distance learning course (2014), in the wording of the Sudan national IMNCI protocol."
+ },
+ "modules": [
+  {
+   "title": "Module 9: Care of the well child",
+   "order": 9,
+   "sections": [
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 5,
+     "bookToPage": 7,
+     "title": "Module overview",
+     "order": 1,
+     "read": [
+      {
+       "type": "note",
+       "text": "See what well child care covers, and take the pre-test.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "A well child is a child who comes to the health facility for preventive services: immunizations, feeding advice, and growth and development monitoring. You use the same IMNCI skills as for the sick child: ask questions, listen, praise good practices, advise in simple language, and check understanding. Even when the clinic is busy, take time to assess a well child properly."
+      },
+      {
+       "type": "paragraph",
+       "text": "More than 200 million children under 5 are not developing to their full potential because they did not get simple, essential care. Risks include stunting, iron and iodine deficiency, frequent illness, and too little help to learn, explore and communicate."
+      },
+      {
+       "type": "heading",
+       "text": "What you will practise"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Feeding infants and young children well</li><li>Care for healthy growth and development</li><li>Immunization, vitamin A and deworming</li><li>Water, sanitation and hygiene</li><li>Prevention of childhood accidents</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Which part of the recording form is used in this module?"
+      },
+      {
+       "type": "form",
+       "part": "child",
+       "sections": [
+        "vaccination",
+        "feeding"
+       ],
+       "caption": "The national recording form: immunization and feeding"
+      },
+      {
+       "type": "heading",
+       "text": "Before you begin"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m9-pretest",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 8,
+     "bookToPage": 9,
+     "title": "Growth and development: what they are",
+     "order": 2,
+     "read": [
+      {
+       "type": "note",
+       "text": "Tell growth from development, and name the four kinds of skills a child develops.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Care of the well child",
+       "caption": "Watch this first.",
+       "script": "V9.2"
+      },
+      {
+       "type": "flip",
+       "title": "Growth or development?",
+       "cards": [
+        {
+         "front": "Child growth",
+         "back": "An increase in physical size, composition and distribution of tissues: weight, length and height."
+        },
+        {
+         "front": "Child development",
+         "back": "The gradual unfolding of what a child can do: talk, walk, run, solve problems, receive affection and express emotions. It needs good health and nutrition, chances to explore, and a safe, nurturing home."
+        }
+       ]
+      },
+      {
+       "type": "flip",
+       "title": "Four kinds of skills",
+       "cards": [
+        {
+         "front": "Motor",
+         "back": "Physical skills such as reaching and grabbing: planned eye and hand movement, muscle control and strength."
+        },
+        {
+         "front": "Cognitive",
+         "back": "Exploring and learning through seeing, hearing, moving and touching; recognizing people, things and sounds; comparing sizes and shapes."
+        },
+        {
+         "front": "Social",
+         "back": "Communicating interests and needs, with words and without."
+        },
+        {
+         "front": "Affective (emotional)",
+         "back": "Receiving and expressing emotions and affection appropriately."
+        }
+       ]
+      },
+      {
+       "type": "sort",
+       "text": "Which skill is the child using?",
+       "groups": [
+        "Motor",
+        "Cognitive",
+        "Social",
+        "Affective"
+       ],
+       "items": [
+        {
+         "text": "Sees a ball rolling and tries to take and hold it",
+         "group": 0
+        },
+        {
+         "text": "Cries and reaches for the ball when it rolls away",
+         "group": 3
+        },
+        {
+         "text": "Examines the ball's shape and size",
+         "group": 1
+        },
+        {
+         "text": "Smiles at his mother when she talks to him about the ball",
+         "group": 2
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "Health workers need to understand growth and development to monitor progress, find delays early, counsel caregivers and treat. Poor growth and development can also reflect poverty, little education, and poor access to food, safe water and health services."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 10,
+     "bookToPage": 16,
+     "title": "Growth monitoring: why, what and how often",
+     "order": 3,
+     "read": [
+      {
+       "type": "note",
+       "text": "Explain growth monitoring and promotion, name the three growth indicators, and know how often to measure.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Growth monitoring and promotion (GMP) detects poor growth early, so it can be corrected. It is not only measuring: you use the results to counsel the caregiver on what she can do at home."
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>GMP helps you to:</strong></p><ul><li>Analyse the causes of poor growth: acute or chronic illness, acute malnutrition, feeding problems</li><li>Show the caregiver the child's growth on the growth chart</li><li>Agree with the caregiver on actions at home, early</li><li>Link families to community and nutrition services</li><li>Keep the child in regular contact with the clinic</li></ul>"
+      },
+      {
+       "type": "flip",
+       "title": "Three growth indicators",
+       "cards": [
+        {
+         "front": "Weight-for-age",
+         "back": "Low = UNDERWEIGHT. Changes quickly with health, so it is the measure used to monitor growth in infants and young children."
+        },
+        {
+         "front": "Length/height-for-age",
+         "back": "Low = STUNTING (chronic malnutrition): the result of long-term poor nutrition."
+        },
+        {
+         "front": "Weight-for-length/height",
+         "back": "Low = WASTING (acute malnutrition), as in Module 6."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Age</strong></td><td style=\"padding: 4px\"><strong>How often</strong></td></tr><tr><td style=\"padding: 4px\">Birth to 2 years</td><td style=\"padding: 4px\">Monthly: weight every month, length every 3 months</td></tr><tr><td style=\"padding: 4px\">2 to 5 years</td><td style=\"padding: 4px\">Every 3 months: weight and height at every visit</td></tr></table>"
+      },
+      {
+       "type": "flip",
+       "title": "Measuring correctly",
+       "cards": [
+        {
+         "front": "Length or height",
+         "back": "Length (lying) under 2 years; height (standing) from 2 years. Under 2 measured standing: add 0.7 cm. 2 years or older measured lying: subtract 0.7 cm."
+        },
+        {
+         "front": "Scale",
+         "back": "A solar, taring scale (it can subtract the mother's weight). A Salter scale can be used until one is available."
+        },
+        {
+         "front": "Board",
+         "back": "A wooden length board in two or three pieces, joined for a tall child."
+        },
+        {
+         "front": "Child health book",
+         "back": "Growth charts for each visit, and the schedules for vaccines, vitamin A and deworming. Separate books for boys and girls."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Use every growth monitoring visit, in the clinic or at outreach, to give other services: assessment, treatment, vaccination, vitamin A, deworming and psychosocial support."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 16,
+     "bookToPage": 18,
+     "title": "Explain growth to the caregiver",
+     "order": 4,
+     "read": [
+      {
+       "type": "note",
+       "text": "Use the child health book with the caregiver, and decide whether a child's growth and development are normal.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "steps",
+       "title": "With the caregiver",
+       "steps": [
+        {
+         "title": "Why",
+         "text": "Explain why growth matters, even if the child looks healthy next to the other children at home."
+        },
+        {
+         "title": "The book",
+         "text": "Explain the child health book. Every child should get one soon after birth; bring it to every visit."
+        },
+        {
+         "title": "The chart",
+         "text": "Use the growth chart to show how the child is growing, and the pattern over time."
+        },
+        {
+         "title": "What else is due",
+         "text": "Show the feeding advice and the schedules in the book, and remind her of the services due today."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "The mother's health is important for the child's health. Ask about her pregnancy, delivery and health since.",
+       "label": "Remember"
+      },
+      {
+       "type": "story",
+       "title": "Samson, 6 months",
+       "stages": [
+        {
+         "text": "Samson comes for growth monitoring and vitamin A. He weighs 8 kg and is 64 cm long. On the boys' chart, 8 kg at 64 cm is above the median line.",
+         "question": "What do you tell his mother?",
+         "options": [
+          "He is growing well; praise her and continue",
+          "He is wasted",
+          "He needs RUTF"
+         ],
+         "answer": 0,
+         "explanation": ""
+        }
+       ]
+      },
+      {
+       "type": "story",
+       "title": "Jandika, 19 months",
+       "stages": [
+        {
+         "text": "Jandika comes for growth monitoring. He weighs 8 kg and is 71 cm long. His weight-for-length is between 0 and -1: not wasted. But on the length-for-age chart he is below -3.",
+         "question": "What does this show, and what do you do?",
+         "options": [
+          "Severe stunting: refer (not urgently) to find and treat the cause",
+          "Normal growth",
+          "Severe wasting: refer urgently"
+         ],
+         "answer": 0,
+         "explanation": "Advise his mother not to delay the hospital visit."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m9-ex-c",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 19,
+     "bookToPage": 22,
+     "title": "Bonding and attachment",
+     "order": 5,
+     "read": [
+      {
+       "type": "note",
+       "text": "Explain bonding and attachment to a caregiver, and tell sensitivity from responsiveness.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "flip",
+       "title": "Two connections",
+       "cards": [
+        {
+         "front": "Bonding: mother to child",
+         "back": "The mother forms a relationship with her new baby, starting in the first hours after birth. Harmed by long separation after birth, poor health or depression of the mother (often undetected), abuse or neglect, or a low birth weight or sick baby."
+        },
+        {
+         "front": "Attachment: child to caregiver",
+         "back": "The baby forms a relationship with the mother or main caregiver during the first two years, especially at 2 to 7 months, and develops a personal way of communicating with her."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>Poor attachment can lead to:</strong></p><ul><li>Difficulty trusting others; depression or rage</li><li>Failure to thrive, physically and emotionally</li><li>Difficulty adapting to change</li><li>Later, behaviour problems, poor relations with peers, poor problem solving and low self-esteem</li></ul>"
+      },
+      {
+       "type": "flip",
+       "title": "A strong caregiver-child interaction needs",
+       "cards": [
+        {
+         "front": "Sensitivity",
+         "back": "Being aware of the baby's signals and reading them correctly; accepting the child's interests; seeing the child as a separate person, from his point of view."
+        },
+        {
+         "front": "Responsiveness",
+         "back": "Responding to the signal quickly and appropriately, for example seeing that the baby is hungry and feeding him. A caregiver must be sensitive to be responsive."
+        }
+       ]
+      },
+      {
+       "type": "sort",
+       "text": "Sara and her son John: sensitivity or responsiveness?",
+       "groups": [
+        "Sensitivity",
+        "Responsiveness"
+       ],
+       "items": [
+        {
+         "text": "Sara hears John crying",
+         "group": 0
+        },
+        {
+         "text": "Sara picks John up to soothe his crying",
+         "group": 1
+        },
+        {
+         "text": "While bathing John, Sara notices a rash on his leg",
+         "group": 0
+        },
+        {
+         "text": "Sara sees John watching the branches blowing in the wind",
+         "group": 0
+        },
+        {
+         "text": "Sara says: \"Do you see the wind blowing? The leaves are blowing!\"",
+         "group": 1
+        },
+        {
+         "text": "Sara notices John is feeding less than usual",
+         "group": 0
+        },
+        {
+         "text": "Sara offers John a food he likes to see if he will eat",
+         "group": 1
+        }
+       ]
+      },
+      {
+       "type": "reveal",
+       "text": "Sara's grandmother says John should be left alone so he grows strong and independent. What do you tell Sara?",
+       "answer": "Explain the benefits of bonding and attachment for John's growth and for his skills, with clear examples Sara can share with her grandmother: a child who is answered when he signals grows more secure, curious and able to learn."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m9-ex-d",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 23,
+     "bookToPage": 28,
+     "title": "Play and communication for development",
+     "order": 6,
+     "read": [
+      {
+       "type": "note",
+       "text": "Recommend play and communication activities for the child's age, and show how to make toys at home.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Play and communication activities stimulate learning, improve care (including feeding), strengthen the caregiver's skills, and improve the interaction between caregiver and child."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Care for child development",
+       "caption": "WHO Care for Child Development CD: case stories on child development."
+      },
+      {
+       "type": "flip",
+       "title": "Activities by age",
+       "cards": [
+        {
+         "front": "Newborn, first week",
+         "back": "Play: let the baby see, hear, feel, move arms and legs freely and touch you; skin-to-skin; gently soothe and stroke. Communicate: look into the baby's eyes and talk, also during breastfeeding."
+        },
+        {
+         "front": "Up to 6 months",
+         "back": "Play: move colourful things for the baby to see and reach; a shaker rattle, a ring on a string. Communicate: smile and laugh, talk, copy the baby's sounds and gestures."
+        },
+        {
+         "front": "6 to 9 months",
+         "back": "Play: clean, safe household things to handle, bang and drop: containers with lids, a metal pot and spoon. Communicate: respond to sounds and interests; call the child's name and see the response."
+        },
+        {
+         "front": "9 to 12 months",
+         "back": "Play: hide a toy and let the child find it; peek-a-boo; a doll with a face. Communicate: name things and people; teach gestures like waving bye-bye."
+        },
+        {
+         "front": "12 months to 2 years",
+         "back": "Play: things to stack and to put in and out of containers. Communicate: ask simple questions; respond to attempts to talk; show and talk about nature, pictures and people."
+        },
+        {
+         "front": "2 years and older",
+         "back": "Play: pictures, face puzzles, shapes to sort by colour, a soft ball, chalk and a flat stone, a home-made book. Communicate: encourage the child to talk and tell stories; answer questions."
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Toys do not need to be bought. Make some at the clinic from jars, stones, cloth, cardboard and old magazines, and show caregivers how easy they are to make and use."
+      },
+      {
+       "type": "steps",
+       "title": "Using the chart with a caregiver",
+       "steps": [
+        {
+         "title": "Find the age",
+         "text": "Find the child's age group and its activities, and explain the chart."
+        },
+        {
+         "title": "Teach",
+         "text": "Explain how to play and communicate, demonstrate, then watch her practise and give feedback."
+        },
+        {
+         "title": "At home",
+         "text": "Explain how to use the activities regularly at home, and ask checking questions."
+        }
+       ]
+      },
+      {
+       "type": "question",
+       "text": "Which is a good checking question?",
+       "options": [
+        "What activities can you do to play with your child?",
+        "Did the nurse explain how to play with your child?",
+        "Do you understand?"
+       ],
+       "answer": 0,
+       "explanation": "It cannot be answered yes or no."
+      },
+      {
+       "type": "reveal",
+       "text": "Beta says her son Rakim, 4 months, is too little to understand play or talk. What do you say?",
+       "answer": "Development begins at birth: even in his first hours a baby connects with people and his surroundings. Show Beta how Rakim already communicates and plays now: following her voice, reaching, smiling."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 29,
+     "bookToPage": 36,
+     "title": "Developmental milestones",
+     "order": 7,
+     "read": [
+      {
+       "type": "note",
+       "text": "Use the milestone chart to find a child whose development is delayed.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Each stage of development has milestones: skills a child should have at that age. Use them to monitor development, and teach caregivers the simple milestones so delays are found early. A child with delayed milestones is referred for further management."
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Age</strong></td><td style=\"padding: 4px\"><strong>Gross motor</strong></td><td style=\"padding: 4px\"><strong>Fine motor</strong></td><td style=\"padding: 4px\"><strong>Speech and language</strong></td><td style=\"padding: 4px\"><strong>Adaptive and social</strong></td></tr><tr><td style=\"padding: 4px\">6 weeks</td><td style=\"padding: 4px\">Lying prone, lifts chin at times</td><td style=\"padding: 4px\"></td><td style=\"padding: 4px\"></td><td style=\"padding: 4px\"></td></tr><tr><td style=\"padding: 4px\">2 months</td><td style=\"padding: 4px\">Prone, arms extended forward</td><td style=\"padding: 4px\">Pulls at clothes</td><td style=\"padding: 4px\">Coos</td><td style=\"padding: 4px\"></td></tr><tr><td style=\"padding: 4px\">4 months</td><td style=\"padding: 4px\">Raises head and chest, rolls front to back, no head lag</td><td style=\"padding: 4px\">Reaches and grasps, objects to mouth</td><td style=\"padding: 4px\">Responds to voice</td><td style=\"padding: 4px\"></td></tr><tr><td style=\"padding: 4px\">6 months</td><td style=\"padding: 4px\">Weight on hands, tripod sit</td><td style=\"padding: 4px\">Ulnar grasp</td><td style=\"padding: 4px\">Begins to babble, responds to name</td><td style=\"padding: 4px\">Stranger anxiety</td></tr><tr><td style=\"padding: 4px\">9 months</td><td style=\"padding: 4px\">Pulls to stand</td><td style=\"padding: 4px\">Finger-thumb grasp</td><td style=\"padding: 4px\">Mama, dada, imitates one word</td><td style=\"padding: 4px\">Plays games, separation anxiety</td></tr><tr><td style=\"padding: 4px\">12 months</td><td style=\"padding: 4px\">Walks with support</td><td style=\"padding: 4px\">Pincer grasp, throws</td><td style=\"padding: 4px\">2 words besides mama and dada</td><td style=\"padding: 4px\">Peek-a-boo, drinks from a cup</td></tr><tr><td style=\"padding: 4px\">15 months</td><td style=\"padding: 4px\">Walks without support</td><td style=\"padding: 4px\">Draws a line</td><td style=\"padding: 4px\">Jargon</td><td style=\"padding: 4px\">Points to needs</td></tr><tr><td style=\"padding: 4px\">18 months</td><td style=\"padding: 4px\">Up steps with help</td><td style=\"padding: 4px\">Tower of 3 cubes, scribbles</td><td style=\"padding: 4px\">10 words, follows simple commands</td><td style=\"padding: 4px\">Uses a spoon, points to body parts</td></tr><tr><td style=\"padding: 4px\">24 months</td><td style=\"padding: 4px\">Runs, kicks a ball, up 2 feet per step</td><td style=\"padding: 4px\">Tower of 6 cubes, undresses</td><td style=\"padding: 4px\">2–3 word phrases, uses I, me, you</td><td style=\"padding: 4px\">Parallel play, helps to undress</td></tr><tr><td style=\"padding: 4px\">3 years</td><td style=\"padding: 4px\">Tricycle, stands on one foot, jumps</td><td style=\"padding: 4px\">Copies a circle and a cross, puts on shoes</td><td style=\"padding: 4px\">Plurals, mostly understood, knows sex and age</td><td style=\"padding: 4px\">Dresses and undresses except buttons, counts to 10</td></tr><tr><td style=\"padding: 4px\">4 years</td><td style=\"padding: 4px\">Hops on 1 foot</td><td style=\"padding: 4px\">Copies a square, uses scissors</td><td style=\"padding: 4px\">Tells a story, speech understood</td><td style=\"padding: 4px\">Cooperative play, toilet trained, buttons clothes</td></tr><tr><td style=\"padding: 4px\">5 years</td><td style=\"padding: 4px\">Skips, rides a bicycle</td><td style=\"padding: 4px\">Copies a triangle, prints name, ties shoelaces</td><td style=\"padding: 4px\">Fluent speech, future tense, alphabet</td><td style=\"padding: 4px\">Knows four colours</td></tr></table>"
+      },
+      {
+       "type": "flip",
+       "title": "How to check some milestones in the clinic",
+       "cards": [
+        {
+         "front": "2 to 4 months",
+         "back": "Lay the child face up and gently pull to sitting by both hands; make a sound with keys; ask the mother to make a joyful sound. The child holds the head up, turns it, responds to voice and smiles."
+        },
+        {
+         "front": "5 to 7 months",
+         "back": "Sit the child on a safe flat surface with a toy to hold. The child sits without using the hands for at least 10 seconds, and brings objects to the mouth."
+        },
+        {
+         "front": "8 to 11 months",
+         "back": "Stand the child holding a support at abdomen height: the legs carry the weight for 10 seconds. The child crawls towards a toy, imitates bye-bye, passes objects hand to hand."
+        },
+        {
+         "front": "12 to 18 months",
+         "back": "The child walks at least 5 steps alone, climbs stairs with help, throws a ball, says 4–20 words, drinks from a cup."
+        },
+        {
+         "front": "19 to 24 months",
+         "back": "Short phrases, kicks a ball on request, jumps with both feet, turns pages one at a time, points to named pictures."
+        }
+       ]
+      },
+      {
+       "type": "story",
+       "title": "Manka and Ikupa",
+       "stages": [
+        {
+         "text": "Manka was born at term 5 months ago. She got neck control at 5 months and cannot yet sit without support. Her mother is worried.",
+         "question": "What do you advise?",
+         "options": [
+          "This can be normal: children sit without support at 5 to 7 months; keep coming for monitoring",
+          "Refer urgently",
+          "She is severely delayed"
+         ],
+         "answer": 0,
+         "explanation": ""
+        },
+        {
+         "text": "Ikupa is 36 months old. She walks only with support, says about 10 words and drinks from a cup.",
+         "question": "What do you advise?",
+         "options": [
+          "Her milestones are those of 8 to 11 months: refer (not urgently) for assessment within a few days",
+          "This is normal for 3 years",
+          "Wait 6 months and see"
+         ],
+         "answer": 0,
+         "explanation": "At 3 years she should run, jump, stand on one foot and use plurals."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m9-ex-f",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 37,
+     "bookToPage": 40,
+     "title": "Counsel about feeding problems",
+     "order": 8,
+     "read": [
+      {
+       "type": "note",
+       "text": "Build the mother's confidence, then counsel on common feeding problems and follow them up.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "steps",
+       "title": "Good practice",
+       "steps": [
+        {
+         "title": "Build confidence first",
+         "text": "Praise good feeding practices; encourage her to feed the same way in illness and health. Avoid judgemental words."
+        },
+        {
+         "title": "Counsel for the age",
+         "text": "If the child is entering a new age group, explain the new recommendations (for example, at almost 6 months, good complementary foods and when to start)."
+        },
+        {
+         "title": "Explain what is not followed",
+         "text": "Explain the recommendations that are not being followed, and make suggestions."
+        }
+       ]
+      },
+      {
+       "type": "flip",
+       "title": "Common feeding problems",
+       "cards": [
+        {
+         "front": "Difficulty breastfeeding",
+         "back": "Check and improve positioning and attachment (Module 2). A breast problem may need a trained breastfeeding counsellor."
+        },
+        {
+         "front": "Under 6 months, other milk or foods",
+         "back": "Aim to return to more or exclusive breastfeeding: more frequent, longer breastfeeds day and night, and gradually reduce other milk or food. If breastfeeding is not possible, teach correct preparation of breast-milk substitutes, used within one hour."
+        },
+        {
+         "front": "Feeding bottle",
+         "back": "Recommend a cup: it is easier to keep clean and does not interfere with breastfeeding."
+        },
+        {
+         "front": "Not actively fed",
+         "back": "Sit with the child and encourage him to eat. He needs his own serving, not a shared plate with siblings."
+        },
+        {
+         "front": "Poor appetite or illness",
+         "back": "Offer the foods recommended for his age, as often as recommended; breastfeed more often and longer; small, frequent, soft, liked foods. Discourage snacks and juices that only fill him up."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>Encourage a young child to eat</strong></p><ul><li>Offer small amounts when the child is alert and happy, and more if he shows interest</li><li>Food of suitable consistency, not too thick or dry</li><li>A suitable spoon, food within reach, the child on the caregiver's lap</li><li>Encourage with words, smiles and songs. A child who gets more attention for refusing food may eat less.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: Follow up a FEEDING PROBLEM in 7 days: reassess feeding, ask how she has carried out the advice, and counsel on any new or continuing problem. WHO module (page 39): Follow-up in 5 days; if the child is very low weight for age, also return 30 days after the first visit to check weight gain.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "story",
+       "title": "A follow-up visit",
+       "stages": [
+        {
+         "text": "At the first visit, a 3-month-old was getting 2 or 3 bottles of milk a day and some breastfeeds. The health worker advised more frequent, longer breastfeeds and less other milk. Now the mother gives 1 bottle a day and breastfeeds 6 or more times in 24 hours.",
+         "question": "What do you do?",
+         "options": [
+          "Praise her, then suggest stopping the other milk and breastfeeding 8 or more times in 24 hours, and see her again",
+          "Tell her she failed",
+          "Nothing more is needed"
+         ],
+         "answer": 0,
+         "explanation": ""
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 41,
+     "bookToPage": 44,
+     "title": "Feeding recommendations by age",
+     "order": 9,
+     "read": [
+      {
+       "type": "note",
+       "text": "Give the feeding recommendations for the child's age, in sickness and in health.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "First ask how the child is fed now; then give only the advice needed for the child's age and situation. The recommendations are the same when the child is sick and when well. During illness offer the recommended foods as often as recommended; after illness, good feeding makes up the weight lost."
+      },
+      {
+       "type": "note",
+       "text": "Use the national mother card for your counselling. The age groups below are those of the WHO module."
+      },
+      {
+       "type": "flip",
+       "title": "By age",
+       "cards": [
+        {
+         "front": "Up to 6 months",
+         "back": "Breastfeed exclusively, as often as the child wants, day and night, at least 8 times in 24 hours. No other food or fluid, not even water (medicines and vitamins only if needed)."
+        },
+        {
+         "front": "6 up to 12 months",
+         "back": "Breastfeed as often as the child wants, breast milk first. Start 2–3 teaspoons of soft porridge or mashed food and build up: 3 meals plus healthy snacks a day if breastfed, 5 meals if not. Not breastfed: formula, or 3 cups of full-cream cow's milk from 9 months."
+        },
+        {
+         "front": "12 months up to 2 years",
+         "back": "Breastfeed as often as the child wants. Complementary or chopped and mashed family foods 5 times a day, with protein at least once a day and fruit or vegetables twice. Not breastfed: full-cream milk every day. Active feeding."
+        },
+        {
+         "front": "2 years and older",
+         "back": "Family foods, 3 meals a day plus 2 nutritious snacks between meals (bread with peanut butter, fruit, full-cream milk). Continue active feeding; offer a refused food several times."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>Include all food groups</strong></p><ul><li>Cereals, roots and tubers: rice, wheat, maize, millet, sorghum, cassava, potatoes</li><li>Animal foods and legumes: meat, chicken, fish, eggs, milk, cheese, yoghurt, chickpeas, lentils, beans</li><li>Green leafy and orange vegetables; fruits, mashed</li><li>Oils and fats, preferably seed oils such as groundnut or sunflower</li></ul>"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Nutrient</strong></td><td style=\"padding: 4px\"><strong>Foods</strong></td></tr><tr><td style=\"padding: 4px\">Iron</td><td style=\"padding: 4px\">Green leafy vegetables, fish, meat, chicken, liver or kidney, eggs</td></tr><tr><td style=\"padding: 4px\">Zinc</td><td style=\"padding: 4px\">Fish, meat, chicken, liver or kidney, eggs</td></tr><tr><td style=\"padding: 4px\">Vitamin A</td><td style=\"padding: 4px\">Dark-coloured fruits and vegetables, red palm oil</td></tr><tr><td style=\"padding: 4px\">Vitamin C</td><td style=\"padding: 4px\">Many fruits and vegetables, potatoes</td></tr><tr><td style=\"padding: 4px\">Folate</td><td style=\"padding: 4px\">Legumes, green leafy vegetables, orange juice</td></tr></table>"
+      },
+      {
+       "type": "flip",
+       "title": "Also tell the mother",
+       "cards": [
+        {
+         "front": "Clean preparation",
+         "back": "Clean hands, utensils, water and food; boil drinking water and milk; keep food well cooked and covered."
+        },
+        {
+         "front": "Avoid",
+         "back": "Ready-made jars of baby food (costly, unreliable, often lacking nutrients), fruit juice, tea and sugary drinks."
+        },
+        {
+         "front": "Active feeding",
+         "back": "Feed slowly and patiently, without forcing; own serving; eye contact and talk. An adequate serving means the child wants no more after active feeding."
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 45,
+     "bookToPage": 49,
+     "title": "Practise feeding counselling",
+     "order": 10,
+     "read": [
+      {
+       "type": "note",
+       "text": "Apply the feeding recommendations to real situations.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "story",
+       "title": "An 8-month-old girl",
+       "stages": [
+        {
+         "text": "Her mother returned to work a month ago, is away 10 hours a day, and stopped breastfeeding. The child takes infant formula by cup about 5 times a day and plain cereal 3 times a day, and has eaten as usual during this illness.",
+         "question": "Which comment praises what she does right?",
+         "options": [
+          "It is good that you use a cup instead of a bottle",
+          "You should still be breastfeeding this child"
+         ],
+         "answer": 0,
+         "explanation": ""
+        },
+        {
+         "text": "",
+         "question": "Which advice improves her diet?",
+         "options": [
+          "The cereal is good: add a little oil and mashed vegetables, peas or bits of meat",
+          "Stop the formula"
+         ],
+         "answer": 0,
+         "explanation": ""
+        }
+       ]
+      },
+      {
+       "type": "question",
+       "text": "Greg, 10 months, is breastfed. He has porridge once a day and jars of baby fruit and vegetables twice. What do you suggest?",
+       "options": [
+        "4–5 servings of nutritious food a day; add oil, margarine or groundnut paste to the porridge; spend the jar money on eggs, fruit and vegetables",
+        "Keep the jars: they are complete",
+        "Stop breastfeeding"
+       ],
+       "answer": 0,
+       "explanation": ""
+      },
+      {
+       "type": "question",
+       "text": "Fatima, 14 months, has PNEUMONIA and ANAEMIA and often gets chest infections. Which nutrients matter most?",
+       "options": [
+        "Iron and vitamin A",
+        "Sugar and salt",
+        "Only protein"
+       ],
+       "answer": 0,
+       "explanation": "Iron: liver, meat, fish, legumes, dark green leaves. Vitamin A: liver, mango, pawpaw, sweet potato, dark green leaves."
+      },
+      {
+       "type": "question",
+       "text": "Joyce, 3 months, is exclusively breastfed, and also gets water. What do you say?",
+       "options": [
+        "She needs no water: breast milk gives all the fluid she needs",
+        "Water is good in hot weather"
+       ],
+       "answer": 0,
+       "explanation": ""
+      },
+      {
+       "type": "question",
+       "text": "Xoli, 15 months, breastfeeds and eats rice, meat, vegetables, fruit and yoghurt. How often should he eat these foods?",
+       "options": [
+        "5 times a day",
+        "Twice a day",
+        "Only when hungry"
+       ],
+       "answer": 0,
+       "explanation": ""
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m9-ex-k",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 50,
+     "bookToPage": 52,
+     "title": "Water, sanitation and hygiene",
+     "order": 11,
+     "read": [
+      {
+       "type": "note",
+       "text": "Counsel a family on safe water, hand washing and a clean, safe place to play.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "About 9 out of 10 cases of diarrhoea come from unsafe water or poor sanitation and hygiene, which also lead to pneumonia and worms that cause anaemia. The key interventions are cheap: safe drinking water, hand washing, and toilets in the home and community."
+      },
+      {
+       "type": "flip",
+       "title": "When to wash hands",
+       "cards": [
+        {
+         "front": "Food",
+         "back": "Before preparing food, before eating, before feeding a child."
+        },
+        {
+         "front": "Toilet",
+         "back": "After using the toilet, and after cleaning a child who has used it."
+        },
+        {
+         "front": "Other",
+         "back": "After coughing, sneezing or blowing the nose; before and after cleaning a child's face; after handling animals, animal waste or rubbish."
+        }
+       ]
+      },
+      {
+       "type": "rich",
+       "text": "<p><strong>How</strong></p><ul><li>Use soap. Rub hands together, between the fingers and under the nails, for 20 seconds (sing \"Happy Birthday\" twice).</li><li>Pour water over the hands: do not dip them into a bowl, which contaminates the water.</li></ul>"
+      },
+      {
+       "type": "steps",
+       "title": "Support the family",
+       "steps": [
+        {
+         "title": "Ask",
+         "text": "Where do you wash your hands? Is there soap? When do you wash them?"
+        },
+        {
+         "title": "Plan",
+         "text": "Help them prepare a convenient place with water and soap."
+        },
+        {
+         "title": "Teach",
+         "text": "Review when to wash, demonstrate, and let the caregiver practise."
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "Babies explore by putting things in the mouth. Ask where the child rests and plays. Keep the area clean and free of small objects, sharp things like glass or stones, and heat such as fires, heaters, lamps and electric sockets; a mat that is shaken clean helps."
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 53,
+     "bookToPage": 56,
+     "title": "Immunization: the schedule and checking status",
+     "order": 12,
+     "read": [
+      {
+       "type": "note",
+       "text": "Use the national schedule to decide which vaccines a child needs today.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Immunization is the most cost-effective way to reduce illness and death in children. Every child should complete the schedule before the first birthday. Check every child's status at every visit, and give missed vaccines that day. Too early, protection may not be adequate; late, the child is at risk."
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Age</strong></td><td style=\"padding: 4px\"><strong>Vaccines (Sudan national schedule)</strong></td></tr><tr><td style=\"padding: 4px\">Birth</td><td style=\"padding: 4px\">OPV 0, BCG</td></tr><tr><td style=\"padding: 4px\">6 weeks</td><td style=\"padding: 4px\">OPV 1, Pentavalent 1, PCV 1, Rota 1, IPV 1</td></tr><tr><td style=\"padding: 4px\">10 weeks</td><td style=\"padding: 4px\">OPV 2, Pentavalent 2, PCV 2, Rota 2</td></tr><tr><td style=\"padding: 4px\">14 weeks</td><td style=\"padding: 4px\">OPV 3, Pentavalent 3, PCV 3, Rota 3, IPV 2</td></tr><tr><td style=\"padding: 4px\">9 months</td><td style=\"padding: 4px\">MR, Men A, Yellow fever</td></tr><tr><td style=\"padding: 4px\">18 months</td><td style=\"padding: 4px\">MR (booster)</td></tr></table>"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: The national schedule adds IPV at 6 and 14 weeks, gives MR (measles-rubella), meningitis A and yellow fever at 9 months, and an MR booster at 18 months. Keep 4 weeks between doses of pentavalent, PCV, OPV and Rota, and 8 weeks between the IPV doses. WHO module (page 54): Birth BCG and OPV 0; 6, 10 and 14 weeks DPT-HepB-Hib (pentavalent), pneumococcal, rota and OPV; measles at 9 months. Repeated doses at least 4 weeks apart.",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "flip",
+       "title": "Rules for missed doses",
+       "cards": [
+        {
+         "front": "OPV 0",
+         "back": "Not after 14 days of age: give OPV 1 at 6 weeks instead, with the other 6-week vaccines."
+        },
+        {
+         "front": "Rota",
+         "back": "Not after 1 year of age."
+        },
+        {
+         "front": "BCG",
+         "back": "At any age if not given before; over 1 year, only after a negative Mantoux test."
+        },
+        {
+         "front": "Diarrhoea",
+         "back": "Give the OPV dose that is due, but do not count it; ask the mother to return in 4 weeks for an extra dose."
+        }
+       ]
+      },
+      {
+       "type": "steps",
+       "title": "Check the status",
+       "steps": [
+        {
+         "title": "Ask for the child health book",
+         "text": "Compare the dates with the schedule, and find the vaccines missed or due today."
+        },
+        {
+         "title": "No book?",
+         "text": "Ask what the child has received. If you doubt the report, vaccinate. Give her a child health book to bring each time."
+        },
+        {
+         "title": "Give and record",
+         "text": "Unless the child is being referred, give the vaccines today, record the dates, and write the return date."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m9-ex-l",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 56,
+     "bookToPage": 59,
+     "title": "Adverse events and contraindications",
+     "order": 13,
+     "read": [
+      {
+       "type": "note",
+       "text": "Counsel on common reactions to vaccines, and vaccinate sick children unless there is a true contraindication.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "An adverse event following immunization (AEFI) is an unwanted event after a vaccine; it may be caused by the vaccine or happen by chance. Most are minor: low fever, pain, redness or swelling at the injection site, crying and irritability. Explain them at vaccination, so they do not keep the mother, or other mothers, away next time. Extensive swelling of the whole limb is not common: the child returns to the facility."
+      },
+      {
+       "type": "note",
+       "text": "For fever over 38.5 °C after vaccination give paracetamol (15 mg/kg a dose), for up to 2 days. Do not give paracetamol at the time of vaccination."
+      },
+      {
+       "type": "flip",
+       "title": "Contraindications",
+       "cards": [
+        {
+         "front": "Not a contraindication",
+         "back": "Common illness, including malnutrition. If a sick child is well enough to go home, vaccinate."
+        },
+        {
+         "front": "BCG",
+         "back": "Do not give BCG to a child with HIV infection (AIDS)."
+        },
+        {
+         "front": "Pentavalent",
+         "back": "Do not give it to a child who had convulsions (or shock) within 72 hours of the last dose, or who has a neurological disease."
+        },
+        {
+         "front": "Referral",
+         "back": "If you refer the child, you need not vaccinate first; the hospital decides, so referral is not delayed."
+        }
+       ]
+      },
+      {
+       "type": "sort",
+       "text": "Vaccinate today (if due)?",
+       "groups": [
+        "Vaccinate",
+        "Not this vaccine"
+       ],
+       "items": [
+        {
+         "text": "Will be treated at home with antibiotics",
+         "group": 0
+        },
+        {
+         "text": "Has a local skin infection",
+         "group": 0
+        },
+        {
+         "text": "Pentavalent 2 for a child who convulsed right after pentavalent 1",
+         "group": 1,
+         "why": "Give the others, not pentavalent."
+        },
+        {
+         "text": "Older brother had a convulsion last year",
+         "group": 0
+        },
+        {
+         "text": "Very low weight",
+         "group": 0
+        },
+        {
+         "text": "BCG for a child known to have AIDS",
+         "group": 1,
+         "why": "Give all the other vaccines."
+        },
+        {
+         "text": "Cough or cold",
+         "group": 0
+        }
+       ]
+      },
+      {
+       "type": "note",
+       "text": "Also advise the mother to have the other children in the family vaccinated."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m9-ex-n",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 60,
+     "bookToPage": 63,
+     "title": "Vitamin A and deworming",
+     "order": 14,
+     "read": [
+      {
+       "type": "note",
+       "text": "Give routine vitamin A and deworming at the right age and interval, and record them.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Vitamin A protects the eyes and the lining of the airways, gut and urinary tract, and helps resist severe infection. Deficiency is the leading cause of preventable blindness in children and increases deaths from measles, diarrhoea and pneumonia. Good vitamin A status at 6–59 months cuts measles deaths by half and diarrhoea deaths by a third."
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Age</strong></td><td style=\"padding: 4px\"><strong>Routine vitamin A</strong></td></tr><tr><td style=\"padding: 4px\">6 months up to 12 months</td><td style=\"padding: 4px\">100 000 IU (blue capsule)</td></tr><tr><td style=\"padding: 4px\">12 months up to 5 years</td><td style=\"padding: 4px\">200 000 IU (red capsule)</td></tr></table>"
+      },
+      {
+       "type": "note",
+       "text": "Sudan national booklet: Give the first dose any time after 6 months, then every 6 months up to 5 years. Do not give it if a dose was given in the last 6 months or the child is on RUTF. Look for doses from campaigns on the child card. WHO module (page 60): The same schedule; the WHO table also allows several smaller capsules (for example 2 × 100 000 IU or 4 × 50 000 IU for 200 000 IU).",
+       "label": "Sudan national protocol"
+      },
+      {
+       "type": "paragraph",
+       "text": "Cut the nipple of the capsule with a clean blade or scissors (or pierce it with a clean, new needle) and squeeze the contents into the child's mouth. Record the date: doses less than 6 months apart risk overdose."
+      },
+      {
+       "type": "heading",
+       "text": "Deworming"
+      },
+      {
+       "type": "paragraph",
+       "text": "Roundworm, hookworm and whipworm cause loss of micronutrients, poor appetite, anaemia, poor growth and malnutrition. From 12 months, check at every visit whether the child had a deworming dose in the last 6 months; if not, give one."
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%\"><tr><td style=\"padding: 4px\"><strong>Medicine, single dose every 6 months</strong></td><td style=\"padding: 4px\"><strong>1 up to 2 years</strong></td><td style=\"padding: 4px\"><strong>2 up to 5 years</strong></td></tr><tr><td style=\"padding: 4px\">Albendazole 400 mg tablet</td><td style=\"padding: 4px\">½ tablet (200 mg)</td><td style=\"padding: 4px\">1 tablet (400 mg)</td></tr><tr><td style=\"padding: 4px\">Mebendazole 500 mg tablet</td><td style=\"padding: 4px\">½ tablet (250 mg)</td><td style=\"padding: 4px\">1 tablet (500 mg)</td></tr></table>"
+      },
+      {
+       "type": "note",
+       "text": "Chewable tablets are best. Under 3 years, crush the tablet between two spoons and add water. In the national chart booklet, mebendazole for a child with ANAEMIA is the syrup course in Module 6."
+      },
+      {
+       "type": "sort",
+       "text": "Sabrina (8 months), Angie (12 months, vitamin A 6 months ago), Jot (26 months, vitamin A 4 months ago, mebendazole 8 months ago):",
+       "groups": [
+        "Give today",
+        "Not today"
+       ],
+       "items": [
+        {
+         "text": "Vitamin A for Sabrina",
+         "group": 0,
+         "why": "100 000 IU."
+        },
+        {
+         "text": "Mebendazole for Sabrina",
+         "group": 1,
+         "why": "Deworming starts at 12 months."
+        },
+        {
+         "text": "Mebendazole for Angie",
+         "group": 0
+        },
+        {
+         "text": "Vitamin A for Angie",
+         "group": 0,
+         "why": "It has been 6 months."
+        },
+        {
+         "text": "Vitamin A for Jot",
+         "group": 1,
+         "why": "Less than 6 months since the last dose."
+        },
+        {
+         "text": "Mebendazole for Jot",
+         "group": 0,
+         "why": "500 mg."
+        }
+       ]
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m9-ex-o",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 64,
+     "bookToPage": 67,
+     "title": "Prevent childhood accidents",
+     "order": 15,
+     "read": [
+      {
+       "type": "note",
+       "text": "Counsel families on preventing road injuries, drowning, burns, falls and poisoning.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Injuries are a growing problem in developing countries; nearly all are unintentional (accidents), and for every death many more children are left disabled. Ask about the home, where the child plays, how the child travels, how water is stored, and how the family cooks, heats and lights the home, then advise."
+      },
+      {
+       "type": "flip",
+       "title": "Prevention",
+       "cards": [
+        {
+         "front": "Road traffic",
+         "back": "Children do not play near the road; supervise play. Helmets on bicycles and motorcycles; seat belts or child seats in cars. Do not leave preschool children in the care of other children. Communities: pavements, safe playgrounds, speed limits."
+        },
+        {
+         "front": "Drowning",
+         "back": "Remove or cover toilet pits, wells and ponds; cover buckets and water drums; supervise children near any water, even a bath; flotation devices when swimming."
+        },
+        {
+         "front": "Burns",
+         "back": "No playing with fire; raised, protected cooking areas with pot handles out of reach; do not hold the baby while cooking; supervise children by a fire; never leave children alone or locked in; no candle or kerosene lamp left lit while sleeping."
+        },
+        {
+         "front": "Falls",
+         "back": "Guards on beds, stairs, windows and roofs; supervise children at play."
+        },
+        {
+         "front": "Poisoning",
+         "back": "Keep medicines and poisons out of reach, in child-resistant packs and their original labelled containers. Never store kerosene or poisons in soda or water bottles. Do not send children to fetch or give medicines."
+        }
+       ]
+      },
+      {
+       "type": "sort",
+       "text": "Safe or unsafe?",
+       "groups": [
+        "Safe",
+        "Unsafe"
+       ],
+       "items": [
+        {
+         "text": "Kerosene kept in an old soda bottle",
+         "group": 1
+        },
+        {
+         "text": "Cooking on a raised, enclosed stove",
+         "group": 0
+        },
+        {
+         "text": "A lamp left lit while the family sleeps",
+         "group": 1
+        },
+        {
+         "text": "The well is covered",
+         "group": 0
+        },
+        {
+         "text": "A 5-year-old minds the baby by the road",
+         "group": 1
+        }
+       ]
+      }
+     ],
+     "isPublished": true
+    },
+    {
+     "see": [],
+     "practise": [],
+     "bookFromPage": 68,
+     "bookToPage": 70,
+     "title": "Review questions and Module 9 test",
+     "order": 16,
+     "read": [
+      {
+       "type": "note",
+       "text": "Test what you have learned in Module 9.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "paragraph",
+       "text": "Answer the seven questions again, then take the logbook test."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m9-posttest",
+       "note": ""
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "dimci-m9-logbook",
+       "note": ""
+      }
+     ],
+     "isPublished": true
+    }
+   ],
+   "isPublished": true
+  }
+ ],
+ "exercises": [
+  {
+   "id": "dimci-m9-pretest",
+   "order": 901,
+   "title": "Distance learning Module 9: Pre-test",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 9 (2014)",
+   "narrative": [
+    "Before you begin studying this module, check what you know. After the module you will answer the same questions."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "q1",
+     "type": "mcq",
+     "question": "Sami is 8 months old. What do you recommend for his feeding?",
+     "options": [
+      "Exclusive breastfeeding",
+      "Four meals a day of porridge and vegetables, and no breastfeeding",
+      "Breastfeeding as often as he wants, and three meals a day of cereals, mashed fruit and vegetables, and protein"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q2",
+     "type": "mcq",
+     "question": "What is child development?",
+     "options": [
+      "An increase in physical size and tissues",
+      "An increase in the complexity of what a child can do",
+      "The same as child growth"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q3",
+     "type": "mcq",
+     "question": "The interaction of mother and child involves:",
+     "options": [
+      "Bonding only",
+      "Attachment only",
+      "Bonding and attachment"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q4",
+     "type": "mcq",
+     "question": "What is the interval between doses of pneumococcal vaccine?",
+     "options": [
+      "4 weeks",
+      "6 weeks",
+      "8 weeks"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q5",
+     "type": "mcq",
+     "question": "At what age do you begin giving vitamin A?",
+     "options": [
+      "12 months",
+      "9 months",
+      "6 months"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q6",
+     "type": "mcq",
+     "question": "Why is it important to deworm children?",
+     "options": [
+      "Intestinal worms are a worldwide problem",
+      "Worms cause loss of micronutrients and contribute to anaemia, growth failure and malnutrition",
+      "Worms are common in young infants"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q7",
+     "type": "mcq",
+     "question": "Childhood injuries:",
+     "options": [
+      "Burns and falls are rare",
+      "Are not a problem in developing countries",
+      "Can be prevented by raising awareness in families and communities"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m9-ex-c",
+   "order": 902,
+   "title": "Distance learning Module 9: Exercise C (growth and development)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 9 (2014)",
+   "narrative": [
+    "Is the child's growth or development normal?"
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "c1",
+     "type": "mcq",
+     "question": "Edward is 6 months old and has no neck control.",
+     "options": [
+      "Normal",
+      "Not normal"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "c2",
+     "type": "mcq",
+     "question": "Maria, girl, 24 months, weighs 13 kg and is 85 cm tall.",
+     "options": [
+      "Normal",
+      "Not normal"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "c3",
+     "type": "mcq",
+     "question": "Hamisi, 17 months, can only walk with support.",
+     "options": [
+      "Normal",
+      "Not normal"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "c4",
+     "type": "mcq",
+     "question": "Amiri is 4 years old and cannot say a single word.",
+     "options": [
+      "Normal",
+      "Not normal"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "c5",
+     "type": "mcq",
+     "question": "Alice, 4½ years, dresses herself and is toilet trained.",
+     "options": [
+      "Normal",
+      "Not normal"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "c6",
+     "type": "mcq",
+     "question": "Kemilembe is 3 years old. She cannot tell a short story and does not know her sex.",
+     "options": [
+      "Normal",
+      "Not normal"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "At 3 years a child knows her sex and age."
+    },
+    {
+     "id": "c7",
+     "type": "mcq",
+     "question": "How often is a child under 2 years monitored for growth?",
+     "options": [
+      "Every month",
+      "Every 3 months",
+      "Every year"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "c8",
+     "type": "mcq",
+     "question": "How often is a child of 2 to 5 years monitored?",
+     "options": [
+      "Every month",
+      "Every 3 months",
+      "Every year"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m9-ex-d",
+   "order": 903,
+   "title": "Distance learning Module 9: Exercise D (bonding and attachment)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 9 (2014)",
+   "narrative": [
+    "Answer the questions about bonding and attachment."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "d1",
+     "type": "mcq",
+     "question": "Bonding is:",
+     "options": [
+      "The mother forming a relationship with her new baby, from the first hours after birth",
+      "The baby forming a relationship with the caregiver during the first two years",
+      "Feeding on a schedule"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d2",
+     "type": "mcq",
+     "question": "Attachment happens especially at:",
+     "options": [
+      "2 to 7 months",
+      "3 to 5 years",
+      "The first hour only"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d3",
+     "type": "mcq",
+     "question": "Sara picks up John to soothe his crying. This is:",
+     "options": [
+      "Responsiveness",
+      "Sensitivity"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d4",
+     "type": "mcq",
+     "question": "Sara notices that John is feeding less than usual. This is:",
+     "options": [
+      "Sensitivity",
+      "Responsiveness"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "d5",
+     "type": "open",
+     "question": "Name three consequences of poor attachment.",
+     "points": [
+      "Difficulty trusting others",
+      "Depression or rage",
+      "Failure to thrive",
+      "Difficulty adapting to change",
+      "Behaviour problems and poor peer relations later",
+      "Poor problem solving and low self-esteem"
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m9-ex-f",
+   "order": 904,
+   "title": "Distance learning Module 9: Exercise F (development and milestones)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 9 (2014)",
+   "narrative": [
+    "Use the activity and milestone charts."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "f1",
+     "type": "open",
+     "question": "Jyothi is 2 months old. Suggest play and communication.",
+     "points": [
+      "Let her see, hear, feel, move freely and touch you",
+      "Move colourful things for her to see and reach; a shaker rattle",
+      "Smile, laugh and talk; copy her sounds"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f2",
+     "type": "open",
+     "question": "Linus is 11 months old. Suggest play and communication.",
+     "points": [
+      "Hide a toy and let him find it; peek-a-boo",
+      "Tell him the names of things and people",
+      "Teach gestures like waving bye-bye"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f3",
+     "type": "mcq",
+     "question": "Which fine motor skills should a child of 2 years have?",
+     "options": [
+      "Builds a tower of 6 cubes, undresses",
+      "Copies a triangle, ties shoelaces",
+      "Ulnar grasp"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f4",
+     "type": "mcq",
+     "question": "Which words should a child of 9 months say?",
+     "options": [
+      "Mama, dada, and imitates one word",
+      "10 words",
+      "2–3 word phrases"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f5",
+     "type": "mcq",
+     "question": "Which social and adaptive skills should a child of 3 years have?",
+     "options": [
+      "Dresses and undresses fully except buttons, counts to 10",
+      "Stranger anxiety",
+      "Knows four colours"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "f6",
+     "type": "mcq",
+     "question": "Ikupa, 36 months, walks only with support and says about 10 words. What do you do?",
+     "options": [
+      "Refer for assessment of delayed development, within a few days",
+      "Reassure: this is normal",
+      "Refer urgently tonight"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m9-ex-k",
+   "order": 905,
+   "title": "Distance learning Module 9: Exercise K (feeding recommendations)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 9 (2014)",
+   "narrative": [
+    "Answer the questions about feeding."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "k1",
+     "type": "mcq",
+     "question": "Which says \"give foods that are high in energy and nutrient content in relation to volume\" simply?",
+     "options": [
+      "Give food that helps him grow without making him feel too full",
+      "Give energy-dense foods"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "k2",
+     "type": "mcq",
+     "question": "Which checking question follows \"When will you begin giving these foods?\" \"When he is ready.\"",
+     "options": [
+      "How will you know that he is ready?",
+      "Do you understand?"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "k3",
+     "type": "mcq",
+     "question": "Why continue exclusive breastfeeding to 6 months?",
+     "options": [
+      "Breast milk is the perfect food, well absorbed, and prevents infection",
+      "Porridge is harmful"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "k4",
+     "type": "mcq",
+     "question": "A child of 6 up to 12 months who is breastfed needs:",
+     "options": [
+      "3 meals plus healthy snacks a day, breast milk first",
+      "5 meals a day and no breastfeeding",
+      "Breast milk only"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "k5",
+     "type": "mcq",
+     "question": "A child of 2 years and older needs:",
+     "options": [
+      "3 family meals and 2 snacks a day",
+      "Breast milk only",
+      "One large meal a day"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "k6",
+     "type": "tf",
+     "question": "An adequate serving means the child does not want any more after active feeding.",
+     "correct": true,
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m9-ex-l",
+   "order": 906,
+   "title": "Distance learning Module 9: Exercise L and M (immunization)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 9 (2014)",
+   "narrative": [
+    "Use the national schedule."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "l1",
+     "type": "mcq",
+     "question": "Why check the vaccination status of every child?",
+     "options": [
+      "Every child should complete the schedule before the first birthday, and missed vaccines are given that day",
+      "Only to fill the register"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l2",
+     "type": "mcq",
+     "question": "A 6-week-old did not get OPV at birth. Which OPV dose do you give?",
+     "options": [
+      "OPV 1, with the other 6-week vaccines",
+      "OPV 0",
+      "None until 10 weeks"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "OPV 0 is not given after 14 days."
+    },
+    {
+     "id": "l3",
+     "type": "open",
+     "question": "Salma is 4 months old. She had BCG and OPV 0 at birth, the 6-week vaccines (OPV 1, Penta 1, PCV 1, Rota 1, IPV 1) and the 10-week vaccines (OPV 2, Penta 2, PCV 2, Rota 2). Which vaccines does she need today, and when does she return?",
+     "points": [
+      "OPV 3, Pentavalent 3, PCV 3, Rota 3 and IPV 2 today",
+      "Return at 9 months for MR, Men A and yellow fever",
+      "Bring the child health book every time; vaccinate the other children; explain the common reactions"
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l4",
+     "type": "open",
+     "question": "Khadija, 3 months, had BCG, OPV 0 and the 6-week vaccines 5 weeks ago. What does she need?",
+     "points": [
+      "OPV 2, Pentavalent 2, PCV 2 and Rota 2 today",
+      "Return in 4 weeks for the 14-week vaccines"
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m9-ex-n",
+   "order": 907,
+   "title": "Distance learning Module 9: Exercise N (contraindications)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 9 (2014)",
+   "narrative": [
+    "Decide whether to vaccinate today."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "n1",
+     "type": "tf",
+     "question": "A child who will be treated at home with antibiotics should be vaccinated today if due.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "n2",
+     "type": "tf",
+     "question": "A child with very low weight should not be vaccinated.",
+     "correct": false,
+     "explain": "Malnutrition is not a contraindication."
+    },
+    {
+     "id": "n3",
+     "type": "tf",
+     "question": "A child who convulsed right after pentavalent 1 gets pentavalent 2 today.",
+     "correct": false,
+     "explain": "Give the other vaccines, not pentavalent."
+    },
+    {
+     "id": "n4",
+     "type": "tf",
+     "question": "A child with diarrhoea due for OPV gets it today, but the dose is not counted.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "n5",
+     "type": "tf",
+     "question": "A child known to have AIDS with no vaccines gets all vaccines except BCG.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "n6",
+     "type": "tf",
+     "question": "A child being referred urgently must be vaccinated before leaving.",
+     "correct": false,
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m9-ex-o",
+   "order": 908,
+   "title": "Distance learning Module 9: Exercise O (vitamin A and deworming)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 9 (2014)",
+   "narrative": [
+    "Answer the questions."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "o1",
+     "type": "tf",
+     "question": "Sabrina, 8 months, with no vitamin A yet, needs vitamin A today.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "o2",
+     "type": "mcq",
+     "question": "What dose of vitamin A does Sabrina (8 months) need?",
+     "options": [
+      "100 000 IU",
+      "200 000 IU",
+      "50 000 IU"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "o3",
+     "type": "tf",
+     "question": "Sabrina needs mebendazole today.",
+     "correct": false,
+     "explain": "Deworming starts at 12 months."
+    },
+    {
+     "id": "o4",
+     "type": "tf",
+     "question": "Angie, 12 months, had vitamin A six months ago. She needs vitamin A again in 6 months.",
+     "correct": false,
+     "explain": "It has been 6 months: she needs it today."
+    },
+    {
+     "id": "o5",
+     "type": "tf",
+     "question": "Jot, 26 months, had vitamin A 4 months ago. He needs vitamin A today.",
+     "correct": false,
+     "explain": "Less than 6 months ago: a dose now is dangerous."
+    },
+    {
+     "id": "o6",
+     "type": "tf",
+     "question": "Jot had mebendazole 8 months ago. He needs 500 mg of mebendazole today.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "o7",
+     "type": "open",
+     "question": "Thabit, 15 months, is fully immunized. He had vitamin A at 6 months and mebendazole at 12 months. What do you do?",
+     "points": [
+      "Give vitamin A (200 000 IU) today: the 12-month dose was missed",
+      "No mebendazole today: the last dose was 3 months ago",
+      "Return in 3 months for mebendazole and in 6 months for vitamin A, up to 5 years"
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m9-posttest",
+   "order": 909,
+   "title": "Distance learning Module 9: Review questions",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 9 (2014)",
+   "narrative": [
+    "Answer the same questions as before the module, and see what you have learned."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "q1",
+     "type": "mcq",
+     "question": "Sami is 8 months old. What do you recommend for his feeding?",
+     "options": [
+      "Exclusive breastfeeding",
+      "Four meals a day of porridge and vegetables, and no breastfeeding",
+      "Breastfeeding as often as he wants, and three meals a day of cereals, mashed fruit and vegetables, and protein"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q2",
+     "type": "mcq",
+     "question": "What is child development?",
+     "options": [
+      "An increase in physical size and tissues",
+      "An increase in the complexity of what a child can do",
+      "The same as child growth"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q3",
+     "type": "mcq",
+     "question": "The interaction of mother and child involves:",
+     "options": [
+      "Bonding only",
+      "Attachment only",
+      "Bonding and attachment"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q4",
+     "type": "mcq",
+     "question": "What is the interval between doses of pneumococcal vaccine?",
+     "options": [
+      "4 weeks",
+      "6 weeks",
+      "8 weeks"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q5",
+     "type": "mcq",
+     "question": "At what age do you begin giving vitamin A?",
+     "options": [
+      "12 months",
+      "9 months",
+      "6 months"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q6",
+     "type": "mcq",
+     "question": "Why is it important to deworm children?",
+     "options": [
+      "Intestinal worms are a worldwide problem",
+      "Worms cause loss of micronutrients and contribute to anaemia, growth failure and malnutrition",
+      "Worms are common in young infants"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q7",
+     "type": "mcq",
+     "question": "Childhood injuries:",
+     "options": [
+      "Burns and falls are rare",
+      "Are not a problem in developing countries",
+      "Can be prevented by raising awareness in families and communities"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "dimci-m9-logbook",
+   "order": 910,
+   "title": "Distance learning Module 9: Logbook test",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 5,
+   "draft": true,
+   "source": "WHO dIMCI Module 9 (2014)",
+   "narrative": [
+    "You may use your chart booklet, but not the module."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "l1",
+     "type": "mcq",
+     "question": "What is the importance of growth monitoring and promotion?",
+     "options": [
+      "Research has not shown it yet",
+      "The growth chart prevents illness",
+      "It helps find poor growth, analyse the causes and support the family to improve growth"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l2",
+     "type": "mcq",
+     "question": "Child development is NOT improved by:",
+     "options": [
+      "Interaction",
+      "Isolation",
+      "Activities"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l3",
+     "type": "mcq",
+     "question": "Which indicator is used to monitor the growth of children under 5 years?",
+     "options": [
+      "Length/height-for-age",
+      "Weight-for-length/height",
+      "Weight-for-age"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l4",
+     "type": "mcq",
+     "question": "What is the recommended schedule for growth monitoring?",
+     "options": [
+      "Birth to 2 years monthly (length every 3 months); 2 to 5 years every 3 months",
+      "Birth to 2 years every 3 months; 2 to 5 years monthly",
+      "Once a year at all ages"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l5",
+     "type": "mcq",
+     "question": "Which is NOT a tool used to monitor growth?",
+     "options": [
+      "Weighing scale",
+      "Length board",
+      "MUAC strip"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l6",
+     "type": "mcq",
+     "question": "Which is a contraindication to a vaccine?",
+     "options": [
+      "OPV for a child with HIV infection",
+      "Pentavalent 2 or 3 after convulsions or shock within 3 days of the last dose",
+      "Pentavalent for a child with persistent diarrhoea"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l7",
+     "type": "mcq",
+     "question": "The first dose of deworming is given at:",
+     "options": [
+      "6 months",
+      "3 up to 6 months",
+      "12 months"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l8",
+     "type": "mcq",
+     "question": "Children 12 months or older are given mebendazole or albendazole:",
+     "options": [
+      "Every 3 months",
+      "Every 6 months",
+      "Every 12 months"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "l9",
+     "type": "tf",
+     "question": "Pavements away from main traffic help prevent road traffic accidents.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l10",
+     "type": "tf",
+     "question": "Helmets on bicycles and motorcycles reduce the severity of injuries.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l11",
+     "type": "tf",
+     "question": "Supervising children, and not leaving preschool children in the care of other children, prevents accidents.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l12",
+     "type": "tf",
+     "question": "Hazardous water such as toilet pits, wells and ponds should be removed or covered to prevent drowning.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l13",
+     "type": "tf",
+     "question": "Raising or enclosing cooking areas increases burns in children.",
+     "correct": false,
+     "explain": ""
+    },
+    {
+     "id": "l14",
+     "type": "tf",
+     "question": "Never leave a candle or kerosene lamp lit while sleeping.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l15",
+     "type": "tf",
+     "question": "Keeping all medicines out of reach of children helps prevent poisoning.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l16",
+     "type": "tf",
+     "question": "Kerosene should be kept in soda or water bottles because they are harder to open.",
+     "correct": false,
+     "explain": ""
+    },
+    {
+     "id": "l17",
+     "type": "tf",
+     "question": "Medicines and poisons should be packed in child-resistant packs or bottles.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l18",
+     "type": "tf",
+     "question": "BCG and OPV 0 are given at birth.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l19",
+     "type": "tf",
+     "question": "The second and third doses of pentavalent, PCV, Rota and OPV are given 4 weeks after the previous dose.",
+     "correct": true,
+     "explain": ""
+    },
+    {
+     "id": "l20",
+     "type": "tf",
+     "question": "Repeated doses of vitamin A less than 6 months apart are not recommended, but safe.",
+     "correct": false,
+     "explain": "They risk overdose."
+    }
+   ]
+  }
+ ]
+}

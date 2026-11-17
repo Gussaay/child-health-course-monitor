@@ -24,6 +24,7 @@ import { useActivity, RevealBlock, FlipBlock, SortBlock, StepsBlock, StoryBlock 
 // The exercise players are heavy (the whole recording form), so they load
 // only when a learner starts an exercise from a section.
 const CasePlayer = lazy(() => import('../exercises.jsx').then((m) => ({ default: m.CasePlayer })));
+const GrowthChartBlock = lazy(() => import('./GrowthChartBlock'));
 const QuizPlayer = lazy(() => import('../exercises.jsx').then((m) => ({ default: m.QuizPlayer })));
 
 // =============================================================================
@@ -605,6 +606,7 @@ export function ContentBlocks({ blocks, scale = 1, activities = false }) {
                 if (b.type === 'sort') return <SortBlock key={i} block={b} activityKey={key(i)} />;
                 if (b.type === 'steps') return <StepsBlock key={i} block={b} activityKey={key(i)} />;
                 if (b.type === 'story') return <StoryBlock key={i} block={b} activityKey={key(i)} />;
+                if (b.type === 'growthchart') return <Suspense key={i} fallback={null}><GrowthChartBlock block={b} activityKey={key(i)} /></Suspense>;
                 if (b.type === 'booklet') {
                     return <BookletBlock key={i} block={b} />;
                 }
