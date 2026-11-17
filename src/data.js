@@ -1513,6 +1513,7 @@ export async function unapproveCourseCertificates(courseId) {
     const courseRef = doc(db, "courses", courseId);
     await updateDoc(courseRef, {
         isCertificateApproved: false,
+        certificateApprovalScopes: null,
         approvedByManagerName: null, 
         approvedByManagerSignatureUrl: null, 
         certificateApprovedAt: null,

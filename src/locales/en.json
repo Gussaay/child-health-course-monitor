@@ -2224,7 +2224,10 @@
       "template_failed": "Failed to generate template.",
       "download_title": "Download Certificate",
       "download_bulk_title": "Download Bulk Certificates",
-      "design_template": "Design Certificate Template"
+      "design_template": "Design Certificate Template",
+      "not_in_scope": "This certificate is not approved in this language or for this participant's sub-course yet.",
+      "none_in_scope": "None of these certificates are approved in this language or sub-course yet.",
+      "out_of_scope_confirm": "{{count}} certificate(s) are not approved in this language or for their sub-course yet and will be left out. Download the other {{remaining}}?"
     },
     "whatsapp": {
       "title": "Send on WhatsApp",
@@ -4622,7 +4625,13 @@
       "image_hint": "Blank uses the built-in default logo.",
       "image_from_template": "Image comes from a template. Upload to replace it here, or tick “Hide this logo”.",
       "added_by_template": "Added by a template. Edit that template to delete it, or hide it here.",
-      "delete_logo": "Delete this logo"
+      "delete_logo": "Delete this logo",
+      "confirm_switch_sub": "You have unsaved changes. Switch without saving them?",
+      "draft_saved_sub": "Draft saved for {{sub}} only.",
+      "draft_saved": "Draft saved for this course.",
+      "draft_for_title": "Which sub-course this draft is for",
+      "draft_for_all": "All sub-courses",
+      "save_draft": "Save draft"
     },
     "preview": {
       "draw_failed": "The certificate could not be drawn. See the console for details.",
@@ -4705,7 +4714,21 @@
       "th_course": "Course",
       "th_location_date": "Location & Date",
       "actions": "Actions",
-      "no_courses": "No courses match the current filters."
+      "no_courses": "No courses match the current filters.",
+      "pick_scope": "Choose at least one language and one sub-course to approve.",
+      "approve_more": "Approve more",
+      "partly_approved": "Partly approved",
+      "lang_en": "English",
+      "lang_ar": "Arabic",
+      "all_subs": "all sub-courses",
+      "no_sub": "no sub-course",
+      "approved_scope": "Approved: {{list}}",
+      "approve_languages": "Approve in",
+      "loading_subs": "Checking the sub-courses…",
+      "approve_subs": "Sub-courses",
+      "all_subs_option": "All sub-courses",
+      "some_subs_option": "Only the sub-courses I tick",
+      "already_in": "already: {{langs}}"
     },
     "templates": {
       "general_template": "General template",
@@ -4891,7 +4914,8 @@
       "th_action": "Download Action",
       "awaiting": "Awaiting re-approval",
       "english": "English",
-      "awaiting_long": "Awaiting re-approval — the details on this certificate changed after the course was approved."
+      "awaiting_long": "Awaiting re-approval — the details on this certificate changed after the course was approved.",
+      "lang_not_approved": "This certificate is not approved in this language yet."
     },
     "signatory": {
       "customized": "Customized",
