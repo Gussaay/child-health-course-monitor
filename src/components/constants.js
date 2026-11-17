@@ -1768,6 +1768,84 @@ const samePrintedText = (a, b) => {
     return norm(a) === norm(b);
 };
 
+// --- Certificate approval scope (language × sub-course) --------------------
+//
+// A course can be approved for one language, or both, and — when its
+// participants are split across sub-courses — for all of them or only some.
+// course.certificateApprovalScopes maps a sub-course name (or '*' for every
+// sub-course) to the languages approved for it:
+//
+//     { '*': ['en'], 'Emergency Maternal Care': ['ar'] }
+//
+// No map at all means a course approved before scopes existed: every language
+// and every sub-course, exactly as the single flag always meant.
+
+export const CERT_LANGUAGES = ['en', 'ar'];
+export const ALL_SUB_COURSES = '*';
+// Participants with no sub-course at all are approved under this key.
+export const NO_SUB_COURSE = '';
+
+const scopeKey = (sub) => String(sub ?? '').replace(/\s+/g, ' ').trim();
+
+const scopeLanguages = (list) =>
+    (Array.isArray(list) ? list : []).filter((l) => CERT_LANGUAGES.includes(l));
+
+/** Languages this sub-course's certificates are approved in ([] = not approved). */
+export const certificateApprovedLanguages = (course, subCourse) => {
+    if (!course?.isCertificateApproved) return [];
+    const scopes = course.certificateApprovalScopes;
+    if (!scopes || typeof scopes !== 'object') return [...CERT_LANGUAGES];
+    const key = scopeKey(subCourse).toLowerCase();
+    const langs = new Set(scopeLanguages(scopes[ALL_SUB_COURSES]));
+    Object.entries(scopes).forEach(([k, v]) => {
+        if (k !== ALL_SUB_COURSES && scopeKey(k).toLowerCase() === key) scopeLanguages(v).forEach((l) => langs.add(l));
+    });
+    return CERT_LANGUAGES.filter((l) => langs.has(l));
+};
+
+/** Whether this sub-course may print in `language` (any language when omitted). */
+export const certificateApprovedFor = (course, subCourse, language = null) => {
+    const langs = certificateApprovedLanguages(course, subCourse);
+    return language ? langs.includes(language) : langs.length > 0;
+};
+
+/** True when every sub-course is approved in both languages (nothing left to approve). */
+export const certificateFullyApproved = (course) => {
+    if (!course?.isCertificateApproved) return false;
+    const scopes = course.certificateApprovalScopes;
+    if (!scopes || typeof scopes !== 'object') return true;
+    return CERT_LANGUAGES.every((l) => scopeLanguages(scopes[ALL_SUB_COURSES]).includes(l));
+};
+
+/**
+ * Adds an approval to the course's scope map. `subCourses` is ['*'] for all
+ * sub-courses, or the names to approve; `languages` is a subset of en/ar.
+ * Approving everything collapses the map to { '*': [...] }.
+ */
+export const mergeCertificateApprovalScopes = (course, subCourses, languages) => {
+    const langs = scopeLanguages(languages);
+    const previous = course?.isCertificateApproved
+        ? (course.certificateApprovalScopes && typeof course.certificateApprovalScopes === 'object'
+            ? course.certificateApprovalScopes
+            : { [ALL_SUB_COURSES]: [...CERT_LANGUAGES] })
+        : {};
+    const out = {};
+    Object.entries(previous).forEach(([k, v]) => { out[k] = scopeLanguages(v); });
+    (subCourses || []).forEach((sub) => {
+        const key = sub === ALL_SUB_COURSES ? ALL_SUB_COURSES : scopeKey(sub);
+        const existingKey = Object.keys(out).find((k) => k !== ALL_SUB_COURSES && key !== ALL_SUB_COURSES && scopeKey(k).toLowerCase() === key.toLowerCase());
+        const target = existingKey ?? key;
+        out[target] = CERT_LANGUAGES.filter((l) => (out[target] || []).includes(l) || langs.includes(l));
+    });
+    // A sub-course that adds nothing beyond '*' is just noise.
+    const all = out[ALL_SUB_COURSES] || [];
+    Object.keys(out).forEach((k) => {
+        if (k !== ALL_SUB_COURSES && out[k].every((l) => all.includes(l))) delete out[k];
+        else if (!out[k].length) delete out[k];
+    });
+    return out;
+};
+
 /** What a participant's certificate approval snapshot is called on their record. */
 export const CERT_APPROVAL_FIELD = 'certificateApproval';
 
@@ -1790,10 +1868,14 @@ export const CERT_APPROVAL_FIELD = 'certificateApproval';
  * @returns {{state: 'pending'|'approved'|'stale', changed: string[],
  *            signedName: string, signedSubCourse: string, unrecorded: boolean}}
  */
-export const certificateApprovalState = (participant, course) => {
+export const certificateApprovalState = (participant, course, language = null) => {
     const nothing = { changed: [], signedName: '', signedSubCourse: '', unrecorded: false };
 
     if (!course?.isCertificateApproved) return { ...nothing, state: 'pending' };
+    // Approved, but not this participant's sub-course, or not in this language.
+    if (!certificateApprovedFor(course, certificateSubCourseOf(course, participant), language)) {
+        return { ...nothing, state: 'pending', outOfScope: true };
+    }
 
     const signed = participant?.[CERT_APPROVAL_FIELD];
     if (!signed || (!signed.name && !signed.subCourse)) {
