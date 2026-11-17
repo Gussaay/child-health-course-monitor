@@ -3,15 +3,14 @@
 // One course: its progress, what to do next, search, and its modules. Each
 // module opens on its own page, where its lessons are listed.
 //
-// The layout follows the "Clinical Slate & Sky" design: a header with the
-// course's numbers, one large progress figure, an "Up next" card that resumes
-// where the learner stopped, filter chips, and one card per module. A card
-// opens the module page (its lessons, offline saving, the authors' tools).
-// The modules used to unfold in place, which made this page long and crowded.
-import React, { Suspense, useMemo, useState } from 'react';
+// The page is mainly the list of modules: a short header (title, one line of
+// numbers, a thin progress bar and the lesson to resume), search, then one row
+// per module that opens the module page. A locked module keeps its normal row
+// with a red "Locked" badge.
+import React, { Suspense, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    BookOpen, Plus, Pencil, ArrowLeft, ArrowRight, CheckCircle2, Lock, Unlock, Clock, Layers, Search, X,
+    Plus, Pencil, ArrowLeft, ChevronRight, CheckCircle2, Lock, Search, X,
     CloudDownload, PlayCircle, Award,
 } from 'lucide-react';
 import { Card, Button } from '../../CommonComponents';
@@ -20,13 +19,13 @@ import { searchSections } from './search';
 import { CourseBooks } from './lazyParts';
 import { savedModules } from './offline';
 import { useCourseScreen } from './screen';
-import { Pill, LockedBanner } from './ui';
+import { Pill, LockedBadge } from './ui';
 
 export function CoursePage() {
     const { t } = useTranslation();
     const {
         aiBooks, back, bookDialog, courseSections, doneCount, duration, go,
-        inOrder, isAdmin, itemModal, minutesById, minutesLeft, moduleLocked, modules, nextUp, openCourse,
+        inOrder, isAdmin, itemModal, minutesLeft, moduleLocked, modules, nextUp, openCourse,
         openCourseId, progress, query, reload, sectionLocked, sectionsByModule, setBookForm,
         setItemModal, setQuery,
     } = useCourseScreen();
@@ -48,11 +47,7 @@ export function CoursePage() {
                 : done > 0 || nextUp?.moduleId === m.id ? 'active' : 'idle';
         return { m, i, secs, done, locked, status };
     });
-    const modulesDone = moduleInfo.filter((x) => x.status === 'done').length;
 
-    const [filter, setFilter] = useState('all');
-    const shown = moduleInfo.filter((x) => filter === 'all'
-        || (filter === 'done' ? x.status === 'done' : x.status === 'active'));
 
     // The section "Up next" points at, with its numbers for the card.
     const next = useMemo(() => {
@@ -89,78 +84,48 @@ export function CoursePage() {
                 )}
             </div>
 
-            {/* The course: its numbers, its name, and how far along it is. */}
-            <section className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6 space-y-4">
-                <div className="flex flex-wrap gap-1.5">
-                    <Pill><Layers size={12} /> {t('imnci_ui.courses.main.n_modules', '{{n}} modules', { n: modules.length })}</Pill>
-                    <Pill><BookOpen size={12} /> {t('imnci_ui.courses.main.n_sections', '{{n}} sections', { n: courseSections.length })}</Pill>
-                    {timeLeft > 0 && (
-                        <Pill><Clock size={12} /> {doneCount
-                            ? t('imnci_ui.courses.time.left', 'about {{time}} left', { time: duration(timeLeft) })
-                            : t('imnci_ui.courses.time.about', 'about {{time}}', { time: duration(timeLeft) })}</Pill>
-                    )}
-                    <Pill>{inOrder ? <Lock size={12} /> : <Unlock size={12} />} {inOrder
-                        ? t('imnci_ui.courses.main.in_order', 'Sections open in order')
-                        : t('imnci_ui.courses.main.any_order', 'Open in any order')}</Pill>
+            {/* The course: its name, one line of numbers, and where to carry on. */}
+            <section className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 sm:p-5">
+                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 leading-tight">{openCourse.title}</h1>
+                {openCourse.description && (
+                    <p className="text-slate-600 text-sm mt-1 line-clamp-2">{openCourse.description}</p>
+                )}
+                <div className="text-xs sm:text-sm text-slate-500 mt-2 tabular-nums flex flex-wrap gap-x-2">
+                    <span>{t('imnci_ui.courses.main.n_modules', '{{n}} modules', { n: modules.length })}</span>
+                    <span>·</span>
+                    <span>{t('imnci_ui.courses.main.n_sections', '{{n}} sections', { n: courseSections.length })}</span>
+                    {timeLeft > 0 && (<><span>·</span><span>{doneCount
+                        ? t('imnci_ui.courses.time.left', 'about {{time}} left', { time: duration(timeLeft) })
+                        : t('imnci_ui.courses.time.about', 'about {{time}}', { time: duration(timeLeft) })}</span></>)}
+                    {!inOrder && (<><span>·</span><span>{t('imnci_ui.courses.main.any_order', 'Open in any order')}</span></>)}
                 </div>
-
-                <div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">{openCourse.title}</h1>
-                    {openCourse.description && (
-                        <p className="text-slate-600 text-sm sm:text-base mt-1.5 max-w-2xl">{openCourse.description}</p>
-                    )}
-                </div>
-
                 {courseSections.length > 0 && (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                        <div className="flex items-end justify-between gap-3">
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-4xl sm:text-5xl font-black tracking-tight text-sky-700 tabular-nums leading-none">{pct}%</span>
-                                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                                    {t('imnci_ui.courses.look.pct_completed', 'completed')}
-                                </span>
-                            </div>
-                            <div className="text-end">
-                                <div className="text-lg font-bold text-slate-900 tabular-nums leading-tight">
-                                    {t('imnci_ui.courses.main.n_of_total', '{{n}} of {{total}}', { n: doneCount, total: courseSections.length })}
-                                </div>
-                                <div className="text-xs text-slate-500">{t('imnci_ui.courses.look.sections_finished', 'Sections finished')}</div>
-                            </div>
-                        </div>
-                        <div className="h-2.5 bg-slate-200 rounded-full overflow-hidden mt-3">
+                    <div className="flex items-center gap-3 mt-3">
+                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden flex-1">
                             <div className="h-full bg-sky-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
                         </div>
-                        <div className="text-xs text-slate-600 mt-2 tabular-nums">
-                            {t('imnci_ui.courses.look.modules_finished', '{{done}} of {{total}} modules finished', { done: modulesDone, total: modules.length })}
-                        </div>
+                        <span className="text-sm font-bold text-sky-700 tabular-nums">{pct}%</span>
                     </div>
                 )}
-
                 {next ? (
-                    <div className="rounded-xl bg-sky-700 text-white p-4 flex items-center gap-3">
-                        <div className="min-w-0 flex-1">
-                            <div className="text-[11px] font-bold uppercase tracking-wider text-sky-100 flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />
+                    <button onClick={() => openSection(next.section)}
+                        className="mt-3 w-full text-start flex items-center gap-3 rounded-xl bg-sky-50 border border-sky-200 px-3 py-2.5 hover:bg-sky-100">
+                        <PlayCircle size={22} className="text-sky-700 shrink-0" />
+                        <span className="min-w-0 flex-1">
+                            <span className="block text-[11px] font-bold uppercase tracking-wider text-sky-800">
                                 {doneCount ? t('imnci_ui.courses.look.continue_label', 'Up next to continue') : t('imnci_ui.courses.look.start_label', 'Start here')}
-                            </div>
-                            <div className="font-bold text-base sm:text-lg truncate mt-0.5">{next.section.title}</div>
-                            <div className="text-xs text-sky-100 truncate">
-                                {t('imnci_ui.courses.look.module_n', 'Module {{n}}', { n: next.mi + 1 })}
                                 {' · '}{t('imnci_ui.courses.look.section_n', 'Section {{n}}', { n: `${next.mi + 1}.${next.si + 1}` })}
-                                {minutesById[next.section.id] > 0 && ` · ${duration(minutesById[next.section.id])}`}
-                            </div>
-                        </div>
-                        <button onClick={() => openSection(next.section)}
-                            className="shrink-0 inline-flex items-center gap-2 min-h-[44px] px-4 rounded-lg bg-white text-sky-800 font-semibold text-sm hover:bg-sky-50">
+                            </span>
+                            <span className="block font-semibold text-slate-900 truncate">{next.section.title}</span>
+                        </span>
+                        <span className="shrink-0 text-sm font-semibold text-sky-800">
                             {doneCount ? t('imnci_ui.courses.look.resume', 'Resume') : t('imnci_ui.courses.look.start', 'Start')}
-                            <PlayCircle size={18} />
-                        </button>
-                    </div>
+                        </span>
+                    </button>
                 ) : courseSections.length > 0 && (
-                    <div className="rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 flex items-center gap-3 font-semibold">
-                        <Award size={22} className="shrink-0" />
+                    <div className="mt-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-2.5 flex items-center gap-2 text-sm font-semibold">
+                        <Award size={18} className="shrink-0" />
                         {t('imnci_ui.courses.look.course_complete', 'Course complete')}
-                        <span className="font-normal text-sm">· {t('imnci_ui.courses.main.all_finished', 'Every section finished')}</span>
                     </div>
                 )}
             </section>
@@ -180,23 +145,6 @@ export function CoursePage() {
                         </button>
                     )}
                 </label>
-            )}
-
-            {!found && modules.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-                    {[
-                        { id: 'all', label: t('imnci_ui.courses.look.filter_all', 'All ({{n}})', { n: moduleInfo.length }) },
-                        { id: 'active', label: t('imnci_ui.courses.look.filter_in_progress', 'In progress ({{n}})', { n: moduleInfo.filter((x) => x.status === 'active').length }) },
-                        { id: 'done', label: t('imnci_ui.courses.look.filter_completed', 'Completed ({{n}})', { n: modulesDone }) },
-                    ].map((f) => (
-                        <button key={f.id} onClick={() => setFilter(f.id)}
-                            className={`shrink-0 px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-colors ${filter === f.id
-                                ? 'bg-sky-700 border-sky-700 text-white'
-                                : 'bg-white border-slate-200 text-slate-600 hover:border-sky-300'}`}>
-                            {f.label}
-                        </button>
-                    ))}
-                </div>
             )}
 
             {found ? (
@@ -232,16 +180,12 @@ export function CoursePage() {
                 <div className="text-center text-slate-500 py-10 text-sm rounded-xl border border-dashed border-slate-300 bg-white">
                     {t('imnci_ui.courses.main.no_modules', 'This course has no modules yet.')}
                 </div>
-            ) : shown.length === 0 ? (
-                <div className="text-center text-slate-500 py-10 text-sm rounded-xl border border-dashed border-slate-300 bg-white">
-                    {t('imnci_ui.courses.look.no_match_filter', 'No modules here yet.')}
-                </div>
             ) : (
-                <div className="space-y-3">
-                    {shown.map((info) => (
-                        <ModuleCard key={info.m.id} info={info} saved={!!saved[info.m.id]} />
+                <ol className="rounded-2xl border border-slate-200 bg-white shadow-sm divide-y divide-slate-100 overflow-hidden" data-testid="module-list">
+                    {moduleInfo.map((info) => (
+                        <ModuleRow key={info.m.id} info={info} saved={!!saved[info.m.id]} />
                     ))}
-                </div>
+                </ol>
             )}
 
             <Suspense fallback={null}>
@@ -276,54 +220,57 @@ export function CoursePage() {
     );
 }
 
-// One module: a card that opens the module on its own page. A locked module
-// carries a striped "Locked" band and cannot be opened.
-function ModuleCard({ info, saved }) {
+// One module in the list: its number, title and progress, opening the module
+// page. A locked module keeps the normal row, with a red "Locked" badge and
+// what it is waiting for, and cannot be opened.
+function ModuleRow({ info, saved }) {
     const { t } = useTranslation();
     const { duration, go, minutesById } = useCourseScreen();
     const { m, i, secs, done, locked, status } = info;
     const mpct = secs.length ? Math.round((done / secs.length) * 100) : 0;
     const total = secs.reduce((n, x) => n + (minutesById[x.id] || 0), 0);
-    const icon = {
-        done: <span className="w-11 h-11 rounded-full bg-emerald-50 text-emerald-600 grid place-items-center shrink-0"><CheckCircle2 size={22} /></span>,
-        active: <span className="w-11 h-11 rounded-full bg-sky-700 text-white grid place-items-center shrink-0 font-bold tabular-nums">{i + 1}</span>,
-        locked: <span className="w-11 h-11 rounded-full bg-slate-200 text-slate-500 grid place-items-center shrink-0"><Lock size={18} /></span>,
-        idle: <span className="w-11 h-11 rounded-full bg-slate-100 text-slate-700 grid place-items-center shrink-0 font-bold tabular-nums">{i + 1}</span>,
-    }[status];
     return (
-        <div className={`rounded-xl border bg-white overflow-hidden transition-shadow ${status === 'active'
-            ? 'border-slate-200 border-s-4 border-s-sky-600 shadow-md'
-            : locked ? 'border-slate-200' : 'border-slate-200 shadow-sm hover:shadow-md hover:border-sky-300'}`}
-            data-testid="module-card" data-locked={locked ? 'true' : 'false'}>
-            {locked && (
-                <LockedBanner compact title={t('imnci_ui.courses.look.locked', 'Locked')}
-                    reason={t('imnci_ui.courses.look.requires_module', 'Requires completion of Module {{n}}', { n: i })} />
-            )}
+        <li data-testid="module-card" data-locked={locked ? 'true' : 'false'}
+            className={status === 'active' ? 'border-s-4 border-s-sky-600' : undefined}>
             <button type="button" disabled={locked} onClick={() => go({ module: m.id, section: null, tab: 'read' })}
-                className={`w-full text-start p-4 flex items-center gap-3 disabled:cursor-not-allowed ${locked ? 'opacity-70' : ''}`}>
-                {icon}
-                <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
+                title={locked ? t('imnci_ui.courses.look.requires_module', 'Requires completion of Module {{n}}', { n: i }) : undefined}
+                className="w-full text-start px-4 sm:px-5 py-3.5 flex items-center gap-3 hover:bg-sky-50/60 disabled:hover:bg-transparent disabled:cursor-not-allowed">
+                <NumberCircle n={i + 1} status={status} />
+                <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                             {t('imnci_ui.courses.look.module_n', 'Module {{n}}', { n: i + 1 })}
                         </span>
+                        {locked && <LockedBadge>{t('imnci_ui.courses.look.locked', 'Locked')}</LockedBadge>}
                         {status === 'done' && <Pill tone="done">{t('imnci_ui.courses.look.completed', 'Completed')}</Pill>}
                         {status === 'active' && <Pill tone="active">{t('imnci_ui.courses.look.in_progress', 'In progress')}</Pill>}
                         {saved && <CloudDownload size={13} className="text-emerald-600" aria-label={t('imnci_ui.courses.offline.saved', 'Saved on this device')} />}
-                    </div>
-                    <div className={`font-bold text-base sm:text-lg leading-snug mt-0.5 ${locked ? 'text-slate-500' : 'text-slate-900'}`}>{m.title}</div>
-                    <div className="text-xs text-slate-500 mt-1 tabular-nums">
-                        {t('imnci_ui.courses.look.n_of_m_sections', '{{done}} of {{total}} sections finished', { done, total: secs.length })}
+                    </span>
+                    <span className="block font-bold text-base leading-snug mt-0.5 text-slate-900">{m.title}</span>
+                    <span className="block text-xs text-slate-500 mt-0.5 tabular-nums">
+                        {locked
+                            ? <span className="text-red-700 font-semibold">{t('imnci_ui.courses.look.requires_module', 'Requires completion of Module {{n}}', { n: i })}</span>
+                            : t('imnci_ui.courses.look.n_of_m_sections', '{{done}} of {{total}} sections finished', { done, total: secs.length })}
                         {total > 0 && ` · ${duration(total)}`}
-                    </div>
-                    {!locked && secs.length > 0 && done > 0 && (
-                        <div className="h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden max-w-xs">
-                            <div className={`h-full rounded-full ${status === 'done' ? 'bg-emerald-500' : 'bg-sky-600'}`} style={{ width: `${mpct}%` }} />
-                        </div>
+                    </span>
+                    {status === 'active' && secs.length > 0 && (
+                        <span className="block h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden max-w-xs">
+                            <span className="block h-full rounded-full bg-sky-600" style={{ width: `${mpct}%` }} />
+                        </span>
                     )}
-                </div>
-                {!locked && <ArrowRight size={20} className="text-slate-400 shrink-0 rtl:rotate-180" />}
+                </span>
+                {!locked && <ChevronRight size={20} className="text-slate-400 shrink-0 rtl:rotate-180" />}
             </button>
-        </div>
+        </li>
     );
+}
+
+// The circle at the start of a module or lesson row: a green tick when done,
+// the number in blue when in progress, a red padlock when locked.
+function NumberCircle({ n, status }) {
+    const size = 'w-10 h-10 text-sm';
+    if (status === 'done') return <span className={`${size} rounded-full bg-emerald-50 text-emerald-600 grid place-items-center shrink-0`}><CheckCircle2 size={20} /></span>;
+    if (status === 'locked') return <span className={`${size} rounded-full bg-red-50 text-red-600 border border-red-200 grid place-items-center shrink-0`}><Lock size={16} /></span>;
+    if (status === 'active') return <span className={`${size} rounded-full bg-sky-700 text-white grid place-items-center shrink-0 font-bold tabular-nums`}>{n}</span>;
+    return <span className={`${size} rounded-full bg-slate-100 text-slate-700 grid place-items-center shrink-0 font-bold tabular-nums`}>{n}</span>;
 }
