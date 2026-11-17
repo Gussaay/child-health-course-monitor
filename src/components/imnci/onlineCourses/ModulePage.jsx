@@ -4,7 +4,7 @@
 // it takes. A locked lesson keeps its normal row, with a red "Locked" badge.
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, ArrowLeft, CheckCircle2, Wand2, Lock, Clock, RefreshCw, FileDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, CheckCircle2, Wand2, ChevronRight, Clock, RefreshCw, FileDown } from 'lucide-react';
 import { Button } from '../../CommonComponents';
 import { sectionContent } from '../book';
 import { activityKeys } from './activityKeys';
@@ -136,13 +136,12 @@ export function ModulePage() {
                             const current = !done && !locked && i === firstOpen;
                             return (
                                 <li key={s.id} data-locked={locked ? 'true' : 'false'}
-                                    className={`flex items-center gap-3 px-4 sm:px-6 py-3.5 transition-colors ${
+                                    className={`flex items-center gap-3 px-4 sm:px-5 py-3.5 transition-colors ${
                                     locked ? '' : 'hover:bg-sky-50/60'} ${current ? 'border-s-4 border-s-sky-600' : ''}`}>
-                                    <span className={`w-9 h-9 rounded-full grid place-items-center text-xs font-bold shrink-0 tabular-nums ${
+                                    <span className={`w-10 h-10 rounded-full grid place-items-center text-sm font-bold shrink-0 tabular-nums ${
                                         done ? 'bg-emerald-50 text-emerald-600'
-                                            : locked ? 'bg-red-50 text-red-600 border border-red-200'
-                                                : current ? 'bg-sky-700 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                                        {done ? <CheckCircle2 size={16} /> : locked ? <Lock size={14} /> : i + 1}
+                                            : current ? 'bg-sky-700 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                                        {done ? <CheckCircle2 size={20} /> : i + 1}
                                     </span>
                                     <button className="flex-1 text-start min-w-0 disabled:cursor-not-allowed"
                                         disabled={locked}
@@ -153,7 +152,7 @@ export function ModulePage() {
                                         }}>
                                         <div className="flex flex-wrap items-center gap-2">
                                             {moduleNo > 0 && (
-                                                <span className="text-xs font-semibold text-slate-500">
+                                                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                                                     {t('imnci_ui.courses.look.section_n', 'Section {{n}}', { n: `${moduleNo}.${i + 1}` })}
                                                 </span>
                                             )}
@@ -161,10 +160,10 @@ export function ModulePage() {
                                             {done && <Pill tone="done">{t('imnci_ui.courses.look.completed', 'Completed')}</Pill>}
                                             {current && <Pill tone="active">{started ? t('imnci_ui.courses.look.in_progress', 'In progress') : t('imnci_ui.courses.look.up_next', 'Up next')}</Pill>}
                                         </div>
-                                        <div className="font-semibold text-slate-900 leading-snug mt-0.5">{s.title}</div>
+                                        <div className="font-bold text-base text-slate-900 leading-snug mt-0.5">{s.title}</div>
                                         <div className="text-xs text-slate-500 flex gap-2 flex-wrap mt-0.5">
                                             {locked ? (
-                                                <span className="font-semibold text-red-700">{t('imnci_ui.courses.main.finish_previous', 'Finish the previous section first')}</span>
+                                                <span className="font-semibold text-slate-900">{t('imnci_ui.courses.main.finish_previous', 'Finish the previous section first')}</span>
                                             ) : (<>
                                                 {activities > 0 && (
                                                     <span className={started ? 'font-semibold text-sky-700' : undefined}>
@@ -180,6 +179,7 @@ export function ModulePage() {
                                             )}
                                         </div>
                                     </button>
+                                    {!isAdmin && !locked && <ChevronRight size={20} className="text-slate-400 shrink-0 rtl:rotate-180" />}
                                     {isAdmin && (
                                         <span className="flex gap-1 shrink-0">
                                             <button title={t('imnci_ui.courses.main.edit_section', 'Edit section')}
