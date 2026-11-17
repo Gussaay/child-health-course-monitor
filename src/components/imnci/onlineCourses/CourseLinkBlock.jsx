@@ -18,10 +18,7 @@ import { useCourseScreen } from './screen';
 const live = (x) => x && x.isDeleted !== true;
 const norm = (s) => String(s || '').trim().toLowerCase();
 
-/** The course, module and lesson a link points to, from what is loaded. */
-export function resolveCourseLink(block, courses = [], items = []) {
-    const course = courses.filter(live).find((c) => norm(c.title) === norm(block.course));
-    if (!course) return { course: null, module: null, section: null };
+function resolveIn(course, block, items) {
     const modules = items.filter((i) => live(i) && i.kind === 'module' && i.courseId === course.id);
     const n = Number(block.module);
     const module = modules.find((m) => Number(m.order) === n)
@@ -30,7 +27,21 @@ export function resolveCourseLink(block, courses = [], items = []) {
     const section = module && block.lesson
         ? items.find((i) => live(i) && i.kind === 'section' && i.moduleId === module.id && norm(i.title) === norm(block.lesson)) || null
         : null;
-    return { course, module, section };
+    return { course, module, section, found: !!module && (!block.lesson || !!section) };
+}
+
+/**
+ * The course, module and lesson a link points to, from what is loaded.
+ * Several courses can share a title (an older import, a draft upload): the
+ * one that holds the module and lesson wins, a published one before a draft.
+ */
+export function resolveCourseLink(block, courses = [], items = []) {
+    const same = courses.filter(live).filter((c) => norm(c.title) === norm(block.course))
+        .sort((a, b) => (b.isPublished === true) - (a.isPublished === true));
+    if (!same.length) return { course: null, module: null, section: null };
+    const tried = same.map((c) => resolveIn(c, block, items));
+    const best = tried.find((r) => r.found) || tried.find((r) => r.module) || tried[0];
+    return { course: best.course, module: best.module, section: best.section };
 }
 
 export default function CourseLinkBlock({ block }) {

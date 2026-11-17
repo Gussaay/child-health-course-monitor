@@ -75,6 +75,20 @@ describe('a link to the learners\' course', () => {
         expect(resolveCourseLink({ course: 'A', module: 4 }, cs, its)).toMatchObject({ course: { id: 'new' }, module: { id: 'mx' }, section: null });
     });
 
+    it('picks, among courses with the same title, the one that holds the lesson, published first', () => {
+        const cs = [{ id: 'old', title: 'A', isPublished: true }, { id: 'draft', title: 'A' }, { id: 'pub', title: 'A', isPublished: true }];
+        const its = [
+            { id: 'o1', kind: 'module', courseId: 'old', order: 1, title: 'Module 1' },
+            { id: 'd3', kind: 'module', courseId: 'draft', order: 3, title: 'Module 3' },
+            { id: 'd3s', kind: 'section', moduleId: 'd3', title: 'Count the breaths' },
+            { id: 'p3', kind: 'module', courseId: 'pub', order: 3, title: 'Module 3' },
+            { id: 'p3s', kind: 'section', moduleId: 'p3', title: 'Count the breaths' },
+        ];
+        expect(resolveCourseLink({ course: 'A', module: 3, lesson: 'Count the breaths' }, cs, its).section.id).toBe('p3s');
+        expect(resolveCourseLink({ course: 'A', module: 3, lesson: 'Count the breaths' }, cs.slice(0, 2), its).section.id).toBe('d3s');
+        expect(resolveCourseLink({ course: 'A', module: 1 }, cs, its).module.id).toBe('o1');
+    });
+
     const render = async (block, screen) => {
         const host = document.createElement('div');
         document.body.appendChild(host);
