@@ -249,7 +249,7 @@ function ModuleRow({ info, saved }) {
                     <span className="block font-bold text-base leading-snug mt-0.5 text-slate-900">{m.title}</span>
                     <span className="block text-xs text-slate-500 mt-0.5 tabular-nums">
                         {locked
-                            ? <span className="text-red-700 font-semibold">{t('imnci_ui.courses.look.requires_module', 'Requires completion of Module {{n}}', { n: i })}</span>
+                            ? <span className="text-slate-900 font-semibold">{t('imnci_ui.courses.look.requires_module', 'Requires completion of Module {{n}}', { n: i })}</span>
                             : t('imnci_ui.courses.look.n_of_m_sections', '{{done}} of {{total}} sections finished', { done, total: secs.length })}
                         {total > 0 && ` · ${duration(total)}`}
                     </span>
@@ -266,11 +266,10 @@ function ModuleRow({ info, saved }) {
 }
 
 // The circle at the start of a module or lesson row: a green tick when done,
-// the number in blue when in progress, a red padlock when locked.
+// the number in blue when in progress, otherwise (locked too) the number.
 function NumberCircle({ n, status }) {
     const size = 'w-10 h-10 text-sm';
     if (status === 'done') return <span className={`${size} rounded-full bg-emerald-50 text-emerald-600 grid place-items-center shrink-0`}><CheckCircle2 size={20} /></span>;
-    if (status === 'locked') return <span className={`${size} rounded-full bg-red-50 text-red-600 border border-red-200 grid place-items-center shrink-0`}><Lock size={16} /></span>;
     if (status === 'active') return <span className={`${size} rounded-full bg-sky-700 text-white grid place-items-center shrink-0 font-bold tabular-nums`}>{n}</span>;
     return <span className={`${size} rounded-full bg-slate-100 text-slate-700 grid place-items-center shrink-0 font-bold tabular-nums`}>{n}</span>;
 }
