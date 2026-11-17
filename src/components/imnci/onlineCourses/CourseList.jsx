@@ -5,13 +5,13 @@
 import React, { Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    BookOpen, Plus, Pencil, Trash2, DownloadCloud, GraduationCap, Layers, RefreshCw, Library, Stethoscope, Syringe, BarChart3,
+    BookOpen, Plus, Pencil, Trash2, DownloadCloud, GraduationCap, Layers, RefreshCw, Library, Stethoscope, Syringe, BarChart3, TrendingUp,
 } from 'lucide-react';
 import { Card, CardBody, PageHeader, Button, Spinner, PageTabs } from '../../CommonComponents';
 import { ImportModal } from './ImportModal';
 import { CourseModal } from './ItemModals';
 import { DeletedItems } from './DeletedItems';
-import { AiLibraryView, ProgressDashboard } from './lazyParts';
+import { AiLibraryView, MyProgress, ProgressDashboard } from './lazyParts';
 import { useCourseScreen } from './screen';
 import { usePageAddButton } from '../../../utils/pageChrome';
 
@@ -89,12 +89,15 @@ export function CourseList() {
                 of the app, rather than a button that swaps the list out. */}
             <PageTabs active={shownTab} onChange={setTopTab} tabs={[
                 { id: 'courses', label: t('imnci_ui.courses.main.tab_courses', 'Courses'), icon: GraduationCap },
+                { id: 'mine', label: t('imnci_ui.my_progress.tab', 'My progress'), short: t('imnci_ui.my_progress.tab_short', 'Mine'), icon: TrendingUp },
                 { id: 'books', label: t('ai_library.tab_books', 'Books and AI'), short: t('ai_library.tab_books_short', 'Books'), icon: Library },
-                canSeeProgress && { id: 'progress', label: t('imnci_ui.progress.tab', 'Progress'), icon: BarChart3 },
+                canSeeProgress && { id: 'progress', label: t('imnci_ui.progress.tab_all', 'All learners'), short: t('imnci_ui.progress.tab', 'Progress'), icon: BarChart3 },
                 isAdmin && { id: 'deleted', label: t('imnci_ui.courses.main.deleted_bin', 'Deleted') + (deletedCount ? ` (${deletedCount})` : ''), icon: Trash2 },
             ]} />
 
-            {shownTab === 'progress' ? (
+            {shownTab === 'mine' ? (
+                <Suspense fallback={<Spinner />}><MyProgress /></Suspense>
+            ) : shownTab === 'progress' ? (
                 <Suspense fallback={<Spinner />}><ProgressDashboard /></Suspense>
             ) : shownTab === 'deleted' ? (
                 <DeletedItems courses={allCourses} items={allItems} onChanged={handleBinChanged} />

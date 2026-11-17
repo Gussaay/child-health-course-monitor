@@ -16,8 +16,8 @@ async function loadProgressReport(db, uid) {
   if (!me.exists) return null;
   const [courses, items, progress, users] = await Promise.all([
     db.collection("onlineCourses").select("title", "isPublished", "isDeleted").get(),
-    db.collection("onlineCourseItems").where("kind", "==", "section").select("courseId", "kind", "isDeleted").get(),
-    db.collection("onlineProgress").select("completed").get(),
+    db.collection("onlineCourseItems").where("kind", "in", ["section", "module"]).select("courseId", "kind", "isDeleted", "moduleId", "title", "order").get(),
+    db.collection("onlineProgress").select("completed", "activities", "lastUpdatedAt").get(),
     db.collection("users").select("displayName", "name", "email", "assignedState", "assignedLocality", "role", "roles", "isDeleted").get(),
   ]);
   tally("onlineProgress", "users", 1 + queryReads(users));

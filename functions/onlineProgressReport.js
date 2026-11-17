@@ -32,34 +32,73 @@ const inScope = (scope, u) => scope.level === "all"
   || (scope.level === "locality" && same(u.assignedLocality, scope.locality));
 
 /**
- * The report from plain records: courses ({id, title, isPublished}), section
- * items ({id, kind: "section", courseId}), progress ({id: uid, completed:
- * {sectionId: time}}) and users ({id, displayName, email, assignedState,
- * assignedLocality, role(s)}). Everyone in scope is listed, those who have not
- * started too.
+ * The report from plain records: courses ({id, title, isPublished}), items
+ * (modules {id, kind: "module", courseId, title, order} and sections {id,
+ * kind: "section", courseId, moduleId, title, order}), progress ({id: uid,
+ * completed: {sectionId: time}, activities: {sectionId: [keys]}}) and users
+ * ({id, displayName, email, assignedState, assignedLocality, role(s)}).
+ * Everyone in scope is listed, those who have not started too.
+ *
+ * Each course carries its modules and lessons in reading order, with how many
+ * of the people in scope finished and started each lesson, so the dashboard
+ * can show where learners stop. Each learner carries how many lessons they
+ * finished per course and per module, how many they have started but not
+ * finished, and the lesson they are on.
  */
 function buildReport({ caller, courses, items, progress, users }) {
   const scope = scopeOf(caller);
   if (!scope) return null;
   const live = courses.filter((c) => notDeleted(c) && c.isPublished !== false);
-  const sectionsOf = {};
-  items.filter((i) => notDeleted(i) && i.kind === "section").forEach((s) => {
-    (sectionsOf[s.courseId] = sectionsOf[s.courseId] || new Set()).add(s.id);
+  const kept = items.filter(notDeleted);
+  const byOrder = (a, b) => (Number(a.order) || 0) - (Number(b.order) || 0);
+  const modulesOf = {};
+  kept.filter((i) => i.kind === "module").sort(byOrder).forEach((m) => {
+    (modulesOf[m.courseId] = modulesOf[m.courseId] || []).push(m);
   });
-  const courseList = live.map((c) => ({ id: c.id, title: c.title || c.id, sections: sectionsOf[c.id]?.size || 0 }))
-    .filter((c) => c.sections > 0);
-  const progressOf = Object.fromEntries(progress.map((p) => [p.id, p.completed || {}]));
+  const sectionsOf = {};
+  kept.filter((i) => i.kind === "section").forEach((s) => {
+    (sectionsOf[s.courseId] = sectionsOf[s.courseId] || []).push(s);
+  });
+  const courseList = live.map((c) => {
+    const secs = sectionsOf[c.id] || [];
+    const mods = modulesOf[c.id] || [];
+    const modIndex = Object.fromEntries(mods.map((m, i) => [m.id, i]));
+    // Reading order: module by module, then lesson order; lessons outside a known module last.
+    const ordered = [...secs].sort((a, b) => (modIndex[a.moduleId] ?? 1e6) - (modIndex[b.moduleId] ?? 1e6) || byOrder(a, b));
+    const lessons = ordered.map((s) => ({ id: s.id, title: s.title || "", moduleId: s.moduleId || "", done: 0, started: 0 }));
+    const modules = mods.map((m) => ({ id: m.id, title: m.title || "", sections: lessons.filter((l) => l.moduleId === m.id).length }))
+      .filter((m) => m.sections > 0);
+    return { id: c.id, title: c.title || c.id, sections: lessons.length, modules, lessons };
+  }).filter((c) => c.sections > 0);
+  const recordOf = Object.fromEntries(progress.map((p) => [p.id, p]));
 
   const learners = users.filter((u) => notDeleted(u) && inScope(scope, u)).map((u) => {
-    const done = progressOf[u.id] || {};
-    let last = 0;
+    const rec = recordOf[u.id] || {};
+    const done = rec.completed || {};
+    const acts = rec.activities || {};
+    let last = millis(rec.lastUpdatedAt);
     const perCourse = {};
+    const perModule = {};
+    const startedPerCourse = {};
+    const at = {};
     courseList.forEach((c) => {
       let n = 0;
-      sectionsOf[c.id].forEach((sid) => {
-        if (done[sid]) { n += 1; last = Math.max(last, millis(done[sid])); }
+      let started = 0;
+      c.lessons.forEach((l) => {
+        if (done[l.id]) {
+          n += 1;
+          l.done += 1;
+          last = Math.max(last, millis(done[l.id]));
+          if (l.moduleId) perModule[l.moduleId] = (perModule[l.moduleId] || 0) + 1;
+        } else {
+          if (Array.isArray(acts[l.id]) && acts[l.id].length) { started += 1; l.started += 1; }
+        }
       });
+      // The lesson they are on: the first one not finished, once they have begun.
+      const current = (n || started) ? c.lessons.find((l) => !done[l.id]) : null;
+      if (current) at[c.id] = current.id;
       if (n) perCourse[c.id] = n;
+      if (started) startedPerCourse[c.id] = started;
     });
     return {
       uid: u.id,
@@ -69,6 +108,9 @@ function buildReport({ caller, courses, items, progress, users }) {
       locality: u.assignedLocality || "",
       role: rolesOf(u)[0] || "user",
       perCourse,
+      perModule,
+      startedPerCourse,
+      at,
       lastActive: last || null,
     };
   });

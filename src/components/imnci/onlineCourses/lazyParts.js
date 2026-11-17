@@ -19,3 +19,4 @@ export const ExerciseManagerView = lazy(() => import('../exercises.jsx').then((m
 // without leaving for another screen and finding their way back.
 export const ProtocolEditor = lazy(() => import('../protocol'));
 export const ProgressDashboard = lazy(() => import('./ProgressDashboard').then((m) => ({ default: m.ProgressDashboard })));
+export const MyProgress = lazy(() => import('./MyProgress').then((m) => ({ default: m.MyProgress })));
