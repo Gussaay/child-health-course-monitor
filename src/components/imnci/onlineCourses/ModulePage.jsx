@@ -12,6 +12,7 @@ import { ConvertBookModal } from './ConvertBookModal';
 import { ItemModal } from './ItemModals';
 import { OfflineSave } from './OfflineSave';
 import { useCourseScreen } from './screen';
+import { LockedBanner } from './ui';
 import { useImnci } from '../shared';
 import { notify } from '../../dialogs';
 import { shareFile } from '../../../utils/sharePdf';
@@ -20,7 +21,7 @@ import { buildPackage, packageFileName } from './coursePackage';
 export function ModulePage() {
     const { t } = useTranslation();
     const {
-        back, convertOpen, duration, go, isAdmin, itemModal, minutesById,
+        back, convertOpen, duration, go, isAdmin, itemModal, minutesById, moduleLocked,
         minutesLeft, modules, openCourse, openCourseId, openModule, progress, reload,
         removeItem, resync, sectionLocked, sectionsByModule, setConvertOpen, setEditingTab,
         setItemModal, syncing,
@@ -44,6 +45,9 @@ export function ModulePage() {
     };
     const doneHere = secs.filter((s) => progress.completed?.[s.id]).length;
     const moduleNo = modules.findIndex((m) => m.id === openModule.id) + 1;
+    // A module opened by its link before the one before it is finished.
+    const locked = moduleNo > 1 && !!moduleLocked?.(moduleNo - 1);
+    const STRIPES = { backgroundImage: 'repeating-linear-gradient(135deg, rgba(100,116,139,0.10) 0 10px, rgba(100,116,139,0.02) 10px 20px)' };
 
     return (
         <div className="space-y-4 max-w-4xl mx-auto">
@@ -93,7 +97,19 @@ export function ModulePage() {
                     )}
                 </div>
 
-                {secs.length === 0 ? (
+                {locked ? (
+                    <div className="p-4">
+                        <LockedBanner
+                            title={t('imnci_ui.courses.look.module_locked', 'This module is locked')}
+                            reason={t('imnci_ui.courses.look.requires_module', 'Requires completion of Module {{n}}', { n: moduleNo - 1 })}
+                            action={(
+                                <button onClick={() => go({ module: modules[moduleNo - 2].id, section: null, tab: 'read' })}
+                                    className="mt-1 inline-flex items-center gap-2 min-h-[44px] px-4 rounded-lg bg-sky-700 text-white text-sm font-semibold hover:bg-sky-800">
+                                    {t('imnci_ui.courses.look.go_to_module', 'Go to Module {{n}}', { n: moduleNo - 1 })}
+                                </button>
+                            )} />
+                    </div>
+                ) : secs.length === 0 ? (
                     <div className="p-12 text-center text-slate-500 text-sm space-y-2">
                         <div>{syncing ? t('imnci_ui.courses.main.checking_sections', 'Checking for sections…') : t('imnci_ui.courses.main.no_sections', 'No sections yet.')}</div>
                         {isAdmin && !syncing && (
@@ -117,7 +133,8 @@ export function ModulePage() {
                             const activitiesDone = done ? activities : actKeys.filter((k) => saved.includes(k)).length;
                             const started = !done && activitiesDone > 0;
                             return (
-                                <li key={s.id} className={`flex items-center gap-3 px-4 sm:px-6 py-3.5 transition-colors ${
+                                <li key={s.id} style={locked ? STRIPES : undefined} data-locked={locked ? 'true' : 'false'}
+                                    className={`flex items-center gap-3 px-4 sm:px-6 py-3.5 transition-colors ${
                                     locked ? 'bg-slate-50' : 'hover:bg-sky-50/60'}`}>
                                     <span className={`w-8 h-8 rounded-full grid place-items-center text-xs font-bold shrink-0 ${
                                         done ? 'bg-emerald-50 text-emerald-600'
@@ -138,7 +155,12 @@ export function ModulePage() {
                                         )}
                                         <div className={`font-semibold truncate ${locked ? 'text-slate-400' : 'text-slate-800'}`}>{s.title}</div>
                                         <div className="text-xs text-slate-500 flex gap-2 flex-wrap mt-0.5">
-                                            {locked ? <span>{t('imnci_ui.courses.main.finish_previous', 'Finish the previous section first')}</span> : (<>
+                                            {locked ? (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-700 text-white text-[10px] font-bold uppercase tracking-wider">
+                                                    <Lock size={10} /> {t('imnci_ui.courses.look.locked', 'Locked')}
+                                                    <span className="normal-case tracking-normal font-semibold">· {t('imnci_ui.courses.main.finish_previous', 'Finish the previous section first')}</span>
+                                                </span>
+                                            ) : (<>
                                                 {activities > 0 && (
                                                     <span className={started ? 'font-semibold text-sky-700' : undefined}>
                                                         {started || done

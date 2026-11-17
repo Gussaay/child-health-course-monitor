@@ -19,6 +19,7 @@ import { NATIONAL_FORMS } from '../recordingForms';
 import { BookletProtocolView } from '../bookletView';
 import { RecordingFormView } from '../recordingFormView';
 import { useCourseScreen } from './screen';
+import CourseLinkBlock from './CourseLinkBlock';
 import { useActivity, RevealBlock, FlipBlock, SortBlock, StepsBlock, StoryBlock } from './interactive';
 
 // The exercise players are heavy (the whole recording form), so they load
@@ -606,6 +607,7 @@ export function ContentBlocks({ blocks, scale = 1, activities = false }) {
                 if (b.type === 'sort') return <SortBlock key={i} block={b} activityKey={key(i)} />;
                 if (b.type === 'steps') return <StepsBlock key={i} block={b} activityKey={key(i)} />;
                 if (b.type === 'story') return <StoryBlock key={i} block={b} activityKey={key(i)} />;
+                if (b.type === 'courselink') return <CourseLinkBlock key={i} block={b} />;
                 if (b.type === 'growthchart') return <Suspense key={i} fallback={null}><GrowthChartBlock block={b} activityKey={key(i)} /></Suspense>;
                 if (b.type === 'booklet') {
                     return <BookletBlock key={i} block={b} />;

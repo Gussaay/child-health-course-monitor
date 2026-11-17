@@ -77,7 +77,7 @@ export function buildPackage({ course, modules = [], sectionsByModule = {}, exer
         format: PACKAGE_FORMAT,
         version: PACKAGE_VERSION,
         exportedAt: new Date().toISOString(),
-        course: copy(clean({ title: course?.title, description: course?.description, imageUrl: course?.imageUrl })),
+        course: copy(clean({ title: course?.title, description: course?.description, imageUrl: course?.imageUrl, audience: course?.audience })),
         modules: outModules,
         exercises: outExercises,
     };
@@ -132,6 +132,7 @@ export function checkPackage(pkg, knownExerciseIds = []) {
             TABS.forEach((tab) => (s?.[tab] || []).forEach((b, bi) => {
                 if (!BLOCK_TYPES.includes(b?.type)) errors.push(`${sw}, ${tab} block ${bi + 1}: unknown block type "${b?.type}".`);
                 if (b?.type === 'growthchart') growthChartErrors(b).forEach((e) => errors.push(`${sw}, ${tab} block ${bi + 1}: ${e}`));
+                if (b?.type === 'courselink') courseLinkErrors(b).forEach((e) => errors.push(`${sw}, ${tab} block ${bi + 1}: ${e}`));
                 if (b?.type === 'exercise' && !fileIds.has(b.exerciseId) && !knownExerciseIds.includes(b.exerciseId)) {
                     warnings.push(`${sw}: links to exercise "${b.exerciseId}", which is not in the file or the app.`);
                 }
@@ -185,6 +186,15 @@ export const packageFileName = (title) =>
 
 // A "Plot on the chart" activity must place its child on a printed chart.
 // One without a weight is free practice and needs nothing more.
+/** What is wrong with a link to another course's module or lesson. */
+export function courseLinkErrors(b) {
+    const errors = [];
+    if (!String(b?.course || '').trim()) errors.push('the link to another course does not name the course.');
+    const n = Number(b?.module);
+    if (!Number.isInteger(n) || n < 1) errors.push('the link to another course needs the module number (1 or more).');
+    return errors;
+}
+
 export function growthChartErrors(b) {
     const out = [];
     if (b.chart && !['wfl', 'wfh', 'wfa'].includes(b.chart)) out.push(`the chart "${b.chart}" is not weight-for-length, weight-for-height or weight-for-age.`);

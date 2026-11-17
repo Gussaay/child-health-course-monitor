@@ -1,7 +1,7 @@
 // src/components/imnci/onlineCourses/SectionTabEditor.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, Stethoscope, Film, BookOpen, ClipboardList, Flag, Lightbulb, Layers, Shuffle, ListOrdered, BookOpenCheck, LineChart } from 'lucide-react';
+import { Plus, Trash2, Stethoscope, Film, BookOpen, ClipboardList, Flag, Lightbulb, Layers, Shuffle, ListOrdered, BookOpenCheck, LineChart, Link2 } from 'lucide-react';
 import { ref as storageRef, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { Button, Modal, Input, Select, Textarea } from '../../CommonComponents';
 import { notify } from '../../dialogs';
@@ -67,13 +67,14 @@ const newCard = (type) => (
                                     : type === 'steps' ? { type: 'steps', title: '', steps: [] }
                                         : type === 'story' ? { type: 'story', title: '', stages: [{ text: '', question: '', options: [], answer: 0, explanation: '' }] }
                                             : type === 'growthchart' ? { type: 'growthchart', title: '', text: '', sex: 'female', ageMonths: 12, weightKg: 8, lengthCm: 72, explanation: '' }
+                                            : type === 'courselink' ? { type: 'courselink', course: 'IMNCI distance learning modules', module: 1, lesson: '', label: '', text: '' }
                                             : { type: 'video', url: '', title: '', caption: '' });
 
 const CARD_NAMES = {
     booklet: 'Chart booklet table', form: 'Recording form', note: 'Note', video: 'Video',
     question: 'Question', exercise: 'Case or exercise', page: 'Book page',
     reveal: 'Think first', flip: 'Flip cards', sort: 'Sort it', steps: 'Step by step', story: 'Case in stages',
-    growthchart: 'Plot on the chart',
+    growthchart: 'Plot on the chart', courselink: 'Link to a module',
 };
 
 // A list written as lines. It keeps what is typed as typed and hands the
@@ -467,6 +468,23 @@ export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
                             </div>
                         )}
 
+                        {b.type === 'courselink' && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <Input label={t('imnci_ui.courses.editor.link_course', 'Course (its title)')} value={b.course || ''}
+                                    onChange={(e) => updateExtra(i, { course: e.target.value })} />
+                                <Input type="number" label={t('imnci_ui.courses.editor.link_module', 'Module number')} value={b.module ?? ''}
+                                    onChange={(e) => updateExtra(i, { module: e.target.value === '' ? undefined : Number(e.target.value) })} />
+                                <Input label={t('imnci_ui.courses.editor.link_lesson', 'Lesson title (optional: empty opens the module)')} value={b.lesson || ''}
+                                    onChange={(e) => updateExtra(i, { lesson: e.target.value })} />
+                                <Input label={t('imnci_ui.courses.editor.link_label', 'Label on the link (optional)')} value={b.label || ''}
+                                    onChange={(e) => updateExtra(i, { label: e.target.value })} />
+                                <div className="sm:col-span-2">
+                                    <Input label={t('imnci_ui.courses.editor.link_text', 'What to do there (optional)')} value={b.text || ''}
+                                        onChange={(e) => updateExtra(i, { text: e.target.value })} />
+                                </div>
+                            </div>
+                        )}
+
                         {b.type === 'question' && (
                             <div className="space-y-2">
                                 <Textarea rows={2} value={b.text || ''} placeholder={t('imnci_ui.courses.editor.the_question', 'The question')}
@@ -532,7 +550,7 @@ export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
                     </button>
                 )}
                 {whole && [
-                    ['reveal', Lightbulb], ['flip', Layers], ['sort', Shuffle], ['steps', ListOrdered], ['story', BookOpenCheck], ['growthchart', LineChart],
+                    ['reveal', Lightbulb], ['flip', Layers], ['sort', Shuffle], ['steps', ListOrdered], ['story', BookOpenCheck], ['growthchart', LineChart], ['courselink', Link2],
                 ].map(([type, Icon]) => (
                     <button key={type} onClick={() => addExtra(type)}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">

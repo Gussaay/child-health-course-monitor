@@ -390,7 +390,7 @@ export function countWords(section) {
     return all.reduce((n, b) => {
         if (b.type === 'list') return n + b.items.join(' ').split(/\s+/).filter(Boolean).length;
         if (b.type === 'image' || b.type === 'page' || b.type === 'video') return n;
-        if (['reveal', 'flip', 'sort', 'steps', 'story', 'growthchart'].includes(b.type)) {
+        if (['reveal', 'flip', 'sort', 'steps', 'story', 'growthchart', 'courselink'].includes(b.type)) {
             const text = JSON.stringify(b).replace(/"[a-zA-Z]+":/g, ' ').replace(/<[^>]*>/g, ' ').replace(/[{}[\],"]/g, ' ');
             return n + text.split(/\s+/).filter(Boolean).length;
         }
@@ -413,6 +413,9 @@ export const BLOCK_TYPES = [
     'reveal', 'flip', 'sort', 'steps', 'story',
     // A child plotted on the official WHO chart from the chart booklet.
     'growthchart',
+    // A link to a module or lesson of another course (the facilitator guide
+    // opens the learners' module it is talking about).
+    'courselink',
 ];
 
 // ---------------------------------------------------------------------------
@@ -426,7 +429,7 @@ export const BLOCK_TYPES = [
 // every card was moved below the text on the first save.
 // ---------------------------------------------------------------------------
 
-export const CARD_TYPES = ['video', 'question', 'exercise', 'page', 'booklet', 'form', 'reveal', 'flip', 'sort', 'steps', 'story', 'growthchart'];
+export const CARD_TYPES = ['video', 'question', 'exercise', 'page', 'booklet', 'form', 'reveal', 'flip', 'sort', 'steps', 'story', 'growthchart', 'courselink'];
 export const isCard = (b) => CARD_TYPES.includes(b?.type) || (b?.type === 'note' && !!b.label);
 export const cardMarker = (key) => `[[card ${key}]]`;
 const MARKER_PARA = /<p[^>]*>\s*\[\[card ([a-z0-9]+)\]\]\s*(?:<br\s*\/?>)?\s*<\/p>/gi;

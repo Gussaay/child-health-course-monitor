@@ -7928,7 +7928,9 @@
         "start_course": "Start the course",
         "the_book": "The book",
         "use_edit_tab": "Use Edit {{tab}}, above, to write it.",
-        "use_import": "Use Import to bring in the IMNCI course from the Android app."
+        "use_import": "Use Import to bring in the IMNCI course from the Android app.",
+        "smaller_text": "Smaller text",
+        "larger_text": "Larger text"
       },
       "question": {
         "correct": "Correct.",
@@ -7980,10 +7982,20 @@
         "explanation": "Explanation",
         "finish_to_open": "Finish this section to open the next",
         "course_complete": "Course complete",
-        "back_to_course": "Back to the course"
+        "back_to_course": "Back to the course",
+        "module_locked": "This module is locked",
+        "go_to_module": "Go to Module {{n}}",
+        "lesson_locked": "This lesson is locked",
+        "finish_earlier": "Finish the lessons before it first. Lessons open in order.",
+        "go_to_current": "Go to your current lesson"
       },
       "activity": {
         "kind_growthchart": "Plot on the chart"
+      },
+      "link": {
+        "module_n": "Module {{n}}",
+        "open": "Open in the learners' course",
+        "missing": "This part of \"{{course}}\" is not in the app yet."
       }
     },
     "exercises": {

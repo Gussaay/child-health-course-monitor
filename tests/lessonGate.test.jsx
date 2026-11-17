@@ -82,3 +82,22 @@ describe('a lesson is completed by doing it', () => {
         expect(button(host, 'Complete & continue')).toBeDefined();
     });
 });
+
+describe('a locked lesson', () => {
+    beforeEach(() => { localStorage.clear(); document.body.innerHTML = ''; });
+    it('shows a locked banner instead of the lesson, with the way to the current lesson', async () => {
+        const { host, went } = await open({
+            openSection: nextLesson, sectionLocked: (secs, i) => i > 0, moduleLocked: () => false,
+            nextUp: { moduleId: 'm1', sectionId: 's1' },
+        });
+        expect(host.querySelector('[data-testid="locked-banner"]')).toBeTruthy();
+        expect(host.textContent).toContain('This lesson is locked');
+        expect(button(host, 'Complete & continue')).toBeUndefined();
+        await click(button(host, 'Go to your current lesson'));
+        expect(went.at(-1)).toMatchObject({ section: 's1' });
+    });
+    it('opens for someone managing the course', async () => {
+        const { host } = await open({ openSection: nextLesson, isAdmin: true, sectionLocked: () => true, moduleLocked: () => true });
+        expect(host.querySelector('[data-testid="locked-banner"]')).toBeNull();
+    });
+});

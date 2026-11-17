@@ -9,6 +9,8 @@
 //                                      The course itself (its id, title, published or not) is left as it is.
 //   node upload-modules.cjs --undo     removes what --commit or --replace wrote (by importBatch)
 // A dry run says which of the two it would be.
+//   --guide  works on the facilitator guide file instead (its own course, shown only to facilitators,
+//            with its own importBatch tag, so commit, replace and undo never touch the learners' modules).
 // KEY_FILE (or --key <file>) is the Firebase service-account JSON.
 const path = require('path'), fs = require('fs');
 const req = (m) => require(require.resolve(m, { paths: [process.cwd(), path.join(__dirname, '..', '..'), __dirname] }));
@@ -18,8 +20,9 @@ const keyPath = a.includes('--key') ? a[a.indexOf('--key') + 1] : process.env.KE
 if (!keyPath || !fs.existsSync(keyPath)) { console.error('Pass --key <service-account.json> or set KEY_FILE'); process.exit(1); }
 const COMMIT = a.includes('--commit'), UNDO = a.includes('--undo'), REPLACE = a.includes('--replace');
 // The batch tag keeps the name of the first upload (Modules 1 and 2), so replace and undo still find it.
-const BATCH = 'imnci-dimci-modules-1-2-2026-11-15';
-const FILE = path.join(__dirname, '..', '..', 'course-packages', 'who-dimci-modules-1-9.imnci.json');
+const GUIDE = a.includes('--guide');
+const BATCH = GUIDE ? 'imnci-dimci-facilitator-guide-2026-11-17' : 'imnci-dimci-modules-1-2-2026-11-15';
+const FILE = path.join(__dirname, '..', '..', 'course-packages', GUIDE ? 'who-dimci-facilitator-guide.imnci.json' : 'who-dimci-modules-1-9.imnci.json');
 
 admin.initializeApp({ credential: admin.credential.cert(JSON.parse(fs.readFileSync(keyPath, 'utf8'))) });
 const db = admin.firestore(), now = () => admin.firestore.FieldValue.serverTimestamp();
