@@ -1,0 +1,42 @@
+name: Deploy Firestore indexes
+
+# One-off: adds the composite indexes in firestore.indexes.json (courseId +
+# lastUpdatedAt / createdAt) that the live course listeners need. It runs only
+# when the branch below is pushed, so it never runs with the main deploy.
+on:
+  push:
+    branches:
+      - claude/deploy-live-course-indexes
+
+jobs:
+  indexes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}'
+      # The project already has indexes that are not in firestore.indexes.json.
+      # Non-interactive deploys refuse to run unless told to delete them, so the
+      # live indexes are read first and merged with ours: nothing is deleted.
+      - name: Merge live indexes into firestore.indexes.json
+        run: |
+          npx --yes firebase-tools@13 firestore:indexes --project imnci-courses-monitor > live-indexes.json
+          node -e '
+            const fs = require("fs");
+            const live = JSON.parse(fs.readFileSync("live-indexes.json", "utf8"));
+            const ours = JSON.parse(fs.readFileSync("firestore.indexes.json", "utf8"));
+            const key = (i) => JSON.stringify([i.collectionGroup, i.queryScope, i.fields]);
+            const seen = new Set((live.indexes || []).map(key));
+            const indexes = [...(live.indexes || []), ...(ours.indexes || []).filter((i) => !seen.has(key(i)))];
+            const fieldOverrides = live.fieldOverrides || [];
+            fs.writeFileSync("firestore.indexes.json", JSON.stringify({ indexes, fieldOverrides }, null, 2));
+            console.log(`live ${(live.indexes || []).length} + new ${indexes.length - (live.indexes || []).length} = ${indexes.length} indexes, ${fieldOverrides.length} field overrides kept`);
+          '
+      - name: Deploy Firestore indexes (add only)
+        run: npx --yes firebase-tools@13 deploy --only firestore:indexes --project imnci-courses-monitor --non-interactive
+      - name: Save the merged index list
+        uses: actions/upload-artifact@v4
+        with:
+          name: firestore-indexes
+          path: firestore.indexes.json

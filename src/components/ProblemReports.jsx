@@ -23,6 +23,7 @@ import { notify, confirmDialog } from './dialogs';
 import {
     submitProblemReport, listProblemReports, setProblemReportStatus, deleteProblemReport,
 } from '../data';
+import { subscribeNewProblemReports } from '../hooks/liveCourseCore.js';
 import { useTranslation } from 'react-i18next';
 import { askDataAssistant } from '../utils/askDataAssistant';
 
@@ -233,6 +234,23 @@ export function ProblemReportsTab() {
     }, [t]);
 
     useEffect(() => { load(); }, [load]);
+
+    // New reports appear while this tab is open (only new ones are read).
+    const loaded = reports !== null;
+    useEffect(() => {
+        if (!loaded) return undefined;
+        const newest = (reports || []).reduce((m, r) => Math.max(m, r.createdAt?.toMillis ? r.createdAt.toMillis() : 0), 0) || Date.now() - 60000;
+        let unsub = null;
+        try {
+            unsub = subscribeNewProblemReports(newest, (rows) => setReports((prev) => {
+                const map = new Map((prev || []).map((r) => [r.id, r]));
+                rows.forEach((r) => map.set(r.id, r));
+                return Array.from(map.values()).sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+            }), (e) => console.warn('[live] problem reports listener stopped:', e?.code || e?.message || e));
+        } catch { /* the Refresh still works */ }
+        return () => { try { unsub?.(); } catch { /* closed */ } };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loaded]);
 
     const shown = useMemo(() => {
         const all = reports || [];

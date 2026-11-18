@@ -47,6 +47,8 @@ if (typeof window !== 'undefined') {
 
 // --- Lazy Load View Components ---
 const DashboardView = lazy(() => import('./components/DashboardView'));
+// Keeps the open course live (participants, tests, monitoring, exercises); hooks/useLiveCourse.js.
+const LiveCourseSync = lazy(() => import('./hooks/useLiveCourse.js'));
 const CourseReportView = lazy(() => import('./components/CourseReportView.jsx').then(module => ({ default: module.CourseReportView })));
 const FinalReportManager = lazy(() => import('./components/FinalReportManager.jsx').then(module => ({ default: module.FinalReportManager })));
 const ObservationView = lazy(() => import('./components/MonitoringView').then(module => ({ default: module.ObservationView })));
@@ -1992,25 +1994,6 @@ export default function App() {
         setDataScope({ level: levelFromPermissions(permissions), states: userStates, localities: userLocalities });
     }, [user, permissionsLoading, permissions, userStates, userLocalities, setDataScope]);
 
-    // The offline cache only holds what THIS device last read. Tests and scores
-    // entered on another phone (or a cache that never held this course's tests,
-    // which comes back as an empty list rather than a miss) stay invisible until
-    // the server is asked, so every cache hit is followed by a server refresh.
-    const refreshCourseDetailsFromServer = useCallback(async (courseId) => {
-        if (!courseId || !isOnline()) return;
-        try {
-            const [serverParticipants, serverTests] = await Promise.all([
-                listAllParticipantsForCourse(courseId, { source: 'server' }),
-                listParticipantTestsForCourse(courseId, { source: 'server' })
-            ]);
-            const activeParticipants = (serverParticipants || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
-            const activeTests = (serverTests || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
-            setCourseDetailsCache(prev => ({ ...prev, [courseId]: { ...(prev[courseId] || {}), participants: activeParticipants, participantTests: activeTests } }));
-        } catch (error) {
-            console.error("Server refresh of course participants/tests failed:", error);
-        }
-    }, []);
-
     useEffect(() => {
         if (selectedCourseId && !courseDetailsCache[selectedCourseId]?.allObs && !courseDetailsLoading) {
             const fetchFullCourseDetails = async () => {
@@ -2040,7 +2023,6 @@ export default function App() {
 
                     if (!isCacheMiss) {
                         processAndSet(participantsData, allCourseData, finalReport, testData);
-                        refreshCourseDetailsFromServer(selectedCourseId);
                     } else {
                         const [serverParticipants, serverAllCourse, serverFinalReport, serverTestData] = await Promise.all([
                             listAllParticipantsForCourse(selectedCourseId, { source: 'server' }).catch(()=>[]),
@@ -2058,7 +2040,7 @@ export default function App() {
             };
             fetchFullCourseDetails();
         }
-    }, [selectedCourseId, courseDetailsCache, courseDetailsLoading, refreshCourseDetailsFromServer]); 
+    }, [selectedCourseId, courseDetailsCache, courseDetailsLoading]); 
 
     const canSeeAllData = useMemo(() => permissions.canUseSuperUserAdvancedFeatures || permissions.canUseFederalManagerAdvancedFeatures, [permissions]);
 
@@ -2429,7 +2411,7 @@ export default function App() {
         setSelectedCourseId(courseId);
         navigate('courseReport', { courseId });
 
-        if (courseDetailsCache[courseId]?.allObs && courseDetailsCache[courseId]?.participants && courseDetailsCache[courseId]?.participantTests) { refreshCourseDetailsFromServer(courseId); return; }
+        if (courseDetailsCache[courseId]?.allObs && courseDetailsCache[courseId]?.participants && courseDetailsCache[courseId]?.participantTests) { return; } // kept current by useLiveCourseDetails
         // Already being fetched by another path; its result lands in the same
         // cache entry and the open page picks it up.
         if (courseDetailsLoading) return;
@@ -2469,7 +2451,6 @@ export default function App() {
             const activeFinalReport = (finalFinalReport && finalFinalReport.isDeleted !== true && finalFinalReport.isDeleted !== "true") ? finalFinalReport : null;
             
             setCourseDetailsCache(prev => ({ ...prev, [courseId]: { participants: activeParticipants, allObs: activeObs, allCases: activeCases, finalReport: activeFinalReport, participantTests: activeTests } }));
-            if (!isCacheMiss) refreshCourseDetailsFromServer(courseId);
         } catch (error) { 
             console.error("Error loading course report data:", error); 
             setToast({ show: true, message: t('app_extra.toast.course_report_load_failed', 'Failed to load course report data. Please try again.'), type: 'error' }); 
@@ -2482,7 +2463,7 @@ export default function App() {
         } finally { 
             setLoading(false); setCourseDetailsLoading(false); 
         }
-    }, [navigate, courseDetailsCache, courseDetailsLoading, t, refreshCourseDetailsFromServer]);
+    }, [navigate, courseDetailsCache, courseDetailsLoading, t]);
 
     const handleOpenCourseForTestForm = useCallback(async (courseId) => {
         setLoading(true); setSelectedCourseId(courseId); setSelectedParticipantId(null); 
@@ -2501,7 +2482,6 @@ export default function App() {
             const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
             const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
             setCourseDetailsCache(prev => ({ ...prev, [courseId]: { ...(prev[courseId] || {}), participants: activeParticipants, participantTests: activeTests } }));
-            if (servedFromCache) refreshCourseDetailsFromServer(courseId);
             setActiveCoursesTab('test-dashboard'); setView('courses');
         } catch (error) { 
             console.error("Error loading data for test form:", error); 
@@ -2510,7 +2490,7 @@ export default function App() {
         } finally { 
             setLoading(false); 
         }
-    }, [navigate, t, refreshCourseDetailsFromServer]); 
+    }, [navigate, t]); 
 
     const handleApproveSubmission = useCallback(async (submission) => {
         if (await confirmDialog(t('app_extra.confirm.approve', 'Approve {{name}}?', { name: submission.name }))) {
@@ -2692,7 +2672,7 @@ export default function App() {
                 onOpenReport={handleOpenCourseReport} onOpenTestForm={handleOpenCourseForTestForm} 
                 onOpenAttendanceManager={(courseId) => { setSelectedCourseId(courseId); navigate('attendanceManager', { courseId }); }}
                 userStates={userStates} userLocalities={userLocalities} activeCoursesTab={activeCoursesTab} setActiveCoursesTab={setActiveCoursesTab}
-                selectedCourse={selectedCourse} participants={courseDetails.participants || []} participantTests={courseDetails.participantTests || []} 
+                selectedCourse={selectedCourse} participants={courseDetails.participants || []} participantTests={courseDetails.participantTests || []} allObs={courseDetails.allObs} allCases={courseDetails.allCases} 
                 onOpenParticipantReport={(pid) => { setSelectedCourseId(selectedCourse.id); setSelectedParticipantId(pid); navigate('participantReport'); }}
                 onAddFinalReport={handleAddFinalReport} onEditFinalReport={handleEditFinalReport}
                 selectedParticipantId={selectedParticipantId} onSetSelectedParticipantId={setSelectedParticipantId}
@@ -2770,7 +2750,7 @@ case 'meetings':
                 />
             ) : null;
 
-            case 'courseReport': return permissions.canViewCourse ? (selectedCourse && <CourseReportView course={selectedCourse} onSaveFinalReport={permissions.canUseFederalManagerAdvancedFeatures ? handleSaveFinalReport : undefined} onFinalReportChanged={(saved) => setCourseDetailsCache(prev => ({ ...prev, [selectedCourse.id]: { ...prev[selectedCourse.id], finalReport: saved } }))} isLoadingData={courseDetails.participants === null || courseDetails.allObs === null} loadFailed={!!courseDetails.loadFailed} onRetry={() => { setCourseDetailsCache(prev => { const next = { ...prev }; delete next[selectedCourse.id]; return next; }); handleOpenCourseReport(selectedCourse.id); }} participants={courseDetails.participants} allObs={courseDetails.allObs} allCases={courseDetails.allCases} finalReportData={courseDetails.finalReport} onBack={goBack} onEditFinalReport={handleEditFinalReport} onDeletePdf={handleDeletePdf} onViewParticipantReport={(pid) => { setSelectedParticipantId(pid); navigate('participantReport'); }} onShare={(course) => handleShare(course, 'course')} setToast={setToast} allHealthFacilities={healthFacilities} />) : null;
+            case 'courseReport': return permissions.canViewCourse ? (selectedCourse && <CourseReportView course={selectedCourse} onSaveFinalReport={permissions.canUseFederalManagerAdvancedFeatures ? handleSaveFinalReport : undefined} onFinalReportChanged={(saved) => setCourseDetailsCache(prev => ({ ...prev, [selectedCourse.id]: { ...prev[selectedCourse.id], finalReport: saved } }))} isLoadingData={courseDetails.participants === null || courseDetails.allObs === null} loadFailed={!!courseDetails.loadFailed} onRetry={() => { setCourseDetailsCache(prev => { const next = { ...prev }; delete next[selectedCourse.id]; return next; }); handleOpenCourseReport(selectedCourse.id); }} participants={courseDetails.participants} allObs={courseDetails.allObs} allCases={courseDetails.allCases} participantTests={courseDetails.participantTests || undefined} finalReportData={courseDetails.finalReport} onBack={goBack} onEditFinalReport={handleEditFinalReport} onDeletePdf={handleDeletePdf} onViewParticipantReport={(pid) => { setSelectedParticipantId(pid); navigate('participantReport'); }} onShare={(course) => handleShare(course, 'course')} setToast={setToast} allHealthFacilities={healthFacilities} />) : null;
 
             case 'facilitatorForm':
                 return permissions.canManageHumanResource ? (<FacilitatorForm 
@@ -3213,6 +3193,7 @@ case 'meetings':
         <div className="min-h-screen bg-surface flex flex-col pt-0 relative">
             {/* A shared link opened in a phone browser: offer the Android app. */}
             <GetAppBanner />
+            {selectedCourseId && user && <Suspense fallback={null}><LiveCourseSync courseId={selectedCourseId} details={courseDetailsCache[selectedCourseId]} user={user} setCourseDetailsCache={setCourseDetailsCache} /></Suspense>}
             
             <style>{`
                 @media (max-width: 768px) {

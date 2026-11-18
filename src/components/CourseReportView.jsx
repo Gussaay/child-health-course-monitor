@@ -1119,7 +1119,7 @@ export function CourseReportView({ isLoadingData = false, loadFailed = false, on
 }
 
 function CourseReportBody({ 
-    course, onBack, participants: rawParticipants, allObs: rawObs, allCases: rawCases, finalReportData, onEditFinalReport, 
+    course, onBack, participants: rawParticipants, allObs: rawObs, allCases: rawCases, participantTests: liveParticipantTests, finalReportData, onEditFinalReport, 
     onDeletePdf, onViewParticipantReport, isSharedView = false, onShare, setToast, allHealthFacilities: rawFacilities,
     onSaveFinalReport, onFinalReportChanged
 }) {
@@ -1191,6 +1191,8 @@ function CourseReportBody({
 
     useEffect(() => {
         if (!isEmoncCourse || !course?.id) { setEmoncTests([]); return; }
+        // The app's live copy of the course's test records, when it passed one.
+        if (Array.isArray(liveParticipantTests)) { setEmoncTests(liveParticipantTests.filter(t => t.isDeleted !== true && t.isDeleted !== 'true')); return; }
         let cancelled = false;
         (async () => {
             let tests = [];
@@ -1202,7 +1204,7 @@ function CourseReportBody({
             if (!cancelled) setEmoncTests((tests || []).filter(t => t.isDeleted !== true && t.isDeleted !== 'true'));
         })();
         return () => { cancelled = true; };
-    }, [isEmoncCourse, course?.id]);
+    }, [isEmoncCourse, course?.id, liveParticipantTests]);
 
     const emoncTestSummary = useMemo(
         () => (isEmoncCourse ? buildEmoncModuleTestSummary(course, reportParticipants, emoncTests) : null),
@@ -2644,7 +2646,7 @@ function CourseReportBody({
 
             {activeTab === 'individual-participant-report' && (
                 <div className="w-full max-w-full min-w-0 mt-4">
-                    <ReportsView course={course} participants={participants} hideHeader={true} />
+                    <ReportsView course={course} participants={participants} allObs={rawObs ? allObs : undefined} allCases={rawCases ? allCases : undefined} allTests={liveParticipantTests} hideHeader={true} />
                 </div>
             )}
 

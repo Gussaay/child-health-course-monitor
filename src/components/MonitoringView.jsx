@@ -1,4 +1,5 @@
 // MonitoringView.jsx
+import { useLiveCases } from '../hooks/useLiveCases.js';
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import CpcmOsceView from './cpcm/CpcmOsceView';
 import { CPCM_COURSE_TYPE } from './cpcm/osceChecklists.js';
@@ -183,6 +184,9 @@ function ClinicalObservationView({ course, participant, participants, onChangePa
         };
         fetchData();
     }, [participant?.id, course?.id, initialCaseToEdit]);
+
+    // Cases another facilitator saves for this participant show up while the form is open.
+    useLiveCases({ courseId: course?.id, participantId: participant?.id, setCases, setObservations });
 
     useEffect(() => {
         if (editingCase) return;
@@ -1452,6 +1456,8 @@ export function LegacyMentorshipMonitoringView({
         load();
         return () => { cancelled = true; };
     }, [course?.id, participant?.id]);
+
+    useLiveCases({ courseId: course?.id, participantId: participant?.id, setCases, setObservations, keep: (c) => c.setting === 'MENTORSHIP' });
 
     // Switching participant discards an in-progress form rather than carrying one
     // person's answers onto another's record.

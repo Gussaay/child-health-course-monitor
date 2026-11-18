@@ -44,7 +44,8 @@ import {
     submitFacilityDataForApproval,
     listFacilitiesByLocality,
     fetchFacilitiesHistoryMultiDate
-} from "../data.js"; 
+} from "../data.js";
+import { subscribePendingSubmissions } from "../hooks/liveCourseCore.js"; 
 import {
     GenericFacilityForm,
     IMNCIFormFields,
@@ -1395,6 +1396,17 @@ const ChildHealthServicesView = ({
             refreshSubmissions(false);
         }
     }, [permissions, refreshSubmissions]);
+
+    // Facility requests stay live while this page is open (pending ones only).
+    useEffect(() => {
+        if (!permissions?.canManageFacilities) return undefined;
+        let unsub = null;
+        try {
+            unsub = subscribePendingSubmissions('facilitySubmissions', (rows) => { setPendingSubmissions(rows); hasFetchedPendingRef.current = true; },
+                (e) => console.warn('[live] facility requests listener stopped:', e?.code || e?.message || e), 'submissionId');
+        } catch { /* falls back to the loads above */ }
+        return () => { try { unsub?.(); } catch { /* closed */ } };
+    }, [permissions?.canManageFacilities]);
 
     const dropPendingSubmissions = useCallback((ids) => {
         const gone = new Set(ids);

@@ -965,6 +965,21 @@ export const DataProvider = ({ children }) => {
         liveRef.current = {};
     }, []);
 
+    // Approval queues stay live once loaded (hooks/liveCourseCore.js startPendingQueues).
+    const loadedPendingKeys = ['pendingFacilitatorSubmissions', 'pendingFederalSubmissions', 'pendingStateSubmissions', 'pendingLocalitySubmissions'].filter((k) => cache[k] != null).join(',');
+    useEffect(() => {
+        if (!user || !appVisible || !netOnline || !loadedPendingKeys) return undefined;
+        let stop = null;
+        let stopped = false;
+        import('./hooks/liveCourseCore.js').then((m) => {
+            if (!stopped) stop = m.startPendingQueues(loadedPendingKeys.split(','), (k, rows) => {
+                cacheRef.current = { ...cacheRef.current, [k]: rows };
+                setCache((prev) => ({ ...prev, [k]: rows }));
+            });
+        }).catch(() => { /* the queues keep their normal loads */ });
+        return () => { stopped = true; stop?.(); };
+    }, [user, appVisible, netOnline, loadedPendingKeys]);
+
     const fetchers = useMemo(() => ({
         fetchCourses: createFetcher('courses', (opts, lastSync) => listAllCourses(opts, lastSync)),
         fetchParticipants: createFetcher('participants', (opts, lastSync) => listAllParticipants(opts, lastSync, scopeFor('participants'))),
