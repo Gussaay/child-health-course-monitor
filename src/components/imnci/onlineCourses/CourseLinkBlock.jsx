@@ -55,6 +55,7 @@ export default function CourseLinkBlock({ block }) {
     ].filter(Boolean).join(' · ');
     const open = () => {
         if (!found || !screen?.go) return;
+        screen.openFromGuide?.({ moduleId: module.id, sectionId: section?.id || null });
         screen.go({ course: course.id, module: module.id, section: section?.id || null, tab: 'read', book: null });
     };
     return (
