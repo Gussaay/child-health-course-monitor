@@ -17,12 +17,8 @@ import { SectionTabEditor } from './SectionTabEditor';
 import { SectionAiPanel } from './lazyParts';
 import { useCourseScreen } from './screen';
 import { LockedBanner } from './ui';
-import { Capacitor } from '@capacitor/core';
-import { useFormTitle } from '../../../utils/pageChrome';
+import { useFocusPage } from '../../../utils/pageChrome';
 
-// The Android app has its own top bar with a back arrow, where the lesson
-// names itself; on the web the lesson's one slim line does the same.
-const HAS_APP_BAR = Capacitor.isNativePlatform();
 
 // Which activities of a section this learner has done, kept on the device: it
 // is the learner's own running tally, not a record anyone else reads. It is
@@ -188,12 +184,13 @@ export function SectionPage() {
         moduleIndex >= 0 && here >= 0 ? t('imnci_ui.courses.look.module_lesson_of', 'Module {{m}} · Lesson {{n}} of {{total}}', { m: moduleIndex + 1, n: here + 1, total: siblings.length }) : '',
         mins > 0 ? duration(mins) : '',
     ].filter(Boolean).join(' · ');
-    useFormTitle(openSection.title, where);
+    // The app's top bars and credit bar are hidden while a lesson is open.
+    useFocusPage(true);
 
     if (locked) {
         return (
             <div className="max-w-3xl mx-auto space-y-4">
-                {!HAS_APP_BAR && (
+                {(
                     <div className="flex items-center gap-1 min-w-0">
                         <button onClick={back} aria-label={t('imnci_ui.courses.main.back', 'Back')}
                             className="p-1.5 -ms-1.5 rounded-full text-slate-600 hover:bg-slate-100 shrink-0">
@@ -221,7 +218,7 @@ export function SectionPage() {
                 {/* One slim line: the lesson's name beside the one back arrow (the
                     app's own top bar does this on Android), and the reading tools. */}
                 <div className="flex items-center gap-2">
-                    {HAS_APP_BAR ? <span className="flex-1" /> : (
+                    {(
                         <div className="flex-1 min-w-0 flex items-center gap-1">
                             <button onClick={back} aria-label={t('imnci_ui.courses.main.back', 'Back')} title={t('imnci_ui.courses.main.back', 'Back')}
                                 className="p-1.5 -ms-1.5 rounded-full text-slate-600 hover:bg-slate-100 shrink-0">
@@ -355,7 +352,7 @@ export function SectionPage() {
             {/* Back and on, pinned above the phone's bottom bar so finishing a
                 section never means scrolling to find the button. */}
             {!editingTab && (
-                <div className="sticky bottom-[var(--bottom-nav,0px)] z-20 -mx-3 sm:mx-0 sm:mb-3 sm:rounded-xl sm:border border-t border-slate-200 shadow-[0_-4px_12px_rgba(15,23,42,0.06)] bg-white/95 backdrop-blur px-3 sm:px-4 py-3">
+                <div className="sticky bottom-0 z-50 -mx-3 sm:mx-0 sm:mb-3 sm:rounded-xl sm:border border-t border-slate-200 shadow-[0_-4px_12px_rgba(15,23,42,0.06)] bg-white/95 backdrop-blur px-3 sm:px-4 py-3">
                     {!isDone && !canComplete ? (
                         <div className="text-xs text-amber-700 text-center mb-2">
                             {t('imnci_ui.courses.activity.left_to_do', 'Activities still to do before this lesson is complete: {{n}}', { n: keys.length - activitiesDone })}

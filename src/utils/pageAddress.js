@@ -25,6 +25,7 @@ const VIEW_SLUGS = {
     survey: 'survey',
     onlineCourses: 'online-courses',
     onlineCoursesManage: 'online-courses-manage',
+    protocolManager: 'protocol-manager',
     projects: 'projects',
     meetings: 'meetings',
     planning: 'planning',

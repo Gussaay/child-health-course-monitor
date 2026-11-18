@@ -22,6 +22,7 @@ function createStack() {
 
 const addStack = createStack();
 const formTitleStack = createStack();
+const focusStack = createStack();
 
 /**
  * Shows the app's floating "Add" button while `enabled`, running `onAdd` when
@@ -47,3 +48,16 @@ export function useFormTitle(title, subtitle, enabled = true) {
 }
 
 export const useFormTitleOverride = () => useSyncExternalStore(formTitleStack.subscribe, formTitleStack.top, formTitleStack.top);
+
+/**
+ * A page that takes the whole screen (a lesson): the app's top bars and the
+ * credit bar are hidden while `enabled`, so only the page itself shows.
+ */
+export function useFocusPage(enabled = true) {
+    useEffect(() => {
+        if (!enabled) return undefined;
+        return focusStack.push({ on: true });
+    }, [enabled]);
+}
+
+export const useFocusPageActive = () => useSyncExternalStore(focusStack.subscribe, () => !!focusStack.top(), () => false);

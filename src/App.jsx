@@ -98,6 +98,7 @@ const OnlineCoursesView = lazy(() => import('./components/imnci').then(m => ({ d
 // in the provider is what stops the course, the exercises and the patient form
 // each fetching their own copy, and what makes a case corrected in one of them
 // correct in the others without a reload.
+const ProtocolManager = lazy(() => import('./components/imnci/ProtocolManager'));
 const ImnciProvider = lazy(() => import('./components/imnci').then(m => ({ default: m.ImnciProvider })));
 // Reaching programme data through Claude: the consent step for the claude.ai
 // connector, and the chat panel inside the app.
@@ -185,7 +186,7 @@ import { isPublicAppPath, parseScannedCode } from './utils/appLinks';
 import GetAppBanner from './components/GetAppBanner';
 import { shareApp } from './utils/shareApp';
 import { findLinkedParticipant, rememberLinkedParticipant } from './utils/linkedParticipant';
-import { usePageAddAction, useFormTitleOverride } from './utils/pageChrome';
+import { usePageAddAction, useFormTitleOverride, useFocusPageActive } from './utils/pageChrome';
 import { IS_EMONC_SITE, IS_CH_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_LOGO_URL, EMONC_LOGO_ALT, EMONC_SHORT_TITLE } from './siteMode';
 import { useSiteHiddenViews } from './hooks/useSiteSettings';
 // The EmONC site shows its own logo, never the Child Health Program one.
@@ -411,7 +412,7 @@ function pageTitles(t) {
     projects: t('landing.modules.projects', 'Project Tracker'), meetings: t('landing.modules.meetings', 'Meeting Tracker'),
     planning: t('landing.modules.planning', 'Master Plan'), localityPlan: t('landing.modules.locality_plan', 'Bottom-up Planning'),
     supplyManagement: t('landing.modules.supply', 'Supply Management'), supervision: t('landing.modules.supervision', 'Supervision'), survey: t('landing.modules.survey', 'Surveys'),
-    onlineCourses: t('landing.modules.online_courses', 'Online Courses'), onlineCoursesManage: t('landing.modules.online_courses_manage', 'Manage Online Courses'), downloads: t('landing.modules.downloads', 'App Files & Downloads'),
+    onlineCourses: t('landing.modules.online_courses', 'Online Courses'), onlineCoursesManage: t('landing.modules.online_courses_manage', 'Course Manager'), protocolManager: t('landing.modules.protocol_manager', 'Protocol Manager'), downloads: t('landing.modules.downloads', 'App Files & Downloads'),
     admin: t('landing.modules.admin', 'Admin'), about: t('landing.modules.about', 'About Team'),
     courseReport: t('landing.modules.course_report', 'Course Report'), participantReport: t('landing.modules.participant_report', 'Participant Report'),
     facilitatorReport: t('landing.modules.facilitator_report', 'Facilitator Report'), facilitatorForm: t('landing.modules.facilitator_form', 'Facilitator'),
@@ -436,7 +437,8 @@ function allModules(t, permissions) {
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), tagline: tile('mentorship', 'Mentorship visits and skills'), view: 'skillsMentorship', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
         { label: t('landing.modules.imci', 'IMNCI Protocol'), tagline: tile('imci', 'Assess and classify a sick child'), view: 'imciForm', group: 'training', icon: Activity, permission: permissions.canViewCourse },
         { label: t('landing.modules.online_courses', 'Online Courses'), tagline: tile('online_courses', 'Learn and practise online'), view: 'onlineCourses', group: 'training', icon: BookOpen, permission: permissions.canViewOnlineCourses },
-        { label: t('landing.modules.online_courses_manage', 'Manage Online Courses'), tagline: tile('online_courses_manage', 'Courses, enrolment, groups and progress'), view: 'onlineCoursesManage', group: 'training', icon: Settings2, permission: permissions.canManageOnlineLearners },
+        { label: t('landing.modules.online_courses_manage', 'Course Manager'), tagline: tile('online_courses_manage', 'Courses, enrolment, groups and progress'), view: 'onlineCoursesManage', group: 'training', icon: Settings2, permission: permissions.canManageOnlineLearners },
+        { label: t('landing.modules.protocol_manager', 'Protocol Manager'), tagline: tile('protocol_manager', 'Protocols and guides by service'), view: 'protocolManager', group: 'training', icon: ClipboardCheck, permission: permissions.canManageOnlineLearners },
         { label: t('landing.modules.supervision', 'Supervision'), tagline: tile('supervision', 'Supervision checklists'), view: 'supervision', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSupervision },
         { label: t('landing.modules.survey', 'Surveys'), tagline: tile('survey', 'Field surveys and mapping'), view: 'survey', group: 'services', icon: MapPin, permission: permissions.canViewSupervision },
         { label: t('landing.modules.supply', 'Supply Management'), tagline: tile('supply', 'Stock and distribution'), view: 'supplyManagement', group: 'services', icon: Package, permission: permissions.canViewSupplyChain },
@@ -823,6 +825,8 @@ export default function App() {
     const headerRef = useRef(null);
     // Set by a full-page form (Android top bar title) and by pages that have an "Add" action.
     const formTitle = useFormTitleOverride();
+    // A lesson hides the app's bars so only the lesson shows.
+    const focusPage = useFocusPageActive();
     const pageAdd = usePageAddAction();
     // The pinned credit bar's height, for the bottom bars that sit above it.
     // A callback ref, so it follows the footer however often the screen re-renders.
@@ -2199,6 +2203,7 @@ export default function App() {
             'survey': permissions.canViewSupervision,
             'onlineCourses': permissions.canViewOnlineCourses,
             'onlineCoursesManage': permissions.canManageOnlineLearners,
+            'protocolManager': permissions.canManageOnlineLearners,
             'downloads': Capacitor.isNativePlatform(), 'about': true, 
         };
 
@@ -2227,9 +2232,9 @@ export default function App() {
         if (state.openParticipantReport) { setSelectedParticipantId(state.openParticipantReport); setSelectedCourseId(state.openCourseReport); }
         if (state.caseToEdit) setEditingCaseFromReport(state.caseToEdit);
 
-        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey', 'onlineCourses', 'onlineCoursesManage', 'downloads', 'about'].includes(newView)) {
+        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey', 'onlineCourses', 'onlineCoursesManage', 'protocolManager', 'downloads', 'about'].includes(newView)) {
             setSelectedCourseId(null); setSelectedParticipantId(null); setFinalReportCourse(null);
-            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey', 'onlineCourses', 'onlineCoursesManage', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
+            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey', 'onlineCourses', 'onlineCoursesManage', 'protocolManager', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
         }
         if ((view === 'observe' || view === 'participantReport') && !['observe', 'participantReport'].includes(newView)) setSelectedParticipantId(null);
         return true;
@@ -2727,7 +2732,9 @@ export default function App() {
     return permissions.canViewSupervision ? ( <Suspense fallback={<PageSkeleton />}><SurveyView permissions={permissions} /></Suspense> ) : null;
 
            case 'onlineCourses':
-    return permissions.canViewOnlineCourses ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><OnlineCoursesView permissions={permissions} userRoles={userRoles} area="learn" openOtherArea={permissions.canManageOnlineLearners ? () => navigate('onlineCoursesManage') : null} /></ImnciProvider></Suspense> ) : null;
+    return permissions.canViewOnlineCourses ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><OnlineCoursesView permissions={permissions} userRoles={userRoles} area="learn" openOtherArea={permissions.canManageOnlineLearners && !siteHiddenViews?.has('onlineCoursesManage') ? () => navigate('onlineCoursesManage') : null} /></ImnciProvider></Suspense> ) : null;
+           case 'protocolManager':
+    return permissions.canManageOnlineLearners ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><ProtocolManager permissions={permissions} /></ImnciProvider></Suspense> ) : null;
            case 'onlineCoursesManage':
     // Keyed so the two pages never share one set of screen state.
     return permissions.canManageOnlineLearners ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><OnlineCoursesView key="manage" permissions={permissions} userRoles={userRoles} area="manage" openOtherArea={() => navigate('onlineCourses')} /></ImnciProvider></Suspense> ) : null;
@@ -3247,7 +3254,7 @@ case 'meetings':
                 )}
             </div>
 
-            <header data-app-chrome="header" ref={headerRef} className={`bg-slate-800 shadow-lg relative z-40 transition-all ${(isFileDownloading || isDownloadingAppUpdate) ? 'top-10 mb-10' : 'top-0'}`}>
+            {!focusPage && <header data-app-chrome="header" ref={headerRef} className={`bg-slate-800 shadow-lg relative z-40 transition-all ${(isFileDownloading || isDownloadingAppUpdate) ? 'top-10 mb-10' : 'top-0'}`}>
                 <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
@@ -3321,9 +3328,9 @@ case 'meetings':
                         </div>
                     </div>
                 </div>
-            </header>
+            </header>}
 
-            {user && !isMinimalUILayout && (
+            {user && !isMinimalUILayout && !focusPage && (
                 <div data-app-chrome="subbar" className="bg-slate-700 text-slate-200 px-2 sm:px-3 py-2 flex items-center justify-between w-full shadow-inner min-h-[48px] gap-2">
 
                     <div className="flex-1 flex items-center justify-start overflow-hidden min-w-0">
@@ -3375,7 +3382,7 @@ case 'meetings':
                 </div>
             )}
 
-            {showBackBar && (
+            {showBackBar && !focusPage && (
                 <div className="app-backbar bg-slate-800 text-white border-t border-slate-700 shadow">
                     <div className="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 h-12 px-1 sm:px-4">
                         <button
@@ -3422,9 +3429,9 @@ case 'meetings':
             {/* The credit bar is pinned to the bottom of every screen. Its height
                 is measured into --credit-bar so the other pinned bottom bars
                 (Save, Next module, ...) sit just above it. */}
-            <footer ref={creditBarRef} data-app-chrome="footer" className="print-hide sticky bottom-0 z-30 block bg-slate-800 text-slate-300 text-xs pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] px-4 border-t border-slate-700">
+            {!focusPage && <footer ref={creditBarRef} data-app-chrome="footer" className="print-hide sticky bottom-0 z-30 block bg-slate-800 text-slate-300 text-xs pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] px-4 border-t border-slate-700">
                 <AppCredit />
-            </footer>
+            </footer>}
 
             {user && !isMinimalUILayout && (
                 <SideMenu

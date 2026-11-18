@@ -99,7 +99,7 @@ export const SITE_MODULES = [
     { id: 'childHealthServices', label: 'Child Health Services', views: ['childHealthServices'] },
     { id: 'skillsMentorship', label: 'Skills Mentorship', views: ['skillsMentorship'] },
     { id: 'imciForm', label: 'IMNCI Protocol', views: ['imciForm'] },
-    { id: 'onlineCourses', label: 'Online Courses (online training)', views: ['onlineCourses', 'onlineCoursesManage'] },
+    { id: 'onlineCourses', label: 'Online Courses (online training)', views: ['onlineCourses'] },
     { id: 'supervision', label: 'Supervision', views: ['supervision'] },
     { id: 'survey', label: 'Surveys', views: ['survey'] },
     { id: 'supplyManagement', label: 'Supply Management', views: ['supplyManagement'] },
@@ -111,8 +111,9 @@ export const SITE_MODULES = [
     { id: 'about', label: 'About Team', views: ['about'] },
 ];
 
-// Pages that only the main site has, whatever is chosen.
-const MAIN_SITE_ONLY_VIEWS = ['admin'];
+// Pages that only the main site has, whatever is chosen (Course Manager and
+// Protocol Manager are for federal managers and super users on the main site).
+const MAIN_SITE_ONLY_VIEWS = ['admin', 'onlineCoursesManage', 'protocolManager'];
 
 // What each site shows until a super user saves a choice in Admin > Sites.
 export const DEFAULT_SITE_MODULES = {

@@ -19,6 +19,7 @@ import { facilitatorContent, sectionContent } from './book';
 import { ContentBlocks } from './onlineCourses/blocks';
 import { CourseScreen } from './onlineCourses/screen';
 import { searchForPlace } from './onlineCourses/place';
+import { categoryOf } from './onlineCourses/categories';
 
 const live = (x) => x && x.isDeleted !== true;
 const byOrder = (a, b) => (a.order || 0) - (b.order || 0) || String(a.title || '').localeCompare(String(b.title || ''));
@@ -43,7 +44,9 @@ export function guideCourses(courses = [], items = []) {
         .sort((a, b) => (b.isGuide - a.isGuide) || byOrder(a.course, b.course));
 }
 
-export default function FacilitatorGuides() {
+// `category`: only the courses of one service (IMNCI, ETAT, EENC ...), as the
+// Protocol Manager shows them; none shows every course.
+export default function FacilitatorGuides({ category = '' }) {
     const { t } = useTranslation();
     const { onlineCourses, fetchOnlineCourses, onlineCourseItems, fetchOnlineCourseItems, isLoading } = useDataCache();
     useEffect(() => {
@@ -51,7 +54,7 @@ export default function FacilitatorGuides() {
         if (!onlineCourseItems) fetchOnlineCourseItems(false);
     }, [onlineCourses, onlineCourseItems, fetchOnlineCourses, fetchOnlineCourseItems]);
 
-    const courses = useMemo(() => onlineCourses || [], [onlineCourses]);
+    const courses = useMemo(() => (onlineCourses || []).filter((c) => !category || categoryOf(c) === category), [onlineCourses, category]);
     const items = useMemo(() => onlineCourseItems || [], [onlineCourseItems]);
     const guides = useMemo(() => guideCourses(courses, items), [courses, items]);
     const [chosen, setChosen] = useState(null);

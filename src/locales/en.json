@@ -1485,7 +1485,8 @@
       "admin": "Users, roles and settings",
       "about": "The programme team",
       "survey": "Field surveys and mapping",
-      "online_courses_manage": "Courses, enrolment, groups and progress"
+      "online_courses_manage": "Courses, enrolment, groups and progress",
+      "protocol_manager": "Protocols and guides by service"
     },
     "welcome": "Welcome",
     "subtitle": "Select a module to get started",
@@ -1516,7 +1517,8 @@
       "attendance": "Attendance",
       "monitoring": "Monitoring",
       "survey": "Surveys",
-      "online_courses_manage": "Manage Online Courses"
+      "online_courses_manage": "Course Manager",
+      "protocol_manager": "Protocol Manager"
     }
   },
   "auth": {
@@ -9149,5 +9151,8 @@
     "pick_locality": "Choose the locality first",
     "select": "Select…",
     "other": "Other (type it)"
+  },
+  "protocol_manager": {
+    "subtitle": "Protocols and facilitator guides, by service"
   }
 }

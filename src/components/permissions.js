@@ -30,8 +30,8 @@ export const ALL_PERMISSIONS = {
     canManageProtocols: false,
     canViewOnlineCourses: false,
     canManageOnlineCourses: false,
-    // Manage online courses page (enrolment, groups, learners' progress).
-    // Also given by applyDerivedPermissions to course authors and managers.
+    // Course Manager and Protocol Manager modules; derived from
+    // canUseFederalManagerAdvancedFeatures (federal managers and super users).
     canManageOnlineLearners: false,
 };
 
@@ -65,11 +65,9 @@ export const applyDerivedPermissions = (permissions) => {
     if (basePermissions.canManageOnlineCourses) {
         basePermissions.canViewOnlineCourses = true;
     }
-    // The Manage online courses page: course authors, and the managers who
-    // approve enrolment, put learners in groups and follow their progress
-    // (the onlineEnrolment function checks the same roles and their scope).
-    basePermissions.canManageOnlineLearners = !!basePermissions.canManageOnlineCourses
-        || ['federal', 'state', 'locality'].includes(basePermissions.manageScope);
+    // Course Manager and Protocol Manager: main site only (siteMode.js), for
+    // federal managers and super users.
+    basePermissions.canManageOnlineLearners = !!basePermissions.canUseFederalManagerAdvancedFeatures;
     if (basePermissions.canUseFederalManagerAdvancedFeatures) {
         basePermissions.canApproveSubmissions = true;
     }

@@ -50,7 +50,7 @@ export function ManageHome() {
     return (
         <div className="space-y-4">
             <PageHeader
-                title={t('landing.modules.online_courses_manage', 'Manage Online Courses')}
+                title={t('landing.modules.online_courses_manage', 'Course Manager')}
                 subtitle={t('imnci_ui.manage.subtitle', 'Courses, enrolment, groups and learner progress')}
                 actions={
                     <div className="flex flex-wrap gap-2 items-center">
