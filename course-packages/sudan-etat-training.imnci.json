@@ -71,11 +71,7 @@
       },
       {
        "type": "paragraph",
-       "text": "A nine-month old baby boy is carried into the children’s section of the outpatient department in his mother’s arms. He appears to be asleep. At the triage desk he is seen by a nurse and found to have lips and tongue that are grey/blue in colour, and he is taken straight into the resuscitation room as an emergency. In the resuscitation room he is given oxygen from an oxygen concentrator. He is noted to be grunting and breathing very fast. His hands are cold to touch and the capillary refill time is prolonged to four seconds. An intravenous cannula is placed. A blood sample is taken at the same time for blood glucose, haematocrit and other investigations. An intravenous infusion of normal saline is commenced at 20ml/kg to run as fast as it can go. Other treatments are given, depending on the result of the investigations and the response to the treatment he receives. It is now 18 minutes since the baby came through the outpatient department’s door, and his situation is stable. It is now time to take a full history and carry out a full examination to make a definitive diagnosis. He is diagnosed as having very severe pneumonia, and receives specific treatment for this. However, before coming to this diagnosis, no time was wasted, his status was stabilized, based on a few leading signs and symptoms, even when the medical staff did not know exactly what was wrong with him. This was good triage and emergency management. Would it have happened like this in your hospital? In this training course, you are going to acquire the necessary knowledge and skills for the triage and emergency management of sick children, and you will consider what is needed to introduce this to your hospital. Deaths in hospital often occur within 24 hours of admission. Many of these deaths could be prevented if very sick children are identified soon after their arrival in the health facility, and treatment is started immediately. Therefore, a process of rapid triage for all children presenting to hospital needs to be put in place, to determine whether any emergency or priority signs are present. Triage may be done in 15-20 seconds by medical staff or by non-medical staff (after appropriate training) as soon as the child arrives, and no special equipment is needed for this. Once emergency signs are identified, prompt emergency treatment needs to be given to stabilize the condition of the child."
-      },
-      {
-       "type": "paragraph",
-       "text": "WHO has developed Emergency Triage Assessment and Treatment (ETAT) guidelines. These are adapted from the Advanced Paediatric Life Support guidelines used in western countries, and they identify children with immediately life-threatening conditions which are most frequently seen in developing countries, such as obstruction of the airway and other breathing problems caused by infections, shock, severely altered central nervous system function (coma or convulsions), and severe dehydration. These guidelines were developed in Malawi, and were field-tested in several other countries including Angola, Brazil, Cambodia, Indonesia, Kenya and Niger. The guidelines are contained in the manual “Management of the child with a serious infection or severe malnutrition” and in the “Pocketbook of hospital care for children”, on which this training course is based. This course manual is primarily meant for the participants of a 3 1/2 days training course in Emergency Triage, Assessment and Treatment. It provides participants with the reading materials to prepare themselves for the modules taught in the course. Some of the reading might be done during the course. In addition, it gives questions for self-assessment which participants can respond to after having gone through the training. Apart from use in a full-time training course, the reading will be useful for trainers and participants who take part in training as a series of seminars. Guidance on how to conduct such training is contained in a parallel facilitator’s guide. This training course does not stand on its own. It can be included in a quality improvement process which targets the whole hospital or it can start such a process. At the end of the course, participants plan for introducing an ETAT process at their institution, by comparing the existing situation with international standards, and suggesting actions to solve identified problems and to document and evaluate such a process. Lessons learned in this process can be applied to other areas of child health in hospital and to care of other patient groups. Emergency management is by team, rather than by individual players, so team work is emphasized and practised throughout the course."
+       "text": "A nine-month old baby boy is carried into the children’s section of the outpatient department in his mother’s arms. He appears to be asleep. At the triage desk he is seen by a nurse and found to have lips and tongue that are grey/blue in colour, and he is taken straight into the resuscitation room as an emergency. In the resuscitation room he is given oxygen from an oxygen concentrator. He is noted to be grunting and breathing very fast. His hands are cold to touch and the capillary refill time is prolonged to four seconds. An intravenous cannula is placed. A blood sample is taken at the same time for blood glucose, haematocrit and other investigations. An intravenous infusion of normal saline is commenced at 20ml/kg to run as fast as it can go. Other treatments are given, depending on the result of the investigations and the response to the treatment he receives. It is now 18 minutes since the baby came through the outpatient department’s door, and his situation is stable. It is now time to take a full history and carry out a full examination to make a definitive diagnosis. He is diagnosed as having very severe pneumonia, and receives specific treatment for this. However, before coming to this diagnosis, no time was wasted, his status was stabilized, based on a few leading signs and symptoms, even when the medical staff did not know exactly what was wrong with him. This was good triage and emergency management. Would it have happened like this in your hospital? In this training course, you are going to acquire the necessary knowledge and skills for the triage and emergency management of sick children, and you will consider what is needed to introduce this to your hospital."
       },
       {
        "type": "story",
@@ -114,6 +110,56 @@
          "explanation": "No time was wasted: his status was stabilized based on a few leading signs and symptoms, even when the medical staff did not know exactly what was wrong with him."
         }
        ]
+      },
+      {
+       "type": "paragraph",
+       "text": "Deaths in hospital often occur within 24 hours of admission. Many of these deaths could be prevented if very sick children are identified soon after their arrival in the health facility, and treatment is started immediately. Therefore, a process of rapid triage for all children presenting to hospital needs to be put in place, to determine whether any emergency or priority signs are present. Triage may be done in 15-20 seconds by medical staff or by non-medical staff (after appropriate training) as soon as the child arrives, and no special equipment is needed for this. Once emergency signs are identified, prompt emergency treatment needs to be given to stabilize the condition of the child."
+      },
+      {
+       "type": "question",
+       "text": "Who can do triage, and how long does it take?",
+       "options": [
+        "Only a doctor, after a full examination",
+        "Medical staff, or non-medical staff after appropriate training, in 15-20 seconds, with no special equipment",
+        "A nurse, with a pulse oximeter, in about 10 minutes"
+       ],
+       "answer": 1,
+       "explanation": "Triage may be done in 15-20 seconds by medical staff or by non-medical staff (after appropriate training) as soon as the child arrives, and no special equipment is needed for this."
+      },
+      {
+       "type": "paragraph",
+       "text": "WHO has developed Emergency Triage Assessment and Treatment (ETAT) guidelines. These are adapted from the Advanced Paediatric Life Support guidelines used in western countries, and they identify children with immediately life-threatening conditions which are most frequently seen in developing countries, such as obstruction of the airway and other breathing problems caused by infections, shock, severely altered central nervous system function (coma or convulsions), and severe dehydration. These guidelines were developed in Malawi, and were field-tested in several other countries including Angola, Brazil, Cambodia, Indonesia, Kenya and Niger. The guidelines are contained in the manual “Management of the child with a serious infection or severe malnutrition” and in the “Pocketbook of hospital care for children”, on which this training course is based. This course manual is primarily meant for the participants of a 3 1/2 days training course in Emergency Triage, Assessment and Treatment. It provides participants with the reading materials to prepare themselves for the modules taught in the course. Some of the reading might be done during the course. In addition, it gives questions for self-assessment which participants can respond to after having gone through the training. Apart from use in a full-time training course, the reading will be useful for trainers and participants who take part in training as a series of seminars. Guidance on how to conduct such training is contained in a parallel facilitator’s guide."
+      },
+      {
+       "type": "flip",
+       "title": "The immediately life-threatening conditions ETAT identifies",
+       "cards": [
+        {
+         "front": "Airway and breathing",
+         "back": "Obstruction of the airway and other breathing problems caused by infections"
+        },
+        {
+         "front": "Circulation",
+         "back": "Shock"
+        },
+        {
+         "front": "Central nervous system",
+         "back": "Severely altered function: coma or convulsions"
+        },
+        {
+         "front": "Fluids",
+         "back": "Severe dehydration"
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "This training course does not stand on its own. It can be included in a quality improvement process which targets the whole hospital or it can start such a process. At the end of the course, participants plan for introducing an ETAT process at their institution, by comparing the existing situation with international standards, and suggesting actions to solve identified problems and to document and evaluate such a process. Lessons learned in this process can be applied to other areas of child health in hospital and to care of other patient groups. Emergency management is by team, rather than by individual players, so team work is emphasized and practised throughout the course."
+      },
+      {
+       "type": "reveal",
+       "text": "Why are team work and the whole hospital part of this course?",
+       "answer": "Emergency management is by team, rather than by individual players, so team work is emphasized and practised throughout the course. The course can be included in a quality improvement process which targets the whole hospital, or it can start such a process."
       }
      ],
      "see": [],

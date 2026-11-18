@@ -49,8 +49,7 @@ L.append(lesson("Welcome to the course and pre-test",
 
 L.append(lesson("Introduction: why emergency triage?",
     "Explain why sick children need rapid triage and emergency treatment as soon as they arrive.", [
-    *X(307, 340, h=[307]),
-    *X(342, 375),
+    *X(307, 331, h=[307]),
     story("Think about it: the nine-month-old baby", [
         stage("A nine-month-old baby is carried in. At the triage desk the nurse finds his lips and tongue grey/blue.",
               "What did the nurse do?", ["Sent him to wait in the queue", "Took him straight into the resuscitation room as an emergency",
@@ -64,6 +63,24 @@ L.append(lesson("Introduction: why emergency triage?",
               "No time was wasted: his status was stabilized based on a few leading signs and symptoms, even when the medical staff did not "
               "know exactly what was wrong with him."),
     ]),
+    *X(332, 340),
+    q("Who can do triage, and how long does it take?",
+      ["Only a doctor, after a full examination", "Medical staff, or non-medical staff after appropriate training, in 15-20 seconds, "
+       "with no special equipment", "A nurse, with a pulse oximeter, in about 10 minutes"], 1,
+      "Triage may be done in 15-20 seconds by medical staff or by non-medical staff (after appropriate training) as soon as the child "
+      "arrives, and no special equipment is needed for this."),
+    *X(342, 366),
+    flip("The immediately life-threatening conditions ETAT identifies", [
+        ("Airway and breathing", "Obstruction of the airway and other breathing problems caused by infections"),
+        ("Circulation", "Shock"),
+        ("Central nervous system", "Severely altered function: coma or convulsions"),
+        ("Fluids", "Severe dehydration"),
+    ]),
+    *X(367, 375),
+    reveal("Why are team work and the whole hospital part of this course?",
+           "Emergency management is by team, rather than by individual players, so team work is emphasized and practised throughout "
+           "the course. The course can be included in a quality improvement process which targets the whole hospital, or it can start "
+           "such a process."),
 ]))
 
 L.append(lesson("Learning objectives for the training course",

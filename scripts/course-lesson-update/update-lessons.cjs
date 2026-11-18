@@ -21,6 +21,8 @@ const COURSES = {
 };
 const UPDATE_TAG = 'lesson-update-2026-11-18';
 const CONTENT = ['read', 'see', 'practise'];
+// Lessons edited in the app that may still be overwritten (titles, one per line), after the author agreed.
+const FORCE = (() => { try { return fs.readFileSync(path.join(__dirname, 'force.txt'), 'utf8').split('\n').map((x) => x.trim().toLowerCase()).filter(Boolean); } catch { return []; } })();
 
 const a = process.argv.slice(2);
 const which = a.find((x) => COURSES[x]);
@@ -82,7 +84,7 @@ async function findCourse(pkg) {
       const changed = CONTENT.filter((k) => JSON.stringify(cur[k] || []) !== JSON.stringify(s[k] || []));
       if (!changed.length) return;
       const edited = cur.lastUpdatedAt && cur.createdAt && cur.lastUpdatedAt.toMillis() - cur.createdAt.toMillis() > 60000
-        && cur.contentUpdateTag !== UPDATE_TAG;
+        && cur.contentUpdateTag !== UPDATE_TAG && !FORCE.includes(norm(s.title));
       (edited ? kept : plan).push({ ref: hit[0].ref, mod: mi + 1, title: s.title, cur, next: s, changed });
     });
   });
@@ -95,7 +97,11 @@ async function findCourse(pkg) {
   });
   if (kept.length) {
     console.log(`\nChanged in the file but edited in the app since the upload, so LEFT AS THEY ARE (${kept.length}):`);
-    kept.forEach(({ mod, title }) => console.log(`  Module ${mod} · "${title}"`));
+    kept.forEach(({ mod, title, cur }) => {
+      const when = cur.lastUpdatedAt?.toDate?.().toISOString?.() || '';
+      console.log(`\n  Module ${mod} · "${title}" (last saved in the app ${when}${cur.lastUpdatedBy ? ` by ${cur.lastUpdatedBy}` : ''}). What is in the app now:`);
+      (cur.read || []).forEach((b, i) => console.log(`     ${String(i + 1).padStart(2)}. ${String(b.type).padEnd(9)} ${plain(b).slice(0, 110)}`));
+    });
   }
   if (missing.length) console.log(`\nIn the file but not matched in the app (not written): ${missing.join('; ')}`);
   if (!COMMIT) return console.log('\nDry run: nothing written.');
