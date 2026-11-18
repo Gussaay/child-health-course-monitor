@@ -12,12 +12,126 @@
    "order": 1,
    "sections": [
     {
+     "title": "How to study this course",
+     "read": [
+      {
+       "type": "note",
+       "text": "Learn how this course works, so every activity counts. This lesson takes about 5 minutes.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "When you treat a sick child, what do you decide from?",
+       "options": [
+        "My memory",
+        "The signs I find and the chart booklet",
+        "What the mother asks for"
+       ],
+       "answer": 1,
+       "feedback": [
+        "Even experienced health workers use the chart booklet.",
+        "Right. You classify from the signs, using the chart booklet.",
+        "Listen to the mother, but classify from the signs."
+       ]
+      },
+      {
+       "type": "steps",
+       "title": "How each lesson works",
+       "steps": [
+        {
+         "title": "Start with a question",
+         "text": "Most lessons open with a short question. Answer it before you read; there is no penalty."
+        },
+        {
+         "title": "Do every activity",
+         "text": "Open the cards, sort, answer the questions and work the cases. A tick shows each one is done."
+        },
+        {
+         "title": "Unlock the next lesson",
+         "text": "The next lesson opens when every activity in this one is done. Modules open in order too."
+        },
+        {
+         "title": "Come back any time",
+         "text": "Your place is saved. When you come back, the lesson offers to take you to where you stopped."
+        }
+       ]
+      },
+      {
+       "type": "steps",
+       "title": "How to practise with cases",
+       "steps": [
+        {
+         "title": "Read the child's story",
+         "text": "Each case is a named child: age, weight, temperature and what the mother says."
+        },
+        {
+         "title": "Open the chart booklet table",
+         "text": "Use the pink button \"See the chart booklet table\". Read from the top row down."
+        },
+        {
+         "title": "Open the recording form",
+         "text": "The child's filled form shows what the health worker found and wrote."
+        },
+        {
+         "title": "Decide, then read the feedback",
+         "text": "Each option explains why it is right or wrong. Your first try is recorded; you can try again."
+        }
+       ]
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "download": true,
+       "categories": [
+        "danger",
+        "cough",
+        "diarrhea",
+        "persistent_diarrhea",
+        "dysentery",
+        "fever",
+        "measles",
+        "ear",
+        "malnutrition",
+        "anemia"
+       ],
+       "caption": "The chart booklet in the app is the Sudan national chart booklet. Open the whole booklet to read it, or print it or save it as a PDF to keep beside you while you study."
+      },
+      {
+       "type": "question",
+       "text": "You answer a case wrongly the first time. What happens?",
+       "options": [
+        "The lesson is locked",
+        "You see why, and you can try again",
+        "You must restart the module"
+       ],
+       "explanation": "",
+       "answer": 1,
+       "feedback": [
+        "Nothing is locked by a wrong answer.",
+        "Right. Read the feedback, then try again. Your first try is kept for your progress page.",
+        "You only repeat the question."
+       ],
+       "label": "Check yourself"
+      },
+      {
+       "type": "note",
+       "text": "Finish every lesson of a module to earn its badge. Your progress page shows your lessons, your badges and how often you were right the first time.",
+       "label": "Badges"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 1,
+     "isPublished": true
+    },
+    {
      "see": [],
      "practise": [],
      "bookFromPage": 5,
      "bookToPage": 7,
      "title": "Module overview",
-     "order": 1,
+     "order": 2,
      "read": [
       {
        "type": "note",
@@ -117,7 +231,7 @@
      "bookFromPage": 8,
      "bookToPage": 17,
      "title": "Greeting the caregiver",
-     "order": 2,
+     "order": 3,
      "read": [
       {
        "type": "note",
@@ -285,12 +399,28 @@
      "bookFromPage": 8,
      "bookToPage": 17,
      "title": "Checking for general danger signs",
-     "order": 3,
+     "order": 4,
      "read": [
       {
        "type": "note",
        "text": "Check every sick child for the general danger signs, one at a time, and say what you do when you find one.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "A child sleeps on her mother's lap. Is she lethargic?",
+       "options": [
+        "Yes",
+        "Not necessarily: wake her and look",
+        "No, sleeping children are never sick"
+       ],
+       "answer": 1,
+       "feedback": [
+        "Sleeping is not the same as lethargic.",
+        "Right. Look at how she wakes and responds.",
+        "A sleeping child can be lethargic. You must look."
+       ]
       },
       {
        "type": "heading",
@@ -447,7 +577,7 @@
      "bookFromPage": 8,
      "bookToPage": 17,
      "title": "See the signs and practise with two cases",
-     "order": 4,
+     "order": 5,
      "read": [
       {
        "type": "note",
@@ -494,12 +624,226 @@
      "isPublished": true
     },
     {
+     "title": "Practise: general danger signs",
+     "read": [
+      {
+       "type": "note",
+       "text": "Find the general danger signs in three children, and in a conversation with a mother.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Ask about the danger signs",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "Good morning. What is the problem with your son today?"
+          },
+          {
+           "who": "Mother",
+           "text": "He has had a cough and fever for three days."
+          },
+          {
+           "who": "You",
+           "text": "Is he able to drink or breastfeed?"
+          },
+          {
+           "who": "Mother",
+           "text": "Yes, he breastfeeds, but less than usual."
+          }
+         ],
+         "question": "What do you ask next?",
+         "options": [
+          "Does he vomit everything?",
+          "Has he had his vaccines?",
+          "How many children do you have?"
+         ],
+         "answer": 0,
+         "explanation": "Ask about each general danger sign in turn before anything else.",
+         "feedback": [
+          "Right. Ask about each danger sign, one at a time.",
+          "Immunization is checked later, after assess and classify.",
+          "This is not part of checking for danger signs."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "Mother",
+           "text": "No, he keeps the milk down."
+          },
+          {
+           "who": "You",
+           "text": "Has he had convulsions during this illness?"
+          },
+          {
+           "who": "Mother",
+           "text": "Yes, yesterday evening he shook all over for a short time."
+          }
+         ],
+         "question": "What does this mean?",
+         "options": [
+          "He has a general danger sign",
+          "It is only from the fever, so it does not count",
+          "Ask again tomorrow"
+         ],
+         "answer": 0,
+         "explanation": "Convulsions during this illness are a general danger sign: the child needs urgent attention.",
+         "feedback": [
+          "Right.",
+          "Convulsions in this illness count whatever the cause.",
+          "A child with a danger sign must not wait."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Does the child have a general danger sign?",
+       "part": "child",
+       "categories": [
+        "danger"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Huda",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 11,
+          "temp": 37.2,
+          "problem": "Vomiting"
+         },
+         "text": "Huda's mother says Huda has vomited since this morning. When you ask, she says Huda vomits everything she eats or drinks, even water. Huda is awake and looks at you. She has had no convulsions.",
+         "record": [
+          {
+           "title": "Check for general danger signs",
+           "lines": [
+            "Not able to drink or breastfeed: no",
+            "Vomits everything: yes",
+            "Convulsions: no",
+            "Lethargic or unconscious: no",
+            "Convulsing now: no"
+           ],
+           "classify": [
+            "General danger sign present"
+           ]
+          }
+         ],
+         "question": "Does Huda have a general danger sign?",
+         "options": [
+          "Yes: she vomits everything",
+          "No: she is awake and alert",
+          "Not sure until you count her breaths"
+         ],
+         "feedback": [
+          "Right. A child who cannot keep anything down vomits everything. This is a general danger sign.",
+          "Being awake does not rule out a danger sign. Huda vomits everything, even water.",
+          "Breathing is part of the cough assessment. The danger signs are checked first, and Huda already has one."
+         ],
+         "explanation": "A child with any general danger sign needs URGENT attention: complete the assessment and any pre-referral treatment immediately, then refer.",
+         "answer": 0
+        },
+        {
+         "child": {
+          "name": "Adam",
+          "age": "3 years",
+          "visit": "initial",
+          "weight": 13,
+          "temp": 38.6,
+          "problem": "Fever"
+         },
+         "text": "Adam has had fever for 2 days. His father says that last night Adam's arms and legs jerked and he did not respond for a few minutes. Now Adam is drinking and looks at you.",
+         "record": [
+          {
+           "title": "Check for general danger signs",
+           "lines": [
+            "Not able to drink: no",
+            "Vomits everything: no",
+            "Convulsions: yes, last night",
+            "Lethargic or unconscious: no"
+           ],
+           "classify": [
+            "General danger sign present"
+           ]
+          }
+         ],
+         "question": "Adam is drinking and alert now. Does he have a general danger sign?",
+         "options": [
+          "No, because he is alert now",
+          "Yes: convulsions during this illness",
+          "Only if he convulses in the clinic"
+         ],
+         "feedback": [
+          "A convulsion during this illness is a general danger sign even if the child looks well now.",
+          "Right. Convulsions during the current illness are a general danger sign.",
+          "Convulsing now is one sign; a history of convulsions in this illness is another. Either one is a danger sign."
+         ],
+         "explanation": "Ask about convulsions in every sick child: \"Has the child had convulsions during this illness?\"",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Mai",
+          "age": "13 months",
+          "visit": "initial",
+          "weight": 9,
+          "temp": 37.0,
+          "problem": "Cough"
+         },
+         "text": "Mai has a cough. She is sleeping on her mother's lap. When her mother speaks to her, she wakes, looks around and breastfeeds well. She has not vomited and has had no convulsions.",
+         "record": [
+          {
+           "title": "Check for general danger signs",
+           "lines": [
+            "Able to breastfeed: yes",
+            "Vomits everything: no",
+            "Convulsions: no",
+            "Lethargic or unconscious: no, wakes easily"
+           ],
+           "classify": [
+            "No general danger sign"
+           ]
+          }
+         ],
+         "question": "Is Mai lethargic?",
+         "options": [
+          "Yes: she was asleep",
+          "No: she wakes easily and breastfeeds",
+          "Yes, because she has a cough"
+         ],
+         "feedback": [
+          "A sleeping child is not lethargic if she wakes when spoken to and looks around. Wake the child and look.",
+          "Right. A lethargic child is not alert when she should be and does not look at her mother. Mai wakes and feeds.",
+          "Cough is not a danger sign. Check each danger sign on its own."
+         ],
+         "explanation": "Mai has no general danger sign. Go on to assess her cough.",
+         "answer": 1
+        }
+       ]
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 6,
+     "isPublished": true
+    },
+    {
      "see": [],
      "practise": [],
      "bookFromPage": 18,
      "bookToPage": 21,
      "title": "Urgent referral and pre-referral treatment",
-     "order": 5,
+     "order": 7,
      "read": [
       {
        "type": "note",
@@ -625,7 +969,7 @@
      "bookFromPage": 18,
      "bookToPage": 21,
      "title": "How to refer a child urgently",
-     "order": 6,
+     "order": 8,
      "read": [
       {
        "type": "note",
@@ -721,7 +1065,7 @@
      "bookFromPage": 22,
      "bookToPage": 22,
      "title": "Using this module in your clinic",
-     "order": 7,
+     "order": 9,
      "read": [
       {
        "type": "note",
@@ -776,7 +1120,7 @@
      "bookFromPage": 23,
      "bookToPage": 26,
      "title": "Review questions and Module 1 test",
-     "order": 8,
+     "order": 10,
      "read": [
       {
        "type": "note",
@@ -798,6 +1142,40 @@
        "note": "The 20 logbook questions. You may use your chart booklet."
       }
      ],
+     "isPublished": true
+    },
+    {
+     "title": "Module 1 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Check every sick child for the general danger signs first.</li><li>Not able to drink or breastfeed, vomits everything, convulsions, lethargic or unconscious, convulsing now.</li><li>A child with any danger sign needs urgent attention and referral after pre-referral treatment.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for any illness, checking each one for the general danger signs: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 11,
      "isPublished": true
     }
    ],
@@ -1162,6 +1540,22 @@
        "label": "In this lesson"
       },
       {
+       "type": "question",
+       "label": "Before you start",
+       "text": "What is fast breathing in a young infant under 2 months?",
+       "options": [
+        "40 or more",
+        "50 or more",
+        "60 or more"
+       ],
+       "answer": 2,
+       "feedback": [
+        "That is for children 12 months up to 5 years.",
+        "That is for children 2 up to 12 months.",
+        "Right. 60 or more, on a repeat count."
+       ]
+      },
+      {
        "type": "heading",
        "text": "How will you assess?"
       },
@@ -1253,6 +1647,27 @@
        "caption": "WHO course DVD, disc 2. It reviews all the steps in assessing for serious disease or local bacterial infection."
       },
       {
+       "type": "steps",
+       "title": "Look at the umbilicus and the skin, with photographs",
+       "steps": [
+        {
+         "title": "A normal umbilicus",
+         "text": "Compare what you see with a normal umbilicus.",
+         "image": "imnci-photos/photo-60.jpg"
+        },
+        {
+         "title": "Red or draining pus?",
+         "text": "Does the redness extend to the skin of the abdomen?",
+         "image": "imnci-photos/photo-61.jpg"
+        },
+        {
+         "title": "Look at the skin",
+         "text": "Are there pustules? Many or severe pustules are a serious sign.",
+         "image": "imnci-photos/photo-62.jpg"
+        }
+       ]
+      },
+      {
        "type": "exercise",
        "exerciseId": "dimci-m2-ex-b",
        "note": ""
@@ -1341,6 +1756,34 @@
        "caption": "Classify: very severe disease and local bacterial infection"
       },
       {
+       "type": "classcards",
+       "title": "Very severe disease and local bacterial infection",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE",
+         "action": "Refer urgently",
+         "signs": "Any one of: not feeding well; convulsions; fast breathing (60 breaths per minute or more); severe chest indrawing; fever (37.5 °C or above); low body temperature (less than 35.5 °C); movement only when stimulated or no movement at all.",
+         "treat": "First dose of IM ampicillin and gentamicin; prevent low blood sugar; keep the infant warm on the way; refer urgently."
+        },
+        {
+         "colour": "yellow",
+         "label": "LOCAL BACTERIAL INFECTION",
+         "action": "Treat and follow up",
+         "signs": "Umbilicus red or draining pus; skin pustules; pus draining from the eyes.",
+         "treat": "Oral amoxicillin for 5 days; teach the mother to treat local infections at home; home care; follow up in 2 days."
+        },
+        {
+         "colour": "green",
+         "label": "SEVERE DISEASE OR LOCAL INFECTION UNLIKELY",
+         "action": "Home care",
+         "signs": "No signs of very severe disease or local bacterial infection.",
+         "treat": "Advise the mother on home care for the young infant."
+        }
+       ]
+      },
+      {
        "type": "note",
        "text": "When you find signs from different rows, always classify with the more severe classification. Signs from RED and YELLOW: classify RED. Signs from YELLOW and GREEN: classify YELLOW. The colour tells you where care is given: RED = refer urgently, YELLOW = treat in the clinic, GREEN = home treatment.",
        "label": "Several rows?"
@@ -1409,6 +1852,22 @@
        "type": "note",
        "text": "Tell mild jaundice from jaundice that is a sign of a severe problem, and assess a young infant for jaundice.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "Where do you look to decide if jaundice is severe?",
+       "options": [
+        "The palms and soles",
+        "The eyes only",
+        "The stool"
+       ],
+       "answer": 0,
+       "feedback": [
+        "Right. Yellow palms and soles at any age is severe jaundice.",
+        "Look at the palms and soles too.",
+        "Look at the skin, palms and soles."
+       ]
       },
       {
        "type": "video",
@@ -1517,6 +1976,34 @@
         "jaundice"
        ],
        "caption": "Chart booklet: jaundice (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "classcards",
+       "title": "Jaundice: the three classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "SEVERE JAUNDICE",
+         "action": "Refer urgently",
+         "signs": "Any jaundice if age less than 24 hours; or yellow palms and soles at any age; or any jaundice in an infant weighing less than 2.5 kg.",
+         "treat": "Prevent low blood sugar; keep the infant warm; refer urgently."
+        },
+        {
+         "colour": "yellow",
+         "label": "JAUNDICE",
+         "action": "Treat and follow up",
+         "signs": "Jaundice appearing after 24 hours of age, and palms and soles not yellow.",
+         "treat": "If 14 days or older, refer for assessment; home care; return immediately if palms and soles appear yellow; follow up in 1 day."
+        },
+        {
+         "colour": "green",
+         "label": "NO JAUNDICE",
+         "action": "Home care",
+         "signs": "No jaundice.",
+         "treat": "Advise the mother on home care for the young infant."
+        }
+       ]
       },
       {
        "type": "flip",
@@ -1741,12 +2228,452 @@
      "isPublished": true
     },
     {
+     "title": "Practise: classify the sick young infant",
+     "read": [
+      {
+       "type": "note",
+       "text": "Count breaths, and classify very severe disease, local infection, jaundice and diarrhoea for six young infants.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "What is fast breathing in a young infant under 2 months?",
+       "options": [
+        "40 or more",
+        "50 or more",
+        "60 or more"
+       ],
+       "answer": 2,
+       "feedback": [
+        "That is for children 12 months up to 5 years.",
+        "That is for children 2 up to 12 months.",
+        "Right. 60 or more, on a repeat count."
+       ]
+      },
+      {
+       "type": "drill",
+       "title": "Count the breaths: a young infant",
+       "url": "",
+       "videoTitle": "Counting breaths: young infant (video to be recorded)",
+       "text": "Count for one full minute. If the count is 60 or more, count again.",
+       "given": "Until this clip is recorded: you count 64 breaths in one minute, and 62 when you count again.",
+       "count": {
+        "answer": 64,
+        "tolerance": 3,
+        "unit": "breaths per minute",
+        "question": "How many breaths did you count in one minute?"
+       },
+       "question": "Does this young infant have fast breathing?",
+       "options": [
+        "Yes",
+        "No, count once more"
+       ],
+       "answer": 0,
+       "feedback": [
+        "Right. Both counts are 60 or more: fast breathing, a sign of very severe disease.",
+        "Two counts of 60 or more confirm fast breathing. Do not delay referral."
+       ]
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Talk with Amal's mother",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "Congratulations on your baby. How old is she?"
+          },
+          {
+           "who": "Mother",
+           "text": "Ten days."
+          },
+          {
+           "who": "You",
+           "text": "Is she feeding well?"
+          },
+          {
+           "who": "Mother",
+           "text": "Yes, but she feels hot."
+          }
+         ],
+         "question": "What do you do next?",
+         "options": [
+          "Measure her temperature",
+          "Tell the mother that babies are often warm",
+          "Give paracetamol"
+         ],
+         "answer": 0,
+         "explanation": "Measure the temperature. In a young infant 37.5 °C or above is fever, a pink-row sign.",
+         "feedback": [
+          "Right.",
+          "Fever in a young infant can be a sign of very severe disease.",
+          "Assess and classify before treating."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "Her temperature is 37.9 degrees."
+          }
+         ],
+         "question": "How do you classify Amal?",
+         "options": [
+          "POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE",
+          "LOCAL BACTERIAL INFECTION",
+          "SEVERE DISEASE OR LOCAL INFECTION UNLIKELY"
+         ],
+         "answer": 0,
+         "explanation": "Fever 37.5 °C or above is a pink-row sign: first dose of IM antibiotics, keep warm, refer urgently.",
+         "feedback": [
+          "Right.",
+          "She has a pink-row sign.",
+          "37.9 °C is fever."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Classify the sick young infant",
+       "part": "infant",
+       "categories": [
+        "bacterial_infection",
+        "jaundice",
+        "diarrhea"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Baby Amal",
+          "age": "10 days",
+          "visit": "initial",
+          "weight": 3.0,
+          "temp": 37.9,
+          "problem": "Feels hot"
+         },
+         "text": "Amal is 10 days old. Her mother says she feels hot. She feeds well and moves on her own. Breathing 52 per minute. No chest indrawing. Her temperature is 37.9 °C.",
+         "record": [
+          {
+           "title": "Check for very severe disease and local bacterial infection",
+           "lines": [
+            "Feeding well: yes",
+            "Breaths: 52 per minute",
+            "Temperature: 37.9 °C",
+            "Movement: moves on her own"
+           ],
+           "classify": [
+            "POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE"
+           ]
+          }
+         ],
+         "question": "How do you classify Amal?",
+         "options": [
+          "POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE",
+          "LOCAL BACTERIAL INFECTION",
+          "SEVERE DISEASE OR LOCAL INFECTION UNLIKELY"
+         ],
+         "feedback": [
+          "Right. Fever of 37.5 °C or above is a sign of very severe disease in a young infant.",
+          "Amal has no umbilical redness, pustules or pus from the eyes, and she has a pink-row sign.",
+          "37.9 °C is fever in a young infant."
+         ],
+         "explanation": "Give the first dose of IM ampicillin and gentamicin, prevent low blood sugar, keep her warm, and refer urgently.",
+         "answer": 0
+        },
+        {
+         "child": {
+          "name": "Baby Omar",
+          "age": "3 weeks",
+          "visit": "initial",
+          "weight": 3.6,
+          "temp": 36.8,
+          "problem": "Red umbilicus"
+         },
+         "text": "Omar's umbilicus is red. He feeds well, breathes 48 times per minute, has no chest indrawing and moves on his own.",
+         "record": [
+          {
+           "title": "Check for very severe disease and local bacterial infection",
+           "lines": [
+            "Umbilicus red or draining pus: yes",
+            "Breaths: 48",
+            "Temperature: 36.8 °C"
+           ],
+           "classify": [
+            "LOCAL BACTERIAL INFECTION"
+           ]
+          }
+         ],
+         "question": "How do you classify Omar?",
+         "options": [
+          "POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE",
+          "LOCAL BACTERIAL INFECTION",
+          "SEVERE DISEASE OR LOCAL INFECTION UNLIKELY"
+         ],
+         "feedback": [
+          "Omar has no sign of the pink row.",
+          "Right. A red umbilicus is a local bacterial infection: oral amoxicillin for 5 days and treat the umbilicus at home.",
+          "A red umbilicus is a sign of local bacterial infection."
+         ],
+         "explanation": "Follow up a local bacterial infection in 2 days.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Baby Tasneem",
+          "age": "5 weeks",
+          "visit": "initial",
+          "weight": 4.2,
+          "temp": 36.9,
+          "problem": "Fast breathing"
+         },
+         "text": "You count 66 breaths in one minute. You count again: 64. Tasneem feeds well and has no other sign.",
+         "record": [
+          {
+           "title": "Check for very severe disease",
+           "lines": [
+            "Breaths: 66, repeat 64",
+            "Fast breathing: yes"
+           ],
+           "classify": [
+            "POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE"
+           ]
+          }
+         ],
+         "question": "How do you classify Tasneem?",
+         "options": [
+          "POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE",
+          "PNEUMONIA",
+          "SEVERE DISEASE OR LOCAL INFECTION UNLIKELY"
+         ],
+         "feedback": [
+          "Right. In a young infant, 60 or more breaths per minute on a repeated count is fast breathing, a pink-row sign.",
+          "Young infants are not classified for pneumonia. Fast breathing is a sign of very severe disease.",
+          "64 on the second count is fast breathing."
+         ],
+         "explanation": "If the first count is 60 or more, count again. Fast breathing is confirmed if the second count is also 60 or more.",
+         "answer": 0
+        },
+        {
+         "child": {
+          "name": "Baby Sana",
+          "age": "4 days",
+          "visit": "initial",
+          "weight": 3.1,
+          "temp": 36.9,
+          "problem": "Yellow eyes"
+         },
+         "text": "Sana is 4 days old. The jaundice appeared on day 3. Her face and body are yellow; her palms and soles are not. She weighs 3.1 kg.",
+         "record": [
+          {
+           "title": "Check for jaundice",
+           "lines": [
+            "Appeared in the first 24 hours: no",
+            "Palms and soles yellow: no",
+            "Weight: 3.1 kg"
+           ],
+           "classify": [
+            "JAUNDICE"
+           ]
+          }
+         ],
+         "question": "How do you classify Sana's jaundice?",
+         "options": [
+          "SEVERE JAUNDICE",
+          "JAUNDICE",
+          "NO JAUNDICE"
+         ],
+         "feedback": [
+          "Severe jaundice: jaundice in the first 24 hours, yellow palms and soles, or jaundice in an infant under 2.5 kg.",
+          "Right. Jaundice that appeared after 24 hours, with palms and soles not yellow: JAUNDICE.",
+          "Her face and body are yellow: she has jaundice."
+         ],
+         "explanation": "Advise the mother to return immediately if the palms and soles appear yellow, and follow up in 1 day.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Baby Hamza",
+          "age": "6 days",
+          "visit": "initial",
+          "weight": 3.3,
+          "temp": 36.8,
+          "problem": "Yellow"
+         },
+         "text": "Hamza's jaundice appeared on day 3. Today his palms and soles are yellow.",
+         "record": [
+          {
+           "title": "Check for jaundice",
+           "lines": [
+            "Appeared in the first 24 hours: no",
+            "Palms and soles yellow: yes"
+           ],
+           "classify": [
+            "SEVERE JAUNDICE"
+           ]
+          }
+         ],
+         "question": "How do you classify Hamza's jaundice?",
+         "options": [
+          "SEVERE JAUNDICE",
+          "JAUNDICE",
+          "NO JAUNDICE"
+         ],
+         "feedback": [
+          "Right. Yellow palms and soles at any age: SEVERE JAUNDICE. Refer urgently.",
+          "Read the pink row first: yellow palms and soles make jaundice severe.",
+          "Hamza is yellow."
+         ],
+         "explanation": "Before referral, prevent low blood sugar and keep the infant warm.",
+         "answer": 0
+        },
+        {
+         "child": {
+          "name": "Baby Ali",
+          "age": "5 weeks",
+          "visit": "initial",
+          "weight": 4.0,
+          "temp": 37.0,
+          "problem": "Diarrhoea"
+         },
+         "text": "Ali has had diarrhoea for 3 days. He is restless and irritable and his eyes are sunken. The skin pinch goes back immediately.",
+         "record": [
+          {
+           "title": "Does the young infant have diarrhoea? Yes",
+           "lines": [
+            "For how long? 3 days",
+            "Restless, irritable: yes",
+            "Sunken eyes: yes"
+           ],
+           "classify": [
+            "SOME DEHYDRATION"
+           ]
+          }
+         ],
+         "question": "How do you classify Ali's dehydration?",
+         "options": [
+          "SEVERE DEHYDRATION",
+          "SOME DEHYDRATION",
+          "NO DEHYDRATION"
+         ],
+         "feedback": [
+          "Severe dehydration needs two of: movement only when stimulated or no movement, sunken eyes, skin pinch very slow.",
+          "Right. Restless and irritable plus sunken eyes: SOME DEHYDRATION.",
+          "He has two signs of the yellow row."
+         ],
+         "explanation": "If the infant has no severe classification, give fluid for some dehydration (Plan B) and counsel on feeding.",
+         "answer": 1
+        }
+       ]
+      },
+      {
+       "type": "spot",
+       "title": "Find the error on Baby Rami's form",
+       "part": "infant",
+       "text": "One entry on this young infant's form is wrong. Tap it.",
+       "child": {
+        "name": "Baby Rami",
+        "age": "2 weeks",
+        "visit": "initial",
+        "weight": 3.4,
+        "temp": 37.8,
+        "problem": "Not well"
+       },
+       "record": [
+        {
+         "title": "Check for very severe disease and local bacterial infection",
+         "lines": [
+          {
+           "text": "Feeding well: yes",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Breaths: 54 per minute",
+           "why": "54 is below 60: not fast breathing."
+          },
+          {
+           "text": "Temperature: 37.8 °C",
+           "why": "The temperature is recorded correctly."
+          },
+          {
+           "text": "Umbilicus: normal",
+           "why": "This entry is right."
+          }
+         ],
+         "classify": [
+          {
+           "text": "SEVERE DISEASE OR LOCAL INFECTION UNLIKELY",
+           "why": "37.8 °C is fever (37.5 °C or above) in a young infant: POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE.",
+           "error": true
+          }
+         ]
+        }
+       ],
+       "explanation": "In a young infant, fever of 37.5 °C or above is a pink-row sign."
+      },
+      {
+       "type": "spot",
+       "title": "Find the error on Baby Nada's form",
+       "part": "infant",
+       "text": "One entry is wrong. Tap it.",
+       "child": {
+        "name": "Baby Nada",
+        "age": "5 days",
+        "visit": "initial",
+        "weight": 3.0,
+        "temp": 36.9,
+        "problem": "Yellow"
+       },
+       "record": [
+        {
+         "title": "Check for jaundice",
+         "lines": [
+          {
+           "text": "Jaundice: yes",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Appeared in the first 24 hours: no",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Palms and soles yellow: yes",
+           "why": "This sign was looked for and recorded correctly."
+          }
+         ],
+         "classify": [
+          {
+           "text": "JAUNDICE",
+           "why": "Yellow palms and soles at any age is SEVERE JAUNDICE.",
+           "error": true
+          }
+         ]
+        }
+       ],
+       "explanation": "Always look at the palms and soles."
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 10,
+     "isPublished": true
+    },
+    {
      "see": [],
      "practise": [],
      "bookFromPage": 30,
      "bookToPage": 34,
      "title": "Before referral: what the infant needs",
-     "order": 10,
+     "order": 11,
      "read": [
       {
        "type": "note",
@@ -1831,7 +2758,7 @@
      "bookFromPage": 30,
      "bookToPage": 34,
      "title": "First dose of antibiotics, warmth and referral",
-     "order": 11,
+     "order": 12,
      "read": [
       {
        "type": "note",
@@ -1958,7 +2885,7 @@
      "bookFromPage": 35,
      "bookToPage": 38,
      "title": "Treatment in the clinic: oral antibiotic and jaundice",
-     "order": 12,
+     "order": 13,
      "read": [
       {
        "type": "note",
@@ -2054,7 +2981,7 @@
      "bookFromPage": 35,
      "bookToPage": 38,
      "title": "Local infections the caregiver can treat at home",
-     "order": 13,
+     "order": 14,
      "read": [
       {
        "type": "note",
@@ -2136,7 +3063,7 @@
      "bookFromPage": 39,
      "bookToPage": 41,
      "title": "Provide follow-up care for the sick young infant",
-     "order": 14,
+     "order": 15,
      "read": [
       {
        "type": "note",
@@ -2290,7 +3217,7 @@
      "bookFromPage": 43,
      "bookToPage": 53,
      "title": "Feeding problems and feeding recommendations",
-     "order": 15,
+     "order": 16,
      "read": [
       {
        "type": "note",
@@ -2396,12 +3323,28 @@
      "bookFromPage": 43,
      "bookToPage": 53,
      "title": "Part A: assess for a feeding problem or low weight",
-     "order": 16,
+     "order": 17,
      "read": [
       {
        "type": "note",
        "text": "Ask the Part A questions, determine weight for age and look for thrush.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "How many breastfeeds in 24 hours does a young infant need?",
+       "options": [
+        "4 or more",
+        "8 or more",
+        "12 or more"
+       ],
+       "answer": 1,
+       "feedback": [
+        "Fewer than 8 is a feeding problem.",
+        "Right.",
+        "8 or more is enough."
+       ]
       },
       {
        "type": "heading",
@@ -2476,7 +3419,7 @@
      "bookFromPage": 43,
      "bookToPage": 53,
      "title": "Part B: assess breastfeeding",
-     "order": 17,
+     "order": 18,
      "read": [
       {
        "type": "note",
@@ -2600,6 +3543,27 @@
        ]
       },
       {
+       "type": "steps",
+       "title": "Check attachment, with photographs",
+       "steps": [
+        {
+         "title": "Good attachment",
+         "text": "Chin touching breast, mouth wide open, lower lip turned outward, more areola above than below.",
+         "image": "imnci-photos/photo-66.jpg"
+        },
+        {
+         "title": "Not well attached",
+         "text": "Compare: chin not touching, mouth not wide open, areola equal above and below.",
+         "image": "imnci-photos/photo-67.jpg"
+        },
+        {
+         "title": "Good positioning",
+         "text": "Head and body straight, facing the breast, close to the mother, whole body supported.",
+         "image": "imnci-photos/photo-77.jpg"
+        }
+       ]
+      },
+      {
        "type": "exercise",
        "exerciseId": "dimci-m2-ex-i",
        "note": "Exercise I: match each infant with how well they are suckling."
@@ -2619,7 +3583,7 @@
      "bookFromPage": 43,
      "bookToPage": 53,
      "title": "Classify feeding problems and low weight",
-     "order": 18,
+     "order": 19,
      "read": [
       {
        "type": "note",
@@ -2684,8 +3648,233 @@
       {
        "type": "paragraph",
        "text": "Skip Parts A and B and use the chart for non-breastfed infants: ask what milk is given, how many times, how much, how it is prepared (let the mother show you), whether any breast milk is given, what other foods and fluids, cup or bottle, and how the utensils are cleaned. This chart is also used when an HIV-positive mother has chosen not to breastfeed. Module 8 covers it, with counselling HIV-positive women on infant feeding."
+      },
+      {
+       "type": "classcards",
+       "title": "Feeding problem or low weight",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "yellow",
+         "label": "FEEDING PROBLEM OR LOW WEIGHT",
+         "action": "Treat and follow up",
+         "signs": "Not well attached; or not suckling effectively; or less than 8 breastfeeds in 24 hours; or receives other foods or drinks; or low weight for age; or thrush.",
+         "treat": "Teach positioning and attachment; advise to breastfeed more often, day and night; counsel about other foods and a cup; treat thrush; follow up a feeding problem or thrush in 2 days and low weight in 14 days."
+        },
+        {
+         "colour": "green",
+         "label": "NO FEEDING PROBLEM",
+         "action": "Home care",
+         "signs": "Not low weight for age and no other signs of inadequate feeding.",
+         "treat": "Advise the mother on home care; praise her for feeding the infant well."
+        }
+       ]
       }
      ],
+     "isPublished": true
+    },
+    {
+     "title": "Practise: classify feeding problems",
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify the feeding of three young infants, and practise the questions you ask a mother.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Talk with Layla's mother",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "How many times does Layla breastfeed in 24 hours, day and night?"
+          },
+          {
+           "who": "Mother",
+           "text": "About six times."
+          },
+          {
+           "who": "You",
+           "text": "Does she get any other food or drink?"
+          },
+          {
+           "who": "Mother",
+           "text": "No, only my milk."
+          }
+         ],
+         "question": "Is this a feeding problem?",
+         "options": [
+          "Yes: less than 8 times in 24 hours",
+          "No: only breast milk is fine",
+          "Only if she is losing weight"
+         ],
+         "answer": 0,
+         "explanation": "A young infant should breastfeed 8 times or more in 24 hours.",
+         "feedback": [
+          "Right.",
+          "Exclusive breastfeeding is good, but 6 times is not enough.",
+          "Fewer than 8 feeds is a problem whatever the weight."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "Mother",
+           "text": "She sleeps a lot at night."
+          }
+         ],
+         "question": "What do you advise?",
+         "options": [
+          "Breastfeed as often and for as long as she wants, day and night",
+          "Give her water between feeds",
+          "Feed only by day"
+         ],
+         "answer": 0,
+         "explanation": "Advise the mother to breastfeed as often and for as long as the infant wants, day and night.",
+         "feedback": [
+          "Right.",
+          "A young infant needs breast milk only.",
+          "Night feeds are important."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Classify feeding problem or low weight",
+       "part": "infant",
+       "categories": [
+        "feeding_problem"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Baby Layla",
+          "age": "6 weeks",
+          "visit": "initial",
+          "weight": 4.3,
+          "temp": 36.8,
+          "problem": "Check-up"
+         },
+         "text": "Layla is breastfed 6 times in 24 hours. She takes no other food or drink. Her weight for age is not low. She is well positioned and well attached and suckles effectively. No thrush.",
+         "record": [
+          {
+           "title": "Check for feeding problem or low weight",
+           "lines": [
+            "Breastfeeds: 6 times in 24 hours",
+            "Other foods or drinks: no",
+            "Weight for age: not low",
+            "Attachment: good",
+            "Suckling: effective"
+           ],
+           "classify": [
+            "FEEDING PROBLEM OR LOW WEIGHT"
+           ]
+          }
+         ],
+         "question": "How do you classify Layla's feeding?",
+         "options": [
+          "FEEDING PROBLEM OR LOW WEIGHT",
+          "NO FEEDING PROBLEM"
+         ],
+         "feedback": [
+          "Right. Breastfeeding less than 8 times in 24 hours is a feeding problem.",
+          "Her attachment is good, but she breastfeeds only 6 times. A young infant should breastfeed 8 times or more in 24 hours."
+         ],
+         "explanation": "Advise the mother to breastfeed as often and for as long as the infant wants, day and night.",
+         "answer": 0
+        },
+        {
+         "child": {
+          "name": "Baby Yasir",
+          "age": "4 weeks",
+          "visit": "initial",
+          "weight": 4.0,
+          "temp": 36.9,
+          "problem": "Check-up"
+         },
+         "text": "Yasir breastfeeds 10 times in 24 hours, day and night. He gets no other food or drink. His weight for age is not low. He is well attached and suckles effectively. No thrush.",
+         "record": [
+          {
+           "title": "Check for feeding problem or low weight",
+           "lines": [
+            "Breastfeeds: 10 times in 24 hours",
+            "Other foods or drinks: no",
+            "Weight for age: not low",
+            "Attachment: good"
+           ],
+           "classify": [
+            "NO FEEDING PROBLEM"
+           ]
+          }
+         ],
+         "question": "How do you classify Yasir's feeding?",
+         "options": [
+          "FEEDING PROBLEM OR LOW WEIGHT",
+          "NO FEEDING PROBLEM"
+         ],
+         "feedback": [
+          "Yasir has no sign of a feeding problem and his weight is not low.",
+          "Right. Praise the mother for feeding him well."
+         ],
+         "explanation": "No feeding problem: advise the mother on home care for the young infant and praise her.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Baby Rana",
+          "age": "7 weeks",
+          "visit": "initial",
+          "weight": 4.5,
+          "temp": 36.7,
+          "problem": "Check-up"
+         },
+         "text": "Rana breastfeeds 9 times in 24 hours. Her mother also gives her water and goat's milk from a bottle. She is well attached.",
+         "record": [
+          {
+           "title": "Check for feeding problem or low weight",
+           "lines": [
+            "Breastfeeds: 9 times in 24 hours",
+            "Other foods or drinks: water, goat's milk",
+            "Feeds with: bottle"
+           ],
+           "classify": [
+            "FEEDING PROBLEM OR LOW WEIGHT"
+           ]
+          }
+         ],
+         "question": "What is Rana's feeding problem? Select all that apply.",
+         "options": [
+          "She breastfeeds too few times",
+          "She receives other foods or drinks",
+          "She is fed from a bottle"
+         ],
+         "feedback": [
+          "9 times in 24 hours is enough: 8 or more.",
+          "Right. A young infant should have breast milk only.",
+          "Right. Counsel the mother to stop the bottle and use a cup if she must give other milk."
+         ],
+         "explanation": "Counsel the mother to breastfeed more, reduce other foods and drinks, and use a cup instead of a bottle.",
+         "answers": [
+          1,
+          2
+         ]
+        }
+       ]
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 20,
      "isPublished": true
     },
     {
@@ -2694,7 +3883,7 @@
      "bookFromPage": 54,
      "bookToPage": 55,
      "title": "Check immunizations and other problems",
-     "order": 19,
+     "order": 21,
      "read": [
       {
        "type": "note",
@@ -2772,7 +3961,7 @@
      "bookFromPage": 56,
      "bookToPage": 64,
      "title": "Counsel on feeding: positioning and attachment",
-     "order": 20,
+     "order": 22,
      "read": [
       {
        "type": "note",
@@ -2937,7 +4126,7 @@
      "bookFromPage": 56,
      "bookToPage": 64,
      "title": "Expressing breast milk and feeding by cup",
-     "order": 21,
+     "order": 23,
      "read": [
       {
        "type": "note",
@@ -3103,7 +4292,7 @@
      "bookFromPage": 56,
      "bookToPage": 64,
      "title": "Other feeding problems and follow-up",
-     "order": 22,
+     "order": 24,
      "read": [
       {
        "type": "note",
@@ -3194,7 +4383,7 @@
      "bookFromPage": 65,
      "bookToPage": 67,
      "title": "Counsel the caregiver on infant care",
-     "order": 23,
+     "order": 25,
      "read": [
       {
        "type": "note",
@@ -3310,7 +4499,7 @@
      "bookFromPage": 68,
      "bookToPage": 69,
      "title": "Using this module in your clinic",
-     "order": 24,
+     "order": 26,
      "read": [
       {
        "type": "note",
@@ -3382,7 +4571,7 @@
      "bookFromPage": 70,
      "bookToPage": 76,
      "title": "Review questions and Module 2 test",
-     "order": 25,
+     "order": 27,
      "read": [
       {
        "type": "note",
@@ -3404,6 +4593,40 @@
        "note": "The 20 logbook questions. You may use your chart booklet."
       }
      ],
+     "isPublished": true
+    },
+    {
+     "title": "Module 2 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Check every sick young infant for very severe disease, local infection, jaundice, diarrhoea and feeding.</li><li>Fever 37.5 °C or above, low temperature, fast breathing 60 or more, severe chest indrawing, not feeding well, convulsions, or moving only when stimulated: refer urgently.</li><li>Jaundice in the first 24 hours or yellow palms and soles is severe.</li><li>A young infant needs 8 or more breastfeeds in 24 hours and good attachment.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for a sick young infant: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 28,
      "isPublished": true
     }
    ],

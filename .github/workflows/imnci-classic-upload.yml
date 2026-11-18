@@ -3,7 +3,7 @@ name: One-off - Sudan IMNCI classic course upload
 # (dry = read only, commit = write, replace = swap the uploaded lessons for the file's, undo = remove what was written).
 on:
   push:
-    branches: [claude/project-thread-h8n9e8]
+    branches: [claude/project-thread-h8n9e8, claude/project-thread-cjzso2]
     paths: ['scripts/imnci-classic-upload/**', 'course-packages/sudan-imnci-classic-modules-1-3.imnci.json', '.github/workflows/imnci-classic-upload.yml']
 jobs:
   run:

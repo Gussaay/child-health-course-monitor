@@ -396,7 +396,7 @@ export function facilitatorContent(section) {
 
 // Blocks the learner does something with. Each one counts as an activity in
 // the section's progress bar once it has been done.
-export const ACTIVITY_TYPES = ['question', 'reveal', 'flip', 'sort', 'steps', 'story', 'calc', 'growthchart', 'exercise', 'video'];
+export const ACTIVITY_TYPES = ['question', 'reveal', 'flip', 'sort', 'steps', 'story', 'calc', 'growthchart', 'exercise', 'video', 'scenario', 'spot', 'drill', 'classcards', 'reflect'];
 export const isActivity = (b) => ACTIVITY_TYPES.includes(b?.type);
 
 export function countWords(section) {
@@ -409,7 +409,7 @@ export function countWords(section) {
     return all.reduce((n, b) => {
         if (b.type === 'list') return n + b.items.join(' ').split(/\s+/).filter(Boolean).length;
         if (b.type === 'image' || b.type === 'page' || b.type === 'video') return n;
-        if (['reveal', 'flip', 'sort', 'steps', 'story', 'calc', 'growthchart', 'courselink'].includes(b.type)) {
+        if (['reveal', 'flip', 'sort', 'steps', 'story', 'calc', 'growthchart', 'courselink', 'scenario', 'spot', 'drill', 'classcards', 'reflect'].includes(b.type)) {
             const text = JSON.stringify(b).replace(/"[a-zA-Z]+":/g, ' ').replace(/<[^>]*>/g, ' ').replace(/[{}[\],"]/g, ' ');
             return n + text.split(/\s+/).filter(Boolean).length;
         }
@@ -437,6 +437,10 @@ export const BLOCK_TYPES = [
     // A link to a module or lesson of another course (the facilitator guide
     // opens the learners' module it is talking about).
     'courselink',
+    // Practice: a set of cases with the booklet table and the child's filled
+    // recording form, find the error on a filled form, a skill drill on a
+    // video, the classification rows as coloured cards, and reflection.
+    'scenario', 'spot', 'drill', 'classcards', 'reflect',
 ];
 
 // ---------------------------------------------------------------------------
@@ -450,7 +454,7 @@ export const BLOCK_TYPES = [
 // every card was moved below the text on the first save.
 // ---------------------------------------------------------------------------
 
-export const CARD_TYPES = ['video', 'question', 'exercise', 'page', 'booklet', 'form', 'reveal', 'flip', 'sort', 'steps', 'story', 'calc', 'growthchart', 'courselink'];
+export const CARD_TYPES = ['video', 'question', 'exercise', 'page', 'booklet', 'form', 'reveal', 'flip', 'sort', 'steps', 'story', 'calc', 'growthchart', 'courselink', 'scenario', 'spot', 'drill', 'classcards', 'reflect'];
 export const isCard = (b) => CARD_TYPES.includes(b?.type) || (b?.type === 'note' && !!b.label);
 export const cardMarker = (key) => `[[card ${key}]]`;
 const MARKER_PARA = /<p[^>]*>\s*\[\[card ([a-z0-9]+)\]\]\s*(?:<br\s*\/?>)?\s*<\/p>/gi;

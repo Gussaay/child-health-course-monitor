@@ -12,8 +12,11 @@ import React, { createContext, useContext, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Eye, RotateCcw, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Lightbulb, Layers, Shuffle, ListOrdered, BookOpenCheck, Calculator,
+    Stethoscope, UserRound,
 } from 'lucide-react';
 import { RichText } from '../shared';
+import { AnswerOptions } from './practice';
+import { useAssetUrl } from './blocks';
 
 // -----------------------------------------------------------------------------
 // Activity tracking
@@ -26,6 +29,28 @@ export function useActivity(key) {
     const ctx = useContext(ActivityContext);
     if (!ctx || key == null) return [false, () => {}];
     return [ctx.isDone(key), () => ctx.markDone(key)];
+}
+
+/**
+ * Records whether the learner's first answer to an activity (or to one part of
+ * it, `sub`) was right, once: later tries change nothing. It is kept with the
+ * lesson's done list as "<key>@1" or "<key>@0", which the progress pages read
+ * as first-try accuracy. `.rate(n)` keeps a 1 to 5 rating the same way.
+ */
+export function useFirstTry(key) {
+    const ctx = useContext(ActivityContext);
+    const record = (right, sub) => {
+        if (!ctx || key == null) return;
+        const base = sub ? `${key}#${sub}` : key;
+        if (ctx.isDone(`${base}@1`) || ctx.isDone(`${base}@0`)) return;
+        ctx.markDone(`${base}@${right ? 1 : 0}`);
+    };
+    record.rate = (n) => {
+        if (!ctx || key == null) return;
+        if ([1, 2, 3, 4, 5].some((k) => ctx.isDone(`${key}@r${k}`))) return;
+        ctx.markDone(`${key}@r${n}`);
+    };
+    return record;
 }
 
 export const Html = ({ html, className = '' }) => (
@@ -201,6 +226,14 @@ export function SortBlock({ block, activityKey }) {
 // Step by step
 // -----------------------------------------------------------------------------
 
+// A photograph for one step (a path in the course files, such as a page of the
+// photograph booklet). The step reads without it while it loads.
+function StepImage({ path, alt }) {
+    const { url } = useAssetUrl(path);
+    if (!url) return null;
+    return <img src={url} alt={alt || ''} loading="lazy" className="mt-2 w-full max-h-72 object-contain rounded-lg border border-slate-200 bg-slate-50" />;
+}
+
 export function StepsBlock({ block, activityKey }) {
     const { t } = useTranslation();
     const steps = block.steps || [];
@@ -224,6 +257,7 @@ export function StepsBlock({ block, activityKey }) {
                 <div className="min-w-0 flex-1">
                     <div className="font-bold text-slate-900"><Html html={step.title} /></div>
                     {step.text && <div className="text-sm sm:text-base text-slate-700 mt-1"><Html html={step.text} /></div>}
+                    {step.image && <StepImage path={step.image} alt={step.title} />}
                 </div>
             </div>
             <div className="flex items-center justify-between mt-4">
@@ -333,6 +367,31 @@ export function ChoiceOptions({ options = [], answer = 0, feedback = [], explana
     );
 }
 
+// A line of the conversation: the health worker on one side, the mother (or
+// anyone else) on the other, as a chat reads.
+const SELF = ['you', 'health worker', 'أنت', 'العامل الصحي', 'الكادر الصحي'];
+function Dialogue({ lines, self = [] }) {
+    const mine = (who) => [...SELF, ...self.map((x) => String(x).toLowerCase())].includes(String(who || '').trim().toLowerCase());
+    return (
+        <div className="space-y-2 my-2">
+            {lines.map((l, k) => {
+                const me = mine(l.who);
+                return (
+                    <div key={k} className={`flex items-end gap-2 ${me ? 'flex-row-reverse' : ''}`}>
+                        <span className={`w-8 h-8 rounded-full grid place-items-center shrink-0 ${me ? 'bg-sky-700 text-white' : 'bg-amber-200 text-amber-900'}`} aria-hidden="true">
+                            {me ? <Stethoscope size={15} /> : <UserRound size={15} />}
+                        </span>
+                        <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm sm:text-base ${me ? 'bg-sky-50 border border-sky-200 rounded-ee-sm' : 'bg-amber-50 border border-amber-200 rounded-es-sm'}`}>
+                            {l.who && <div className={`text-[11px] font-bold ${me ? 'text-sky-800' : 'text-amber-800'}`}>{l.who}</div>}
+                            <Html html={l.text} />
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 export function StoryBlock({ block, activityKey }) {
     const { t } = useTranslation();
     const stages = block.stages || [];
@@ -340,6 +399,7 @@ export function StoryBlock({ block, activityKey }) {
     // How each stage went: 'first' (right first time), 'later' or 'shown'.
     const [results, setResults] = useState({});
     const [done, markDone] = useActivity(activityKey);
+    const firstTry = useFirstTry(activityKey);
     const next = (i) => { const n = i + 1; setReached(n); if (n >= stages.length) markDone(); };
     const asked = stages.map((s, i) => ({ s, i })).filter(({ s }) => (s.options || []).length > 0);
     const firstTime = asked.filter(({ i }) => results[i] === 'first').length;
@@ -352,7 +412,8 @@ export function StoryBlock({ block, activityKey }) {
                 {stages.slice(0, Math.min(reached + 1, stages.length)).map((s, i) => (
                     <StoryStage key={i} stage={s} last={i === stages.length - 1} current={i === reached} done={done}
                         maxTries={triesAllowed(s.maxTries ? s : block)}
-                        onResult={(r) => setResults((x) => ({ ...x, [i]: r }))} onNext={() => next(i)} />
+                        self={block.self || []}
+                        onResult={(r) => { firstTry(r === 'first', `s${i}`); setResults((x) => ({ ...x, [i]: r })); }} onNext={() => next(i)} />
                 ))}
             </ol>
             {finished && asked.length > 0 && (
@@ -376,7 +437,7 @@ export function StoryBlock({ block, activityKey }) {
     );
 }
 
-function StoryStage({ stage: s, last, current, done, maxTries, onResult, onNext }) {
+function StoryStage({ stage: s, last, current, done, maxTries, self, onResult, onNext }) {
     const { t } = useTranslation();
     const options = s.options || [];
     const hasQuestion = options.length > 0;
@@ -384,17 +445,27 @@ function StoryStage({ stage: s, last, current, done, maxTries, onResult, onNext 
     const choice = useChoice(answer, maxTries);
     const reported = React.useRef(false);
     React.useEffect(() => {
-        if (choice.shown && !reported.current) {
+        if (!multi && choice.shown && !reported.current) {
             reported.current = true;
             onResult(choice.firstTime ? 'first' : choice.right ? 'later' : 'shown');
         }
     }, [choice.shown, choice.firstTime, choice.right, onResult]);
-    const settled = !hasQuestion || choice.shown;
+    // Several right answers ("select all that apply"): answered at once.
+    const [multiDone, setMultiDone] = useState(false);
+    const multi = Array.isArray(s.answers) && s.answers.length > 0;
+    const settled = !hasQuestion || (multi ? multiDone : choice.shown);
     return (
         <li className="relative ps-5 border-s-2 border-sky-200" data-testid="story-stage">
             <span className="absolute -start-[7px] top-1.5 w-3 h-3 rounded-full bg-sky-600" aria-hidden="true" />
             {s.text && <div className="text-sm sm:text-base text-slate-800"><Html html={s.text} /></div>}
-            {hasQuestion && (
+            {(s.dialogue || []).length > 0 && <Dialogue lines={s.dialogue} self={self} />}
+            {hasQuestion && multi && (
+                <div className="mt-2">
+                    <div className="font-semibold text-slate-900 text-sm sm:text-base mb-2"><Html html={s.question} /></div>
+                    <AnswerOptions compact allowRetry={false} q={s} onAnswered={(right) => { setMultiDone(true); onResult(right ? 'first' : 'shown'); }} />
+                </div>
+            )}
+            {hasQuestion && !multi && (
                 <div className="mt-2">
                     <div className="font-semibold text-slate-900 text-sm sm:text-base"><Html html={s.question} /></div>
                     <ChoiceOptions small options={options} answer={answer} feedback={s.feedback || []}

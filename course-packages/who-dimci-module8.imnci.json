@@ -2357,6 +2357,45 @@
       }
      ],
      "isPublished": true
+    },
+    {
+     "title": "Module 8 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Know the HIV status of the child and the mother.</li><li>Give cotrimoxazole prophylaxis and the right feeding advice to HIV-exposed children.</li><li>Support adherence to ART and follow up regularly.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for HIV exposure or infection: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 28,
+     "isPublished": true
     }
    ],
    "isPublished": true

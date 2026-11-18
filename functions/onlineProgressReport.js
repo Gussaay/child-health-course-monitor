@@ -81,10 +81,24 @@ function buildReport({ caller, courses, items, progress, users }) {
     const perModule = {};
     const startedPerCourse = {};
     const at = {};
+    // First tries at practice questions: "<activity>@1" right, "<activity>@0" not.
+    const firstTry = {};
+    const rating = {};
     courseList.forEach((c) => {
       let n = 0;
       let started = 0;
+      const ft = [0, 0];
       c.lessons.forEach((l) => {
+        (Array.isArray(acts[l.id]) ? acts[l.id] : []).forEach((k) => {
+          const tag = String(k).split("@")[1];
+          if (tag === "1") { ft[0] += 1; ft[1] += 1; }
+          else if (tag === "0") ft[1] += 1;
+          else if (/^r[1-5]$/.test(tag || "")) {
+            // A module's 1 to 5 star rating, kept per learner so the dashboard
+            // can average it for whoever its filter shows.
+            if (l.moduleId) rating[l.moduleId] = Number(tag.slice(1));
+          }
+        });
         if (done[l.id]) {
           n += 1;
           l.done += 1;
@@ -99,6 +113,7 @@ function buildReport({ caller, courses, items, progress, users }) {
       if (current) at[c.id] = current.id;
       if (n) perCourse[c.id] = n;
       if (started) startedPerCourse[c.id] = started;
+      if (ft[1]) firstTry[c.id] = ft;
     });
     return {
       uid: u.id,
@@ -110,6 +125,8 @@ function buildReport({ caller, courses, items, progress, users }) {
       perCourse,
       perModule,
       startedPerCourse,
+      firstTry,
+      ratings: rating,
       at,
       lastActive: last || null,
     };

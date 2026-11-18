@@ -166,6 +166,20 @@
        "label": "In this lesson"
       },
       {
+       "type": "question",
+       "label": "Before you start",
+       "text": "A child's MUAC is normal. Can she still have severe acute malnutrition?",
+       "options": [
+        "No",
+        "Yes, if she has oedema of both feet or a very low weight for length"
+       ],
+       "answer": 1,
+       "feedback": [
+        "Check oedema of both feet and weight for length too.",
+        "Right. Check all three: oedema, WFH/L and MUAC."
+       ]
+      },
+      {
        "type": "heading",
        "text": "Why do you check every child for malnutrition?"
       },
@@ -722,6 +736,41 @@
        "caption": "Chart booklet: classify acute malnutrition (Sudan national IMNCI booklet)"
       },
       {
+       "type": "classcards",
+       "title": "Nutritional status: the four classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "COMPLICATED SEVERE ACUTE MALNUTRITION (SAM)",
+         "action": "Refer urgently",
+         "signs": "Edema of both feet OR WFH/L less than -3 z-scores or MUAC less than 11.5 cm with any of the following: — Medical complication present, or — Not able to finish RUTF portion",
+         "treat": "Give first dose appropriate antibiotic; Treat the child to prevent low blood sugar; Keep the child warm; Refer URGENTLY to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "UNCOMPLICATED SEVERE ACUTE MALNUTRITION (SAM)",
+         "action": "Treat and follow up",
+         "signs": "WFH/L less than -3 z-scores OR MUAC less than 11.5 cm AND Able to finish RUTF portion and no medical complications",
+         "treat": "Give oral antibiotics for 5 days; Refer for Outpatient Therapeutic Program (OTP) for ready-to-use therapeutic food (RUTF) if a child aged 6 months or more; Counsel the mother on how to feed the child; Advise mother when to return immediately; Follow up in 14 days"
+        },
+        {
+         "colour": "yellow",
+         "label": "MODERATE ACUTE MALNUTRITION (MAM)",
+         "action": "Treat and follow up",
+         "signs": "WFH/L -3 up to -2 z-scores OR MUAC 11.5 up to 12.5 cm",
+         "treat": "Refer the child for Supplementary feeding program if available; Assess the child's feeding and counsel the mother on the feeding recommendations and refer for growth monitoring and health promotion; If feeding problem, follow up in 7 days; Advise mother when to return immediately; Follow-up in 30 days"
+        },
+        {
+         "colour": "green",
+         "label": "NO ACUTE MALNUTRITION",
+         "action": "Home care",
+         "signs": "WFH/L -2 z-scores or more OR MUAC 12.5 cm or more.",
+         "treat": "If child is less than 2 years old, assess the child's feeding and counsel the mother on feeding according to the feeding recommendations; If feeding problem, follow-up in 7 days"
+        }
+       ]
+      },
+      {
        "type": "flip",
        "title": "The four classifications",
        "cards": [
@@ -990,6 +1039,22 @@
        "label": "In this lesson"
       },
       {
+       "type": "question",
+       "label": "Before you start",
+       "text": "How do you look for palmar pallor?",
+       "options": [
+        "Compare the child's palm with your own",
+        "Ask the mother",
+        "Look at the tongue"
+       ],
+       "answer": 0,
+       "feedback": [
+        "Right.",
+        "Look yourself.",
+        "IMNCI uses the palm."
+       ]
+      },
+      {
        "type": "paragraph",
        "text": "Anaemia is a reduced number of red cells, or a reduced amount of haemoglobin in each red cell. Iron deficiency is the most common cause; folate, vitamin B12 and vitamin A deficiency are others. A child can also become anaemic from:"
       },
@@ -1026,6 +1091,34 @@
         "anemia"
        ],
        "caption": "Chart booklet: anaemia (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "classcards",
+       "title": "Anaemia: the three classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "SEVERE ANAEMIA",
+         "action": "Refer urgently",
+         "signs": "Severe palmar pallor",
+         "treat": "Refer URGENTLY to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "ANAEMIA",
+         "action": "Treat and follow up",
+         "signs": "Some palmar pallor",
+         "treat": "Give iron; Give mebendazole if child is 1 year or older and has not received a dose in the last 6 months; Advise mother when to return immediately; Follow-up in 14 days; If child is less than 2 years old, assess the child's feeding and counsel the mother on feeding according to the feeding recommendations"
+        },
+        {
+         "colour": "green",
+         "label": "NO ANAEMIA",
+         "action": "Home care",
+         "signs": "No palmar pallor",
+         "treat": "No additional treatment; If child is less than 2 years old, assess the child's feeding and counsel the mother on feeding according to the feeding recommendations"
+        }
+       ]
       },
       {
        "type": "flip",
@@ -1077,6 +1170,27 @@
        ]
       },
       {
+       "type": "steps",
+       "title": "Look for palmar pallor, with photographs",
+       "steps": [
+        {
+         "title": "Hold the child's palm open",
+         "text": "Do not stretch the fingers back: that can make the palm look pale.",
+         "image": "imnci-photos/photo-38.jpg"
+        },
+        {
+         "title": "Compare",
+         "text": "With your own palm and the palms of other children.",
+         "image": "imnci-photos/photo-39.jpg"
+        },
+        {
+         "title": "Decide",
+         "text": "Severe pallor (very pale, almost white), some pallor (pale), or no pallor.",
+         "image": "imnci-photos/photo-40.jpg"
+        }
+       ]
+      },
+      {
        "type": "exercise",
        "exerciseId": "dimci-m6-ex-g",
        "note": ""
@@ -1085,12 +1199,297 @@
      "isPublished": true
     },
     {
+     "title": "Practise: classify malnutrition and anaemia",
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify the nutritional status and anaemia of four children, and find an error on a recording form.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Talk with Hala's mother",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "Hala's arm measures 11.2 centimetres. That is below the line."
+          },
+          {
+           "who": "Mother",
+           "text": "What does that mean?"
+          },
+          {
+           "who": "You",
+           "text": "She is severely thin. Let us see if she can eat this RUTF."
+          }
+         ],
+         "question": "Why do the appetite test?",
+         "options": [
+          "To see if she can be treated at home",
+          "To feed her before she leaves",
+          "It is optional"
+         ],
+         "answer": 0,
+         "explanation": "A child with SAM who finishes the RUTF portion and has no medical complication can be treated at home.",
+         "feedback": [
+          "Right.",
+          "It decides where she is treated.",
+          "It is part of the assessment of SAM."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "Mother",
+           "text": "She ate it all."
+          }
+         ],
+         "question": "How do you classify Hala?",
+         "options": [
+          "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+          "COMPLICATED SEVERE ACUTE MALNUTRITION",
+          "MODERATE ACUTE MALNUTRITION"
+         ],
+         "answer": 0,
+         "explanation": "MUAC below 11.5 cm, no complication, appetite test passed.",
+         "feedback": [
+          "Right.",
+          "She passed the appetite test and has no complication.",
+          "MUAC below 11.5 cm is severe."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Classify malnutrition and anaemia",
+       "part": "child",
+       "categories": [
+        "malnutrition",
+        "anemia"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Mazin",
+          "age": "18 months",
+          "visit": "initial",
+          "weight": 8.6,
+          "temp": 37.0,
+          "length": 80,
+          "muac": 12.0,
+          "problem": "Check-up"
+         },
+         "text": "Mazin has no oedema of both feet. On the weight-for-length chart he is between -3 and -2 z-scores. His MUAC is 12.0 cm.",
+         "record": [
+          {
+           "title": "Check for acute malnutrition",
+           "lines": [
+            "Oedema of both feet: no",
+            "WFL: between -3 and -2 z",
+            "MUAC: 12.0 cm"
+           ],
+           "classify": [
+            "MODERATE ACUTE MALNUTRITION"
+           ]
+          }
+         ],
+         "question": "How do you classify Mazin's nutritional status?",
+         "options": [
+          "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+          "MODERATE ACUTE MALNUTRITION",
+          "NO ACUTE MALNUTRITION"
+         ],
+         "feedback": [
+          "SAM needs WFL below -3 z or MUAC below 11.5 cm.",
+          "Right. WFL -3 up to -2 z, or MUAC 11.5 up to 12.5 cm: MODERATE ACUTE MALNUTRITION.",
+          "His WFL and MUAC are both in the moderate range."
+         ],
+         "explanation": "MAM: assess the child's feeding and counsel the mother, and follow up in 30 days.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Hala",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 8.4,
+          "temp": 37.1,
+          "length": 82,
+          "muac": 11.2,
+          "problem": "Not gaining weight"
+         },
+         "text": "Hala has no oedema. Her MUAC is 11.2 cm. She has no medical complication, and she finishes her RUTF portion in the appetite test.",
+         "record": [
+          {
+           "title": "Check for acute malnutrition",
+           "lines": [
+            "Oedema of both feet: no",
+            "MUAC: 11.2 cm",
+            "Medical complication: no",
+            "Appetite test: passed"
+           ],
+           "classify": [
+            "UNCOMPLICATED SEVERE ACUTE MALNUTRITION"
+           ]
+          }
+         ],
+         "question": "How do you classify Hala?",
+         "options": [
+          "COMPLICATED SEVERE ACUTE MALNUTRITION",
+          "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+          "MODERATE ACUTE MALNUTRITION"
+         ],
+         "feedback": [
+          "Complicated SAM needs oedema of both feet, a medical complication or a failed appetite test.",
+          "Right. MUAC below 11.5 cm with no complication and a passed appetite test: UNCOMPLICATED SAM.",
+          "MUAC below 11.5 cm is severe, not moderate."
+         ],
+         "explanation": "Uncomplicated SAM is treated at home with RUTF, with follow-up in 7 days.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Ibrahim",
+          "age": "3 years",
+          "visit": "initial",
+          "weight": 12,
+          "temp": 37.0,
+          "muac": 12.8,
+          "problem": "Swollen feet"
+         },
+         "text": "When you press both of Ibrahim's feet with your thumbs for a few seconds, a dent stays in each foot. His MUAC is 12.8 cm.",
+         "record": [
+          {
+           "title": "Check for acute malnutrition",
+           "lines": [
+            "Oedema of both feet: yes",
+            "MUAC: 12.8 cm"
+           ],
+           "classify": [
+            "COMPLICATED SEVERE ACUTE MALNUTRITION"
+           ]
+          }
+         ],
+         "question": "His MUAC is normal. How do you classify Ibrahim?",
+         "options": [
+          "NO ACUTE MALNUTRITION",
+          "MODERATE ACUTE MALNUTRITION",
+          "COMPLICATED SEVERE ACUTE MALNUTRITION"
+         ],
+         "feedback": [
+          "Oedema of both feet is severe acute malnutrition whatever the MUAC.",
+          "Oedema of both feet is severe, not moderate.",
+          "Right. Oedema of both feet is in the pink row: COMPLICATED SEVERE ACUTE MALNUTRITION. Refer urgently."
+         ],
+         "explanation": "Always look and feel for oedema of both feet. A normal MUAC does not rule out severe malnutrition.",
+         "answer": 2
+        },
+        {
+         "child": {
+          "name": "Reem",
+          "age": "20 months",
+          "visit": "initial",
+          "weight": 10,
+          "temp": 37.0,
+          "problem": "Tired"
+         },
+         "text": "You compare Reem's palm with your own and with her mother's. Her palm is pale, but not white.",
+         "record": [
+          {
+           "title": "Check for anaemia",
+           "lines": [
+            "Palmar pallor: some"
+           ],
+           "classify": [
+            "ANAEMIA"
+           ]
+          }
+         ],
+         "question": "How do you classify Reem?",
+         "options": [
+          "SEVERE ANAEMIA",
+          "ANAEMIA",
+          "NO ANAEMIA"
+         ],
+         "feedback": [
+          "Severe palmar pallor is a very pale, almost white palm.",
+          "Right. Some palmar pallor classifies ANAEMIA: give iron, and mebendazole if 1 year or older and none in the last 6 months.",
+          "Her palm is pale: she has some palmar pallor."
+         ],
+         "explanation": "Severe palmar pallor: SEVERE ANAEMIA, refer urgently. Some palmar pallor: ANAEMIA.",
+         "answer": 1
+        }
+       ]
+      },
+      {
+       "type": "spot",
+       "title": "Find the error on Fatima's form",
+       "part": "child",
+       "text": "One entry on this form is wrong. Tap it.",
+       "child": {
+        "name": "Fatima",
+        "age": "2 years",
+        "visit": "initial",
+        "weight": 9,
+        "temp": 37.0,
+        "muac": 11.3,
+        "problem": "Check-up"
+       },
+       "record": [
+        {
+         "title": "Check for acute malnutrition",
+         "lines": [
+          {
+           "text": "Oedema of both feet: no",
+           "why": "This entry is right."
+          },
+          {
+           "text": "MUAC: 11.3 cm",
+           "why": "The MUAC was read correctly."
+          },
+          {
+           "text": "Medical complication: no",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Appetite test: passed",
+           "why": "This entry is right."
+          }
+         ],
+         "classify": [
+          {
+           "text": "MODERATE ACUTE MALNUTRITION",
+           "why": "MUAC below 11.5 cm is SEVERE acute malnutrition. With no complication and a passed appetite test: UNCOMPLICATED SAM.",
+           "error": true
+          }
+         ]
+        }
+       ],
+       "explanation": "MUAC below 11.5 cm is severe; 11.5 up to 12.5 cm is moderate."
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 12,
+     "isPublished": true
+    },
+    {
      "see": [],
      "practise": [],
      "bookFromPage": 40,
      "bookToPage": 42,
      "title": "Treat anaemia: iron and mebendazole",
-     "order": 12,
+     "order": 13,
      "read": [
       {
        "type": "note",
@@ -1174,7 +1573,7 @@
      "bookFromPage": 42,
      "bookToPage": 43,
      "title": "Counsel Rachel",
-     "order": 13,
+     "order": 14,
      "read": [
       {
        "type": "note",
@@ -1255,7 +1654,7 @@
      "bookFromPage": 44,
      "bookToPage": 46,
      "title": "Follow-up care for nutrition",
-     "order": 14,
+     "order": 15,
      "read": [
       {
        "type": "note",
@@ -1362,7 +1761,7 @@
      "bookFromPage": 47,
      "bookToPage": 47,
      "title": "Using this module in your clinic",
-     "order": 15,
+     "order": 16,
      "read": [
       {
        "type": "note",
@@ -1404,7 +1803,7 @@
      "bookFromPage": 48,
      "bookToPage": 49,
      "title": "Review questions and Module 6 test",
-     "order": 16,
+     "order": 17,
      "read": [
       {
        "type": "note",
@@ -1431,6 +1830,40 @@
        "note": ""
       }
      ],
+     "isPublished": true
+    },
+    {
+     "title": "Module 6 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Check every child for oedema of both feet, weight for length or height, and MUAC.</li><li>SAM with a complication, oedema or a failed appetite test: refer urgently.</li><li>Compare the child's palm with your own to classify anaemia.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for a check of nutrition and anaemia: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 18,
      "isPublished": true
     }
    ],

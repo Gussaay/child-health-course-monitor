@@ -299,6 +299,22 @@
        "label": "In this lesson"
       },
       {
+       "type": "question",
+       "label": "Before you start",
+       "text": "A child with fever lives in Sudan, where there is malaria. What do you do first for the fever?",
+       "options": [
+        "Give an antimalarial",
+        "Do a malaria test",
+        "Give paracetamol and send home"
+       ],
+       "answer": 1,
+       "feedback": [
+        "Treat malaria only after a positive test.",
+        "Right. Classify fever from the malaria test.",
+        "First assess and classify."
+       ]
+      },
+      {
        "type": "paragraph",
        "text": "First determine if the child has fever. If you have no thermometer, feel the child's stomach or underarm and decide whether the child feels hot. Ask the caregiver, \"Does the child have fever?\""
       },
@@ -566,6 +582,22 @@
        "label": "In this lesson"
       },
       {
+       "type": "question",
+       "label": "Before you start",
+       "text": "Which of these is NOT a complication of measles in the chart booklet?",
+       "options": [
+        "Mouth ulcers",
+        "Pus draining from the eye",
+        "Runny nose"
+       ],
+       "answer": 2,
+       "feedback": [
+        "Mouth ulcers are a complication.",
+        "Pus draining from the eye is a complication.",
+        "Right. A runny nose is one of the signs of measles, not a complication."
+       ]
+      },
+      {
        "type": "note",
        "text": "If the child has measles NOW, or has had measles within the LAST 3 MONTHS, assess for mouth and eye complications.",
        "label": "Key point"
@@ -642,6 +674,32 @@
          "why": "Red eyes are a sign of measles itself, not a complication."
         }
        ]
+      },
+      {
+       "type": "steps",
+       "title": "Look for measles and its complications, with photographs",
+       "steps": [
+        {
+         "title": "Look for the generalized rash",
+         "text": "A generalized rash with cough, runny nose or red eyes.",
+         "image": "imnci-photos/photo-08.jpg"
+        },
+        {
+         "title": "Look in the mouth for ulcers",
+         "text": "Are they deep or extensive?",
+         "image": "imnci-photos/photo-24.jpg"
+        },
+        {
+         "title": "Look for pus draining from the eye",
+         "text": "Wipe the eye and look again.",
+         "image": "imnci-photos/photo-29.jpg"
+        },
+        {
+         "title": "Look for clouding of the cornea",
+         "text": "A hazy cornea is a pink-row sign.",
+         "image": "imnci-photos/photo-30.jpg"
+        }
+       ]
       }
      ],
      "isPublished": true
@@ -670,6 +728,34 @@
         "fever"
        ],
        "caption": "Chart booklet: classify fever (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "classcards",
+       "title": "Fever: the three classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "VERY SEVERE FEBRILE DISEASE",
+         "action": "Refer urgently",
+         "signs": "Any general danger sign or Stiff neck.",
+         "treat": "Give IM quinine (first dose); Give first dose of an appropriate antibiotic; Treat the child to prevent low blood sugar; Give one dose of paracetamol in clinic for high fever (38.5°C or above); Refer URGENTLY to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "MALARIA",
+         "action": "Treat and follow up",
+         "signs": "Positive malaria test. Falciparum or Vivax",
+         "treat": "Give first line of oral antimalarial; In case of Vivax give primaquine after completion of the first line antimalarial; Give one dose of paracetamol in clinic for high fever (38.5°C or above); Advise mother when to return immediately; Follow-up in 3 days if fever persists"
+        },
+        {
+         "colour": "green",
+         "label": "FEVER — NO MALARIA",
+         "action": "Home care",
+         "signs": "Negative malaria test.",
+         "treat": "Assess for other cause of fever and treat accordingly; Give one dose of paracetamol for high fever (38.5°C or above); If fever for 7 days or more refer for assessment; Advise the mother when to return immediately; Follow up in 3 days if fever persists"
+        }
+       ]
       },
       {
        "type": "video",
@@ -807,6 +893,34 @@
        "caption": "Chart booklet: classify measles (Sudan national IMNCI booklet)"
       },
       {
+       "type": "classcards",
+       "title": "Measles: the three classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "SEVERE COMPLICATED MEASLES",
+         "action": "Refer urgently",
+         "signs": "Any general danger sign or Clouding of the cornea or Deep or extensive mouth ulcers.",
+         "treat": "Give Vitamin A treatment; Give first dose of an appropriate antibiotic; If clouding of the cornea or pus draining from the eye, apply tetracycline eye ointment; Refer URGENTLY to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "MEASLES WITH EYE OR MOUTH COMPLICATIONS",
+         "action": "Treat and follow up",
+         "signs": "Pus draining from the eye or Mouth ulcers.",
+         "treat": "Give Vitamin A treatment; If pus draining from the eye, treat eye infection with tetracycline eye ointment; If mouth ulcers, treat with gentian violet; Advise the mother when to return immediately; Follow-up in 3 days"
+        },
+        {
+         "colour": "green",
+         "label": "MEASLES",
+         "action": "Home care",
+         "signs": "Measles now or within the last 3 months.",
+         "treat": "Give Vitamin A; Advise the mother to feed the child"
+        }
+       ]
+      },
+      {
        "type": "flip",
        "title": "The three classifications for measles",
        "cards": [
@@ -898,12 +1012,296 @@
      "isPublished": true
     },
     {
+     "title": "Practise: classify fever and measles",
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify fever and measles for four children, and find an error on a recording form.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Talk with Ahmed's father",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "How long has Ahmed had fever?"
+          },
+          {
+           "who": "Father",
+           "text": "Two days."
+          },
+          {
+           "who": "You",
+           "text": "I will do a quick test for malaria from a drop of blood from his finger."
+          }
+         ],
+         "question": "Why test every child with fever?",
+         "options": [
+          "To treat malaria only when the test is positive",
+          "Because the father asked",
+          "It is not needed if the child is hot"
+         ],
+         "answer": 0,
+         "explanation": "Classify fever from the malaria test: positive is MALARIA, negative is FEVER - NO MALARIA.",
+         "feedback": [
+          "Right.",
+          "The test is part of assessing every child with fever.",
+          "Feeling hot does not tell you if it is malaria."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "The test is positive."
+          },
+          {
+           "who": "Father",
+           "text": "So what do we do?"
+          }
+         ],
+         "question": "What is the classification?",
+         "options": [
+          "MALARIA",
+          "VERY SEVERE FEBRILE DISEASE",
+          "FEVER - NO MALARIA"
+         ],
+         "answer": 0,
+         "explanation": "Ahmed has no danger sign and no stiff neck: MALARIA. Give the oral antimalarial and follow up in 3 days if fever persists.",
+         "feedback": [
+          "Right.",
+          "He has no danger sign and no stiff neck.",
+          "The test is positive."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Classify fever and measles",
+       "part": "child",
+       "categories": [
+        "fever",
+        "measles"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Ahmed",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 12,
+          "temp": 38.5,
+          "problem": "Fever for 2 days"
+         },
+         "text": "Ahmed has had fever for 2 days. He has no general danger sign and no stiff neck. There are no signs of measles. His malaria rapid diagnostic test (RDT) is positive.",
+         "record": [
+          {
+           "title": "Does the child have fever? Yes",
+           "lines": [
+            "For how long? 2 days",
+            "Stiff neck: no",
+            "Malaria test: positive",
+            "Measles now or in the last 3 months: no"
+           ],
+           "classify": [
+            "MALARIA"
+           ]
+          }
+         ],
+         "question": "How do you classify Ahmed's fever?",
+         "options": [
+          "VERY SEVERE FEBRILE DISEASE",
+          "MALARIA",
+          "FEVER - NO MALARIA"
+         ],
+         "feedback": [
+          "He has no general danger sign and no stiff neck.",
+          "Right. A positive malaria test classifies MALARIA.",
+          "The malaria test is positive, so this is not \"no malaria\"."
+         ],
+         "explanation": "Do a malaria test for every child with fever, and classify from the result.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Salma",
+          "age": "11 months",
+          "visit": "initial",
+          "weight": 8,
+          "temp": 38.2,
+          "problem": "Fever since yesterday"
+         },
+         "text": "Salma has had fever since yesterday. She has no general danger sign and no stiff neck. There is no rash. Her malaria test is negative.",
+         "record": [
+          {
+           "title": "Does the child have fever? Yes",
+           "lines": [
+            "For how long? 1 day",
+            "Stiff neck: no",
+            "Malaria test: negative"
+           ],
+           "classify": [
+            "FEVER - NO MALARIA"
+           ]
+          }
+         ],
+         "question": "How do you classify Salma's fever?",
+         "options": [
+          "MALARIA",
+          "FEVER - NO MALARIA",
+          "VERY SEVERE FEBRILE DISEASE"
+         ],
+         "feedback": [
+          "The malaria test is negative. Do not classify malaria without a positive test.",
+          "Right. A negative malaria test with no danger sign or stiff neck: FEVER - NO MALARIA.",
+          "Salma has no general danger sign and no stiff neck."
+         ],
+         "explanation": "For FEVER - NO MALARIA, look for and treat any other cause of fever, and give paracetamol for high fever.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Mustafa",
+          "age": "4 years",
+          "visit": "initial",
+          "weight": 15,
+          "temp": 39.0,
+          "problem": "Fever and headache"
+         },
+         "text": "Mustafa has had fever for 3 days. He has no general danger sign. When you ask him to look at his umbilicus, he cannot bend his neck forward: he has a stiff neck.",
+         "record": [
+          {
+           "title": "Does the child have fever? Yes",
+           "lines": [
+            "For how long? 3 days",
+            "Stiff neck: yes"
+           ],
+           "classify": [
+            "VERY SEVERE FEBRILE DISEASE"
+           ]
+          }
+         ],
+         "question": "How do you classify Mustafa's fever?",
+         "options": [
+          "MALARIA, if the test is positive",
+          "VERY SEVERE FEBRILE DISEASE",
+          "FEVER - NO MALARIA"
+         ],
+         "feedback": [
+          "Even with a positive test, a stiff neck puts the child in the pink row.",
+          "Right. A stiff neck classifies VERY SEVERE FEBRILE DISEASE: give the pre-referral treatment and refer urgently.",
+          "A stiff neck is a sign of very severe disease, such as meningitis."
+         ],
+         "explanation": "Pink row: any general danger sign or stiff neck.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Rawan",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 11,
+          "temp": 38.4,
+          "problem": "Fever and rash"
+         },
+         "text": "Rawan has had fever for 4 days. She has a generalized rash with cough and red eyes: measles now. You see mouth ulcers, but they are not deep or extensive. There is no pus draining from the eye and no clouding of the cornea. Her malaria test is negative.",
+         "record": [
+          {
+           "title": "Does the child have fever? Yes",
+           "lines": [
+            "Malaria test: negative",
+            "Generalized rash and red eyes: yes",
+            "Mouth ulcers: yes, not deep or extensive",
+            "Pus draining from the eye: no",
+            "Clouding of the cornea: no"
+           ],
+           "classify": [
+            "FEVER - NO MALARIA",
+            "MEASLES WITH EYE OR MOUTH COMPLICATIONS"
+           ]
+          }
+         ],
+         "question": "How do you classify Rawan's measles?",
+         "options": [
+          "SEVERE COMPLICATED MEASLES",
+          "MEASLES WITH EYE OR MOUTH COMPLICATIONS",
+          "MEASLES"
+         ],
+         "feedback": [
+          "Only deep or extensive mouth ulcers, clouding of the cornea or a danger sign make measles severe complicated.",
+          "Right. Mouth ulcers that are not deep or extensive put measles in the yellow row.",
+          "Rawan has a complication: mouth ulcers."
+         ],
+         "explanation": "Treat mouth ulcers with gentian violet and give vitamin A.",
+         "answer": 1
+        }
+       ]
+      },
+      {
+       "type": "spot",
+       "title": "Find the error on Musa's form",
+       "part": "child",
+       "text": "One entry on this form is wrong. Tap it.",
+       "child": {
+        "name": "Musa",
+        "age": "3 years",
+        "visit": "initial",
+        "weight": 14,
+        "temp": 38.7,
+        "problem": "Fever for 2 days"
+       },
+       "record": [
+        {
+         "title": "Does the child have fever? Yes",
+         "lines": [
+          {
+           "text": "For how long? 2 days",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Stiff neck: no",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Malaria test: positive",
+           "why": "The test was read correctly."
+          }
+         ],
+         "classify": [
+          {
+           "text": "FEVER - NO MALARIA",
+           "why": "The malaria test is positive: classify MALARIA.",
+           "error": true
+          }
+         ]
+        }
+       ],
+       "explanation": "Classify fever from the malaria test result."
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 9,
+     "isPublished": true
+    },
+    {
      "see": [],
      "practise": [],
      "bookFromPage": 29,
      "bookToPage": 34,
      "title": "Treat malaria",
-     "order": 9,
+     "order": 10,
      "read": [
       {
        "type": "note",
@@ -1050,7 +1448,7 @@
      "bookFromPage": 33,
      "bookToPage": 33,
      "title": "Treat measles: vitamin A and local infections",
-     "order": 10,
+     "order": 11,
      "read": [
       {
        "type": "note",
@@ -1162,7 +1560,7 @@
      "bookFromPage": 35,
      "bookToPage": 37,
      "title": "Counsel: eye ointment and gentian violet at home",
-     "order": 11,
+     "order": 12,
      "read": [
       {
        "type": "note",
@@ -1306,7 +1704,7 @@
      "bookFromPage": 38,
      "bookToPage": 39,
      "title": "Counsel: when to return, and counselling Miriam",
-     "order": 12,
+     "order": 13,
      "read": [
       {
        "type": "note",
@@ -1400,7 +1798,7 @@
      "bookFromPage": 40,
      "bookToPage": 42,
      "title": "Follow-up care for fever and malaria",
-     "order": 13,
+     "order": 14,
      "read": [
       {
        "type": "note",
@@ -1531,7 +1929,7 @@
      "bookFromPage": 43,
      "bookToPage": 44,
      "title": "Follow-up care for measles",
-     "order": 14,
+     "order": 15,
      "read": [
       {
        "type": "note",
@@ -1650,7 +2048,7 @@
      "bookFromPage": 45,
      "bookToPage": 46,
      "title": "Using this module in your clinic",
-     "order": 15,
+     "order": 16,
      "read": [
       {
        "type": "note",
@@ -1709,7 +2107,7 @@
      "bookFromPage": 47,
      "bookToPage": 48,
      "title": "Review questions and Module 5 test",
-     "order": 16,
+     "order": 17,
      "read": [
       {
        "type": "note",
@@ -1731,6 +2129,40 @@
        "note": ""
       }
      ],
+     "isPublished": true
+    },
+    {
+     "title": "Module 5 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Test every child with fever for malaria and classify from the result.</li><li>Any danger sign or stiff neck: VERY SEVERE FEBRILE DISEASE.</li><li>Look for measles and its complications in the eyes and mouth.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for fever: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 18,
      "isPublished": true
     }
    ],
@@ -1893,6 +2325,20 @@
        "type": "note",
        "text": "Explain why every child is checked, what causes malnutrition, and recognize the signs of marasmus and kwashiorkor.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "A child's MUAC is normal. Can she still have severe acute malnutrition?",
+       "options": [
+        "No",
+        "Yes, if she has oedema of both feet or a very low weight for length"
+       ],
+       "answer": 1,
+       "feedback": [
+        "Check oedema of both feet and weight for length too.",
+        "Right. Check all three: oedema, WFH/L and MUAC."
+       ]
       },
       {
        "type": "heading",
@@ -2451,6 +2897,41 @@
        "caption": "Chart booklet: classify acute malnutrition (Sudan national IMNCI booklet)"
       },
       {
+       "type": "classcards",
+       "title": "Nutritional status: the four classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "COMPLICATED SEVERE ACUTE MALNUTRITION (SAM)",
+         "action": "Refer urgently",
+         "signs": "Edema of both feet OR WFH/L less than -3 z-scores or MUAC less than 11.5 cm with any of the following: — Medical complication present, or — Not able to finish RUTF portion",
+         "treat": "Give first dose appropriate antibiotic; Treat the child to prevent low blood sugar; Keep the child warm; Refer URGENTLY to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "UNCOMPLICATED SEVERE ACUTE MALNUTRITION (SAM)",
+         "action": "Treat and follow up",
+         "signs": "WFH/L less than -3 z-scores OR MUAC less than 11.5 cm AND Able to finish RUTF portion and no medical complications",
+         "treat": "Give oral antibiotics for 5 days; Refer for Outpatient Therapeutic Program (OTP) for ready-to-use therapeutic food (RUTF) if a child aged 6 months or more; Counsel the mother on how to feed the child; Advise mother when to return immediately; Follow up in 14 days"
+        },
+        {
+         "colour": "yellow",
+         "label": "MODERATE ACUTE MALNUTRITION (MAM)",
+         "action": "Treat and follow up",
+         "signs": "WFH/L -3 up to -2 z-scores OR MUAC 11.5 up to 12.5 cm",
+         "treat": "Refer the child for Supplementary feeding program if available; Assess the child's feeding and counsel the mother on the feeding recommendations and refer for growth monitoring and health promotion; If feeding problem, follow up in 7 days; Advise mother when to return immediately; Follow-up in 30 days"
+        },
+        {
+         "colour": "green",
+         "label": "NO ACUTE MALNUTRITION",
+         "action": "Home care",
+         "signs": "WFH/L -2 z-scores or more OR MUAC 12.5 cm or more.",
+         "treat": "If child is less than 2 years old, assess the child's feeding and counsel the mother on feeding according to the feeding recommendations; If feeding problem, follow-up in 7 days"
+        }
+       ]
+      },
+      {
        "type": "flip",
        "title": "The four classifications",
        "cards": [
@@ -2719,6 +3200,22 @@
        "label": "In this lesson"
       },
       {
+       "type": "question",
+       "label": "Before you start",
+       "text": "How do you look for palmar pallor?",
+       "options": [
+        "Compare the child's palm with your own",
+        "Ask the mother",
+        "Look at the tongue"
+       ],
+       "answer": 0,
+       "feedback": [
+        "Right.",
+        "Look yourself.",
+        "IMNCI uses the palm."
+       ]
+      },
+      {
        "type": "paragraph",
        "text": "Anaemia is a reduced number of red cells, or a reduced amount of haemoglobin in each red cell. Iron deficiency is the most common cause; folate, vitamin B12 and vitamin A deficiency are others. A child can also become anaemic from:"
       },
@@ -2755,6 +3252,34 @@
         "anemia"
        ],
        "caption": "Chart booklet: anaemia (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "classcards",
+       "title": "Anaemia: the three classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "SEVERE ANAEMIA",
+         "action": "Refer urgently",
+         "signs": "Severe palmar pallor",
+         "treat": "Refer URGENTLY to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "ANAEMIA",
+         "action": "Treat and follow up",
+         "signs": "Some palmar pallor",
+         "treat": "Give iron; Give mebendazole if child is 1 year or older and has not received a dose in the last 6 months; Advise mother when to return immediately; Follow-up in 14 days; If child is less than 2 years old, assess the child's feeding and counsel the mother on feeding according to the feeding recommendations"
+        },
+        {
+         "colour": "green",
+         "label": "NO ANAEMIA",
+         "action": "Home care",
+         "signs": "No palmar pallor",
+         "treat": "No additional treatment; If child is less than 2 years old, assess the child's feeding and counsel the mother on feeding according to the feeding recommendations"
+        }
+       ]
       },
       {
        "type": "flip",
@@ -2806,6 +3331,27 @@
        ]
       },
       {
+       "type": "steps",
+       "title": "Look for palmar pallor, with photographs",
+       "steps": [
+        {
+         "title": "Hold the child's palm open",
+         "text": "Do not stretch the fingers back: that can make the palm look pale.",
+         "image": "imnci-photos/photo-38.jpg"
+        },
+        {
+         "title": "Compare",
+         "text": "With your own palm and the palms of other children.",
+         "image": "imnci-photos/photo-39.jpg"
+        },
+        {
+         "title": "Decide",
+         "text": "Severe pallor (very pale, almost white), some pallor (pale), or no pallor.",
+         "image": "imnci-photos/photo-40.jpg"
+        }
+       ]
+      },
+      {
        "type": "exercise",
        "exerciseId": "dimci-m6-ex-g",
        "note": ""
@@ -2814,12 +3360,297 @@
      "isPublished": true
     },
     {
+     "title": "Practise: classify malnutrition and anaemia",
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify the nutritional status and anaemia of four children, and find an error on a recording form.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Talk with Hala's mother",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "Hala's arm measures 11.2 centimetres. That is below the line."
+          },
+          {
+           "who": "Mother",
+           "text": "What does that mean?"
+          },
+          {
+           "who": "You",
+           "text": "She is severely thin. Let us see if she can eat this RUTF."
+          }
+         ],
+         "question": "Why do the appetite test?",
+         "options": [
+          "To see if she can be treated at home",
+          "To feed her before she leaves",
+          "It is optional"
+         ],
+         "answer": 0,
+         "explanation": "A child with SAM who finishes the RUTF portion and has no medical complication can be treated at home.",
+         "feedback": [
+          "Right.",
+          "It decides where she is treated.",
+          "It is part of the assessment of SAM."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "Mother",
+           "text": "She ate it all."
+          }
+         ],
+         "question": "How do you classify Hala?",
+         "options": [
+          "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+          "COMPLICATED SEVERE ACUTE MALNUTRITION",
+          "MODERATE ACUTE MALNUTRITION"
+         ],
+         "answer": 0,
+         "explanation": "MUAC below 11.5 cm, no complication, appetite test passed.",
+         "feedback": [
+          "Right.",
+          "She passed the appetite test and has no complication.",
+          "MUAC below 11.5 cm is severe."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Classify malnutrition and anaemia",
+       "part": "child",
+       "categories": [
+        "malnutrition",
+        "anemia"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Mazin",
+          "age": "18 months",
+          "visit": "initial",
+          "weight": 8.6,
+          "temp": 37.0,
+          "length": 80,
+          "muac": 12.0,
+          "problem": "Check-up"
+         },
+         "text": "Mazin has no oedema of both feet. On the weight-for-length chart he is between -3 and -2 z-scores. His MUAC is 12.0 cm.",
+         "record": [
+          {
+           "title": "Check for acute malnutrition",
+           "lines": [
+            "Oedema of both feet: no",
+            "WFL: between -3 and -2 z",
+            "MUAC: 12.0 cm"
+           ],
+           "classify": [
+            "MODERATE ACUTE MALNUTRITION"
+           ]
+          }
+         ],
+         "question": "How do you classify Mazin's nutritional status?",
+         "options": [
+          "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+          "MODERATE ACUTE MALNUTRITION",
+          "NO ACUTE MALNUTRITION"
+         ],
+         "feedback": [
+          "SAM needs WFL below -3 z or MUAC below 11.5 cm.",
+          "Right. WFL -3 up to -2 z, or MUAC 11.5 up to 12.5 cm: MODERATE ACUTE MALNUTRITION.",
+          "His WFL and MUAC are both in the moderate range."
+         ],
+         "explanation": "MAM: assess the child's feeding and counsel the mother, and follow up in 30 days.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Hala",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 8.4,
+          "temp": 37.1,
+          "length": 82,
+          "muac": 11.2,
+          "problem": "Not gaining weight"
+         },
+         "text": "Hala has no oedema. Her MUAC is 11.2 cm. She has no medical complication, and she finishes her RUTF portion in the appetite test.",
+         "record": [
+          {
+           "title": "Check for acute malnutrition",
+           "lines": [
+            "Oedema of both feet: no",
+            "MUAC: 11.2 cm",
+            "Medical complication: no",
+            "Appetite test: passed"
+           ],
+           "classify": [
+            "UNCOMPLICATED SEVERE ACUTE MALNUTRITION"
+           ]
+          }
+         ],
+         "question": "How do you classify Hala?",
+         "options": [
+          "COMPLICATED SEVERE ACUTE MALNUTRITION",
+          "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+          "MODERATE ACUTE MALNUTRITION"
+         ],
+         "feedback": [
+          "Complicated SAM needs oedema of both feet, a medical complication or a failed appetite test.",
+          "Right. MUAC below 11.5 cm with no complication and a passed appetite test: UNCOMPLICATED SAM.",
+          "MUAC below 11.5 cm is severe, not moderate."
+         ],
+         "explanation": "Uncomplicated SAM is treated at home with RUTF, with follow-up in 7 days.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Ibrahim",
+          "age": "3 years",
+          "visit": "initial",
+          "weight": 12,
+          "temp": 37.0,
+          "muac": 12.8,
+          "problem": "Swollen feet"
+         },
+         "text": "When you press both of Ibrahim's feet with your thumbs for a few seconds, a dent stays in each foot. His MUAC is 12.8 cm.",
+         "record": [
+          {
+           "title": "Check for acute malnutrition",
+           "lines": [
+            "Oedema of both feet: yes",
+            "MUAC: 12.8 cm"
+           ],
+           "classify": [
+            "COMPLICATED SEVERE ACUTE MALNUTRITION"
+           ]
+          }
+         ],
+         "question": "His MUAC is normal. How do you classify Ibrahim?",
+         "options": [
+          "NO ACUTE MALNUTRITION",
+          "MODERATE ACUTE MALNUTRITION",
+          "COMPLICATED SEVERE ACUTE MALNUTRITION"
+         ],
+         "feedback": [
+          "Oedema of both feet is severe acute malnutrition whatever the MUAC.",
+          "Oedema of both feet is severe, not moderate.",
+          "Right. Oedema of both feet is in the pink row: COMPLICATED SEVERE ACUTE MALNUTRITION. Refer urgently."
+         ],
+         "explanation": "Always look and feel for oedema of both feet. A normal MUAC does not rule out severe malnutrition.",
+         "answer": 2
+        },
+        {
+         "child": {
+          "name": "Reem",
+          "age": "20 months",
+          "visit": "initial",
+          "weight": 10,
+          "temp": 37.0,
+          "problem": "Tired"
+         },
+         "text": "You compare Reem's palm with your own and with her mother's. Her palm is pale, but not white.",
+         "record": [
+          {
+           "title": "Check for anaemia",
+           "lines": [
+            "Palmar pallor: some"
+           ],
+           "classify": [
+            "ANAEMIA"
+           ]
+          }
+         ],
+         "question": "How do you classify Reem?",
+         "options": [
+          "SEVERE ANAEMIA",
+          "ANAEMIA",
+          "NO ANAEMIA"
+         ],
+         "feedback": [
+          "Severe palmar pallor is a very pale, almost white palm.",
+          "Right. Some palmar pallor classifies ANAEMIA: give iron, and mebendazole if 1 year or older and none in the last 6 months.",
+          "Her palm is pale: she has some palmar pallor."
+         ],
+         "explanation": "Severe palmar pallor: SEVERE ANAEMIA, refer urgently. Some palmar pallor: ANAEMIA.",
+         "answer": 1
+        }
+       ]
+      },
+      {
+       "type": "spot",
+       "title": "Find the error on Fatima's form",
+       "part": "child",
+       "text": "One entry on this form is wrong. Tap it.",
+       "child": {
+        "name": "Fatima",
+        "age": "2 years",
+        "visit": "initial",
+        "weight": 9,
+        "temp": 37.0,
+        "muac": 11.3,
+        "problem": "Check-up"
+       },
+       "record": [
+        {
+         "title": "Check for acute malnutrition",
+         "lines": [
+          {
+           "text": "Oedema of both feet: no",
+           "why": "This entry is right."
+          },
+          {
+           "text": "MUAC: 11.3 cm",
+           "why": "The MUAC was read correctly."
+          },
+          {
+           "text": "Medical complication: no",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Appetite test: passed",
+           "why": "This entry is right."
+          }
+         ],
+         "classify": [
+          {
+           "text": "MODERATE ACUTE MALNUTRITION",
+           "why": "MUAC below 11.5 cm is SEVERE acute malnutrition. With no complication and a passed appetite test: UNCOMPLICATED SAM.",
+           "error": true
+          }
+         ]
+        }
+       ],
+       "explanation": "MUAC below 11.5 cm is severe; 11.5 up to 12.5 cm is moderate."
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 12,
+     "isPublished": true
+    },
+    {
      "see": [],
      "practise": [],
      "bookFromPage": 40,
      "bookToPage": 42,
      "title": "Treat anaemia: iron and mebendazole",
-     "order": 12,
+     "order": 13,
      "read": [
       {
        "type": "note",
@@ -2903,7 +3734,7 @@
      "bookFromPage": 42,
      "bookToPage": 43,
      "title": "Counsel Rachel",
-     "order": 13,
+     "order": 14,
      "read": [
       {
        "type": "note",
@@ -2984,7 +3815,7 @@
      "bookFromPage": 44,
      "bookToPage": 46,
      "title": "Follow-up care for nutrition",
-     "order": 14,
+     "order": 15,
      "read": [
       {
        "type": "note",
@@ -3091,7 +3922,7 @@
      "bookFromPage": 47,
      "bookToPage": 47,
      "title": "Using this module in your clinic",
-     "order": 15,
+     "order": 16,
      "read": [
       {
        "type": "note",
@@ -3133,7 +3964,7 @@
      "bookFromPage": 48,
      "bookToPage": 49,
      "title": "Review questions and Module 6 test",
-     "order": 16,
+     "order": 17,
      "read": [
       {
        "type": "note",
@@ -3160,6 +3991,40 @@
        "note": ""
       }
      ],
+     "isPublished": true
+    },
+    {
+     "title": "Module 6 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Check every child for oedema of both feet, weight for length or height, and MUAC.</li><li>SAM with a complication, oedema or a failed appetite test: refer urgently.</li><li>Compare the child's palm with your own to classify anaemia.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for a check of nutrition and anaemia: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 18,
      "isPublished": true
     }
    ],
@@ -3377,6 +4242,20 @@
        "label": "In this lesson"
       },
       {
+       "type": "question",
+       "label": "Before you start",
+       "text": "Pus has drained from a child's ear for 14 days. Acute or chronic?",
+       "options": [
+        "Acute",
+        "Chronic"
+       ],
+       "answer": 1,
+       "feedback": [
+        "Acute is less than 14 days.",
+        "Right. 14 days or more is chronic."
+       ]
+      },
+      {
        "type": "paragraph",
        "text": "Ask about an ear problem for ALL sick children. If the caregiver says NO, go on to malnutrition and anaemia. If YES, ask, look and feel."
       },
@@ -3453,6 +4332,41 @@
         "ear"
        ],
        "caption": "Chart booklet: classify ear problem (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "classcards",
+       "title": "Ear problem: the four classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "MASTOIDITIS",
+         "action": "Refer urgently",
+         "signs": "Tender swelling behind the ear.",
+         "treat": "Give first dose of an appropriate antibiotic; Give first dose of paracetamol for pain; Refer URGENTLY to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "ACUTE EAR INFECTION",
+         "action": "Treat and follow up",
+         "signs": "Ear pain. or Pus is seen draining from the ear and discharge is reported for less than 14 days.",
+         "treat": "Give an appropriate oral antibiotic for 5 days; Give paracetamol for pain; Dry the ear by wicking; Advise the mother when to return immediately; Follow up in 5 days"
+        },
+        {
+         "colour": "yellow",
+         "label": "CHRONIC EAR INFECTION",
+         "action": "Treat and follow up",
+         "signs": "Pus is seen draining from the ear and discharge is reported for 14 days or more.",
+         "treat": "Dry the ear by wicking; Give Quinolone ear drops; Advise the mother when to return immediately"
+        },
+        {
+         "colour": "green",
+         "label": "NO EAR INFECTION (other ear problems)",
+         "action": "Home care",
+         "signs": "No ear pain and no pus seen draining from the ear.",
+         "treat": "No treatment advised; Refer for assessment if there is hearing problems"
+        }
+       ]
       },
       {
        "type": "flip",
@@ -3548,12 +4462,259 @@
      "isPublished": true
     },
     {
+     "title": "Practise: classify ear problems",
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify the ear problems of three children, and find an error on a recording form.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Talk with Lina's mother",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "Does Lina have an ear problem?"
+          },
+          {
+           "who": "Mother",
+           "text": "Yes, pus comes from her ear."
+          },
+          {
+           "who": "You",
+           "text": "For how long?"
+          },
+          {
+           "who": "Mother",
+           "text": "About three weeks."
+          }
+         ],
+         "question": "How do you classify Lina?",
+         "options": [
+          "CHRONIC EAR INFECTION",
+          "ACUTE EAR INFECTION",
+          "MASTOIDITIS"
+         ],
+         "answer": 0,
+         "explanation": "Pus for 14 days or more: CHRONIC EAR INFECTION.",
+         "feedback": [
+          "Right.",
+          "Acute is less than 14 days.",
+          "There is no tender swelling behind the ear."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "Mother",
+           "text": "What should I do at home?"
+          }
+         ],
+         "question": "What do you teach her?",
+         "options": [
+          "Dry the ear by wicking",
+          "Put oil in the ear",
+          "Leave it alone"
+         ],
+         "answer": 0,
+         "explanation": "Teach the mother to dry the ear by wicking, three times daily, and give ear drops.",
+         "feedback": [
+          "Right.",
+          "Nothing should be put in the ear except the drops you give.",
+          "The ear must be dried."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Classify the ear problem",
+       "part": "child",
+       "categories": [
+        "ear"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Tamer",
+          "age": "3 years",
+          "visit": "initial",
+          "weight": 14,
+          "temp": 37.4,
+          "problem": "Ear pain"
+         },
+         "text": "Tamer has had ear pain for 2 days. You see no pus draining from the ear and there is no tender swelling behind the ear.",
+         "record": [
+          {
+           "title": "Does the child have an ear problem? Yes",
+           "lines": [
+            "Ear pain: yes",
+            "Ear discharge: no",
+            "Tender swelling behind the ear: no"
+           ],
+           "classify": [
+            "ACUTE EAR INFECTION"
+           ]
+          }
+         ],
+         "question": "How do you classify Tamer's ear problem?",
+         "options": [
+          "MASTOIDITIS",
+          "ACUTE EAR INFECTION",
+          "NO EAR INFECTION"
+         ],
+         "feedback": [
+          "There is no tender swelling behind the ear.",
+          "Right. Ear pain classifies ACUTE EAR INFECTION.",
+          "Ear pain is a sign of acute ear infection, even with no pus."
+         ],
+         "explanation": "Acute ear infection: oral amoxicillin for 5 days, paracetamol for pain, and follow up in 5 days.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Lina",
+          "age": "4 years",
+          "visit": "initial",
+          "weight": 15,
+          "temp": 37.0,
+          "problem": "Pus from the ear"
+         },
+         "text": "Lina's mother says pus has come from Lina's right ear for 3 weeks. You see pus draining. Lina has no ear pain and no swelling behind the ear.",
+         "record": [
+          {
+           "title": "Does the child have an ear problem? Yes",
+           "lines": [
+            "Ear pain: no",
+            "Pus seen draining: yes",
+            "For how long? 21 days",
+            "Tender swelling behind the ear: no"
+           ],
+           "classify": [
+            "CHRONIC EAR INFECTION"
+           ]
+          }
+         ],
+         "question": "How do you classify Lina's ear problem?",
+         "options": [
+          "ACUTE EAR INFECTION",
+          "CHRONIC EAR INFECTION",
+          "MASTOIDITIS"
+         ],
+         "feedback": [
+          "Pus for less than 14 days is acute. Lina's has lasted 21 days.",
+          "Right. Pus seen draining and discharge for 14 days or more: CHRONIC EAR INFECTION.",
+          "There is no tender swelling behind the ear."
+         ],
+         "explanation": "Chronic ear infection: dry the ear by wicking, give topical quinolone ear drops for 14 days, and follow up in 5 days.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Badr",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 11,
+          "temp": 38.6,
+          "problem": "Ear pain and swelling"
+         },
+         "text": "Badr has ear pain. Behind his left ear there is a swelling that is tender when you touch it.",
+         "record": [
+          {
+           "title": "Does the child have an ear problem? Yes",
+           "lines": [
+            "Ear pain: yes",
+            "Tender swelling behind the ear: yes"
+           ],
+           "classify": [
+            "MASTOIDITIS"
+           ]
+          }
+         ],
+         "question": "How do you classify Badr's ear problem?",
+         "options": [
+          "ACUTE EAR INFECTION",
+          "MASTOIDITIS",
+          "CHRONIC EAR INFECTION"
+         ],
+         "feedback": [
+          "Ear pain is in the yellow row, but read from the top: there is a tender swelling behind the ear.",
+          "Right. A tender swelling behind the ear classifies MASTOIDITIS: first dose of antibiotic, paracetamol, and refer urgently.",
+          "There is no long-lasting discharge, and the swelling puts him in the pink row."
+         ],
+         "explanation": "Pink row first: tender swelling behind the ear is MASTOIDITIS.",
+         "answer": 1
+        }
+       ]
+      },
+      {
+       "type": "spot",
+       "title": "Find the error on Salih's form",
+       "part": "child",
+       "text": "One entry on this form is wrong. Tap it.",
+       "child": {
+        "name": "Salih",
+        "age": "4 years",
+        "visit": "initial",
+        "weight": 15,
+        "temp": 37.1,
+        "problem": "Pus from the ear"
+       },
+       "record": [
+        {
+         "title": "Does the child have an ear problem? Yes",
+         "lines": [
+          {
+           "text": "Ear pain: no",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Pus seen draining: yes",
+           "why": "This entry is right."
+          },
+          {
+           "text": "For how long? 10 days",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Tender swelling behind the ear: no",
+           "why": "This entry is right."
+          }
+         ],
+         "classify": [
+          {
+           "text": "CHRONIC EAR INFECTION",
+           "why": "Pus for less than 14 days is ACUTE EAR INFECTION. Chronic is 14 days or more.",
+           "error": true
+          }
+         ]
+        }
+       ],
+       "explanation": "The number of days decides between acute (less than 14 days) and chronic (14 days or more)."
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 6,
+     "isPublished": true
+    },
+    {
      "see": [],
      "practise": [],
      "bookFromPage": 17,
      "bookToPage": 18,
      "title": "Treat an ear problem, and refer Telisa",
-     "order": 6,
+     "order": 7,
      "read": [
       {
        "type": "note",
@@ -3623,7 +4784,7 @@
      "bookFromPage": 19,
      "bookToPage": 21,
      "title": "Counsel: dry the ear by wicking",
-     "order": 7,
+     "order": 8,
      "read": [
       {
        "type": "note",
@@ -3752,7 +4913,7 @@
      "bookFromPage": 21,
      "bookToPage": 26,
      "title": "Counselling skills that build confidence",
-     "order": 8,
+     "order": 9,
      "read": [
       {
        "type": "note",
@@ -3836,7 +4997,7 @@
      "bookFromPage": 27,
      "bookToPage": 28,
      "title": "Follow-up care for ear problems",
-     "order": 9,
+     "order": 10,
      "read": [
       {
        "type": "note",
@@ -3913,7 +5074,7 @@
      "bookFromPage": 29,
      "bookToPage": 29,
      "title": "Using this module in your clinic",
-     "order": 10,
+     "order": 11,
      "read": [
       {
        "type": "note",
@@ -3955,7 +5116,7 @@
      "bookFromPage": 30,
      "bookToPage": 31,
      "title": "Review questions and Module 7 test",
-     "order": 11,
+     "order": 12,
      "read": [
       {
        "type": "note",
@@ -3982,6 +5143,40 @@
        "note": ""
       }
      ],
+     "isPublished": true
+    },
+    {
+     "title": "Module 7 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Tender swelling behind the ear is MASTOIDITIS: refer urgently.</li><li>Ear pain, or pus for less than 14 days: ACUTE EAR INFECTION.</li><li>Pus for 14 days or more: CHRONIC EAR INFECTION; dry the ear by wicking.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for an ear problem: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 13,
      "isPublished": true
     }
    ],
@@ -6337,6 +7532,45 @@
       }
      ],
      "isPublished": true
+    },
+    {
+     "title": "Module 8 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "note",
+       "text": "This lesson follows the WHO 2014 module and chart booklet for high HIV settings. The Sudan national IMNCI booklet has no HIV section, so this is not Sudan national guidance. HIV testing, prophylaxis and ART recommendations have changed since 2014: in practice, follow the current Sudan national HIV guidelines.",
+       "label": "WHO 2014 HIV content"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Know the HIV status of the child and the mother.</li><li>Give cotrimoxazole prophylaxis and the right feeding advice to HIV-exposed children.</li><li>Support adherence to ART and follow up regularly.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for HIV exposure or infection: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 28,
+     "isPublished": true
     }
    ],
    "isPublished": true
@@ -7595,6 +8829,40 @@
        "note": ""
       }
      ],
+     "isPublished": true
+    },
+    {
+     "title": "Module 9 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Check growth, development, feeding, immunization, vitamin A and deworming at every visit.</li><li>Counsel the caregiver on play and communication, hygiene and preventing accidents.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for a well-child visit: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 17,
      "isPublished": true
     }
    ],

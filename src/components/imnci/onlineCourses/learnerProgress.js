@@ -103,8 +103,19 @@ export function learnerSummary({ courses = [], items = [], progress = {}, now = 
         for (let d = Math.floor(now / DAY) - 1; days.has(d); d -= 1) streak += 1;
     }
 
+    // First tries at practice questions ("<activity>@1" right, "@0" not),
+    // kept with each lesson's done list.
+    let firstRight = 0;
+    let firstTotal = 0;
+    Object.values(savedActs).forEach((list) => (Array.isArray(list) ? list : []).forEach((k) => {
+        const tag = String(k).split('@')[1];
+        if (tag === '1') { firstRight += 1; firstTotal += 1; } else if (tag === '0') firstTotal += 1;
+    }));
+
     return {
         courses: out,
+        firstRight,
+        firstTotal,
         lessonsDone: out.reduce((n, c) => n + c.done, 0),
         lessonsTotal: out.reduce((n, c) => n + c.total, 0),
         activitiesDone: out.reduce((n, c) => n + c.activitiesDone, 0),

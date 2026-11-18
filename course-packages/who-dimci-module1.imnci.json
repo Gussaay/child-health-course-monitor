@@ -12,12 +12,126 @@
    "order": 1,
    "sections": [
     {
+     "title": "How to study this course",
+     "read": [
+      {
+       "type": "note",
+       "text": "Learn how this course works, so every activity counts. This lesson takes about 5 minutes.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "When you treat a sick child, what do you decide from?",
+       "options": [
+        "My memory",
+        "The signs I find and the chart booklet",
+        "What the mother asks for"
+       ],
+       "answer": 1,
+       "feedback": [
+        "Even experienced health workers use the chart booklet.",
+        "Right. You classify from the signs, using the chart booklet.",
+        "Listen to the mother, but classify from the signs."
+       ]
+      },
+      {
+       "type": "steps",
+       "title": "How each lesson works",
+       "steps": [
+        {
+         "title": "Start with a question",
+         "text": "Most lessons open with a short question. Answer it before you read; there is no penalty."
+        },
+        {
+         "title": "Do every activity",
+         "text": "Open the cards, sort, answer the questions and work the cases. A tick shows each one is done."
+        },
+        {
+         "title": "Unlock the next lesson",
+         "text": "The next lesson opens when every activity in this one is done. Modules open in order too."
+        },
+        {
+         "title": "Come back any time",
+         "text": "Your place is saved. When you come back, the lesson offers to take you to where you stopped."
+        }
+       ]
+      },
+      {
+       "type": "steps",
+       "title": "How to practise with cases",
+       "steps": [
+        {
+         "title": "Read the child's story",
+         "text": "Each case is a named child: age, weight, temperature and what the mother says."
+        },
+        {
+         "title": "Open the chart booklet table",
+         "text": "Use the pink button \"See the chart booklet table\". Read from the top row down."
+        },
+        {
+         "title": "Open the recording form",
+         "text": "The child's filled form shows what the health worker found and wrote."
+        },
+        {
+         "title": "Decide, then read the feedback",
+         "text": "Each option explains why it is right or wrong. Your first try is recorded; you can try again."
+        }
+       ]
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "download": true,
+       "categories": [
+        "danger",
+        "cough",
+        "diarrhea",
+        "persistent_diarrhea",
+        "dysentery",
+        "fever",
+        "measles",
+        "ear",
+        "malnutrition",
+        "anemia"
+       ],
+       "caption": "The chart booklet in the app is the Sudan national chart booklet. Open the whole booklet to read it, or print it or save it as a PDF to keep beside you while you study."
+      },
+      {
+       "type": "question",
+       "text": "You answer a case wrongly the first time. What happens?",
+       "options": [
+        "The lesson is locked",
+        "You see why, and you can try again",
+        "You must restart the module"
+       ],
+       "explanation": "",
+       "answer": 1,
+       "feedback": [
+        "Nothing is locked by a wrong answer.",
+        "Right. Read the feedback, then try again. Your first try is kept for your progress page.",
+        "You only repeat the question."
+       ],
+       "label": "Check yourself"
+      },
+      {
+       "type": "note",
+       "text": "Finish every lesson of a module to earn its badge. Your progress page shows your lessons, your badges and how often you were right the first time.",
+       "label": "Badges"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 1,
+     "isPublished": true
+    },
+    {
      "see": [],
      "practise": [],
      "bookFromPage": 5,
      "bookToPage": 7,
      "title": "Module overview",
-     "order": 1,
+     "order": 2,
      "read": [
       {
        "type": "note",
@@ -117,7 +231,7 @@
      "bookFromPage": 8,
      "bookToPage": 17,
      "title": "Greeting the caregiver",
-     "order": 2,
+     "order": 3,
      "read": [
       {
        "type": "note",
@@ -285,12 +399,28 @@
      "bookFromPage": 8,
      "bookToPage": 17,
      "title": "Checking for general danger signs",
-     "order": 3,
+     "order": 4,
      "read": [
       {
        "type": "note",
        "text": "Check every sick child for the general danger signs, one at a time, and say what you do when you find one.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "A child sleeps on her mother's lap. Is she lethargic?",
+       "options": [
+        "Yes",
+        "Not necessarily: wake her and look",
+        "No, sleeping children are never sick"
+       ],
+       "answer": 1,
+       "feedback": [
+        "Sleeping is not the same as lethargic.",
+        "Right. Look at how she wakes and responds.",
+        "A sleeping child can be lethargic. You must look."
+       ]
       },
       {
        "type": "heading",
@@ -447,7 +577,7 @@
      "bookFromPage": 8,
      "bookToPage": 17,
      "title": "See the signs and practise with two cases",
-     "order": 4,
+     "order": 5,
      "read": [
       {
        "type": "note",
@@ -494,12 +624,226 @@
      "isPublished": true
     },
     {
+     "title": "Practise: general danger signs",
+     "read": [
+      {
+       "type": "note",
+       "text": "Find the general danger signs in three children, and in a conversation with a mother.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Ask about the danger signs",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "Good morning. What is the problem with your son today?"
+          },
+          {
+           "who": "Mother",
+           "text": "He has had a cough and fever for three days."
+          },
+          {
+           "who": "You",
+           "text": "Is he able to drink or breastfeed?"
+          },
+          {
+           "who": "Mother",
+           "text": "Yes, he breastfeeds, but less than usual."
+          }
+         ],
+         "question": "What do you ask next?",
+         "options": [
+          "Does he vomit everything?",
+          "Has he had his vaccines?",
+          "How many children do you have?"
+         ],
+         "answer": 0,
+         "explanation": "Ask about each general danger sign in turn before anything else.",
+         "feedback": [
+          "Right. Ask about each danger sign, one at a time.",
+          "Immunization is checked later, after assess and classify.",
+          "This is not part of checking for danger signs."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "Mother",
+           "text": "No, he keeps the milk down."
+          },
+          {
+           "who": "You",
+           "text": "Has he had convulsions during this illness?"
+          },
+          {
+           "who": "Mother",
+           "text": "Yes, yesterday evening he shook all over for a short time."
+          }
+         ],
+         "question": "What does this mean?",
+         "options": [
+          "He has a general danger sign",
+          "It is only from the fever, so it does not count",
+          "Ask again tomorrow"
+         ],
+         "answer": 0,
+         "explanation": "Convulsions during this illness are a general danger sign: the child needs urgent attention.",
+         "feedback": [
+          "Right.",
+          "Convulsions in this illness count whatever the cause.",
+          "A child with a danger sign must not wait."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Does the child have a general danger sign?",
+       "part": "child",
+       "categories": [
+        "danger"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Huda",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 11,
+          "temp": 37.2,
+          "problem": "Vomiting"
+         },
+         "text": "Huda's mother says Huda has vomited since this morning. When you ask, she says Huda vomits everything she eats or drinks, even water. Huda is awake and looks at you. She has had no convulsions.",
+         "record": [
+          {
+           "title": "Check for general danger signs",
+           "lines": [
+            "Not able to drink or breastfeed: no",
+            "Vomits everything: yes",
+            "Convulsions: no",
+            "Lethargic or unconscious: no",
+            "Convulsing now: no"
+           ],
+           "classify": [
+            "General danger sign present"
+           ]
+          }
+         ],
+         "question": "Does Huda have a general danger sign?",
+         "options": [
+          "Yes: she vomits everything",
+          "No: she is awake and alert",
+          "Not sure until you count her breaths"
+         ],
+         "feedback": [
+          "Right. A child who cannot keep anything down vomits everything. This is a general danger sign.",
+          "Being awake does not rule out a danger sign. Huda vomits everything, even water.",
+          "Breathing is part of the cough assessment. The danger signs are checked first, and Huda already has one."
+         ],
+         "explanation": "A child with any general danger sign needs URGENT attention: complete the assessment and any pre-referral treatment immediately, then refer.",
+         "answer": 0
+        },
+        {
+         "child": {
+          "name": "Adam",
+          "age": "3 years",
+          "visit": "initial",
+          "weight": 13,
+          "temp": 38.6,
+          "problem": "Fever"
+         },
+         "text": "Adam has had fever for 2 days. His father says that last night Adam's arms and legs jerked and he did not respond for a few minutes. Now Adam is drinking and looks at you.",
+         "record": [
+          {
+           "title": "Check for general danger signs",
+           "lines": [
+            "Not able to drink: no",
+            "Vomits everything: no",
+            "Convulsions: yes, last night",
+            "Lethargic or unconscious: no"
+           ],
+           "classify": [
+            "General danger sign present"
+           ]
+          }
+         ],
+         "question": "Adam is drinking and alert now. Does he have a general danger sign?",
+         "options": [
+          "No, because he is alert now",
+          "Yes: convulsions during this illness",
+          "Only if he convulses in the clinic"
+         ],
+         "feedback": [
+          "A convulsion during this illness is a general danger sign even if the child looks well now.",
+          "Right. Convulsions during the current illness are a general danger sign.",
+          "Convulsing now is one sign; a history of convulsions in this illness is another. Either one is a danger sign."
+         ],
+         "explanation": "Ask about convulsions in every sick child: \"Has the child had convulsions during this illness?\"",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Mai",
+          "age": "13 months",
+          "visit": "initial",
+          "weight": 9,
+          "temp": 37.0,
+          "problem": "Cough"
+         },
+         "text": "Mai has a cough. She is sleeping on her mother's lap. When her mother speaks to her, she wakes, looks around and breastfeeds well. She has not vomited and has had no convulsions.",
+         "record": [
+          {
+           "title": "Check for general danger signs",
+           "lines": [
+            "Able to breastfeed: yes",
+            "Vomits everything: no",
+            "Convulsions: no",
+            "Lethargic or unconscious: no, wakes easily"
+           ],
+           "classify": [
+            "No general danger sign"
+           ]
+          }
+         ],
+         "question": "Is Mai lethargic?",
+         "options": [
+          "Yes: she was asleep",
+          "No: she wakes easily and breastfeeds",
+          "Yes, because she has a cough"
+         ],
+         "feedback": [
+          "A sleeping child is not lethargic if she wakes when spoken to and looks around. Wake the child and look.",
+          "Right. A lethargic child is not alert when she should be and does not look at her mother. Mai wakes and feeds.",
+          "Cough is not a danger sign. Check each danger sign on its own."
+         ],
+         "explanation": "Mai has no general danger sign. Go on to assess her cough.",
+         "answer": 1
+        }
+       ]
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 6,
+     "isPublished": true
+    },
+    {
      "see": [],
      "practise": [],
      "bookFromPage": 18,
      "bookToPage": 21,
      "title": "Urgent referral and pre-referral treatment",
-     "order": 5,
+     "order": 7,
      "read": [
       {
        "type": "note",
@@ -625,7 +969,7 @@
      "bookFromPage": 18,
      "bookToPage": 21,
      "title": "How to refer a child urgently",
-     "order": 6,
+     "order": 8,
      "read": [
       {
        "type": "note",
@@ -721,7 +1065,7 @@
      "bookFromPage": 22,
      "bookToPage": 22,
      "title": "Using this module in your clinic",
-     "order": 7,
+     "order": 9,
      "read": [
       {
        "type": "note",
@@ -776,7 +1120,7 @@
      "bookFromPage": 23,
      "bookToPage": 26,
      "title": "Review questions and Module 1 test",
-     "order": 8,
+     "order": 10,
      "read": [
       {
        "type": "note",
@@ -798,6 +1142,40 @@
        "note": "The 20 logbook questions. You may use your chart booklet."
       }
      ],
+     "isPublished": true
+    },
+    {
+     "title": "Module 1 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Check every sick child for the general danger signs first.</li><li>Not able to drink or breastfeed, vomits everything, convulsions, lethargic or unconscious, convulsing now.</li><li>A child with any danger sign needs urgent attention and referral after pre-referral treatment.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for any illness, checking each one for the general danger signs: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 11,
      "isPublished": true
     }
    ],

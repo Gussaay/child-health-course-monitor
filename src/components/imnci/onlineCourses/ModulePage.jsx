@@ -4,7 +4,7 @@
 // it takes. A locked lesson keeps its normal row, with a red "Locked" badge.
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, ArrowLeft, CheckCircle2, Wand2, ChevronRight, Clock, RefreshCw, FileDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, CheckCircle2, Wand2, ChevronRight, Clock, RefreshCw, FileDown, Award } from 'lucide-react';
 import { Button } from '../../CommonComponents';
 import { learnerContent } from '../book';
 import { activityKeys } from './activityKeys';
@@ -91,6 +91,16 @@ export function ModulePage() {
                         <div className="h-full bg-sky-600 rounded-full transition-all"
                             style={{ width: `${secs.length ? (doneHere / secs.length) * 100 : 0}%` }} />
                     </div>
+                    {secs.length > 0 && doneHere === secs.length && (
+                        // The module's badge, earned by finishing every lesson in it.
+                        <div className="mt-3 rounded-xl bg-amber-50 border border-amber-300 px-3 py-2.5 flex items-center gap-3" data-testid="module-badge">
+                            <span className="w-10 h-10 rounded-full bg-amber-400 text-amber-950 grid place-items-center shrink-0"><Award size={20} /></span>
+                            <span className="text-sm text-amber-950">
+                                <span className="block font-bold">{t('imnci_ui.courses.practice.badge_title', 'Module {{n}} badge earned', { n: moduleNo })}</span>
+                                <span className="block">{t('imnci_ui.courses.practice.badge_text', 'You finished every lesson of this module.')}</span>
+                            </span>
+                        </div>
+                    )}
                     {secs.length > 0 && (
                         <div className="mt-3">
                             <OfflineSave moduleId={openModule.id} sections={secs} />

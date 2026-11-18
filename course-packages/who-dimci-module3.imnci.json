@@ -237,6 +237,22 @@
        "label": "In this lesson"
       },
       {
+       "type": "question",
+       "label": "Before you start",
+       "text": "A child of 8 months breathes 48 times a minute. Is that fast?",
+       "options": [
+        "Yes",
+        "No",
+        "It depends on the child's age"
+       ],
+       "answer": 2,
+       "feedback": [
+        "48 is below the cut-off for 8 months (50).",
+        "Right for 8 months, but think about why.",
+        "Right. The cut-off is 50 from 2 up to 12 months and 40 from 12 months up to 5 years. At 8 months 48 is not fast."
+       ]
+      },
+      {
        "type": "paragraph",
        "text": "Fast breathing is one sign of pneumonia. To decide whether a child is breathing faster than normal, you count the number of breaths the child takes in one minute."
       },
@@ -514,6 +530,34 @@
        "caption": "Classify: cough or difficult breathing (Sudan national IMNCI booklet)"
       },
       {
+       "type": "classcards",
+       "title": "Cough or difficult breathing: the three classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "SEVERE PNEUMONIA OR VERY SEVERE DISEASE",
+         "action": "Refer urgently",
+         "signs": "Any general danger sign or Stridor in a calm child.",
+         "treat": "Give first dose of an appropriate antibiotic; Treat to prevent low blood sugar; Refer URGENTLY to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "PNEUMONIA",
+         "action": "Treat and follow up",
+         "signs": "Chest indrawing or Fast breathing",
+         "treat": "Give appropriate antibiotics for 5 days; If wheezing (or disappeared after rapidly acting bronchodilator) give an inhaled bronchodilator for 5 days; Soothe the throat and relieve the cough with a safe remedy; If coughing for 14 days or more refer to the hospital for further assessment; Advise mother when to return immediately"
+        },
+        {
+         "colour": "green",
+         "label": "COUGH OR COLD",
+         "action": "Home care",
+         "signs": "No signs of pneumonia or very severe disease.",
+         "treat": "If coughing for 14 days or more refer for assessment; Soothe the throat and relieve cough with a safe remedy; Treat wheezing if present; Advise mother when to return immediately; Follow up in 5 days if not improving"
+        }
+       ]
+      },
+      {
        "type": "note",
        "text": "Classifications are colour-coded, and identify treatments. RED: refer urgently. YELLOW: treat in the clinic. GREEN: home treatment.",
        "label": "Remember"
@@ -659,12 +703,362 @@
      "isPublished": true
     },
     {
+     "title": "Practise: classify cough or difficult breathing",
+     "read": [
+      {
+       "type": "note",
+       "text": "Count, decide and classify cough or difficult breathing for four children, and find an error on a recording form.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "Which sign alone puts a child with cough in the pink row?",
+       "options": [
+        "Fast breathing",
+        "Chest indrawing",
+        "Stridor in a calm child"
+       ],
+       "answer": 2,
+       "feedback": [
+        "Fast breathing is in the yellow row.",
+        "In the Sudan chart booklet, chest indrawing is in the yellow row.",
+        "Right. Stridor in a calm child, or any general danger sign."
+       ]
+      },
+      {
+       "type": "drill",
+       "title": "Count the breaths: Ali, 2 years",
+       "url": "",
+       "videoTitle": "Counting breaths: Ali, 2 years (video to be recorded)",
+       "text": "Count the breaths for one full minute while the child is calm, then decide.",
+       "given": "Until this clip is recorded: you watch Ali's chest and count 43 breaths in one full minute.",
+       "count": {
+        "answer": 43,
+        "tolerance": 2,
+        "unit": "breaths per minute",
+        "question": "How many breaths did you count in one minute?"
+       },
+       "question": "Ali is 2 years old. Does he have fast breathing?",
+       "options": [
+        "Yes",
+        "No"
+       ],
+       "answer": 0,
+       "feedback": [
+        "Right. From 12 months up to 5 years, 40 breaths per minute or more is fast breathing.",
+        "Ali is 2 years old: 40 or more is fast. 43 is fast breathing."
+       ]
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Talk with Omer's mother",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "Does Omer have a cough or difficult breathing?"
+          },
+          {
+           "who": "Mother",
+           "text": "Yes, he has coughed for four days."
+          },
+          {
+           "who": "You",
+           "text": "I will count his breaths now. Can you keep him calm on your lap?"
+          }
+         ],
+         "question": "Why should Omer be calm?",
+         "options": [
+          "A crying child breathes faster, so the count would be wrong",
+          "So he does not cough",
+          "It does not matter"
+         ],
+         "answer": 0,
+         "explanation": "Count the breaths when the child is calm. Look for chest indrawing and listen for stridor when calm too.",
+         "feedback": [
+          "Right.",
+          "Coughing does not change the count much; crying does.",
+          "It matters: crying changes breathing."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "He breathes 36 times a minute, and I see his lower chest go in when he breathes in."
+          },
+          {
+           "who": "Mother",
+           "text": "Is that serious?"
+          }
+         ],
+         "question": "What do you say?",
+         "options": [
+          "\"He has pneumonia. I will give you a medicine for 5 days and show you how to give it.\"",
+          "\"No, the breathing is not fast, so it is a cold.\"",
+          "\"He must go to hospital now.\""
+         ],
+         "answer": 0,
+         "explanation": "Chest indrawing with no danger sign or stridor classifies PNEUMONIA: oral amoxicillin for 5 days and follow-up in 3 days.",
+         "feedback": [
+          "Right.",
+          "Chest indrawing is a sign of pneumonia even when breathing is not fast.",
+          "He has no general danger sign and no stridor, so he can be treated at home."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Classify cough or difficult breathing",
+       "part": "child",
+       "categories": [
+        "danger",
+        "cough"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Amna",
+          "age": "18 months",
+          "visit": "initial",
+          "weight": 10,
+          "temp": 37.0,
+          "problem": "Cough for 3 days"
+         },
+         "text": "Amna has coughed for 3 days. She has no general danger sign. You count 46 breaths in one minute. There is no chest indrawing and no stridor.",
+         "record": [
+          {
+           "title": "Check for general danger signs",
+           "lines": [
+            "None"
+           ]
+          },
+          {
+           "title": "Does the child have cough or difficult breathing? Yes",
+           "lines": [
+            "For how long? 3 days",
+            "Count the breaths: 46 per minute",
+            "Fast breathing: yes",
+            "Chest indrawing: no",
+            "Stridor: no"
+           ],
+           "classify": [
+            "PNEUMONIA"
+           ]
+          }
+         ],
+         "question": "How do you classify Amna's cough?",
+         "options": [
+          "SEVERE PNEUMONIA OR VERY SEVERE DISEASE",
+          "PNEUMONIA",
+          "COUGH OR COLD"
+         ],
+         "feedback": [
+          "That needs a general danger sign or stridor in a calm child. Amna has neither.",
+          "Right. At 18 months fast breathing is 40 breaths per minute or more. 46 is fast breathing.",
+          "Look at her age: from 12 months up to 5 years, 40 or more is fast. 46 is fast breathing, a sign of pneumonia."
+         ],
+         "explanation": "Fast breathing: 50 or more from 2 up to 12 months; 40 or more from 12 months up to 5 years.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Khalid",
+          "age": "7 months",
+          "visit": "initial",
+          "weight": 7.5,
+          "temp": 37.3,
+          "problem": "Cough for 2 days"
+         },
+         "text": "Khalid has coughed for 2 days. He has no general danger sign. You count 48 breaths in one minute. There is no chest indrawing and no stridor.",
+         "record": [
+          {
+           "title": "Does the child have cough or difficult breathing? Yes",
+           "lines": [
+            "For how long? 2 days",
+            "Count the breaths: 48 per minute",
+            "Fast breathing: no",
+            "Chest indrawing: no",
+            "Stridor: no"
+           ],
+           "classify": [
+            "COUGH OR COLD"
+           ]
+          }
+         ],
+         "question": "How do you classify Khalid's cough?",
+         "options": [
+          "PNEUMONIA",
+          "COUGH OR COLD",
+          "SEVERE PNEUMONIA OR VERY SEVERE DISEASE"
+         ],
+         "feedback": [
+          "Check the cut-off for his age. From 2 up to 12 months fast breathing is 50 or more. 48 is not fast.",
+          "Right. Khalid is 7 months old, so fast breathing is 50 or more. 48 is not fast, and he has no other sign.",
+          "Khalid has no general danger sign and no stridor."
+         ],
+         "explanation": "Use the child's age to choose the cut-off. The same count can be fast for one child and not for another.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Sara",
+          "age": "3 years",
+          "visit": "initial",
+          "weight": 13,
+          "temp": 37.8,
+          "problem": "Cough and not drinking"
+         },
+         "text": "Sara has coughed for 5 days. Her mother says that since yesterday Sara is not able to drink anything. You count 44 breaths per minute and see chest indrawing.",
+         "record": [
+          {
+           "title": "Check for general danger signs",
+           "lines": [
+            "Not able to drink or breastfeed: yes"
+           ],
+           "classify": [
+            "General danger sign present"
+           ]
+          },
+          {
+           "title": "Does the child have cough or difficult breathing? Yes",
+           "lines": [
+            "For how long? 5 days",
+            "44 breaths per minute: fast breathing",
+            "Chest indrawing: yes",
+            "Stridor: no"
+           ],
+           "classify": [
+            "SEVERE PNEUMONIA OR VERY SEVERE DISEASE"
+           ]
+          }
+         ],
+         "question": "How do you classify Sara's cough?",
+         "options": [
+          "PNEUMONIA, because of fast breathing and chest indrawing",
+          "SEVERE PNEUMONIA OR VERY SEVERE DISEASE",
+          "COUGH OR COLD"
+         ],
+         "feedback": [
+          "Fast breathing and chest indrawing are signs of pneumonia, but read the table from the top: Sara has a general danger sign.",
+          "Right. Any general danger sign puts a child with cough in the pink row. Sara is not able to drink.",
+          "Sara has several signs. Start at the pink row."
+         ],
+         "explanation": "Read the classification table from the top down and take the first row that fits.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Omer",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 12,
+          "temp": 37.1,
+          "problem": "Cough"
+         },
+         "text": "Omer has coughed for 4 days. He has no general danger sign. You count 36 breaths per minute, but you see that his lower chest wall goes in when he breathes in. He is calm and has no stridor.",
+         "record": [
+          {
+           "title": "Does the child have cough or difficult breathing? Yes",
+           "lines": [
+            "For how long? 4 days",
+            "36 breaths per minute: not fast",
+            "Chest indrawing: yes",
+            "Stridor: no"
+           ],
+           "classify": [
+            "PNEUMONIA"
+           ]
+          }
+         ],
+         "question": "Which signs does Omer have that need treatment? Select all that apply.",
+         "options": [
+          "Fast breathing",
+          "Chest indrawing",
+          "Stridor in a calm child",
+          "None: his breathing is not fast"
+         ],
+         "feedback": [
+          "36 is not fast at 2 years: fast is 40 or more.",
+          "Right. Chest indrawing is a sign of pneumonia, even when the breathing is not fast.",
+          "Omer is calm and you hear no stridor.",
+          "His breathing is not fast, but he has chest indrawing."
+         ],
+         "explanation": "In the Sudan chart booklet, chest indrawing OR fast breathing classifies PNEUMONIA. Omer needs oral amoxicillin for 5 days.",
+         "answers": [
+          1
+         ]
+        }
+       ]
+      },
+      {
+       "type": "spot",
+       "title": "Find the error on Hamid's form",
+       "part": "child",
+       "text": "A health worker filled in this part of the form for Hamid, 2 years. One entry is wrong. Tap it.",
+       "child": {
+        "name": "Hamid",
+        "age": "2 years",
+        "visit": "initial",
+        "weight": 12,
+        "temp": 37.2,
+        "problem": "Cough for 4 days"
+       },
+       "record": [
+        {
+         "title": "Does the child have cough or difficult breathing? Yes",
+         "lines": [
+          {
+           "text": "For how long? 4 days",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Count the breaths: 44 per minute",
+           "why": "The count is right."
+          },
+          {
+           "text": "Fast breathing: yes",
+           "why": "Right: at 2 years, 40 or more is fast breathing."
+          },
+          {
+           "text": "Chest indrawing: no",
+           "why": "This entry is right."
+          }
+         ],
+         "classify": [
+          {
+           "text": "COUGH OR COLD",
+           "why": "Hamid has fast breathing, so the classification is PNEUMONIA, not cough or cold.",
+           "error": true
+          }
+         ]
+        }
+       ],
+       "explanation": "The signs were recorded well, but the classification did not follow them. Read the table row by row."
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 8,
+     "isPublished": true
+    },
+    {
      "see": [],
      "practise": [],
      "bookFromPage": 21,
      "bookToPage": 24,
      "title": "Treat: choose the antibiotic and the dose",
-     "order": 8,
+     "order": 9,
      "read": [
       {
        "type": "note",
@@ -795,7 +1189,7 @@
      "bookFromPage": 24,
      "bookToPage": 27,
      "title": "Treat: inhaler for wheezing, and a safe soothing remedy",
-     "order": 9,
+     "order": 10,
      "read": [
       {
        "type": "note",
@@ -981,7 +1375,7 @@
      "bookFromPage": 28,
      "bookToPage": 30,
      "title": "Counsel the caregiver: giving medicine at home",
-     "order": 10,
+     "order": 11,
      "read": [
       {
        "type": "note",
@@ -1139,7 +1533,7 @@
      "bookFromPage": 31,
      "bookToPage": 34,
      "title": "Counsel the caregiver: when to return, and counselling Amira",
-     "order": 11,
+     "order": 12,
      "read": [
       {
        "type": "note",
@@ -1247,7 +1641,7 @@
      "bookFromPage": 35,
      "bookToPage": 37,
      "title": "Follow-up care for cough or difficult breathing",
-     "order": 12,
+     "order": 13,
      "read": [
       {
        "type": "note",
@@ -1375,7 +1769,7 @@
      "bookFromPage": 38,
      "bookToPage": 38,
      "title": "Using this module in your clinic",
-     "order": 13,
+     "order": 14,
      "read": [
       {
        "type": "note",
@@ -1429,7 +1823,7 @@
      "bookFromPage": 39,
      "bookToPage": 43,
      "title": "Review questions and Module 3 test",
-     "order": 14,
+     "order": 15,
      "read": [
       {
        "type": "note",
@@ -1451,6 +1845,40 @@
        "note": ""
       }
      ],
+     "isPublished": true
+    },
+    {
+     "title": "Module 3 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Count breaths for a full minute in a calm child: 50 or more is fast from 2 up to 12 months, 40 or more from 12 months.</li><li>Any danger sign or stridor in a calm child: SEVERE PNEUMONIA OR VERY SEVERE DISEASE.</li><li>Fast breathing or chest indrawing: PNEUMONIA, oral amoxicillin for 5 days, follow up in 3 days.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for cough or difficult breathing: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 16,
      "isPublished": true
     }
    ],

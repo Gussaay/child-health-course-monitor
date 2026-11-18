@@ -3,6 +3,8 @@
 import json, os, re, sys, itertools
 import importlib
 import src
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "imnci-practice"))
+import practice   # shared practice cases, colour cards, drills, module endings (see ../../imnci-practice)
 # Modules in course order; a module is built once its .py file exists.
 ORDER = ["intro", "ac", "it", "tr", "cm", "yi", "fu"]   # facilitator guide order: young infant before follow-up
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -23,7 +25,7 @@ pkg = {
               "manager. Videos are placeholders until the narration is recorded."),
     "course": {"title": "Sudan IMNCI course",
                "description": "The Sudan national IMNCI course, in the order of the national facilitator guide, with the national module text."},
-    "modules": [m.MODULE for m in MODS],
+    "modules": practice.enrich([m.MODULE for m in MODS], practice.classic_plans()),
     "exercises": [e for m in MODS for e in m.EXERCISES],
 }
 
@@ -45,7 +47,7 @@ for b in blocks:
     if b["type"] in ("image", "page") and b.get("path"):
         root, name = b["path"].split("/", 1)
         if not os.path.exists(os.path.join(PHOTOS if root == "imnci-photos" else FIG, name)): errors.append(f"missing figure {b['path']}")
-    if b["type"] == "question" and not (0 <= b["answer"] < len(b["options"])): errors.append(f"bad answer: {b['text'][:60]}")
+    if b["type"] == "question" and not all(0 <= a < len(b["options"]) for a in (b.get("answers") or [b.get("answer", -1)])): errors.append(f"bad answer: {b['text'][:60]}")
 for e in pkg["exercises"]:
     for q in e.get("questions", []):
         if q["type"] == "mcq" and not all(0 <= c < len(q["options"]) for c in q["correct"]): errors.append(f"bad mcq {e['id']} {q['id']}")
