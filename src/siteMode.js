@@ -50,7 +50,16 @@ export const SITE_APPS = {
     emonc: { package: 'com.nchp.monitoring.emonc', name: 'EmONC', versionFile: 'native-version-emonc.json', updateManifest: 'latest-emonc/update.json', apkFilePrefix: 'EmONC_APP_v', downloadName: 'EmONC' },
     ch: { package: 'com.nchp.monitoring.ch', name: 'Child Health Sudan', versionFile: 'native-version-ch.json', updateManifest: 'latest-ch/update.json', apkFilePrefix: 'CH_Sudan_APP_v', downloadName: 'CH-Sudan' },
 };
-export const NATIVE_APP = IS_EMONC_SITE ? SITE_APPS.emonc : IS_CH_SITE ? SITE_APPS.ch : SITE_APPS.nchp;
+// What each app is called where it is offered (the get-the-app bar, the
+// "Share app" message). The ch-sudan subtitle is the one Qusay chose.
+export const SITE_APP_TEXT = {
+    nchp: { title: 'National Child Health Program', titleAr: 'البرنامج القومي لصحة الطفل', subtitle: 'Program & Course Monitoring System', subtitleAr: 'نظام متابعة البرامج والدورات' },
+    emonc: { title: 'EmONC', titleAr: 'EmONC', subtitle: 'Course Monitoring System', subtitleAr: 'نظام متابعة الدورات' },
+    ch: { title: 'Child Health Sudan', titleAr: 'صحة الطفل السودان', subtitle: 'Online Course and Guidelines', subtitleAr: 'الدورة الإلكترونية والموجهات' },
+};
+export const NATIVE_APP_ID = IS_EMONC_SITE ? 'emonc' : IS_CH_SITE ? 'ch' : 'nchp';
+export const NATIVE_APP = SITE_APPS[NATIVE_APP_ID];
+export const NATIVE_APP_TEXT = SITE_APP_TEXT[NATIVE_APP_ID];
 
 // meta/update_config names the NCHP APK of a release. All the apps are built
 // in the same release with the same version, so another app's APK of that

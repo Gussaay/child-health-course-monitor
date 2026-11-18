@@ -1,27 +1,30 @@
 // src/components/GetAppBanner.jsx
 //
-// A shared link (survey, evaluation, test, attendance, monitoring ...) opened
-// in a phone's browser. When the Android app is installed, Android opens these
-// links in the app itself (App Links, see AndroidManifest.xml), so a link that
-// lands in the browser usually means the app is not on this phone. This bar
-// offers the app and leaves the form usable underneath:
-//   Open in the app   opens this same page in the app if it is installed,
-//                     otherwise downloads it (Chrome's intent:// link)
-//   Get or update     downloads the latest APK (also for phones with an older APK,
-//                     which does not open links yet)
+// Every site has its own Android app (main: NCHP, emonc-sudan: EmONC,
+// ch-sudan: Child Health Sudan). A phone that opens a site in its browser
+// most likely does not have that site's app, so this bar offers it:
+//   Open in the app   (shared links only) opens this same page in the app if
+//                     it is installed, otherwise downloads it (intent:// link).
+//                     Android opens these links in the app by itself (App
+//                     Links, see AndroidManifest.xml), so landing here
+//                     usually means the app is missing.
+//   Get the app       downloads the latest APK of THIS site's app (also for
+//                     phones with an older APK, which does not open links yet)
 //   ×                 hides the bar on this browser for a week
-// Shown only in Android browsers, never inside the app, and never on a
-// training link (that one stays in the browser on purpose).
+// Shown only in Android browsers (the apps are Android only), never inside
+// the app, and never on a training link (that one stays in the browser on
+// purpose).
 
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Capacitor } from '@capacitor/core';
 import { Smartphone, X } from 'lucide-react';
 import { isPublicAppPath } from '../utils/appLinks';
-import { LIVE_HOSTS, LIVE_SITE } from '../utils/publicLink';
-import { IS_EMONC_SITE, NATIVE_APP } from '../siteMode';
+import { LIVE_HOSTS } from '../utils/publicLink';
+import { fetchSiteApkUrl } from '../utils/shareApp';
+import { NATIVE_APP, NATIVE_APP_TEXT } from '../siteMode';
 
-// The EmONC site offers the EmONC app, the other sites the NCHP app.
+// Each site offers its own app.
 export const APP_PACKAGE = NATIVE_APP.package;
 const DISMISS_KEY = 'chm.getAppBanner.dismissedAt';
 const DISMISS_DAYS = 7;
@@ -29,7 +32,7 @@ const DISMISS_DAYS = 7;
 export function shouldShowGetAppBanner({ native, userAgent, pathname, dismissedAt, now = Date.now() }) {
     if (native) return false;
     if (!/Android/i.test(userAgent || '')) return false;
-    if (!isPublicAppPath(pathname)) return false;
+    if (/^\/training(\/|$)/.test(String(pathname || ''))) return false;
     const at = Number(dismissedAt) || 0;
     if (at && now - at < DISMISS_DAYS * 24 * 60 * 60 * 1000) return false;
     return true;
@@ -67,14 +70,8 @@ export default function GetAppBanner() {
     useEffect(() => {
         if (!visible) return undefined;
         let cancelled = false;
-        // Every site serves these files; the main site is asked if this one
-        // cannot be. The EmONC site reads the EmONC app's file, which exists
-        // only once the EmONC app has been built.
-        const read = (base) => fetch(`${base}/${NATIVE_APP.versionFile}?t=${Date.now()}`, { cache: 'no-store' })
-            .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))));
-        read('').catch(() => read(LIVE_SITE))
-            .then((info) => { if (!cancelled) setApkUrl(info?.apkUrl || info?.downloadUrl || ''); })
-            .catch(() => { /* no download button then */ });
+        // This site's app's file; no download button if it cannot be read.
+        fetchSiteApkUrl().then((url) => { if (!cancelled) setApkUrl(url); });
         return () => { cancelled = true; };
     }, [visible]);
 
@@ -84,7 +81,11 @@ export default function GetAppBanner() {
         try { window.localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch { /* hidden for now only */ }
         setVisible(false);
     };
-    const openUrl = appIntentUrl(window.location.href, apkUrl);
+    // Only shared links are claimed by the app; other pages just get the download.
+    const sharedLink = isPublicAppPath(window.location.pathname);
+    const openUrl = sharedLink ? appIntentUrl(window.location.href, apkUrl) : '';
+    const name = ar ? NATIVE_APP_TEXT.titleAr : NATIVE_APP_TEXT.title;
+    const subtitle = ar ? NATIVE_APP_TEXT.subtitleAr : NATIVE_APP_TEXT.subtitle;
 
     return (
         <div dir={ar ? 'rtl' : 'ltr'} role="region" aria-label={L('تطبيق الهاتف', 'Phone app')}
@@ -93,9 +94,12 @@ export default function GetAppBanner() {
                 <div className="flex items-center gap-2 flex-1 min-w-[14rem]">
                     <Smartphone className="w-5 h-5 text-sky-700 dark:text-sky-300 shrink-0" aria-hidden="true" />
                     <span className="flex-1 min-w-0 leading-snug">
-                        {IS_EMONC_SITE
-                            ? L('افتح هذا الرابط في تطبيق EmONC على هاتفك.', 'Open this link in the EmONC app on your phone.')
-                            : L('افتح هذا الرابط في تطبيق البرنامج القومي لصحة الطفل على هاتفك.', 'Open this link in the Child Health app on your phone.')}
+                        <span className="block font-semibold">
+                            {sharedLink
+                                ? L(`افتح هذا الرابط في تطبيق ${name}`, `Open this link in the ${name} app`)
+                                : L(`ثبّت تطبيق ${name} على هاتفك`, `Get the ${name} app on your phone`)}
+                        </span>
+                        <span className="block text-xs text-slate-600 dark:text-slate-300">{subtitle}</span>
                     </span>
                 </div>
                 <div className="flex items-center gap-2 ms-auto">
@@ -106,7 +110,7 @@ export default function GetAppBanner() {
                     )}
                     {apkUrl && (
                         <a href={apkUrl} rel="noopener" className="px-3 py-1.5 rounded-lg bg-sky-700 text-white font-semibold whitespace-nowrap">
-                            {L('تنزيل أو تحديث التطبيق', 'Get or update the app')}
+                            {L('تنزيل التطبيق', 'Get the app')}
                         </a>
                     )}
                     <button type="button" onClick={dismiss} aria-label={L('إخفاء', 'Hide')} title={L('إخفاء', 'Hide')}

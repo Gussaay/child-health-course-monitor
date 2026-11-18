@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages, Sun, Moon, Monitor, MapPin, Settings2
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages, Sun, Moon, Monitor, MapPin, Settings2, Share2
 } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
@@ -183,9 +183,10 @@ import { DataAssistantCard, PageAddButton } from './components/DataAssistantLaun
 import { ScanQrCard } from './components/QrScanLauncher';
 import { isPublicAppPath, parseScannedCode } from './utils/appLinks';
 import GetAppBanner from './components/GetAppBanner';
+import { shareApp } from './utils/shareApp';
 import { findLinkedParticipant, rememberLinkedParticipant } from './utils/linkedParticipant';
 import { usePageAddAction, useFormTitleOverride } from './utils/pageChrome';
-import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_LOGO_URL, EMONC_LOGO_ALT, EMONC_SHORT_TITLE } from './siteMode';
+import { IS_EMONC_SITE, IS_CH_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_LOGO_URL, EMONC_LOGO_ALT, EMONC_SHORT_TITLE } from './siteMode';
 import { useSiteHiddenViews } from './hooks/useSiteSettings';
 // The EmONC site shows its own logo, never the Child Health Program one.
 const logoUrl = IS_EMONC_SITE ? EMONC_LOGO_URL : mainLogoUrl;
@@ -578,7 +579,7 @@ function AppCredit({ className = '' }) {
 
 // Slide-out side menu (☰): who you are, every module you can open, and the
 // app's settings in one place. The header keeps its own buttons as well.
-function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, currentView, onNavigate, onProfile, onSync, onLanguage, onUpdate, onLogout, appVersion, apkInfo, isOffline, languageLabel }) {
+function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, currentView, onNavigate, onProfile, onSync, onLanguage, onUpdate, onShareApp, onLogout, appVersion, apkInfo, isOffline, languageLabel }) {
     const { t } = useTranslation();
     const closeRef = useRef(onClose);
     closeRef.current = onClose;
@@ -603,6 +604,8 @@ function SideMenu({ open, onClose, user, roleLabel, levelLabel, modules, current
         { icon: Languages, label: languageLabel, action: onLanguage, keepOpen: true },
         { icon: themeIcon, label: themeLabel, action: cycleTheme, keepOpen: true },
         { icon: RefreshCw, label: t('menu.updates', 'Check for updates'), action: onUpdate },
+        // Sends this site's own app (the APK itself inside the Android app).
+        ...(onShareApp ? [{ icon: Share2, label: t('menu.share_app', 'Share the app'), action: onShareApp }] : []),
     ];
 
     return createPortal(
@@ -680,7 +683,7 @@ function SplashScreen() {
             <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src={logoUrl} alt={IS_EMONC_SITE ? EMONC_LOGO_ALT : t('app_extra.header.logo_alt', 'NCHP Logo')} width="80" height="80" className="h-20 w-20 object-contain" /></div>
             <div>
                 <h1 className="text-3xl font-bold text-slate-800">{IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program')}</h1>
-                <p className="text-lg text-slate-500 mt-1">{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : t('app.subtitle', 'Program & Course Monitoring System')}</p>
+                <p className="text-lg text-slate-500 mt-1">{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : IS_CH_SITE ? t('app.subtitle_ch', 'Online Course and Guidelines') : t('app.subtitle', 'Program & Course Monitoring System')}</p>
             </div>
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mt-4"></div>
             <p className="text-slate-600 mt-4">{t('app.loading_system', 'Loading application, please wait...')}</p>
@@ -2623,6 +2626,16 @@ export default function App() {
 
     const handleDeletePdf = useCallback(async (courseId) => {  }, [permissions, courseDetails.finalReport]);
 
+    // ☰ > Share the app: the APK through Bluetooth, WhatsApp ... (utils/shareApp.js).
+    const handleShareApp = useCallback(async () => {
+        try {
+            const result = await shareApp({ ar: (i18n.language || '').startsWith('ar'), version: apkInfo?.version || '' });
+            if (result === 'copied') setToast({ show: true, message: t('app_extra.toast.app_link_copied', 'The app download link was copied.'), type: 'success' });
+        } catch (e) {
+            setToast({ show: true, message: t('app_extra.toast.share_app_failed', 'Could not share the app: {{message}}', { message: e?.message || '' }), type: 'error' });
+        }
+    }, [i18n.language, apkInfo, t]);
+
     const handleLogout = useCallback(async () => { 
         if (await confirmDialog(t('app_extra.confirm.logout', 'Are you sure you want to log out?'))) {
             try { 
@@ -3268,7 +3281,7 @@ case 'meetings':
                                     <><span className="lg:hidden">{EMONC_SHORT_TITLE}</span><span className="hidden lg:inline">{EMONC_SITE_TITLE}</span></>
                                 ) : t('app.title', 'National Child Health Program')}</h1>
                                 <p className="text-[11px] sm:text-sm text-slate-300 flex items-center flex-wrap gap-1.5 sm:gap-2 mt-0.5 sm:mt-0">
-                                    <span>{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : t('app.subtitle', 'Program & Course Monitoring System')}</span>
+                                    <span>{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : IS_CH_SITE ? t('app.subtitle_ch', 'Online Course and Guidelines') : t('app.subtitle', 'Program & Course Monitoring System')}</span>
                                     <span
                                         onClick={(e) => { e.stopPropagation(); handleManualUpdateCheck(); }}
                                         className="bg-slate-700 text-sky-300 text-[10px] sm:text-xs leading-tight px-1 sm:px-1.5 py-0 sm:py-0.5 rounded border border-slate-600 font-mono shadow-sm cursor-pointer hover:bg-slate-600 hover:text-sky-200 transition-colors"
@@ -3428,6 +3441,7 @@ case 'meetings':
                     onLanguage={toggleLanguage}
                     languageLabel={i18n.language?.startsWith('en') ? 'التبديل إلى العربية' : 'Switch to English'}
                     onUpdate={handleManualUpdateCheck}
+                    onShareApp={handleShareApp}
                     onLogout={handleLogout}
                     appVersion={appVersion}
                     apkInfo={apkInfo}
