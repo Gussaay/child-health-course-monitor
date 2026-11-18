@@ -185,7 +185,8 @@ import { isPublicAppPath, parseScannedCode } from './utils/appLinks';
 import GetAppBanner from './components/GetAppBanner';
 import { findLinkedParticipant, rememberLinkedParticipant } from './utils/linkedParticipant';
 import { usePageAddAction, useFormTitleOverride } from './utils/pageChrome';
-import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_SITE_HIDDEN_VIEWS, EMONC_LOGO_URL, EMONC_LOGO_ALT, EMONC_SHORT_TITLE } from './siteMode';
+import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_LOGO_URL, EMONC_LOGO_ALT, EMONC_SHORT_TITLE } from './siteMode';
+import { useSiteHiddenViews } from './hooks/useSiteSettings';
 // The EmONC site shows its own logo, never the Child Health Program one.
 const logoUrl = IS_EMONC_SITE ? EMONC_LOGO_URL : mainLogoUrl;
 import { ASK_DATA_EVENT } from './utils/askDataAssistant';
@@ -418,9 +419,10 @@ function pageTitles(t) {
 };
 }
 
-function buildModules(t, permissions) {
+// `hiddenViews`: what this site hides (Admin > Sites, see siteMode.js).
+function buildModules(t, permissions, hiddenViews) {
     const modules = allModules(t, permissions);
-    return IS_EMONC_SITE ? modules.filter(m => !EMONC_SITE_HIDDEN_VIEWS.has(m.view)) : modules;
+    return hiddenViews?.size ? modules.filter(m => !hiddenViews.has(m.view)) : modules;
 }
 
 function allModules(t, permissions) {
@@ -533,7 +535,8 @@ function Landing({ navigate, permissions, user, userStates = [], userLocalities 
     const places = (level === 'locality' ? userLocalities : level === 'state' ? userStates : []) || [];
     const scope = places.filter(Boolean).join(i18n.language?.startsWith('ar') ? '، ' : ', ');
 
-    const accessibleButtons = buildModules(t, permissions).filter(btn => btn.permission);
+    const siteHiddenViews = useSiteHiddenViews();
+    const accessibleButtons = buildModules(t, permissions, siteHiddenViews).filter(btn => btn.permission);
 
     // The coloured welcome card, then one calm card with every module as the
     // same tile (big icon in the app's colour, bold name), as in August.
@@ -792,6 +795,8 @@ export default function App() {
     } = useAppUpdate();
 
     usePushNotifications(); 
+    // Pages this site hides (EmONC and ch-sudan, chosen in Admin > Sites).
+    const siteHiddenViews = useSiteHiddenViews();
 
     const [isFileDownloading, setIsFileDownloading] = useState(false);
     const [fileDownloadProgress, setFileDownloadProgress] = useState(0);
@@ -2169,7 +2174,7 @@ export default function App() {
 
 
     const navigate = useCallback((requestedView, state = {}) => {
-        const newView = IS_EMONC_SITE && EMONC_SITE_HIDDEN_VIEWS.has(requestedView) ? 'landing' : requestedView;
+        const newView = siteHiddenViews.has(requestedView) ? 'landing' : requestedView;
         const viewPermissions = {
             'landing': true, 'dashboard': true, 'admin': permissions.canViewAdmin, 'imciForm': permissions.canViewCourse, 'humanResources': permissions.canViewHumanResource,
             'courses': permissions.canViewCourse, 'courseDetails': permissions.canViewCourse, 'participants': permissions.canViewCourse, 'reports': permissions.canViewCourse,
@@ -2223,15 +2228,16 @@ export default function App() {
         }
         if ((view === 'observe' || view === 'participantReport') && !['observe', 'participantReport'].includes(newView)) setSelectedParticipantId(null);
         return true;
-    }, [view, selectedCourseId, selectedParticipantId, permissions, user, isCourseActive]);
+    }, [view, selectedCourseId, selectedParticipantId, permissions, user, isCourseActive, siteHiddenViews]);
     navigateRef.current = navigate;
     viewRef.current = view;
 
-    // A few places still set the view directly (sign-in, a denied page). On the
-    // EmONC site those land on the home page instead of a hidden module.
+    // A few places still set the view directly (sign-in, a denied page), and
+    // the site's settings can arrive after a page opened. On the EmONC and
+    // ch-sudan sites a module the site hides goes back to the home page.
     useEffect(() => {
-        if (IS_EMONC_SITE && EMONC_SITE_HIDDEN_VIEWS.has(view)) setView('landing');
-    }, [view]);
+        if (siteHiddenViews.has(view)) setView('landing');
+    }, [view, siteHiddenViews]);
 
     // Opens a page described by an address or history entry.
     const applyPage = useCallback((page) => {
@@ -2775,7 +2781,7 @@ case 'meetings':
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), view: 'skillsMentorship', active: view === 'skillsMentorship', disabled: !permissions.canViewSkillsMentorship }
     ], [view, permissions, t]);
 
-    const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled && !(IS_EMONC_SITE && EMONC_SITE_HIDDEN_VIEWS.has(item.view))), [navItems]);
+    const visibleNavItems = useMemo(() => navItems.filter(item => !item.disabled && !siteHiddenViews.has(item.view)), [navItems, siteHiddenViews]);
 
     const isApplicationPublicView = isPublicSubmissionView || isNewFacilityView || isPublicFacilityUpdateView;
     const isMentorshipPublicView = !!publicMentorshipProps || isPublicMentorshipDashboardView; 
@@ -3409,7 +3415,7 @@ case 'meetings':
                     user={user}
                     roleLabel={userRoles?.[0] ? String(userRoles[0]).replace(/_/g, ' ') : ''}
                     levelLabel={{ federal: t('landing.level_federal', 'Federal level'), state: t('landing.level_state', 'State level'), locality: t('landing.level_locality', 'Locality level') }[levelFromPermissions(permissions)]}
-                    modules={buildModules(t, permissions).filter(m => m.permission)}
+                    modules={buildModules(t, permissions, siteHiddenViews).filter(m => m.permission)}
                     currentView={view}
                     onNavigate={guardedNavigate}
                     onProfile={() => setIsUserProfileModalOpen(true)}

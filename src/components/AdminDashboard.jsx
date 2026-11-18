@@ -9,7 +9,7 @@ import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { STATE_LOCALITIES } from './constants';
 
 // --- Icons & Data Imports ---
-import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History, Bell, Trash2, Download, MessageSquareWarning, AlertTriangle, Sparkles, UserPlus } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Lock, Users, Shield, Activity, Filter, Database, Edit3, Clock, Settings, Smartphone, CloudDownload, History, Bell, Trash2, Download, MessageSquareWarning, AlertTriangle, Sparkles, UserPlus, Globe } from 'lucide-react';
 
 // Lazy: the reports carry screenshots, and nobody opening Manage User Roles
 // should pay to download a screen they are not looking at.
@@ -17,6 +17,8 @@ const ProblemReportsTab = lazy(() => import('./ProblemReports').then(m => ({ def
 const AiActivityTab = lazy(() => import('./AiActivityTab'));
 const UsageCostPanel = lazy(() => import('./UsageCostPanel'));
 const RegistrationsTab = lazy(() => import('./RegistrationsTab'));
+const SitesTab = lazy(() => import('./SitesTab'));
+import { CURRENT_SITE } from '../siteMode';
 import { listFederalCoordinators } from '../data';
 import { downloadAndOpenFile } from '../utils/fileDownloader';
 import { nextDisplayVersion, displayVersionFor } from '../utils/appVersionLabel';
@@ -71,6 +73,8 @@ const AdminTabs = ({ activeTab, setActiveTab, currentUserRoles = [] }) => {
         tabs.push({ key: 'usage', label: 'Resource Usage', short: 'Usage', icon: Activity });
         tabs.push({ key: 'ai', label: 'AI Activity', short: 'AI', icon: Sparkles });
         tabs.push({ key: 'updates', label: 'App Updates', short: 'Updates', icon: Smartphone });
+        // What the EmONC and ch-sudan sites show. Managed from the main site only.
+        if (CURRENT_SITE === 'main') tabs.push({ key: 'sites', label: 'Sites', short: 'Sites', icon: Globe });
     }
 
     return (
@@ -1448,6 +1452,9 @@ export function AdminDashboard({ appRoles = [] }) {
                 {activeTab === 'updates' && currentUserRoles.includes('super_user') && renderUpdatesTab()}
                 {activeTab === 'ai' && currentUserRoles.includes('super_user') && (
                     <Suspense fallback={<Spinner />}><AiActivityTab /></Suspense>
+                )}
+                {activeTab === 'sites' && currentUserRoles.includes('super_user') && CURRENT_SITE === 'main' && (
+                    <Suspense fallback={<Spinner />}><SitesTab setToast={setToast} /></Suspense>
                 )}
                 {activeTab === 'notifications' && <AdminNotificationSender preselectedUserId={notificationTargetId} />}
                 {activeTab === 'problems' && (
