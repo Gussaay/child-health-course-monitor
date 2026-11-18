@@ -10,7 +10,7 @@ import {
     Pencil, ArrowLeft, ArrowRight, Columns2, CheckCircle2, ZoomIn, ZoomOut, Clock, Trophy,
     ListChecks, ChevronDown, Circle,
 } from 'lucide-react';
-import { sectionContent } from '../book';
+import { learnerContent } from '../book';
 import { ContentBlocks, activityOutline, activityAnchor } from './blocks';
 import { ActivityContext } from './interactive';
 import { SectionTabEditor } from './SectionTabEditor';
@@ -135,7 +135,7 @@ export function SectionPage() {
 
     const isDone = !!progress.completed?.[openSection.id];
     const [resumeShown, setResumeShown] = useState(null);
-    const content = sectionContent(openSection);
+    const content = learnerContent(openSection);
     const [doneKeys, activityValue] = useSectionActivities(user?.uid, openSection.id, progress.activities?.[openSection.id], saveActivities);
     const outline = useMemo(() => activityOutline(content), [openSection]); // eslint-disable-line react-hooks/exhaustive-deps
     const keys = outline.map((a) => a.key);

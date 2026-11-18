@@ -1,7 +1,7 @@
 // src/components/imnci/onlineCourses/SectionTabEditor.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, Stethoscope, Film, BookOpen, ClipboardList, Flag, Lightbulb, Layers, Shuffle, ListOrdered, BookOpenCheck, LineChart, Link2, Users, Search, Timer, Palette, NotebookPen } from 'lucide-react';
+import { Plus, Trash2, Stethoscope, Film, BookOpen, ClipboardList, Flag, Lightbulb, Layers, Shuffle, ListOrdered, BookOpenCheck, LineChart, Link2, Users, Calculator, Search, Timer, Palette, NotebookPen } from 'lucide-react';
 import { ref as storageRef, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { Button, Modal, Input, Select, Textarea } from '../../CommonComponents';
 import { notify } from '../../dialogs';
@@ -10,7 +10,7 @@ import { upsertOnlineCourseItem } from '../../../data';
 import { IMNCI_SEVERITIES } from '../../constants';
 import { signOptions, classificationOptions, treatmentSuggestions } from '../standardLists';
 import { liveProtocol, SEVERITY_OF_COLOR } from '../vocabulary';
-import { SECTION_TABS, tabContent, sectionContent, newQuestion, newExerciseLink, splitForEditor, joinFromEditor, cardMarker } from '../book';
+import { SECTION_TABS, tabContent, sectionContent, newQuestion, newExerciseLink, splitForEditor, joinFromEditor, cardMarker, isFacilitatorBlock } from '../book';
 import {
     cardsFromText, cardsToText, stepsFromText, stepsToText, groupsFromText, sortItemsFromText, sortItemsToText,
     chaptersFromText, chaptersToText, stopsFromText, stopsToText,
@@ -63,6 +63,8 @@ const newCard = (type) => (
             : type === 'booklet' ? { type: 'booklet', part: 'child', categories: [], caption: '' }
                 : type === 'form' ? { type: 'form', part: 'child', sections: [], caption: '' }
                     : type === 'sudan' ? { type: 'note', label: 'Sudan national protocol', text: '' }
+                    : type === 'facilitator' ? { type: 'note', label: 'From your facilitator', text: '', facilitator: true }
+                    : type === 'calc' ? { type: 'calc', title: '', text: '', question: '', answer: 0, tolerance: 0, unit: 'ml', hint: '', explanation: '' }
                         : type === 'reveal' ? { type: 'reveal', text: '', answer: '' }
                             : type === 'flip' ? { type: 'flip', title: '', cards: [] }
                                 : type === 'sort' ? { type: 'sort', text: '', groups: [], items: [], explanation: '' }
@@ -80,8 +82,8 @@ const newCard = (type) => (
 const CARD_NAMES = {
     booklet: 'Chart booklet table', form: 'Recording form', note: 'Note', video: 'Video',
     question: 'Question', exercise: 'Case or exercise', page: 'Book page',
-    reveal: 'Think first', flip: 'Flip cards', sort: 'Sort it', steps: 'Step by step', story: 'Case in stages',
-    growthchart: 'Plot on the chart', courselink: 'Link to a module',
+    reveal: 'Think first', flip: 'Flip cards', sort: 'Sort it', steps: 'Step by step', story: 'Case in stages', calc: 'Work it out',
+    growthchart: 'Plot on the chart', courselink: 'Link to a module', facilitator: 'Facilitator note',
     scenario: 'Practice cases', spot: 'Find the error', drill: 'Skill drill', classcards: 'Colour cards', reflect: 'Reflect',
 };
 
@@ -400,6 +402,11 @@ export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
                             <div className="space-y-2">
                                 <Input label={t('imnci_ui.courses.editor.note_label', 'Label')} value={b.label || ''}
                                     onChange={(e) => updateExtra(i, { label: e.target.value })} />
+                                <label className="inline-flex items-center gap-1.5 text-sm">
+                                    <input type="checkbox" checked={isFacilitatorBlock(b)} disabled={isFacilitatorBlock({ ...b, facilitator: false })}
+                                        onChange={(e) => updateExtra(i, { facilitator: e.target.checked })} />
+                                    {t('imnci_ui.courses.editor.note_facilitator', 'For the facilitator only (shown in Protocol management > Facilitator guides, not to learners)')}
+                                </label>
                                 <Textarea rows={4} value={b.text || ''} dir="auto"
                                     placeholder={t('imnci_ui.courses.editor.sudan_placeholder', 'What the Sudan national protocol says, then what the WHO module says.')}
                                     onChange={(e) => updateExtra(i, { text: e.target.value })} />
@@ -474,6 +481,26 @@ export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
                                 })}
                                 <button onClick={() => updateExtra(i, { stages: [...(b.stages || []), { text: '', question: '', options: [], answer: 0, explanation: '' }] })}
                                     className="text-xs text-sky-700 font-semibold">{t('imnci_ui.courses.editor.add_stage', '+ add a stage')}</button>
+                            </div>
+                        )}
+
+                        {b.type === 'calc' && (
+                            <div className="space-y-2">
+                                <Input label={t('imnci_ui.courses.editor.title', 'Title')} value={b.title || ''} onChange={(e) => updateExtra(i, { title: e.target.value })} />
+                                <Textarea rows={2} value={b.text || ''} dir="auto" placeholder={t('imnci_ui.courses.editor.calc_case', 'The child: age, weight and what is needed')}
+                                    onChange={(e) => updateExtra(i, { text: e.target.value })} />
+                                <Input value={b.question || ''} placeholder={t('imnci_ui.courses.editor.calc_question', 'What to work out, for example How many ml in the first hour?')}
+                                    onChange={(e) => updateExtra(i, { question: e.target.value })} />
+                                <div className="grid grid-cols-3 gap-2">
+                                    <Input label={t('imnci_ui.courses.editor.calc_answer', 'Answer (several: split by ;)')} value={(Array.isArray(b.answers) && b.answers.length ? b.answers : [b.answer ?? '']).join(' ; ')}
+                                        onChange={(e) => { const list = e.target.value.split(';').map((x) => x.trim()).filter((x) => x !== '').map(Number).filter((n) => !Number.isNaN(n)); updateExtra(i, { answer: list[0] ?? 0, answers: list.length > 1 ? list : undefined }); }} />
+                                    <Input type="number" label={t('imnci_ui.courses.editor.calc_tolerance', 'Accept ± ')} value={b.tolerance ?? 0}
+                                        onChange={(e) => updateExtra(i, { tolerance: Number(e.target.value) || 0 })} />
+                                    <Input label={t('imnci_ui.courses.editor.calc_unit', 'Unit')} value={b.unit || ''} onChange={(e) => updateExtra(i, { unit: e.target.value })} />
+                                </div>
+                                <Input label={t('imnci_ui.courses.editor.calc_hint', 'Hint after a wrong number')} value={b.hint || ''} onChange={(e) => updateExtra(i, { hint: e.target.value })} />
+                                <Input label={t('imnci_ui.courses.editor.why_after', 'Why (shown after answering)')} value={b.explanation || ''}
+                                    onChange={(e) => updateExtra(i, { explanation: e.target.value })} />
                             </div>
                         )}
 
@@ -721,7 +748,7 @@ export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
                     </button>
                 )}
                 {whole && [
-                    ['reveal', Lightbulb], ['flip', Layers], ['sort', Shuffle], ['steps', ListOrdered], ['story', BookOpenCheck], ['growthchart', LineChart], ['courselink', Link2],
+                    ['reveal', Lightbulb], ['flip', Layers], ['sort', Shuffle], ['steps', ListOrdered], ['story', BookOpenCheck], ['calc', Calculator], ['growthchart', LineChart], ['courselink', Link2], ['facilitator', Users],
                     ['scenario', Users], ['spot', Search], ['drill', Timer], ['classcards', Palette], ['reflect', NotebookPen],
                 ].map(([type, Icon]) => (
                     <button key={type} onClick={() => addExtra(type)}

@@ -2655,7 +2655,7 @@ export default function App() {
             case 'admin': return <AdminDashboard appRoles={userRoles} />;
             case 'about': return <AboutDeveloperPage permissions={permissions} />;
             case 'imciForm': 
-                return permissions.canViewCourse ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><IMNCIRecordingForm permissions={permissions} /></ImnciProvider></Suspense> ) : null;
+                return permissions.canViewCourse ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><IMNCIRecordingForm permissions={permissions} userRoles={userRoles} /></ImnciProvider></Suspense> ) : null;
 
             case 'humanResources': return <HumanResourcesPage
                 activeTab={activeHRTab} setActiveTab={setActiveHRTab}

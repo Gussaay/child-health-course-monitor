@@ -11,7 +11,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Eye, RotateCcw, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Lightbulb, Layers, Shuffle, ListOrdered, BookOpenCheck,
+    Eye, RotateCcw, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Lightbulb, Layers, Shuffle, ListOrdered, BookOpenCheck, Calculator,
     Stethoscope, UserRound,
 } from 'lucide-react';
 import { RichText } from '../shared';
@@ -286,6 +286,87 @@ export function StepsBlock({ block, activityKey }) {
 // A case in stages
 // -----------------------------------------------------------------------------
 
+// -----------------------------------------------------------------------------
+// Choosing with a second chance
+//
+// A wrong pick does not give the answer away. The option is struck out and its
+// own hint is shown ("Does the child have an emergency sign?") so the learner
+// thinks again; the answer and the explanation come with a right pick, or
+// after `maxTries` wrong ones (2 unless the block says otherwise). This is how
+// a drill on the ward works: the facilitator gives a clue, not the answer.
+// -----------------------------------------------------------------------------
+
+export const triesAllowed = (block) => Math.max(1, Number(block?.maxTries) || 2);
+
+/** The state of one choice: picks so far, and whether the answer is shown. */
+export function useChoice(answer, maxTries = 2) {
+    const [wrong, setWrong] = useState([]);
+    const [right, setRight] = useState(false);
+    const shown = right || wrong.length >= maxTries;
+    const pick = (i) => {
+        if (shown || wrong.includes(i)) return;
+        if (i === answer) setRight(true); else setWrong((w) => [...w, i]);
+    };
+    const reset = () => { setWrong([]); setRight(false); };
+    return { wrong, right, shown, pick, reset, last: wrong[wrong.length - 1], firstTime: right && wrong.length === 0 };
+}
+
+/** The options of one choice and what is said after each pick. */
+export function ChoiceOptions({ options = [], answer = 0, feedback = [], explanation, choice, maxTries = 2, small = false }) {
+    const { t } = useTranslation();
+    const { wrong, right, shown, pick, last } = choice;
+    const hint = !shown && last !== undefined ? feedback[last] : null;
+    const tries = maxTries - wrong.length;
+    return (
+        <>
+            <div className={small ? 'space-y-1.5 mt-2' : 'space-y-2'}>
+                {options.map((o, oi) => {
+                    const isAns = oi === answer;
+                    const struck = wrong.includes(oi);
+                    const tone = shown && isAns ? 'border-sky-500 bg-sky-50 text-slate-900'
+                        : struck ? 'border-rose-300 bg-rose-50 text-rose-900 line-through decoration-rose-400'
+                            : shown ? 'border-slate-200 bg-slate-50 text-slate-500'
+                                : 'border-slate-200 bg-slate-50 hover:border-sky-400 hover:bg-white';
+                    return (
+                        <button key={oi} type="button" disabled={shown || struck} onClick={() => pick(oi)} data-testid="choice-option"
+                            className={`w-full text-start ${small ? 'min-h-[40px] px-3 py-2 rounded-lg text-sm gap-2' : 'min-h-[44px] px-3 py-2.5 rounded-xl text-sm sm:text-base gap-3'} border flex items-center transition-colors ${tone}`}>
+                            <span className={`${small ? 'w-6 h-6 text-[11px]' : 'w-7 h-7 text-xs'} rounded-full border border-slate-300 bg-white grid place-items-center font-bold shrink-0 no-underline`}>
+                                {String.fromCharCode(65 + oi)}
+                            </span>
+                            <span className="flex-1"><Html html={o} /></span>
+                            {shown && isAns && <CheckCircle2 size={16} className="text-sky-700 shrink-0" />}
+                            {struck && <XCircle size={16} className="text-rose-600 shrink-0" />}
+                        </button>
+                    );
+                })}
+            </div>
+            {!shown && wrong.length > 0 && (
+                <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm flex gap-2" data-testid="choice-hint">
+                    <Lightbulb size={16} className="text-amber-700 shrink-0 mt-0.5" />
+                    <div>
+                        <span className="font-semibold text-amber-900">{t('imnci_ui.courses.question.not_yet', 'Not quite. Think again.')}</span>{' '}
+                        {hint && <span className="text-slate-800"><Html html={hint} /></span>}
+                        <div className="text-xs text-amber-800 mt-1">
+                            {t('imnci_ui.courses.question.tries_left', '{{n}} more try before the answer is shown.', { n: tries, count: tries })}
+                        </div>
+                    </div>
+                </div>
+            )}
+            {shown && (
+                <div className={`mt-2 rounded-lg border p-3 text-sm ${right ? 'bg-sky-50 border-sky-200' : 'bg-rose-50 border-rose-200'}`} data-testid="choice-result">
+                    <span className={`font-semibold ${right ? 'text-sky-900' : 'text-rose-900'}`}>
+                        {right
+                            ? (wrong.length ? t('imnci_ui.courses.question.correct_now', 'Correct, this time.') : t('imnci_ui.courses.question.correct', 'Correct.'))
+                            : t('imnci_ui.courses.question.the_answer', 'The answer is {{letter}}.', { letter: String.fromCharCode(65 + answer) })}
+                    </span>{' '}
+                    {!right && last !== undefined && feedback[last] && <span className="text-slate-800 block mt-1"><Html html={feedback[last]} /></span>}
+                    {explanation && <span className="text-slate-700 block mt-1"><Html html={explanation} /></span>}
+                </div>
+            )}
+        </>
+    );
+}
+
 // A line of the conversation: the health worker on one side, the mother (or
 // anyone else) on the other, as a chat reads.
 const SELF = ['you', 'health worker', 'أنت', 'العامل الصحي', 'الكادر الصحي'];
@@ -315,47 +396,174 @@ export function StoryBlock({ block, activityKey }) {
     const { t } = useTranslation();
     const stages = block.stages || [];
     const [reached, setReached] = useState(0);
-    const [answered, setAnswered] = useState({});
+    // How each stage went: 'first' (right first time), 'later' or 'shown'.
+    const [results, setResults] = useState({});
     const [done, markDone] = useActivity(activityKey);
     const firstTry = useFirstTry(activityKey);
     const next = (i) => { const n = i + 1; setReached(n); if (n >= stages.length) markDone(); };
+    const asked = stages.map((s, i) => ({ s, i })).filter(({ s }) => (s.options || []).length > 0);
+    const firstTime = asked.filter(({ i }) => results[i] === 'first').length;
+    const finished = reached >= stages.length;
     return (
         <Frame icon={BookOpenCheck} tone="sky" done={done}
             label={block.label || t('imnci_ui.courses.activity.case', 'Case')} title={block.title}>
+            {block.text && <div className="text-sm sm:text-base text-slate-800 mb-3"><Html html={block.text} /></div>}
             <ol className="space-y-4">
-                {stages.slice(0, Math.min(reached + 1, stages.length)).map((s, i) => {
-                    const hasQuestion = (s.options || []).length > 0;
-                    const ok = !hasQuestion || answered[i];
-                    return (
-                        <li key={i} className="relative ps-5 border-s-2 border-sky-200">
-                            <span className="absolute -start-[7px] top-1.5 w-3 h-3 rounded-full bg-sky-600" aria-hidden="true" />
-                            {s.text && <div className="text-sm sm:text-base text-slate-800"><Html html={s.text} /></div>}
-                            {(s.dialogue || []).length > 0 && <Dialogue lines={s.dialogue} self={block.self || []} />}
-                            {hasQuestion && (
-                                <div className="mt-2">
-                                    <div className="font-semibold text-slate-900 text-sm sm:text-base mb-2"><Html html={s.question} /></div>
-                                    <AnswerOptions compact q={s} onAnswered={(right) => { firstTry(right, `s${i}`); setAnswered((a) => ({ ...a, [i]: true })); }} />
-                                </div>
-                            )}
-                            {hasQuestion && !ok && i === reached && (
-                                <div className="mt-2 text-xs text-slate-500">{t('imnci_ui.courses.practice.answer_first', 'Answer the question to continue the case.')}</div>
-                            )}
-                            {i === reached && i < stages.length - 1 && ok && (
-                                <button onClick={() => next(i)}
-                                    className="mt-3 inline-flex items-center gap-1 min-h-[40px] px-3 rounded-lg bg-sky-700 text-white text-sm font-semibold hover:bg-sky-800">
-                                    {t('imnci_ui.courses.activity.continue_case', 'Continue the case')} <ArrowRight size={16} className="rtl:rotate-180" />
-                                </button>
-                            )}
-                            {i === stages.length - 1 && ok && !done && (
-                                <button onClick={() => next(i)}
-                                    className="mt-3 inline-flex items-center gap-1 min-h-[40px] px-3 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">
-                                    <CheckCircle2 size={16} /> {t('imnci_ui.courses.activity.finish_case', 'Finish the case')}
-                                </button>
-                            )}
-                        </li>
-                    );
-                })}
+                {stages.slice(0, Math.min(reached + 1, stages.length)).map((s, i) => (
+                    <StoryStage key={i} stage={s} last={i === stages.length - 1} current={i === reached} done={done}
+                        maxTries={triesAllowed(s.maxTries ? s : block)}
+                        self={block.self || []}
+                        onResult={(r) => { firstTry(r === 'first', `s${i}`); setResults((x) => ({ ...x, [i]: r })); }} onNext={() => next(i)} />
+                ))}
             </ol>
+            {finished && asked.length > 0 && (
+                <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm" data-testid="story-summary">
+                    <div className="font-semibold text-emerald-900">
+                        {t('imnci_ui.courses.activity.case_summary', 'Right first time at {{n}} of {{total}} decisions.', { n: firstTime, total: asked.length })}
+                    </div>
+                    {asked.some(({ i }) => results[i] && results[i] !== 'first') && (
+                        <>
+                            <div className="text-slate-700 mt-1">{t('imnci_ui.courses.activity.case_review', 'Read these again:')}</div>
+                            <ul className="list-disc ps-5 mt-1 text-slate-800">
+                                {asked.filter(({ i }) => results[i] && results[i] !== 'first').map(({ s, i }) => (
+                                    <li key={i}><Html html={s.question} />{' '}<span className="text-slate-600">({String(s.options[s.answer ?? 0]).replace(/<[^>]*>/g, '')})</span></li>
+                                ))}
+                            </ul>
+                        </>
+                    )}
+                </div>
+            )}
+        </Frame>
+    );
+}
+
+function StoryStage({ stage: s, last, current, done, maxTries, self, onResult, onNext }) {
+    const { t } = useTranslation();
+    const options = s.options || [];
+    const hasQuestion = options.length > 0;
+    const answer = s.answer ?? 0;
+    const choice = useChoice(answer, maxTries);
+    const reported = React.useRef(false);
+    React.useEffect(() => {
+        if (!multi && choice.shown && !reported.current) {
+            reported.current = true;
+            onResult(choice.firstTime ? 'first' : choice.right ? 'later' : 'shown');
+        }
+    }, [choice.shown, choice.firstTime, choice.right, onResult]);
+    // Several right answers ("select all that apply"): answered at once.
+    const [multiDone, setMultiDone] = useState(false);
+    const multi = Array.isArray(s.answers) && s.answers.length > 0;
+    const settled = !hasQuestion || (multi ? multiDone : choice.shown);
+    return (
+        <li className="relative ps-5 border-s-2 border-sky-200" data-testid="story-stage">
+            <span className="absolute -start-[7px] top-1.5 w-3 h-3 rounded-full bg-sky-600" aria-hidden="true" />
+            {s.text && <div className="text-sm sm:text-base text-slate-800"><Html html={s.text} /></div>}
+            {(s.dialogue || []).length > 0 && <Dialogue lines={s.dialogue} self={self} />}
+            {hasQuestion && multi && (
+                <div className="mt-2">
+                    <div className="font-semibold text-slate-900 text-sm sm:text-base mb-2"><Html html={s.question} /></div>
+                    <AnswerOptions compact allowRetry={false} q={s} onAnswered={(right) => { setMultiDone(true); onResult(right ? 'first' : 'shown'); }} />
+                </div>
+            )}
+            {hasQuestion && !multi && (
+                <div className="mt-2">
+                    <div className="font-semibold text-slate-900 text-sm sm:text-base"><Html html={s.question} /></div>
+                    <ChoiceOptions small options={options} answer={answer} feedback={s.feedback || []}
+                        explanation={s.explanation} choice={choice} maxTries={maxTries} />
+                </div>
+            )}
+            {current && !last && settled && (
+                <button type="button" onClick={onNext}
+                    className="mt-3 inline-flex items-center gap-1 min-h-[40px] px-3 rounded-lg bg-sky-700 text-white text-sm font-semibold hover:bg-sky-800">
+                    {t('imnci_ui.courses.activity.continue_case', 'Continue the case')} <ArrowRight size={16} className="rtl:rotate-180" />
+                </button>
+            )}
+            {last && current && settled && !done && (
+                <button type="button" onClick={onNext}
+                    className="mt-3 inline-flex items-center gap-1 min-h-[40px] px-3 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">
+                    <CheckCircle2 size={16} /> {t('imnci_ui.courses.activity.finish_case', 'Finish the case')}
+                </button>
+            )}
+        </li>
+    );
+}
+
+// -----------------------------------------------------------------------------
+// Work it out: a dose, a volume or a drip rate, typed as a number
+//
+//   { type: 'calc', title, text: 'Amina weighs 12 kg ...', question: 'How many ml?',
+//     answer: 240, tolerance: 0, unit: 'ml', hint: 'Use 20 ml/kg.', explanation: '12 × 20 = 240 ml' }
+//
+// `answers` (a list) takes more than one right number, for a range printed in a
+// table. A wrong number gives the hint; the answer comes after two tries.
+// -----------------------------------------------------------------------------
+
+const toNumber = (v) => {
+    const n = Number(String(v ?? '').replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(',', '.').trim());
+    return String(v ?? '').trim() === '' || Number.isNaN(n) ? null : n;
+};
+export const calcAnswers = (b) => (Array.isArray(b?.answers) && b.answers.length ? b.answers : [b?.answer]).map(Number).filter((n) => !Number.isNaN(n));
+export function calcIsRight(b, value) {
+    const n = toNumber(value);
+    if (n === null) return false;
+    const tol = Math.abs(Number(b?.tolerance) || 0);
+    return calcAnswers(b).some((a) => Math.abs(n - a) <= tol + 1e-9);
+}
+
+export function CalcBlock({ block, activityKey }) {
+    const { t } = useTranslation();
+    const [value, setValue] = useState('');
+    const [tries, setTries] = useState([]);
+    const [right, setRight] = useState(false);
+    const [done, markDone] = useActivity(activityKey);
+    const max = triesAllowed(block);
+    const shown = right || tries.length >= max;
+    const unit = block.unit || '';
+    const check = () => {
+        if (shown || toNumber(value) === null) return;
+        if (calcIsRight(block, value)) { setRight(true); markDone(); return; }
+        const next = [...tries, value];
+        setTries(next);
+        if (next.length >= max) markDone();
+    };
+    const answers = calcAnswers(block);
+    return (
+        <Frame icon={Calculator} tone="emerald" done={done}
+            label={block.label || t('imnci_ui.courses.activity.calc', 'Work it out')} title={block.title}>
+            {block.text && <div className="text-sm sm:text-base text-slate-800 mb-2"><Html html={block.text} /></div>}
+            {block.question && <div className="font-semibold text-slate-900 text-sm sm:text-base mb-2"><Html html={block.question} /></div>}
+            <form className="flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); check(); }}>
+                <input type="text" inputMode="decimal" value={value} disabled={shown} data-testid="calc-input"
+                    onChange={(e) => setValue(e.target.value)} aria-label={block.question || t('imnci_ui.courses.activity.calc', 'Work it out')}
+                    className="w-32 border border-slate-300 rounded-lg px-3 py-2 text-base font-semibold disabled:bg-slate-100" />
+                {unit && <span className="text-sm text-slate-700">{unit}</span>}
+                {!shown && (
+                    <button type="submit" disabled={toNumber(value) === null} data-testid="calc-check"
+                        className="min-h-[40px] px-4 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50">
+                        {t('imnci_ui.courses.activity.calc_check', 'Check')}
+                    </button>
+                )}
+            </form>
+            {!shown && tries.length > 0 && (
+                <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm" data-testid="calc-hint">
+                    <span className="font-semibold text-amber-900">{t('imnci_ui.courses.activity.calc_wrong', '{{v}} {{unit}} is not right.', { v: tries[tries.length - 1], unit })}</span>{' '}
+                    {block.hint && <span className="text-slate-800"><Html html={block.hint} /></span>}
+                </div>
+            )}
+            {shown && (
+                <div className={`mt-2 rounded-lg border p-3 text-sm ${right ? 'bg-sky-50 border-sky-200' : 'bg-rose-50 border-rose-200'}`} data-testid="calc-result">
+                    <span className={`font-semibold ${right ? 'text-sky-900' : 'text-rose-900'}`}>
+                        {right ? t('imnci_ui.courses.question.correct', 'Correct.')
+                            : t('imnci_ui.courses.activity.calc_answer', 'The answer is {{a}} {{unit}}.', { a: answers.join(' or '), unit })}
+                    </span>{' '}
+                    {block.explanation && <span className="text-slate-700 block mt-1"><Html html={block.explanation} /></span>}
+                    {!right && (
+                        <button type="button" onClick={() => { setTries([]); setValue(''); }} className="block text-xs text-sky-700 font-semibold mt-2 hover:underline">
+                            {t('imnci_ui.courses.question.try_again', 'try again')}
+                        </button>
+                    )}
+                </div>
+            )}
         </Frame>
     );
 }

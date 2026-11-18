@@ -6,7 +6,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, ArrowLeft, CheckCircle2, Wand2, ChevronRight, Clock, RefreshCw, FileDown, Award } from 'lucide-react';
 import { Button } from '../../CommonComponents';
-import { sectionContent } from '../book';
+import { learnerContent } from '../book';
 import { activityKeys } from './activityKeys';
 import { ConvertBookModal } from './ConvertBookModal';
 import { ItemModal } from './ItemModals';
@@ -137,7 +137,7 @@ export function ModulePage() {
                         {secs.map((s, i) => {
                             const done = !!progress.completed?.[s.id];
                             const locked = sectionLocked(secs, i);
-                            const all = sectionContent(s);
+                            const all = learnerContent(s);
                             const actKeys = activityKeys(all);
                             const activities = actKeys.length;
                             const saved = progress.activities?.[s.id] || [];

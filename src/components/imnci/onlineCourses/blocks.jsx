@@ -20,7 +20,7 @@ import { BookletProtocolView } from '../bookletView';
 import { RecordingFormView } from '../recordingFormView';
 import { useCourseScreen } from './screen';
 import CourseLinkBlock from './CourseLinkBlock';
-import { useActivity, useFirstTry, RevealBlock, FlipBlock, SortBlock, StepsBlock, StoryBlock } from './interactive';
+import { useActivity, useFirstTry, RevealBlock, FlipBlock, SortBlock, StepsBlock, StoryBlock, CalcBlock } from './interactive';
 import { AnswerOptions, ScenarioBlock, SpotBlock, DrillBlock, ClassCardsBlock, ReflectBlock } from './practice';
 
 // The exercise players are heavy (the whole recording form), so they load
@@ -588,6 +588,7 @@ export function ContentBlocks({ blocks, scale = 1, activities = false }) {
                 if (b.type === 'sort') return <SortBlock key={i} block={b} activityKey={key(i)} />;
                 if (b.type === 'steps') return <StepsBlock key={i} block={b} activityKey={key(i)} />;
                 if (b.type === 'story') return <StoryBlock key={i} block={b} activityKey={key(i)} />;
+                if (b.type === 'calc') return <CalcBlock key={i} block={b} activityKey={key(i)} />;
                 if (b.type === 'courselink') return <CourseLinkBlock key={i} block={b} />;
                 if (b.type === 'scenario') return <ScenarioBlock key={i} block={b} activityKey={key(i)} />;
                 if (b.type === 'spot') return <SpotBlock key={i} block={b} activityKey={key(i)} />;

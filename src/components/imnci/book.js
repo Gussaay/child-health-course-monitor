@@ -375,9 +375,28 @@ export function sectionContent(section) {
     return [...tabContent(section, 'read'), ...tabContent(section, 'see'), ...tabContent(section, 'practise')];
 }
 
+// Notes written for the facilitator: the course timetable and "From your
+// facilitator" prompts. They stay in the lesson (the author edits them there)
+// but the learner never sees them; Protocol management > Facilitator guides
+// lists them lesson by lesson, for an online or a face-to-face course. A block
+// can also be marked { facilitator: true } whatever its type.
+const FACILITATOR_LABELS = /^\s*(from your facilitator|course timetable|for the facilitator|facilitator notes?\b|من الميسر|للميسر|الجدول الزمني للدورة)/i;
+export const isFacilitatorBlock = (b) => !!b && (b.facilitator === true
+    || (b.type === 'note' && FACILITATOR_LABELS.test(String(b.label || ''))));
+
+/** What the learner sees of a section: everything but the facilitator's notes. */
+export function learnerContent(section) {
+    return sectionContent(section).filter((b) => !isFacilitatorBlock(b));
+}
+
+/** The facilitator's notes of a section, in lesson order. */
+export function facilitatorContent(section) {
+    return sectionContent(section).filter(isFacilitatorBlock);
+}
+
 // Blocks the learner does something with. Each one counts as an activity in
 // the section's progress bar once it has been done.
-export const ACTIVITY_TYPES = ['question', 'reveal', 'flip', 'sort', 'steps', 'story', 'growthchart', 'exercise', 'video', 'scenario', 'spot', 'drill', 'classcards', 'reflect'];
+export const ACTIVITY_TYPES = ['question', 'reveal', 'flip', 'sort', 'steps', 'story', 'calc', 'growthchart', 'exercise', 'video', 'scenario', 'spot', 'drill', 'classcards', 'reflect'];
 export const isActivity = (b) => ACTIVITY_TYPES.includes(b?.type);
 
 export function countWords(section) {
@@ -390,7 +409,7 @@ export function countWords(section) {
     return all.reduce((n, b) => {
         if (b.type === 'list') return n + b.items.join(' ').split(/\s+/).filter(Boolean).length;
         if (b.type === 'image' || b.type === 'page' || b.type === 'video') return n;
-        if (['reveal', 'flip', 'sort', 'steps', 'story', 'growthchart', 'courselink', 'scenario', 'spot', 'drill', 'classcards', 'reflect'].includes(b.type)) {
+        if (['reveal', 'flip', 'sort', 'steps', 'story', 'calc', 'growthchart', 'courselink', 'scenario', 'spot', 'drill', 'classcards', 'reflect'].includes(b.type)) {
             const text = JSON.stringify(b).replace(/"[a-zA-Z]+":/g, ' ').replace(/<[^>]*>/g, ' ').replace(/[{}[\],"]/g, ' ');
             return n + text.split(/\s+/).filter(Boolean).length;
         }
@@ -411,6 +430,8 @@ export const BLOCK_TYPES = [
     // cards, a sort-into-groups task, a step-by-step walk through a
     // procedure, and a case told in stages with a decision at each.
     'reveal', 'flip', 'sort', 'steps', 'story',
+    // A dose, volume or drip rate the learner works out and types.
+    'calc',
     // A child plotted on the official WHO chart from the chart booklet.
     'growthchart',
     // A link to a module or lesson of another course (the facilitator guide
@@ -433,7 +454,7 @@ export const BLOCK_TYPES = [
 // every card was moved below the text on the first save.
 // ---------------------------------------------------------------------------
 
-export const CARD_TYPES = ['video', 'question', 'exercise', 'page', 'booklet', 'form', 'reveal', 'flip', 'sort', 'steps', 'story', 'growthchart', 'courselink', 'scenario', 'spot', 'drill', 'classcards', 'reflect'];
+export const CARD_TYPES = ['video', 'question', 'exercise', 'page', 'booklet', 'form', 'reveal', 'flip', 'sort', 'steps', 'story', 'calc', 'growthchart', 'courselink', 'scenario', 'spot', 'drill', 'classcards', 'reflect'];
 export const isCard = (b) => CARD_TYPES.includes(b?.type) || (b?.type === 'note' && !!b.label);
 export const cardMarker = (key) => `[[card ${key}]]`;
 const MARKER_PARA = /<p[^>]*>\s*\[\[card ([a-z0-9]+)\]\]\s*(?:<br\s*\/?>)?\s*<\/p>/gi;

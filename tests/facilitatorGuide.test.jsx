@@ -121,11 +121,11 @@ describe('a link to the learners\' course', () => {
 
 describe('who sees the facilitator guide', () => {
     const guide = { audience: 'facilitators' };
-    it('hides it from learners and shows it to facilitators and managers', () => {
+    it('keeps it out of the course list (it is read in Protocol management) except for course authors', () => {
         expect(canSeeCourse(guide, {})).toBe(false);
         expect(canSeeCourse({}, {})).toBe(true);
-        expect(canSeeCourse(guide, { isFacilitator: isFacilitatorRole(['IMNCI Facilitator']) })).toBe(true);
-        expect(canSeeCourse(guide, { canSeeProgress: true })).toBe(true);
+        expect(canSeeCourse(guide, { isFacilitator: isFacilitatorRole(['IMNCI Facilitator']) })).toBe(false);
+        expect(canSeeCourse(guide, { canSeeProgress: true })).toBe(false);
         expect(canSeeCourse(guide, { canManage: true })).toBe(true);
         expect(isFacilitatorRole(['state_coordinator'])).toBe(false);
     });

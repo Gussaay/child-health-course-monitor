@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { NATIONAL_PROTOCOLS } from '../nationalProtocol';
 import { BookletProtocolView } from '../bookletView';
-import { Frame, Html, useActivity, useFirstTry } from './interactive';
+import { Frame, Html, useActivity, useFirstTry, useChoice, ChoiceOptions, triesAllowed } from './interactive';
 import { Overlay, VideoBlock, useLiveProtocols } from './blocks';
 
 // -----------------------------------------------------------------------------
@@ -51,7 +51,39 @@ export function pickedRight(q, picked) {
  * whether it was right, the feedback for what was picked, and the general
  * explanation. `onAnswered(right)` is called on each answer; Try again clears it.
  */
-export function AnswerOptions({ q, onAnswered, allowRetry = true, compact = false }) {
+export function AnswerOptions(props) {
+    // One right answer: a wrong pick gives its feedback as a hint and the
+    // learner tries again; the answer shows after a right pick or two wrong
+    // ones (ChoiceOptions). onAnswered gets whether it was right first time.
+    // With allowRetry false, or several right answers, it is answered at once.
+    const { q, allowRetry = true } = props;
+    return !isMulti(q) && allowRetry ? <SingleChoice {...props} /> : <AnswerAtOnce {...props} />;
+}
+
+function SingleChoice({ q, onAnswered, compact = false }) {
+    const { t } = useTranslation();
+    // With two options, one wrong pick already gives the answer away.
+    const maxTries = Math.min(triesAllowed(q), Math.max(1, (q.options || []).length - 1));
+    const choice = useChoice(q.answer ?? 0, maxTries);
+    const told = React.useRef(false);
+    React.useEffect(() => {
+        if (choice.shown && !told.current) { told.current = true; onAnswered?.(choice.firstTime, choice); }
+    }, [choice.shown]); // eslint-disable-line react-hooks/exhaustive-deps
+    return (
+        <>
+            <ChoiceOptions small={compact} options={q.options || []} answer={q.answer ?? 0} feedback={q.feedback || []}
+                explanation={q.explanation} choice={choice} maxTries={maxTries} />
+            {choice.shown && !choice.firstTime && (
+                <button onClick={choice.reset}
+                    className="text-xs text-sky-700 font-semibold mt-2 hover:underline inline-flex items-center gap-1">
+                    <RotateCcw size={12} /> {t('imnci_ui.courses.question.try_again', 'try again')}
+                </button>
+            )}
+        </>
+    );
+}
+
+function AnswerAtOnce({ q, onAnswered, allowRetry = true, compact = false }) {
     const { t } = useTranslation();
     const multi = isMulti(q);
     const right = rightOptions(q);
