@@ -5878,7 +5878,8 @@
       "parts": {
         "label": "Age group",
         "child": "Sick child (2 months – 5 years)",
-        "infant": "Young infant (up to 2 months)"
+        "infant": "Young infant (up to 2 months)",
+        "guides": "Facilitator guides"
       },
       "sections": {
         "label": "Section",
@@ -6181,6 +6182,18 @@
         "name": "Your Name (Required)",
         "email": "Your Email (Optional)"
       }
+    },
+    "guides": {
+      "loading": "Loading the courses…",
+      "none": "No course has facilitator notes yet.",
+      "intro": "What the facilitator needs to run each course, online or face to face: the timetable, the prompts and the drills, lesson by lesson. Learners do not see these notes.",
+      "courses": "Courses",
+      "draft": "draft",
+      "guide_course": "A facilitator guide, with answer keys. Its links open the learners' lessons.",
+      "notes_count": "{{n}} notes for the facilitator in this course.",
+      "open_course": "Open the course",
+      "open_lesson": "Open the lesson",
+      "lessons_n": "{{n}} lessons"
     }
   },
   "trackers": {
@@ -7872,7 +7885,12 @@
         "growth_low": "Is the weight low for age?",
         "growth_low_yes": "Yes, below the -2 line",
         "growth_low_no": "No",
-        "add_growthchart": "Plot on the chart"
+        "add_growthchart": "Plot on the chart",
+        "note_facilitator": "For the facilitator only (shown in Protocol management > Facilitator guides, not to learners)",
+        "hints": "A hint for each answer, split by ; in the same order (shown after a wrong pick)",
+        "hint_wrong": "Hint if picked",
+        "add_calc": "Work it out",
+        "add_facilitator": "Facilitator note"
       },
       "exlink": {
         "gone": "This section points at an exercise ({{id}}) that is no longer in Online Exercises.",
@@ -8000,7 +8018,12 @@
       "question": {
         "correct": "Correct.",
         "not_quite": "Not quite.",
-        "try_again": "try again"
+        "try_again": "try again",
+        "not_yet": "Not quite. Think again.",
+        "tries_left_one": "{{n}} more try before the answer is shown.",
+        "tries_left_other": "{{n}} more tries before the answer is shown.",
+        "correct_now": "Correct, this time.",
+        "the_answer": "The answer is {{letter}}."
       },
       "tab_hints": {
         "practise": "Cases, exercises and questions",
@@ -8055,7 +8078,13 @@
         "go_to_current": "Go to your current lesson"
       },
       "activity": {
-        "kind_growthchart": "Plot on the chart"
+        "kind_growthchart": "Plot on the chart",
+        "case_summary": "Right first time at {{n}} of {{total}} decisions.",
+        "case_review": "Read these again:",
+        "calc": "Work it out",
+        "calc_check": "Check",
+        "calc_wrong": "{{v}} {{unit}} is not right.",
+        "calc_answer": "The answer is {{a}} {{unit}}."
       },
       "link": {
         "module_n": "Module {{n}}",
@@ -8518,7 +8547,8 @@
       "view_details": "View details",
       "visit_followup": "Follow-up",
       "visit_initial": "First visit",
-      "weight": "Weight"
+      "weight": "Weight",
+      "protocol_subtitle_facilitator": "Facilitator guides, photograph booklet and the protocol"
     },
     "form_title": "IMNCI Recording Form",
     "infant_title": "Management of the sick young infant up to 2 months",

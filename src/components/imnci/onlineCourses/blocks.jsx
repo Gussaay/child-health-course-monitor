@@ -5,7 +5,7 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    BookOpenText, MonitorPlay, Stethoscope, CheckCircle2, XCircle, GraduationCap, X, Lightbulb, ClipboardCheck,
+    BookOpenText, MonitorPlay, Stethoscope, CheckCircle2, GraduationCap, X, Lightbulb, ClipboardCheck,
     Play, Pencil, Film, BookOpen, Syringe,
 } from 'lucide-react';
 import { severityById } from '../../constants';
@@ -20,7 +20,7 @@ import { BookletProtocolView } from '../bookletView';
 import { RecordingFormView } from '../recordingFormView';
 import { useCourseScreen } from './screen';
 import CourseLinkBlock from './CourseLinkBlock';
-import { useActivity, RevealBlock, FlipBlock, SortBlock, StepsBlock, StoryBlock } from './interactive';
+import { useActivity, RevealBlock, FlipBlock, SortBlock, StepsBlock, StoryBlock, CalcBlock, ChoiceOptions, useChoice, triesAllowed } from './interactive';
 
 // The exercise players are heavy (the whole recording form), so they load
 // only when a learner starts an exercise from a section.
@@ -132,13 +132,12 @@ function ImageViewer({ url, alt, onClose }) {
 // checking themselves should not feel they are being marked.
 export function QuestionBlock({ block, number, total, activityKey }) {
     const { t } = useTranslation();
-    const [picked, setPickedState] = useState(null);
     const [, markDone] = useActivity(activityKey);
-    const setPicked = (v) => { setPickedState(v); if (v !== null) markDone(); };
     const options = block.options || [];
     const answer = block.answer ?? 0;
-    const show = picked !== null;
-    const right = picked === answer;
+    const maxTries = triesAllowed(block);
+    const choice = useChoice(answer, maxTries);
+    useEffect(() => { if (choice.shown) markDone(); }, [choice.shown]);
     return (
         <div className="not-prose rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm my-4">
             <div className="flex items-center gap-2 mb-3">
@@ -153,44 +152,11 @@ export function QuestionBlock({ block, number, total, activityKey }) {
                 <ClipboardCheck size={18} className="ms-auto text-slate-400" />
             </div>
             <div className="font-semibold text-slate-900 text-base sm:text-lg leading-snug mb-3">{block.text}</div>
-            <div className="space-y-2">
-                {options.map((opt, i) => {
-                    const chosen = picked === i;
-                    const correct = i === answer;
-                    const tone = show && correct ? 'border-sky-500 bg-sky-50 text-slate-900'
-                        : show && chosen ? 'border-rose-400 bg-rose-50 text-rose-900'
-                            : 'border-slate-200 bg-slate-50 hover:border-sky-400 hover:bg-white';
-                    const dot = show && correct ? 'bg-sky-700 text-white border-sky-700'
-                        : show && chosen ? 'bg-rose-600 text-white border-rose-600'
-                            : 'bg-white text-slate-600 border-slate-300';
-                    return (
-                        <button key={i} onClick={() => setPicked(i)} disabled={show}
-                            className={`w-full text-start min-h-[44px] px-3 py-2.5 rounded-xl border text-sm sm:text-base flex items-center gap-3 transition-colors ${tone}`}>
-                            <span className={`w-7 h-7 rounded-full border grid place-items-center text-xs font-bold shrink-0 ${dot}`}>
-                                {String.fromCharCode(65 + i)}
-                            </span>
-                            <span className="flex-1">{opt}</span>
-                            {show && correct && <CheckCircle2 size={18} className="text-sky-700 shrink-0" />}
-                            {show && chosen && !correct && <XCircle size={18} className="text-rose-600 shrink-0" />}
-                        </button>
-                    );
-                })}
-            </div>
-            {show && (
-                <div className={`mt-3 rounded-xl border p-3 sm:p-4 text-sm flex gap-3 ${right ? 'bg-sky-50 border-sky-200' : 'bg-rose-50 border-rose-200'}`}>
-                    <Lightbulb size={18} className={`shrink-0 mt-0.5 ${right ? 'text-sky-700' : 'text-rose-700'}`} />
-                    <div className="min-w-0">
-                        <div className={`text-[11px] font-bold uppercase tracking-wider ${right ? 'text-sky-800' : 'text-rose-800'}`}>
-                            {t('imnci_ui.courses.look.explanation', 'Explanation')}
-                        </div>
-                        <div className={`font-semibold mt-0.5 ${right ? 'text-sky-900' : 'text-rose-900'}`}>
-                            {right ? t('imnci_ui.courses.question.correct', 'Correct.') : t('imnci_ui.courses.question.not_quite', 'Not quite.')}
-                        </div>
-                        {block.explanation && <p className="text-slate-700 mt-1">{block.explanation}</p>}
-                        <button onClick={() => setPicked(null)}
-                            className="text-xs text-sky-700 font-semibold mt-2 hover:underline">{t('imnci_ui.courses.question.try_again', 'try again')}</button>
-                    </div>
-                </div>
+            <ChoiceOptions options={options} answer={answer} feedback={block.feedback || []}
+                explanation={block.explanation} choice={choice} maxTries={maxTries} />
+            {choice.shown && (
+                <button type="button" onClick={choice.reset}
+                    className="text-xs text-sky-700 font-semibold mt-2 hover:underline">{t('imnci_ui.courses.question.try_again', 'try again')}</button>
             )}
         </div>
     );
@@ -607,6 +573,7 @@ export function ContentBlocks({ blocks, scale = 1, activities = false }) {
                 if (b.type === 'sort') return <SortBlock key={i} block={b} activityKey={key(i)} />;
                 if (b.type === 'steps') return <StepsBlock key={i} block={b} activityKey={key(i)} />;
                 if (b.type === 'story') return <StoryBlock key={i} block={b} activityKey={key(i)} />;
+                if (b.type === 'calc') return <CalcBlock key={i} block={b} activityKey={key(i)} />;
                 if (b.type === 'courselink') return <CourseLinkBlock key={i} block={b} />;
                 if (b.type === 'growthchart') return <Suspense key={i} fallback={null}><GrowthChartBlock block={b} activityKey={key(i)} /></Suspense>;
                 if (b.type === 'booklet') {

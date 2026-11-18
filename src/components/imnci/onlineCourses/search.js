@@ -4,7 +4,7 @@
 // on the sections already on the device, so it works offline and costs no
 // reads. Plain word matching: every word typed must appear in the section,
 // and a match in the title counts for more than one in the text.
-import { tabContent } from '../book';
+import { tabContent, isFacilitatorBlock } from '../book';
 
 // Text of one block, tags and entities stripped.
 function blockText(b) {
@@ -31,7 +31,7 @@ function blockText(b) {
 /** Everything readable in a section, in the order it is shown. */
 export function sectionText(section) {
     return ['read', 'see', 'practise']
-        .flatMap((tab) => tabContent(section, tab).map(blockText))
+        .flatMap((tab) => tabContent(section, tab).filter((b) => !isFacilitatorBlock(b)).map(blockText))
         .join('\n')
         .replace(/[ \t]+/g, ' ');
 }

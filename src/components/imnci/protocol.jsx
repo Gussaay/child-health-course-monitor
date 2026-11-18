@@ -18,8 +18,9 @@ import { GuideBlock, addGuideBox } from './treatmentGuideView';
 import { GENERAL, FORM, topicsFor, drugsForTopic, guideForTopic, groupForNewBox } from './topics';
 import { diffProtocol, currentEditor } from './protocolHistory';
 import PhotoBooklet from './PhotoBooklet';
+import FacilitatorGuides from './FacilitatorGuides';
 import { useTranslation } from 'react-i18next';
-import { Save, Plus, Trash2, DownloadCloud, FolderPlus, Globe, Syringe, Activity, ChevronDown, ChevronRight, Lock, X, Pencil, Settings2, History, ClipboardList, Baby, User, ListChecks, MessageCircle, CalendarClock, Stethoscope, BookOpen, Images } from 'lucide-react';
+import { Save, Plus, Trash2, DownloadCloud, FolderPlus, Globe, Syringe, Activity, ChevronDown, ChevronRight, Lock, X, Pencil, Settings2, History, ClipboardList, Baby, User, ListChecks, MessageCircle, CalendarClock, Stethoscope, BookOpen, Images, Users } from 'lucide-react';
 
 // --- Predefined Conditions Mapping for Dropdowns ---
 const CHILD_CONDITIONS = [
@@ -339,13 +340,17 @@ const HistoryPanel = ({ entries, loading, onClose, t }) => (
     </div>
 );
 
-export default function ProtocolEditor() {
+// canEdit: false for facilitators who come here only to read the facilitator
+// guides, the photograph booklet and the protocol; nothing can be changed.
+export default function ProtocolEditor({ canEdit = true }) {
     const { t, i18n } = useTranslation();
     const ar = i18n.language === 'ar';
     const { protocols, fetchProtocols, isLoading } = useDataCache();
     const [part, setPart] = useState('child');
-    // The photograph booklet sits beside the two age groups; it has no protocol documents.
-    const [photos, setPhotos] = useState(false);
+    // The photograph booklet and the facilitator guides sit beside the two age
+    // groups; they have no protocol documents. `photos` is true while either is open.
+    const [sheet, setSheet] = useState(canEdit ? null : 'guides');
+    const photos = sheet !== null;
     const [topicChoice, setTopicChoice] = useState({});
     // Every protocol document of both parts, by formType, as being edited.
     const [docs, setDocs] = useState({});
@@ -442,7 +447,7 @@ export default function ProtocolEditor() {
     const viewMode = !editing ? 'booklet' : (advanced && !isFormTab ? 'advanced' : 'edit');
     const openTopic = (id) => { setTopicChoice((prev) => ({ ...prev, [part]: id })); setSearch(''); };
     // Nothing is lost by changing part or tab: every document stays in the editor.
-    const switchPart = (next) => { setPhotos(false); if (next !== part) { setPart(next); setIssues(null); setSearch(''); } };
+    const switchPart = (next) => { setSheet(null); if (next !== part) { setPart(next); setIssues(null); setSearch(''); } };
 
     const docName = (ft) => t(`clinical_ui.protocol.history.tab.${ft}`, ft);
 
@@ -907,7 +912,7 @@ export default function ProtocolEditor() {
         <div className="space-y-4 max-w-[1400px] mx-auto pb-12 font-sans text-sm" dir="ltr">
             <PageHeader title={t('clinical_ui.protocol.title', 'IMNCI Protocol Builder')} subtitle={t('clinical_ui.protocol.subtitle', 'Manage dynamic rules, conditions, and treatments for the clinical engine')} />
             
-            {nothingSaved && (
+            {canEdit && !photos && nothingSaved && (
                 <div className="border border-emerald-300 bg-emerald-50 rounded-md p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3" dir={ar ? 'rtl' : 'ltr'}>
                     <div>
                         <p className="font-bold text-emerald-900">{t('clinical_ui.protocol.national.empty_title', 'No protocol is saved yet')}</p>
@@ -929,12 +934,16 @@ export default function ProtocolEditor() {
                                 </button>
                             );
                         })}
-                        <button type="button" role="tab" aria-selected={photos} onClick={() => setPhotos(true)} disabled={editing} data-testid="photo-booklet-tab"
-                            className={`px-4 py-2 text-sm font-bold flex items-center gap-2 disabled:opacity-50 ${photos ? 'bg-sky-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}>
+                        <button type="button" role="tab" aria-selected={sheet === 'photos'} onClick={() => setSheet('photos')} disabled={editing} data-testid="photo-booklet-tab"
+                            className={`px-4 py-2 text-sm font-bold flex items-center gap-2 disabled:opacity-50 ${sheet === 'photos' ? 'bg-sky-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}>
                             <Images size={16} /> {t('clinical_ui.protocol.parts.photos', 'Photograph booklet')}
                         </button>
+                        <button type="button" role="tab" aria-selected={sheet === 'guides'} onClick={() => setSheet('guides')} disabled={editing} data-testid="facilitator-guides-tab"
+                            className={`px-4 py-2 text-sm font-bold flex items-center gap-2 disabled:opacity-50 ${sheet === 'guides' ? 'bg-sky-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}>
+                            <Users size={16} /> {t('clinical_ui.protocol.parts.guides', 'Facilitator guides')}
+                        </button>
                     </div>
-                    {!photos && <div className="flex flex-wrap items-center gap-2">
+                    {!photos && canEdit && <div className="flex flex-wrap items-center gap-2">
                         {!editing ? (
                             <>
                                 <Button onClick={startEditing} className="flex items-center gap-1.5 text-sm"><Pencil size={16} /> {t('clinical_ui.protocol.btn.edit', 'Edit')}</Button>
@@ -991,7 +1000,8 @@ export default function ProtocolEditor() {
                 )}
             </div>
 
-            {photos && <Card><div className="p-3 sm:p-4 bg-slate-50" dir={ar ? 'rtl' : 'ltr'}><PhotoBooklet /></div></Card>}
+            {sheet === 'photos' && <Card><div className="p-3 sm:p-4 bg-slate-50" dir={ar ? 'rtl' : 'ltr'}><PhotoBooklet /></div></Card>}
+            {sheet === 'guides' && <Card><div className="p-3 sm:p-4 bg-slate-50" dir={ar ? 'rtl' : 'ltr'}><FacilitatorGuides /></div></Card>}
 
             {!photos && showHistory && <div dir={ar ? 'rtl' : 'ltr'}><HistoryPanel entries={history} loading={historyLoading} onClose={() => setShowHistory(false)} t={t} /></div>}
 

@@ -1,3 +1,4 @@
+import { isFacilitatorRole } from './onlineCourses/audience';
 import React, { useState, useMemo, useEffect, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTraining, SignCircleStyles, MarkStyles, LockStyles } from './training';
@@ -1182,7 +1183,10 @@ const TONES = {
     amber: { border: 'border-t-amber-500', bg: 'bg-amber-100', text: 'text-amber-600', title: 'text-amber-900' },
 };
 
-export default function IMNCIRecordingForm({ permissions = {} }) {
+export default function IMNCIRecordingForm({ permissions = {}, userRoles = [] }) {
+    // Facilitators open Protocol management to read the facilitator guides
+    // (and the protocol and photograph booklet); only editors can change it.
+    const canOpenProtocol = !!permissions.canManageProtocols || isFacilitatorRole(userRoles);
     const { t, i18n } = useTranslation();
     const dir = i18n.dir();
     const isAr = dir === 'rtl';
@@ -1289,11 +1293,13 @@ export default function IMNCIRecordingForm({ permissions = {} }) {
                 <div className="grid grid-cols-2 gap-3 md:gap-6 md:grid-cols-3 mt-6 animate-fade-in" dir={dir}>
                     {/* Editing the protocol changes the guidance every clinician
                         sees, so the tile only appears for the roles allowed to. */}
-                    {permissions.canManageProtocols && (
+                    {canOpenProtocol && (
                         <HubTile
                             icon={Stethoscope} tone={TONES.amber}
                             title={t('imci.ui.protocol_title', 'Protocol management')}
-                            subtitle={t('imci.ui.protocol_subtitle', 'Edit classification rules, treatments and dose tables')}
+                            subtitle={permissions.canManageProtocols
+                                ? t('imci.ui.protocol_subtitle', 'Edit classification rules, treatments and dose tables')
+                                : t('imci.ui.protocol_subtitle_facilitator', 'Facilitator guides, photograph booklet and the protocol')}
                             onClick={() => setActiveView('protocol')}
                         />
                     )}
@@ -1324,7 +1330,7 @@ export default function IMNCIRecordingForm({ permissions = {} }) {
 
             {activeView === 'protocol' && (
                 <Suspense fallback={<div className="p-8 text-center text-slate-500">{t('imci.ui.loading', 'Loading...')}</div>}>
-                    <ProtocolEditor />
+                    <ProtocolEditor canEdit={!!permissions.canManageProtocols} />
                 </Suspense>
             )}
 

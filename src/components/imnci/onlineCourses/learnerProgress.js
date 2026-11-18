@@ -5,7 +5,7 @@
 // modules and lessons (sections), and the learner's onlineProgress record
 // ({ completed: { sectionId: time }, activities: { sectionId: [keys] } }).
 // Kept apart from the page that draws it, so the arithmetic is tested alone.
-import { sectionContent } from '../book';
+import { learnerContent } from '../book';
 import { activityKeys } from './activityKeys';
 import { readingMinutes } from './search';
 
@@ -50,7 +50,7 @@ export function learnerSummary({ courses = [], items = [], progress = {}, now = 
                 const doneAt = completed[s.id];
                 const done = !!doneAt;
                 if (done) doneTimes.push(toMillis(doneAt));
-                const keys = activityKeys(sectionContent(s));
+                const keys = activityKeys(learnerContent(s));
                 const saved = savedActs[s.id] || [];
                 const activitiesDone = done ? keys.length : keys.filter((k) => saved.includes(k)).length;
                 const locked = !done && (moduleLocked || (inOrder && si > 0 && !prevDone));
