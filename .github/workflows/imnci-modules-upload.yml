@@ -4,8 +4,8 @@ name: One-off - IMNCI distance learning modules upload
 # (dry = read only, commit = write, replace = swap the uploaded lessons for the file's, undo = remove what was written).
 on:
   push:
-    branches: [claude/project-thread-v7irb4]
-    paths: ['scripts/imnci-modules-upload/**', '.github/workflows/imnci-modules-upload.yml']
+    branches: [claude/project-thread-v7irb4, claude/project-thread-cjzso2]
+    paths: ['scripts/imnci-modules-upload/**', 'course-packages/who-dimci-*.imnci.json', '.github/workflows/imnci-modules-upload.yml']
 jobs:
   run:
     runs-on: ubuntu-latest
