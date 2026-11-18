@@ -4,7 +4,7 @@
 // order they were written, the AI study helper, and Previous / Next within the
 // module. There are no tabs to step through: a learner reads, watches and
 // practises in one pass and then moves on to the next section.
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Pencil, ArrowLeft, ArrowRight, Columns2, CheckCircle2, ZoomIn, ZoomOut, Clock, Trophy,
@@ -30,17 +30,29 @@ function readDone(uid, id) {
 // lesson started on one device carries on where it stopped on another. What
 // is done is the two together: nothing done is ever taken away by a sync.
 function useSectionActivities(uid, sectionId, saved, save) {
-    const [local, setLocal] = useState(() => readDone(uid, sectionId));
-    useEffect(() => { setLocal(readDone(uid, sectionId)); }, [uid, sectionId]);
-    const done = useMemo(() => new Set([...local, ...(saved || [])]), [local, saved]);
+    // Everything here belongs to one learner and one lesson (`at`). On a move
+    // to another lesson, the first render already reads the new lesson's
+    // tally, never the last lesson's: activity keys come from block content,
+    // so an identical activity in the next lesson must not count as done.
+    const at = `${uid || 'guest'}|${sectionId}`;
+    const [local, setLocal] = useState(() => ({ at, set: readDone(uid, sectionId) }));
+    const localSet = local.at === at ? local.set : readDone(uid, sectionId);
+    const done = useMemo(() => new Set([...localSet, ...(saved || [])]), [localSet, saved]);
+    // Kept in a ref as well, so two marks in the same tap (the first-try
+    // record and "done") both land instead of the second overwriting the first.
+    const latest = useRef({ at, set: done });
+    if (latest.current.at !== at) latest.current = { at, set: done };
+    else if ([...done].some((k) => !latest.current.set.has(k))) latest.current = { at, set: new Set([...latest.current.set, ...done]) };
     const markDone = useCallback((key) => {
-        if (done.has(key)) return;
-        const next = new Set(done).add(key);
+        const cur = latest.current.at === at ? latest.current.set : new Set();
+        if (cur.has(key)) return;
+        const next = new Set(cur).add(key);
+        latest.current = { at, set: next };
         try { localStorage.setItem(storeKey(uid, sectionId), JSON.stringify([...next])); } catch { /* private mode */ }
-        setLocal(next);
+        setLocal({ at, set: next });
         save?.(sectionId, [...next]);
-    }, [uid, sectionId, done, save]);
-    const value = useMemo(() => ({ isDone: (k) => done.has(k), markDone }), [done, markDone]);
+    }, [at, uid, sectionId, save]);
+    const value = useMemo(() => ({ isDone: (k) => done.has(k) || latest.current.set.has(k), markDone }), [done, markDone]);
     return [done, value];
 }
 
@@ -122,6 +134,7 @@ export function SectionPage() {
     } = useCourseScreen();
 
     const isDone = !!progress.completed?.[openSection.id];
+    const [resumeShown, setResumeShown] = useState(null);
     const content = sectionContent(openSection);
     const [doneKeys, activityValue] = useSectionActivities(user?.uid, openSection.id, progress.activities?.[openSection.id], saveActivities);
     const outline = useMemo(() => activityOutline(content), [openSection]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -231,6 +244,23 @@ export function SectionPage() {
                     )}
                 </header>
 
+                {!editingTab && !isDone && activitiesDone > 0 && firstLeft && resumeShown !== openSection.id && (
+                    // Back in a lesson started earlier: offer to go straight to
+                    // the first activity not done yet, as "return to your last
+                    // location" does, rather than make the learner scroll for it.
+                    <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 flex flex-wrap items-center gap-3">
+                        <span className="text-sm text-sky-900 flex-1 min-w-[12rem]">
+                            {t('imnci_ui.courses.practice.resume_text', 'You stopped after {{n}} of {{total}} activities. Continue where you stopped?', { n: activitiesDone, total: keys.length })}
+                        </span>
+                        <button onClick={() => { setResumeShown(openSection.id); goToActivity(firstLeft.key); }}
+                            className="inline-flex items-center gap-1 min-h-[40px] px-3 rounded-lg bg-sky-700 text-white text-sm font-semibold hover:bg-sky-800">
+                            {t('imnci_ui.courses.practice.resume_go', 'Continue')} <ArrowRight size={16} className="rtl:rotate-180" />
+                        </button>
+                        <button onClick={() => setResumeShown(openSection.id)} className="text-xs text-slate-500 underline underline-offset-2">
+                            {t('imnci_ui.courses.practice.resume_top', 'Start from the top')}
+                        </button>
+                    </div>
+                )}
                 {!editingTab && outline.length > 0 && <LessonChecklist key={openSection.id} outline={outline} doneKeys={doneKeys} />}
 
                 <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6 space-y-4">
@@ -248,17 +278,17 @@ export function SectionPage() {
                             <div className="lg:max-h-[38rem] lg:overflow-y-auto pe-1">
                                 <div className="text-xs font-semibold text-slate-500 mb-2">{t('imnci_ui.courses.main.converted_text', 'Converted text')}</div>
                                 <ActivityContext.Provider value={activityValue}>
-                                    <ContentBlocks blocks={content.filter((b) => b.type !== 'page')} scale={fontScale} activities />
+                                    <ContentBlocks key={openSection.id} blocks={content.filter((b) => b.type !== 'page')} scale={fontScale} activities />
                                 </ActivityContext.Provider>
                             </div>
                             <div className="lg:max-h-[38rem] lg:overflow-y-auto ps-1 border-s">
                                 <div className="text-xs font-semibold text-slate-500 mb-2">{t('imnci_ui.courses.main.the_book', 'The book')}</div>
-                                <ContentBlocks blocks={pages} />
+                                <ContentBlocks key={openSection.id} blocks={pages} />
                             </div>
                         </div>
                     ) : content.length > 0 ? (
                         <ActivityContext.Provider value={activityValue}>
-                            <ContentBlocks blocks={content} scale={fontScale} activities />
+                            <ContentBlocks key={openSection.id} blocks={content} scale={fontScale} activities />
                         </ActivityContext.Provider>
                     ) : (
                         <div className="text-sm text-slate-500 py-12 text-center border border-dashed rounded-lg">

@@ -299,6 +299,22 @@
        "label": "In this lesson"
       },
       {
+       "type": "question",
+       "label": "Before you start",
+       "text": "A child with fever lives in Sudan, where there is malaria. What do you do first for the fever?",
+       "options": [
+        "Give an antimalarial",
+        "Do a malaria test",
+        "Give paracetamol and send home"
+       ],
+       "answer": 1,
+       "feedback": [
+        "Treat malaria only after a positive test.",
+        "Right. Classify fever from the malaria test.",
+        "First assess and classify."
+       ]
+      },
+      {
        "type": "paragraph",
        "text": "First determine if the child has fever. If you have no thermometer, feel the child's stomach or underarm and decide whether the child feels hot. Ask the caregiver, \"Does the child have fever?\""
       },
@@ -566,6 +582,22 @@
        "label": "In this lesson"
       },
       {
+       "type": "question",
+       "label": "Before you start",
+       "text": "Which of these is NOT a complication of measles in the chart booklet?",
+       "options": [
+        "Mouth ulcers",
+        "Pus draining from the eye",
+        "Runny nose"
+       ],
+       "answer": 2,
+       "feedback": [
+        "Mouth ulcers are a complication.",
+        "Pus draining from the eye is a complication.",
+        "Right. A runny nose is one of the signs of measles, not a complication."
+       ]
+      },
+      {
        "type": "note",
        "text": "If the child has measles NOW, or has had measles within the LAST 3 MONTHS, assess for mouth and eye complications.",
        "label": "Key point"
@@ -642,6 +674,32 @@
          "why": "Red eyes are a sign of measles itself, not a complication."
         }
        ]
+      },
+      {
+       "type": "steps",
+       "title": "Look for measles and its complications, with photographs",
+       "steps": [
+        {
+         "title": "Look for the generalized rash",
+         "text": "A generalized rash with cough, runny nose or red eyes.",
+         "image": "imnci-photos/photo-08.jpg"
+        },
+        {
+         "title": "Look in the mouth for ulcers",
+         "text": "Are they deep or extensive?",
+         "image": "imnci-photos/photo-24.jpg"
+        },
+        {
+         "title": "Look for pus draining from the eye",
+         "text": "Wipe the eye and look again.",
+         "image": "imnci-photos/photo-29.jpg"
+        },
+        {
+         "title": "Look for clouding of the cornea",
+         "text": "A hazy cornea is a pink-row sign.",
+         "image": "imnci-photos/photo-30.jpg"
+        }
+       ]
       }
      ],
      "isPublished": true
@@ -670,6 +728,34 @@
         "fever"
        ],
        "caption": "Chart booklet: classify fever (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "classcards",
+       "title": "Fever: the three classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "VERY SEVERE FEBRILE DISEASE",
+         "action": "Refer urgently",
+         "signs": "Any general danger sign or Stiff neck.",
+         "treat": "Give IM quinine (first dose); Give first dose of an appropriate antibiotic; Treat the child to prevent low blood sugar; Give one dose of paracetamol in clinic for high fever (38.5°C or above); Refer URGENTLY to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "MALARIA",
+         "action": "Treat and follow up",
+         "signs": "Positive malaria test. Falciparum or Vivax",
+         "treat": "Give first line of oral antimalarial; In case of Vivax give primaquine after completion of the first line antimalarial; Give one dose of paracetamol in clinic for high fever (38.5°C or above); Advise mother when to return immediately; Follow-up in 3 days if fever persists"
+        },
+        {
+         "colour": "green",
+         "label": "FEVER — NO MALARIA",
+         "action": "Home care",
+         "signs": "Negative malaria test.",
+         "treat": "Assess for other cause of fever and treat accordingly; Give one dose of paracetamol for high fever (38.5°C or above); If fever for 7 days or more refer for assessment; Advise the mother when to return immediately; Follow up in 3 days if fever persists"
+        }
+       ]
       },
       {
        "type": "video",
@@ -807,6 +893,34 @@
        "caption": "Chart booklet: classify measles (Sudan national IMNCI booklet)"
       },
       {
+       "type": "classcards",
+       "title": "Measles: the three classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "SEVERE COMPLICATED MEASLES",
+         "action": "Refer urgently",
+         "signs": "Any general danger sign or Clouding of the cornea or Deep or extensive mouth ulcers.",
+         "treat": "Give Vitamin A treatment; Give first dose of an appropriate antibiotic; If clouding of the cornea or pus draining from the eye, apply tetracycline eye ointment; Refer URGENTLY to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "MEASLES WITH EYE OR MOUTH COMPLICATIONS",
+         "action": "Treat and follow up",
+         "signs": "Pus draining from the eye or Mouth ulcers.",
+         "treat": "Give Vitamin A treatment; If pus draining from the eye, treat eye infection with tetracycline eye ointment; If mouth ulcers, treat with gentian violet; Advise the mother when to return immediately; Follow-up in 3 days"
+        },
+        {
+         "colour": "green",
+         "label": "MEASLES",
+         "action": "Home care",
+         "signs": "Measles now or within the last 3 months.",
+         "treat": "Give Vitamin A; Advise the mother to feed the child"
+        }
+       ]
+      },
+      {
        "type": "flip",
        "title": "The three classifications for measles",
        "cards": [
@@ -898,12 +1012,296 @@
      "isPublished": true
     },
     {
+     "title": "Practise: classify fever and measles",
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify fever and measles for four children, and find an error on a recording form.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Talk with Ahmed's father",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "How long has Ahmed had fever?"
+          },
+          {
+           "who": "Father",
+           "text": "Two days."
+          },
+          {
+           "who": "You",
+           "text": "I will do a quick test for malaria from a drop of blood from his finger."
+          }
+         ],
+         "question": "Why test every child with fever?",
+         "options": [
+          "To treat malaria only when the test is positive",
+          "Because the father asked",
+          "It is not needed if the child is hot"
+         ],
+         "answer": 0,
+         "explanation": "Classify fever from the malaria test: positive is MALARIA, negative is FEVER - NO MALARIA.",
+         "feedback": [
+          "Right.",
+          "The test is part of assessing every child with fever.",
+          "Feeling hot does not tell you if it is malaria."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "The test is positive."
+          },
+          {
+           "who": "Father",
+           "text": "So what do we do?"
+          }
+         ],
+         "question": "What is the classification?",
+         "options": [
+          "MALARIA",
+          "VERY SEVERE FEBRILE DISEASE",
+          "FEVER - NO MALARIA"
+         ],
+         "answer": 0,
+         "explanation": "Ahmed has no danger sign and no stiff neck: MALARIA. Give the oral antimalarial and follow up in 3 days if fever persists.",
+         "feedback": [
+          "Right.",
+          "He has no danger sign and no stiff neck.",
+          "The test is positive."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Classify fever and measles",
+       "part": "child",
+       "categories": [
+        "fever",
+        "measles"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Ahmed",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 12,
+          "temp": 38.5,
+          "problem": "Fever for 2 days"
+         },
+         "text": "Ahmed has had fever for 2 days. He has no general danger sign and no stiff neck. There are no signs of measles. His malaria rapid diagnostic test (RDT) is positive.",
+         "record": [
+          {
+           "title": "Does the child have fever? Yes",
+           "lines": [
+            "For how long? 2 days",
+            "Stiff neck: no",
+            "Malaria test: positive",
+            "Measles now or in the last 3 months: no"
+           ],
+           "classify": [
+            "MALARIA"
+           ]
+          }
+         ],
+         "question": "How do you classify Ahmed's fever?",
+         "options": [
+          "VERY SEVERE FEBRILE DISEASE",
+          "MALARIA",
+          "FEVER - NO MALARIA"
+         ],
+         "feedback": [
+          "He has no general danger sign and no stiff neck.",
+          "Right. A positive malaria test classifies MALARIA.",
+          "The malaria test is positive, so this is not \"no malaria\"."
+         ],
+         "explanation": "Do a malaria test for every child with fever, and classify from the result.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Salma",
+          "age": "11 months",
+          "visit": "initial",
+          "weight": 8,
+          "temp": 38.2,
+          "problem": "Fever since yesterday"
+         },
+         "text": "Salma has had fever since yesterday. She has no general danger sign and no stiff neck. There is no rash. Her malaria test is negative.",
+         "record": [
+          {
+           "title": "Does the child have fever? Yes",
+           "lines": [
+            "For how long? 1 day",
+            "Stiff neck: no",
+            "Malaria test: negative"
+           ],
+           "classify": [
+            "FEVER - NO MALARIA"
+           ]
+          }
+         ],
+         "question": "How do you classify Salma's fever?",
+         "options": [
+          "MALARIA",
+          "FEVER - NO MALARIA",
+          "VERY SEVERE FEBRILE DISEASE"
+         ],
+         "feedback": [
+          "The malaria test is negative. Do not classify malaria without a positive test.",
+          "Right. A negative malaria test with no danger sign or stiff neck: FEVER - NO MALARIA.",
+          "Salma has no general danger sign and no stiff neck."
+         ],
+         "explanation": "For FEVER - NO MALARIA, look for and treat any other cause of fever, and give paracetamol for high fever.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Mustafa",
+          "age": "4 years",
+          "visit": "initial",
+          "weight": 15,
+          "temp": 39.0,
+          "problem": "Fever and headache"
+         },
+         "text": "Mustafa has had fever for 3 days. He has no general danger sign. When you ask him to look at his umbilicus, he cannot bend his neck forward: he has a stiff neck.",
+         "record": [
+          {
+           "title": "Does the child have fever? Yes",
+           "lines": [
+            "For how long? 3 days",
+            "Stiff neck: yes"
+           ],
+           "classify": [
+            "VERY SEVERE FEBRILE DISEASE"
+           ]
+          }
+         ],
+         "question": "How do you classify Mustafa's fever?",
+         "options": [
+          "MALARIA, if the test is positive",
+          "VERY SEVERE FEBRILE DISEASE",
+          "FEVER - NO MALARIA"
+         ],
+         "feedback": [
+          "Even with a positive test, a stiff neck puts the child in the pink row.",
+          "Right. A stiff neck classifies VERY SEVERE FEBRILE DISEASE: give the pre-referral treatment and refer urgently.",
+          "A stiff neck is a sign of very severe disease, such as meningitis."
+         ],
+         "explanation": "Pink row: any general danger sign or stiff neck.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Rawan",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 11,
+          "temp": 38.4,
+          "problem": "Fever and rash"
+         },
+         "text": "Rawan has had fever for 4 days. She has a generalized rash with cough and red eyes: measles now. You see mouth ulcers, but they are not deep or extensive. There is no pus draining from the eye and no clouding of the cornea. Her malaria test is negative.",
+         "record": [
+          {
+           "title": "Does the child have fever? Yes",
+           "lines": [
+            "Malaria test: negative",
+            "Generalized rash and red eyes: yes",
+            "Mouth ulcers: yes, not deep or extensive",
+            "Pus draining from the eye: no",
+            "Clouding of the cornea: no"
+           ],
+           "classify": [
+            "FEVER - NO MALARIA",
+            "MEASLES WITH EYE OR MOUTH COMPLICATIONS"
+           ]
+          }
+         ],
+         "question": "How do you classify Rawan's measles?",
+         "options": [
+          "SEVERE COMPLICATED MEASLES",
+          "MEASLES WITH EYE OR MOUTH COMPLICATIONS",
+          "MEASLES"
+         ],
+         "feedback": [
+          "Only deep or extensive mouth ulcers, clouding of the cornea or a danger sign make measles severe complicated.",
+          "Right. Mouth ulcers that are not deep or extensive put measles in the yellow row.",
+          "Rawan has a complication: mouth ulcers."
+         ],
+         "explanation": "Treat mouth ulcers with gentian violet and give vitamin A.",
+         "answer": 1
+        }
+       ]
+      },
+      {
+       "type": "spot",
+       "title": "Find the error on Musa's form",
+       "part": "child",
+       "text": "One entry on this form is wrong. Tap it.",
+       "child": {
+        "name": "Musa",
+        "age": "3 years",
+        "visit": "initial",
+        "weight": 14,
+        "temp": 38.7,
+        "problem": "Fever for 2 days"
+       },
+       "record": [
+        {
+         "title": "Does the child have fever? Yes",
+         "lines": [
+          {
+           "text": "For how long? 2 days",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Stiff neck: no",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Malaria test: positive",
+           "why": "The test was read correctly."
+          }
+         ],
+         "classify": [
+          {
+           "text": "FEVER - NO MALARIA",
+           "why": "The malaria test is positive: classify MALARIA.",
+           "error": true
+          }
+         ]
+        }
+       ],
+       "explanation": "Classify fever from the malaria test result."
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 9,
+     "isPublished": true
+    },
+    {
      "see": [],
      "practise": [],
      "bookFromPage": 29,
      "bookToPage": 34,
      "title": "Treat malaria",
-     "order": 9,
+     "order": 10,
      "read": [
       {
        "type": "note",
@@ -1050,7 +1448,7 @@
      "bookFromPage": 33,
      "bookToPage": 33,
      "title": "Treat measles: vitamin A and local infections",
-     "order": 10,
+     "order": 11,
      "read": [
       {
        "type": "note",
@@ -1162,7 +1560,7 @@
      "bookFromPage": 35,
      "bookToPage": 37,
      "title": "Counsel: eye ointment and gentian violet at home",
-     "order": 11,
+     "order": 12,
      "read": [
       {
        "type": "note",
@@ -1306,7 +1704,7 @@
      "bookFromPage": 38,
      "bookToPage": 39,
      "title": "Counsel: when to return, and counselling Miriam",
-     "order": 12,
+     "order": 13,
      "read": [
       {
        "type": "note",
@@ -1400,7 +1798,7 @@
      "bookFromPage": 40,
      "bookToPage": 42,
      "title": "Follow-up care for fever and malaria",
-     "order": 13,
+     "order": 14,
      "read": [
       {
        "type": "note",
@@ -1531,7 +1929,7 @@
      "bookFromPage": 43,
      "bookToPage": 44,
      "title": "Follow-up care for measles",
-     "order": 14,
+     "order": 15,
      "read": [
       {
        "type": "note",
@@ -1650,7 +2048,7 @@
      "bookFromPage": 45,
      "bookToPage": 46,
      "title": "Using this module in your clinic",
-     "order": 15,
+     "order": 16,
      "read": [
       {
        "type": "note",
@@ -1709,7 +2107,7 @@
      "bookFromPage": 47,
      "bookToPage": 48,
      "title": "Review questions and Module 5 test",
-     "order": 16,
+     "order": 17,
      "read": [
       {
        "type": "note",
@@ -1731,6 +2129,40 @@
        "note": ""
       }
      ],
+     "isPublished": true
+    },
+    {
+     "title": "Module 5 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Test every child with fever for malaria and classify from the result.</li><li>Any danger sign or stiff neck: VERY SEVERE FEBRILE DISEASE.</li><li>Look for measles and its complications in the eyes and mouth.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for fever: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 18,
      "isPublished": true
     }
    ],

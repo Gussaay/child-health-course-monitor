@@ -67,3 +67,69 @@ export function stopsFromText(text) {
 }
 export const stopsToText = (stops = []) =>
     stops.map((s) => [toClock(s.at), s.text || '', optionsText(s.options, s.answer ?? 0), s.explanation || ''].join(' | ')).join('\n');
+
+// Options where several may be right: "A ; *B ; *C". One star gives `answer`,
+// more than one gives `answers` (select all that apply).
+export function parseOptionsMulti(text) {
+    const parts = String(text || '').split(';').map((x) => x.trim()).filter(Boolean);
+    const starred = parts.map((p, i) => (p.startsWith('*') ? i : -1)).filter((i) => i >= 0);
+    const options = parts.map((p) => p.replace(/^\*\s*/, ''));
+    return starred.length > 1 ? { options, answers: starred, answer: undefined } : { options, answer: Math.max(0, starred[0] ?? 0), answers: undefined };
+}
+export const optionsTextMulti = (q = {}) => {
+    const right = Array.isArray(q.answers) && q.answers.length ? q.answers.map(Number) : [Number(q.answer ?? 0)];
+    return (q.options || []).map((o, i) => (right.includes(i) ? `*${o}` : o)).join(' ; ');
+};
+
+// Feedback for each option, one line each in option order (blank lines kept).
+export const feedbackFromText = (text) => {
+    const list = String(text || '').split('\n').map((l) => l.trim());
+    while (list.length && !list[list.length - 1]) list.pop();
+    return list;
+};
+export const feedbackToText = (list = []) => (list || []).join('\n');
+
+// A conversation: "Name: what they say", one line each.
+export const dialogueFromText = (text) => lines(text).map((l) => {
+    const m = l.match(/^([^:]{1,40}):\s*(.*)$/);
+    return m ? { who: m[1].trim(), text: m[2].trim() } : { who: '', text: l };
+});
+export const dialogueToText = (list = []) => (list || []).map((d) => (d.who ? `${d.who}: ${d.text || ''}` : d.text || '')).join('\n');
+
+// A filled recording form: "Part of the form | finding ; finding | CLASSIFICATION".
+// A finding starting with "!" is the error (find the error); "words :: why"
+// adds the feedback shown when it is tapped.
+const recItem = (x) => {
+    let s = x.trim();
+    const error = s.startsWith('!');
+    if (error) s = s.slice(1).trim();
+    const [text, ...why] = s.split('::');
+    const out = { text: text.trim() };
+    if (why.length) out.why = why.join('::').trim();
+    if (error) out.error = true;
+    return out.why || out.error ? out : out.text;
+};
+const recItemText = (x) => {
+    if (typeof x === 'string') return x;
+    return `${x.error ? '!' : ''}${x.text || ''}${x.why ? ` :: ${x.why}` : ''}`;
+};
+export const recordFromText = (text) => lines(text).map((l) => {
+    const [title = '', found = '', cls = ''] = split(l);
+    const listOf = (s) => s.split(';').map((x) => x.trim()).filter(Boolean).map(recItem);
+    const sec = { title, lines: listOf(found) };
+    const c = listOf(cls);
+    if (c.length) sec.classify = c;
+    return sec;
+});
+export const recordToText = (record = []) => (record || []).map((s) => {
+    const parts = [s.title || '', (s.lines || []).map(recItemText).join(' ; ')];
+    if ((s.classify || []).length) parts.push(s.classify.map(recItemText).join(' ; '));
+    return parts.join(' | ');
+}).join('\n');
+
+// Classification cards: "colour | label | action | signs | treatment".
+export const classCardsFromText = (text) => lines(text).map((l) => {
+    const [colour = 'green', label = '', action = '', signs = '', treat = ''] = split(l);
+    return { colour: colour.toLowerCase(), label, action, signs, treat };
+});
+export const classCardsToText = (cards = []) => (cards || []).map((c) => [c.colour, c.label, c.action, c.signs, c.treat].map((x) => x || '').join(' | ')).join('\n');

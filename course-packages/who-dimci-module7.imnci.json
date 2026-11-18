@@ -219,6 +219,20 @@
        "label": "In this lesson"
       },
       {
+       "type": "question",
+       "label": "Before you start",
+       "text": "Pus has drained from a child's ear for 14 days. Acute or chronic?",
+       "options": [
+        "Acute",
+        "Chronic"
+       ],
+       "answer": 1,
+       "feedback": [
+        "Acute is less than 14 days.",
+        "Right. 14 days or more is chronic."
+       ]
+      },
+      {
        "type": "paragraph",
        "text": "Ask about an ear problem for ALL sick children. If the caregiver says NO, go on to malnutrition and anaemia. If YES, ask, look and feel."
       },
@@ -295,6 +309,41 @@
         "ear"
        ],
        "caption": "Chart booklet: classify ear problem (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "classcards",
+       "title": "Ear problem: the four classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "MASTOIDITIS",
+         "action": "Refer urgently",
+         "signs": "Tender swelling behind the ear.",
+         "treat": "Give first dose of an appropriate antibiotic; Give first dose of paracetamol for pain; Refer URGENTLY to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "ACUTE EAR INFECTION",
+         "action": "Treat and follow up",
+         "signs": "Ear pain. or Pus is seen draining from the ear and discharge is reported for less than 14 days.",
+         "treat": "Give an appropriate oral antibiotic for 5 days; Give paracetamol for pain; Dry the ear by wicking; Advise the mother when to return immediately; Follow up in 5 days"
+        },
+        {
+         "colour": "yellow",
+         "label": "CHRONIC EAR INFECTION",
+         "action": "Treat and follow up",
+         "signs": "Pus is seen draining from the ear and discharge is reported for 14 days or more.",
+         "treat": "Dry the ear by wicking; Give Quinolone ear drops; Advise the mother when to return immediately"
+        },
+        {
+         "colour": "green",
+         "label": "NO EAR INFECTION (other ear problems)",
+         "action": "Home care",
+         "signs": "No ear pain and no pus seen draining from the ear.",
+         "treat": "No treatment advised; Refer for assessment if there is hearing problems"
+        }
+       ]
       },
       {
        "type": "flip",
@@ -390,12 +439,259 @@
      "isPublished": true
     },
     {
+     "title": "Practise: classify ear problems",
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify the ear problems of three children, and find an error on a recording form.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Talk with Lina's mother",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "Does Lina have an ear problem?"
+          },
+          {
+           "who": "Mother",
+           "text": "Yes, pus comes from her ear."
+          },
+          {
+           "who": "You",
+           "text": "For how long?"
+          },
+          {
+           "who": "Mother",
+           "text": "About three weeks."
+          }
+         ],
+         "question": "How do you classify Lina?",
+         "options": [
+          "CHRONIC EAR INFECTION",
+          "ACUTE EAR INFECTION",
+          "MASTOIDITIS"
+         ],
+         "answer": 0,
+         "explanation": "Pus for 14 days or more: CHRONIC EAR INFECTION.",
+         "feedback": [
+          "Right.",
+          "Acute is less than 14 days.",
+          "There is no tender swelling behind the ear."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "Mother",
+           "text": "What should I do at home?"
+          }
+         ],
+         "question": "What do you teach her?",
+         "options": [
+          "Dry the ear by wicking",
+          "Put oil in the ear",
+          "Leave it alone"
+         ],
+         "answer": 0,
+         "explanation": "Teach the mother to dry the ear by wicking, three times daily, and give ear drops.",
+         "feedback": [
+          "Right.",
+          "Nothing should be put in the ear except the drops you give.",
+          "The ear must be dried."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Classify the ear problem",
+       "part": "child",
+       "categories": [
+        "ear"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Tamer",
+          "age": "3 years",
+          "visit": "initial",
+          "weight": 14,
+          "temp": 37.4,
+          "problem": "Ear pain"
+         },
+         "text": "Tamer has had ear pain for 2 days. You see no pus draining from the ear and there is no tender swelling behind the ear.",
+         "record": [
+          {
+           "title": "Does the child have an ear problem? Yes",
+           "lines": [
+            "Ear pain: yes",
+            "Ear discharge: no",
+            "Tender swelling behind the ear: no"
+           ],
+           "classify": [
+            "ACUTE EAR INFECTION"
+           ]
+          }
+         ],
+         "question": "How do you classify Tamer's ear problem?",
+         "options": [
+          "MASTOIDITIS",
+          "ACUTE EAR INFECTION",
+          "NO EAR INFECTION"
+         ],
+         "feedback": [
+          "There is no tender swelling behind the ear.",
+          "Right. Ear pain classifies ACUTE EAR INFECTION.",
+          "Ear pain is a sign of acute ear infection, even with no pus."
+         ],
+         "explanation": "Acute ear infection: oral amoxicillin for 5 days, paracetamol for pain, and follow up in 5 days.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Lina",
+          "age": "4 years",
+          "visit": "initial",
+          "weight": 15,
+          "temp": 37.0,
+          "problem": "Pus from the ear"
+         },
+         "text": "Lina's mother says pus has come from Lina's right ear for 3 weeks. You see pus draining. Lina has no ear pain and no swelling behind the ear.",
+         "record": [
+          {
+           "title": "Does the child have an ear problem? Yes",
+           "lines": [
+            "Ear pain: no",
+            "Pus seen draining: yes",
+            "For how long? 21 days",
+            "Tender swelling behind the ear: no"
+           ],
+           "classify": [
+            "CHRONIC EAR INFECTION"
+           ]
+          }
+         ],
+         "question": "How do you classify Lina's ear problem?",
+         "options": [
+          "ACUTE EAR INFECTION",
+          "CHRONIC EAR INFECTION",
+          "MASTOIDITIS"
+         ],
+         "feedback": [
+          "Pus for less than 14 days is acute. Lina's has lasted 21 days.",
+          "Right. Pus seen draining and discharge for 14 days or more: CHRONIC EAR INFECTION.",
+          "There is no tender swelling behind the ear."
+         ],
+         "explanation": "Chronic ear infection: dry the ear by wicking, give topical quinolone ear drops for 14 days, and follow up in 5 days.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Badr",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 11,
+          "temp": 38.6,
+          "problem": "Ear pain and swelling"
+         },
+         "text": "Badr has ear pain. Behind his left ear there is a swelling that is tender when you touch it.",
+         "record": [
+          {
+           "title": "Does the child have an ear problem? Yes",
+           "lines": [
+            "Ear pain: yes",
+            "Tender swelling behind the ear: yes"
+           ],
+           "classify": [
+            "MASTOIDITIS"
+           ]
+          }
+         ],
+         "question": "How do you classify Badr's ear problem?",
+         "options": [
+          "ACUTE EAR INFECTION",
+          "MASTOIDITIS",
+          "CHRONIC EAR INFECTION"
+         ],
+         "feedback": [
+          "Ear pain is in the yellow row, but read from the top: there is a tender swelling behind the ear.",
+          "Right. A tender swelling behind the ear classifies MASTOIDITIS: first dose of antibiotic, paracetamol, and refer urgently.",
+          "There is no long-lasting discharge, and the swelling puts him in the pink row."
+         ],
+         "explanation": "Pink row first: tender swelling behind the ear is MASTOIDITIS.",
+         "answer": 1
+        }
+       ]
+      },
+      {
+       "type": "spot",
+       "title": "Find the error on Salih's form",
+       "part": "child",
+       "text": "One entry on this form is wrong. Tap it.",
+       "child": {
+        "name": "Salih",
+        "age": "4 years",
+        "visit": "initial",
+        "weight": 15,
+        "temp": 37.1,
+        "problem": "Pus from the ear"
+       },
+       "record": [
+        {
+         "title": "Does the child have an ear problem? Yes",
+         "lines": [
+          {
+           "text": "Ear pain: no",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Pus seen draining: yes",
+           "why": "This entry is right."
+          },
+          {
+           "text": "For how long? 10 days",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Tender swelling behind the ear: no",
+           "why": "This entry is right."
+          }
+         ],
+         "classify": [
+          {
+           "text": "CHRONIC EAR INFECTION",
+           "why": "Pus for less than 14 days is ACUTE EAR INFECTION. Chronic is 14 days or more.",
+           "error": true
+          }
+         ]
+        }
+       ],
+       "explanation": "The number of days decides between acute (less than 14 days) and chronic (14 days or more)."
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 6,
+     "isPublished": true
+    },
+    {
      "see": [],
      "practise": [],
      "bookFromPage": 17,
      "bookToPage": 18,
      "title": "Treat an ear problem, and refer Telisa",
-     "order": 6,
+     "order": 7,
      "read": [
       {
        "type": "note",
@@ -465,7 +761,7 @@
      "bookFromPage": 19,
      "bookToPage": 21,
      "title": "Counsel: dry the ear by wicking",
-     "order": 7,
+     "order": 8,
      "read": [
       {
        "type": "note",
@@ -594,7 +890,7 @@
      "bookFromPage": 21,
      "bookToPage": 26,
      "title": "Counselling skills that build confidence",
-     "order": 8,
+     "order": 9,
      "read": [
       {
        "type": "note",
@@ -678,7 +974,7 @@
      "bookFromPage": 27,
      "bookToPage": 28,
      "title": "Follow-up care for ear problems",
-     "order": 9,
+     "order": 10,
      "read": [
       {
        "type": "note",
@@ -755,7 +1051,7 @@
      "bookFromPage": 29,
      "bookToPage": 29,
      "title": "Using this module in your clinic",
-     "order": 10,
+     "order": 11,
      "read": [
       {
        "type": "note",
@@ -797,7 +1093,7 @@
      "bookFromPage": 30,
      "bookToPage": 31,
      "title": "Review questions and Module 7 test",
-     "order": 11,
+     "order": 12,
      "read": [
       {
        "type": "note",
@@ -824,6 +1120,40 @@
        "note": ""
       }
      ],
+     "isPublished": true
+    },
+    {
+     "title": "Module 7 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Tender swelling behind the ear is MASTOIDITIS: refer urgently.</li><li>Ear pain, or pus for less than 14 days: ACUTE EAR INFECTION.</li><li>Pus for 14 days or more: CHRONIC EAR INFECTION; dry the ear by wicking.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for an ear problem: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 13,
      "isPublished": true
     }
    ],

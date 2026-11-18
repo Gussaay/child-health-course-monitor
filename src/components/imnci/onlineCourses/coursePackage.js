@@ -83,6 +83,39 @@ export function buildPackage({ course, modules = [], sectionsByModule = {}, exer
     };
 }
 
+// The right answer(s) of a question-shaped block point at real options.
+function answerErrors(q, where) {
+    const n = (q?.options || []).length;
+    if (!n) return [];
+    const right = Array.isArray(q.answers) && q.answers.length ? q.answers : [q.answer ?? 0];
+    const bad = right.some((a) => !Number.isInteger(Number(a)) || Number(a) < 0 || Number(a) >= n);
+    return bad ? [`${where}the right answer is not one of its options.`] : [];
+}
+
+/** Problems in the practice blocks: case sets, find the error, drills, cards. */
+export function practiceErrors(b) {
+    const out = [];
+    if (['question', 'drill'].includes(b?.type)) out.push(...answerErrors(b, ''));
+    if (b?.type === 'scenario') {
+        if (!(b.cases || []).length) out.push('the case set has no cases.');
+        (b.cases || []).forEach((c, i) => {
+            if (!(c?.options || []).length) out.push(`case ${i + 1} has no answer options.`);
+            out.push(...answerErrors(c, `case ${i + 1}: `));
+        });
+    }
+    if (b?.type === 'spot') {
+        const marked = (b.record || []).flatMap((s) => [...(s?.lines || []), ...(s?.classify || [])]).filter((l) => l && typeof l === 'object' && l.error);
+        if (marked.length !== 1) out.push(`find the error needs exactly one wrong entry, it has ${marked.length}.`);
+    }
+    if (b?.type === 'classcards') {
+        if (!(b.cards || []).length) out.push('the classification cards are empty.');
+        (b.cards || []).forEach((c, i) => {
+            if (!['pink', 'red', 'yellow', 'green'].includes(c?.colour)) out.push(`card ${i + 1} has an unknown colour "${c?.colour}".`);
+        });
+    }
+    return out;
+}
+
 /**
  * Checks a file before anything is written. Errors stop the import; warnings
  * are shown and the import can go ahead.
@@ -132,6 +165,7 @@ export function checkPackage(pkg, knownExerciseIds = []) {
             TABS.forEach((tab) => (s?.[tab] || []).forEach((b, bi) => {
                 if (!BLOCK_TYPES.includes(b?.type)) errors.push(`${sw}, ${tab} block ${bi + 1}: unknown block type "${b?.type}".`);
                 if (b?.type === 'growthchart') growthChartErrors(b).forEach((e) => errors.push(`${sw}, ${tab} block ${bi + 1}: ${e}`));
+                practiceErrors(b).forEach((e) => errors.push(`${sw}, ${tab} block ${bi + 1}: ${e}`));
                 if (b?.type === 'courselink') courseLinkErrors(b).forEach((e) => errors.push(`${sw}, ${tab} block ${bi + 1}: ${e}`));
                 if (b?.type === 'exercise' && !fileIds.has(b.exerciseId) && !knownExerciseIds.includes(b.exerciseId)) {
                     warnings.push(`${sw}: links to exercise "${b.exerciseId}", which is not in the file or the app.`);

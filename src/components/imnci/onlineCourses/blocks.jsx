@@ -2,11 +2,11 @@
 //
 // How a section's content is shown to the learner: text, figures, captured
 // book pages, videos, questions and links to practice cases.
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    BookOpenText, MonitorPlay, Stethoscope, CheckCircle2, XCircle, GraduationCap, X, Lightbulb, ClipboardCheck,
-    Play, Pencil, Film, BookOpen, Syringe,
+    BookOpenText, MonitorPlay, Stethoscope, CheckCircle2, GraduationCap, X, Lightbulb, ClipboardCheck,
+    Play, Pencil, Film, BookOpen, Syringe, Printer,
 } from 'lucide-react';
 import { severityById } from '../../constants';
 import { videoSource, blockHtml } from '../book';
@@ -20,7 +20,8 @@ import { BookletProtocolView } from '../bookletView';
 import { RecordingFormView } from '../recordingFormView';
 import { useCourseScreen } from './screen';
 import CourseLinkBlock from './CourseLinkBlock';
-import { useActivity, RevealBlock, FlipBlock, SortBlock, StepsBlock, StoryBlock } from './interactive';
+import { useActivity, useFirstTry, RevealBlock, FlipBlock, SortBlock, StepsBlock, StoryBlock } from './interactive';
+import { AnswerOptions, ScenarioBlock, SpotBlock, DrillBlock, ClassCardsBlock, ReflectBlock } from './practice';
 
 // The exercise players are heavy (the whole recording form), so they load
 // only when a learner starts an exercise from a section.
@@ -132,18 +133,13 @@ function ImageViewer({ url, alt, onClose }) {
 // checking themselves should not feel they are being marked.
 export function QuestionBlock({ block, number, total, activityKey }) {
     const { t } = useTranslation();
-    const [picked, setPickedState] = useState(null);
     const [, markDone] = useActivity(activityKey);
-    const setPicked = (v) => { setPickedState(v); if (v !== null) markDone(); };
-    const options = block.options || [];
-    const answer = block.answer ?? 0;
-    const show = picked !== null;
-    const right = picked === answer;
+    const firstTry = useFirstTry(activityKey);
     return (
         <div className="not-prose rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm my-4">
             <div className="flex items-center gap-2 mb-3">
                 <span className="px-2 py-0.5 rounded bg-sky-700 text-white text-[11px] font-bold uppercase tracking-wider">
-                    {t('imnci_ui.courses.look.checkpoint', 'Checkpoint')}
+                    {block.label || t('imnci_ui.courses.look.checkpoint', 'Checkpoint')}
                 </span>
                 {total > 1 && (
                     <span className="text-xs font-semibold text-slate-500">
@@ -153,45 +149,9 @@ export function QuestionBlock({ block, number, total, activityKey }) {
                 <ClipboardCheck size={18} className="ms-auto text-slate-400" />
             </div>
             <div className="font-semibold text-slate-900 text-base sm:text-lg leading-snug mb-3">{block.text}</div>
-            <div className="space-y-2">
-                {options.map((opt, i) => {
-                    const chosen = picked === i;
-                    const correct = i === answer;
-                    const tone = show && correct ? 'border-sky-500 bg-sky-50 text-slate-900'
-                        : show && chosen ? 'border-rose-400 bg-rose-50 text-rose-900'
-                            : 'border-slate-200 bg-slate-50 hover:border-sky-400 hover:bg-white';
-                    const dot = show && correct ? 'bg-sky-700 text-white border-sky-700'
-                        : show && chosen ? 'bg-rose-600 text-white border-rose-600'
-                            : 'bg-white text-slate-600 border-slate-300';
-                    return (
-                        <button key={i} onClick={() => setPicked(i)} disabled={show}
-                            className={`w-full text-start min-h-[44px] px-3 py-2.5 rounded-xl border text-sm sm:text-base flex items-center gap-3 transition-colors ${tone}`}>
-                            <span className={`w-7 h-7 rounded-full border grid place-items-center text-xs font-bold shrink-0 ${dot}`}>
-                                {String.fromCharCode(65 + i)}
-                            </span>
-                            <span className="flex-1">{opt}</span>
-                            {show && correct && <CheckCircle2 size={18} className="text-sky-700 shrink-0" />}
-                            {show && chosen && !correct && <XCircle size={18} className="text-rose-600 shrink-0" />}
-                        </button>
-                    );
-                })}
-            </div>
-            {show && (
-                <div className={`mt-3 rounded-xl border p-3 sm:p-4 text-sm flex gap-3 ${right ? 'bg-sky-50 border-sky-200' : 'bg-rose-50 border-rose-200'}`}>
-                    <Lightbulb size={18} className={`shrink-0 mt-0.5 ${right ? 'text-sky-700' : 'text-rose-700'}`} />
-                    <div className="min-w-0">
-                        <div className={`text-[11px] font-bold uppercase tracking-wider ${right ? 'text-sky-800' : 'text-rose-800'}`}>
-                            {t('imnci_ui.courses.look.explanation', 'Explanation')}
-                        </div>
-                        <div className={`font-semibold mt-0.5 ${right ? 'text-sky-900' : 'text-rose-900'}`}>
-                            {right ? t('imnci_ui.courses.question.correct', 'Correct.') : t('imnci_ui.courses.question.not_quite', 'Not quite.')}
-                        </div>
-                        {block.explanation && <p className="text-slate-700 mt-1">{block.explanation}</p>}
-                        <button onClick={() => setPicked(null)}
-                            className="text-xs text-sky-700 font-semibold mt-2 hover:underline">{t('imnci_ui.courses.question.try_again', 'try again')}</button>
-                    </div>
-                </div>
-            )}
+            {/* Every option is marked right or wrong once answered, with the
+                feedback written for the one picked; the first try is recorded. */}
+            <AnswerOptions q={block} onAnswered={(right) => { firstTry(right); markDone(); }} />
         </div>
     );
 }
@@ -449,7 +409,7 @@ export function Overlay({ title, onClose, children }) {
 // text that ships with the app is shown.
 // =============================================================================
 
-function useLiveProtocols() {
+export function useLiveProtocols() {
     const cache = useDataCache() || {};
     const { protocols, fetchProtocols } = cache;
     useEffect(() => { if (fetchProtocols) fetchProtocols(false).catch(() => {}); }, [fetchProtocols]);
@@ -457,6 +417,18 @@ function useLiveProtocols() {
 }
 
 const pick = (obj, keys) => Object.fromEntries(Object.entries(obj || {}).filter(([k]) => !keys?.length || keys.includes(k)));
+
+/** Prints a part of the page (the whole chart booklet) in its own window, so it can be saved as a PDF. */
+function printHtml(title, node) {
+    if (!node) return;
+    const w = window.open('', '_blank');
+    if (!w) return;
+    const css = [...document.querySelectorAll('style, link[rel="stylesheet"]')].map((n) => n.outerHTML).join('');
+    const safeTitle = String(title).replace(/[<>&]/g, '');
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${safeTitle}</title>${css}</head><body style="background:#fff;padding:16px">${node.innerHTML}</body></html>`);
+    w.document.close();
+    w.addEventListener('load', () => { w.focus(); w.print(); });
+}
 
 export function BookletBlock({ block }) {
     const { t } = useTranslation();
@@ -467,6 +439,8 @@ export function BookletBlock({ block }) {
     const shown = { ...protocol, categories: pick(protocol?.categories, block.categories) };
     const screen = useCourseScreen();
     const [whole, setWhole] = useState(false);
+    const printRef = useRef(null);
+    const wholeTitle = part === 'infant' ? t('imnci_ui.courses.booklet.infant', 'Chart booklet: sick young infant') : t('imnci_ui.courses.booklet.child', 'Chart booklet: sick child');
     const canEdit = screen?.isAdmin && screen?.permissions?.canManageProtocols && screen?.setBuilder;
     return (
         <figure className="not-prose my-4">
@@ -480,7 +454,9 @@ export function BookletBlock({ block }) {
             <div className="flex flex-wrap justify-center gap-2 mt-2">
                 <button onClick={() => setWhole(true)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:border-sky-400 hover:text-sky-700">
-                    <BookOpen size={14} /> {t('imnci_ui.courses.booklet.open_whole', 'Open the whole chart booklet')}
+                    <BookOpen size={14} /> {block.download
+                        ? t('imnci_ui.courses.booklet.open_print', 'Open the whole chart booklet to read or print')
+                        : t('imnci_ui.courses.booklet.open_whole', 'Open the whole chart booklet')}
                 </button>
                 {canEdit && (
                     <button onClick={() => screen.setBuilder('protocol')}
@@ -490,9 +466,14 @@ export function BookletBlock({ block }) {
                 )}
             </div>
             {whole && (
-                <Overlay title={part === 'infant' ? t('imnci_ui.courses.booklet.infant', 'Chart booklet: sick young infant') : t('imnci_ui.courses.booklet.child', 'Chart booklet: sick child')}
-                    onClose={() => setWhole(false)}>
-                    <BookletProtocolView formType={part} protocol={protocol} doses={doses} />
+                <Overlay title={wholeTitle} onClose={() => setWhole(false)}>
+                    <div className="flex justify-end mb-2">
+                        <button onClick={() => printHtml(wholeTitle, printRef.current)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-700 text-white text-xs font-semibold hover:bg-sky-800">
+                            <Printer size={14} /> {t('imnci_ui.courses.booklet.print', 'Print or save as PDF')}
+                        </button>
+                    </div>
+                    <div ref={printRef}><BookletProtocolView formType={part} protocol={protocol} doses={doses} /></div>
                 </Overlay>
             )}
         </figure>
@@ -608,6 +589,11 @@ export function ContentBlocks({ blocks, scale = 1, activities = false }) {
                 if (b.type === 'steps') return <StepsBlock key={i} block={b} activityKey={key(i)} />;
                 if (b.type === 'story') return <StoryBlock key={i} block={b} activityKey={key(i)} />;
                 if (b.type === 'courselink') return <CourseLinkBlock key={i} block={b} />;
+                if (b.type === 'scenario') return <ScenarioBlock key={i} block={b} activityKey={key(i)} />;
+                if (b.type === 'spot') return <SpotBlock key={i} block={b} activityKey={key(i)} />;
+                if (b.type === 'drill') return <DrillBlock key={i} block={b} activityKey={key(i)} />;
+                if (b.type === 'classcards') return <ClassCardsBlock key={i} block={b} activityKey={key(i)} />;
+                if (b.type === 'reflect') return <ReflectBlock key={i} block={b} activityKey={key(i)} />;
                 if (b.type === 'growthchart') return <Suspense key={i} fallback={null}><GrowthChartBlock block={b} activityKey={key(i)} /></Suspense>;
                 if (b.type === 'booklet') {
                     return <BookletBlock key={i} block={b} />;

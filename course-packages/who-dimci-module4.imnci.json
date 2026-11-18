@@ -279,6 +279,22 @@
        "label": "In this lesson"
       },
       {
+       "type": "question",
+       "label": "Before you start",
+       "text": "Which of these is a sign of dehydration you can check without equipment?",
+       "options": [
+        "Skin pinch",
+        "Body temperature",
+        "Breathing rate"
+       ],
+       "answer": 0,
+       "feedback": [
+        "Right. You need only your fingers and your eyes.",
+        "Temperature is for fever.",
+        "Breathing is for cough."
+       ]
+      },
+      {
        "type": "heading",
        "text": "What is dehydration?"
       },
@@ -522,6 +538,26 @@
          "explanation": "It did not go back at once, and it took less than 2 seconds: slowly. On the recording form you tick restless and irritable, sunken eyes, drinking eagerly and skin pinch slowly."
         }
        ]
+      },
+      {
+       "type": "steps",
+       "title": "Look for signs of dehydration, with photographs",
+       "steps": [
+        {
+         "title": "Look at the eyes",
+         "text": "Are they sunken? Ask the mother if the eyes look unusual to her.",
+         "image": "imnci-photos/photo-01.jpg"
+        },
+        {
+         "title": "Pinch the skin of the abdomen",
+         "text": "Halfway between the umbilicus and the side, with the fold up and down the body. Hold for one second, then release.",
+         "image": "imnci-photos/photo-02.jpg"
+        },
+        {
+         "title": "Decide how the skin goes back",
+         "text": "Very slowly (longer than 2 seconds), slowly, or immediately."
+        }
+       ]
       }
      ],
      "isPublished": true
@@ -594,6 +630,34 @@
         "diarrhea"
        ],
        "caption": "Chart booklet: classify dehydration (Sudan national IMNCI booklet)"
+      },
+      {
+       "type": "classcards",
+       "title": "Dehydration: the three classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "SEVERE DEHYDRATION",
+         "action": "Refer urgently",
+         "signs": "Two of the following signs: Lethargic or unconscious Sunken eyes Not able to drink or drinking poorly Skin pinch goes back very slowly.",
+         "treat": "If child has no other severe classification: Give fluid for severe dehydration (Plan C); If child has another severe classification: Refer URGENTLY to hospital with mother giving frequent sips of ORS on the way; Advise the mother to continue breastfeeding; If child is 2 years or older and there is cholera in your area, give antibiotic for cholera"
+        },
+        {
+         "colour": "yellow",
+         "label": "SOME DEHYDRATION",
+         "action": "Treat and follow up",
+         "signs": "Two of the following signs: Restless, irritable Sunken eyes Drinks eagerly, thirsty Skin pinch goes back slowly.",
+         "treat": "Give fluid for some dehydration (Plan B); Give Zinc; If child has a severe classification: Refer URGENTLY to hospital with mother giving frequent sips of ORS on the way; Advise the mother to continue breastfeeding; Advise mother when to return immediately"
+        },
+        {
+         "colour": "green",
+         "label": "NO DEHYDRATION",
+         "action": "Home care",
+         "signs": "Not enough signs to classify as severe or some dehydration.",
+         "treat": "Give fluid and food to treat diarrhoea at home (Plan A); Give Zinc; Advise mother when to return immediately; Follow-up in 5 days if not improving"
+        }
+       ]
       },
       {
        "type": "video",
@@ -739,6 +803,34 @@
        "caption": "Chart booklet: diarrhoea for 14 days or more (Sudan national IMNCI booklet)"
       },
       {
+       "type": "classcards",
+       "title": "Persistent diarrhoea and dysentery",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "SEVERE PERSISTENT DIARRHOEA",
+         "action": "Refer urgently",
+         "signs": "Dehydration present.",
+         "treat": "Treat dehydration before referral unless the child has another severe classification; Refer to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "PERSISTENT DIARRHOEA",
+         "action": "Treat and follow up",
+         "signs": "No dehydration.",
+         "treat": "Advise the mother on feeding a child who has PERSISTENT DIARRHOEA; Give dose of Vitamin A; Follow-up in 5 days"
+        },
+        {
+         "colour": "yellow",
+         "label": "DYSENTERY",
+         "action": "Treat and follow up",
+         "signs": "Blood in the stool.",
+         "treat": "Give an oral ciprofloxacin for 3 days; Follow-up in 3 days"
+        }
+       ]
+      },
+      {
        "type": "note",
        "text": "Sudan national booklet: For PERSISTENT DIARRHOEA, give zinc for 14 days. WHO module (page 17): says \"give multivitamins and minerals (including zinc) for 14 days\".",
        "label": "Sudan national protocol"
@@ -823,12 +915,352 @@
      "isPublished": true
     },
     {
+     "title": "Practise: classify diarrhoea",
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify dehydration, persistent diarrhoea and dysentery for four children, and find an error on a recording form.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "How many signs of a row do you need to classify dehydration?",
+       "options": [
+        "One",
+        "Two",
+        "All of them"
+       ],
+       "answer": 1,
+       "feedback": [
+        "One is not enough.",
+        "Right. Two signs of the pink row, or two of the yellow row.",
+        "Two are enough."
+       ]
+      },
+      {
+       "type": "drill",
+       "title": "The skin pinch",
+       "url": "",
+       "videoTitle": "Skin pinch (video to be recorded)",
+       "text": "Watch the skin pinch, then decide how it goes back.",
+       "given": "Until this clip is recorded: after you let go, the skin stays up for about 3 seconds before it goes back.",
+       "question": "How does the skin go back?",
+       "options": [
+        "Immediately",
+        "Slowly",
+        "Very slowly (longer than 2 seconds)"
+       ],
+       "answer": 2,
+       "feedback": [
+        "The skin stays up for a moment: it is not immediate.",
+        "Slowly means the skin stays up for a brief instant only.",
+        "Right. Longer than 2 seconds is very slowly, a sign of severe dehydration."
+       ]
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Offer Hiba a drink",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "Let us see if Hiba wants to drink. Can you give her some water from this cup?"
+          },
+          {
+           "who": "Mother",
+           "text": "Look, she grabs the cup and drinks fast!"
+          }
+         ],
+         "question": "What sign is this?",
+         "options": [
+          "Drinks eagerly, thirsty",
+          "Not able to drink",
+          "Drinks normally"
+         ],
+         "answer": 0,
+         "explanation": "A child who reaches for the cup and drinks fast is thirsty: a yellow-row sign.",
+         "feedback": [
+          "Right.",
+          "She is able to drink.",
+          "Drinking fast and wanting more is eager drinking."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "Mother",
+           "text": "Is she very sick?"
+          },
+          {
+           "who": "You",
+           "text": "She is restless, her eyes are sunken, and she is thirsty. She has some dehydration."
+          }
+         ],
+         "question": "What do you do now?",
+         "options": [
+          "Give ORS in the clinic (Plan B) and zinc",
+          "Send her home with Plan A",
+          "Refer urgently"
+         ],
+         "answer": 0,
+         "explanation": "SOME DEHYDRATION: give fluid, zinc supplements and food for some dehydration (Plan B).",
+         "feedback": [
+          "Right.",
+          "Plan A is for no dehydration.",
+          "Hiba has no severe classification."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Classify diarrhoea",
+       "part": "child",
+       "categories": [
+        "diarrhea",
+        "persistent_diarrhea",
+        "dysentery"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Hiba",
+          "age": "14 months",
+          "visit": "initial",
+          "weight": 9,
+          "temp": 37.4,
+          "problem": "Diarrhoea for 3 days"
+         },
+         "text": "Hiba has had diarrhoea for 3 days, with no blood. She is restless and irritable. Her eyes are sunken. When you offer her water, she drinks eagerly. The skin pinch goes back immediately.",
+         "record": [
+          {
+           "title": "Does the child have diarrhoea? Yes",
+           "lines": [
+            "For how long? 3 days",
+            "Blood in the stool: no",
+            "Restless, irritable: yes",
+            "Sunken eyes: yes",
+            "Drinks eagerly, thirsty: yes",
+            "Skin pinch: goes back immediately"
+           ],
+           "classify": [
+            "SOME DEHYDRATION"
+           ]
+          }
+         ],
+         "question": "How do you classify Hiba's dehydration?",
+         "options": [
+          "SEVERE DEHYDRATION",
+          "SOME DEHYDRATION",
+          "NO DEHYDRATION"
+         ],
+         "feedback": [
+          "Hiba has none of the pink-row signs except sunken eyes. Two pink-row signs are needed.",
+          "Right. She has restless and irritable, sunken eyes and drinks eagerly: two or more signs of the yellow row.",
+          "Hiba has three signs of the yellow row, more than enough to classify SOME DEHYDRATION."
+         ],
+         "explanation": "Some dehydration: give fluid, zinc supplements and food for some dehydration (Plan B).",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Yousif",
+          "age": "9 months",
+          "visit": "initial",
+          "weight": 7,
+          "temp": 37.0,
+          "problem": "Diarrhoea"
+         },
+         "text": "Yousif has had watery diarrhoea for 2 days. He is lethargic. His eyes are sunken. When you offer water, he drinks poorly. The skin pinch goes back very slowly.",
+         "record": [
+          {
+           "title": "Does the child have diarrhoea? Yes",
+           "lines": [
+            "For how long? 2 days",
+            "Lethargic: yes",
+            "Sunken eyes: yes",
+            "Drinking poorly: yes",
+            "Skin pinch: goes back very slowly"
+           ],
+           "classify": [
+            "SEVERE DEHYDRATION"
+           ]
+          }
+         ],
+         "question": "How do you classify Yousif's dehydration?",
+         "options": [
+          "SEVERE DEHYDRATION",
+          "SOME DEHYDRATION",
+          "NO DEHYDRATION"
+         ],
+         "feedback": [
+          "Right. He has all four signs of the pink row; two are enough.",
+          "Start at the top row. Two pink-row signs classify SEVERE DEHYDRATION.",
+          "Yousif has every sign of severe dehydration."
+         ],
+         "explanation": "Lethargic is also a general danger sign. If the child has no other severe classification, give fluid for severe dehydration (Plan C).",
+         "answer": 0
+        },
+        {
+         "child": {
+          "name": "Rayan",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 11.5,
+          "temp": 37.2,
+          "problem": "Diarrhoea for 16 days"
+         },
+         "text": "Rayan has had diarrhoea for 16 days, with no blood. He is alert, his eyes are not sunken, he drinks normally and the skin pinch goes back immediately.",
+         "record": [
+          {
+           "title": "Does the child have diarrhoea? Yes",
+           "lines": [
+            "For how long? 16 days",
+            "Blood in the stool: no",
+            "No signs of dehydration"
+           ],
+           "classify": [
+            "NO DEHYDRATION",
+            "PERSISTENT DIARRHOEA"
+           ]
+          }
+         ],
+         "question": "Which classifications does Rayan have for his diarrhoea? Select all that apply.",
+         "options": [
+          "SEVERE PERSISTENT DIARRHOEA",
+          "PERSISTENT DIARRHOEA",
+          "NO DEHYDRATION",
+          "DYSENTERY"
+         ],
+         "feedback": [
+          "Severe persistent diarrhoea needs dehydration as well. Rayan has no dehydration.",
+          "Right. Diarrhoea for 14 days or more with no dehydration is PERSISTENT DIARRHOEA.",
+          "Right. Classify dehydration for every child with diarrhoea. Rayan has no signs, so NO DEHYDRATION.",
+          "There is no blood in the stool."
+         ],
+         "explanation": "A child with diarrhoea is classified for dehydration, and also for persistent diarrhoea if it has lasted 14 days or more, and for dysentery if there is blood in the stool.",
+         "answers": [
+          1,
+          2
+         ]
+        },
+        {
+         "child": {
+          "name": "Nour",
+          "age": "3 years",
+          "visit": "initial",
+          "weight": 13,
+          "temp": 37.6,
+          "problem": "Diarrhoea with blood"
+         },
+         "text": "Nour has had diarrhoea for 5 days and her mother has seen blood in the stool. Nour is restless and irritable and her eyes are sunken. She drinks normally and the skin pinch goes back immediately.",
+         "record": [
+          {
+           "title": "Does the child have diarrhoea? Yes",
+           "lines": [
+            "For how long? 5 days",
+            "Blood in the stool: yes",
+            "Restless, irritable: yes",
+            "Sunken eyes: yes"
+           ],
+           "classify": [
+            "SOME DEHYDRATION",
+            "DYSENTERY"
+           ]
+          }
+         ],
+         "question": "Which classifications does Nour have? Select all that apply.",
+         "options": [
+          "SEVERE DEHYDRATION",
+          "SOME DEHYDRATION",
+          "NO DEHYDRATION",
+          "DYSENTERY"
+         ],
+         "feedback": [
+          "Nour has only one pink-row sign (sunken eyes).",
+          "Right. Restless and irritable plus sunken eyes are two yellow-row signs.",
+          "She has two signs of the yellow row, so she is dehydrated.",
+          "Right. Blood in the stool classifies DYSENTERY."
+         ],
+         "explanation": "Nour needs Plan B, zinc, and an antibiotic for dysentery (oral ciprofloxacin for 3 days in the Sudan booklet).",
+         "answers": [
+          1,
+          3
+         ]
+        }
+       ]
+      },
+      {
+       "type": "spot",
+       "title": "Find the error on Huda's form",
+       "part": "child",
+       "text": "One entry on this form is wrong. Tap it.",
+       "child": {
+        "name": "Huda",
+        "age": "16 months",
+        "visit": "initial",
+        "weight": 9.5,
+        "temp": 37.3,
+        "problem": "Diarrhoea for 2 days"
+       },
+       "record": [
+        {
+         "title": "Does the child have diarrhoea? Yes",
+         "lines": [
+          {
+           "text": "For how long? 2 days",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Blood in the stool: no",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Restless, irritable: yes",
+           "why": "This sign is in the yellow row."
+          },
+          {
+           "text": "Sunken eyes: yes",
+           "why": "This sign is in both rows."
+          },
+          {
+           "text": "Skin pinch: goes back immediately",
+           "why": "This entry is right."
+          }
+         ],
+         "classify": [
+          {
+           "text": "NO DEHYDRATION",
+           "why": "Restless and irritable plus sunken eyes are two signs: SOME DEHYDRATION.",
+           "error": true
+          }
+         ]
+        }
+       ],
+       "explanation": "Two signs of the yellow row are enough to classify SOME DEHYDRATION."
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 9,
+     "isPublished": true
+    },
+    {
      "see": [],
      "practise": [],
      "bookFromPage": 23,
      "bookToPage": 24,
      "title": "Treat: three fluid plans, and Plan C",
-     "order": 9,
+     "order": 10,
      "read": [
       {
        "type": "note",
@@ -916,7 +1348,7 @@
      "bookFromPage": 25,
      "bookToPage": 28,
      "title": "Treat: Plan B at the clinic",
-     "order": 10,
+     "order": 11,
      "read": [
       {
        "type": "note",
@@ -1070,7 +1502,7 @@
      "bookFromPage": 29,
      "bookToPage": 31,
      "title": "Treat: Plan A and extra fluid at home",
-     "order": 11,
+     "order": 12,
      "read": [
       {
        "type": "note",
@@ -1228,7 +1660,7 @@
      "bookFromPage": 31,
      "bookToPage": 33,
      "title": "Treat: zinc, feeding and when to return",
-     "order": 12,
+     "order": 13,
      "read": [
       {
        "type": "note",
@@ -1340,7 +1772,7 @@
      "bookFromPage": 33,
      "bookToPage": 35,
      "title": "Treat persistent diarrhoea and dysentery",
-     "order": 13,
+     "order": 14,
      "read": [
       {
        "type": "note",
@@ -1464,7 +1896,7 @@
      "bookFromPage": 37,
      "bookToPage": 41,
      "title": "Counsel the caregiver: the four rules",
-     "order": 14,
+     "order": 15,
      "read": [
       {
        "type": "note",
@@ -1595,7 +2027,7 @@
      "bookFromPage": 42,
      "bookToPage": 44,
      "title": "Follow-up care for diarrhoea",
-     "order": 15,
+     "order": 16,
      "read": [
       {
        "type": "note",
@@ -1716,7 +2148,7 @@
      "bookFromPage": 45,
      "bookToPage": 45,
      "title": "Using this module in your clinic",
-     "order": 16,
+     "order": 17,
      "read": [
       {
        "type": "note",
@@ -1771,7 +2203,7 @@
      "bookFromPage": 46,
      "bookToPage": 47,
      "title": "Review questions and Module 4 test",
-     "order": 17,
+     "order": 18,
      "read": [
       {
        "type": "note",
@@ -1793,6 +2225,40 @@
        "note": ""
       }
      ],
+     "isPublished": true
+    },
+    {
+     "title": "Module 4 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Two signs of a row classify dehydration: pink is severe, yellow is some.</li><li>Plan C for severe, Plan B for some, Plan A for no dehydration; zinc for 14 days.</li><li>14 days or more is persistent diarrhoea; blood in the stool is dysentery.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for diarrhoea: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 19,
      "isPublished": true
     }
    ],

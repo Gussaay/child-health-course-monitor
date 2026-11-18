@@ -72,7 +72,7 @@ describe('WHO distance learning Module 1', () => {
         const check = checkPackage(PKG, []);
         expect(check.errors).toEqual([]);
         expect(check.warnings).toEqual([]);
-        expect(check.summary).toMatchObject({ modules: 1, sections: 8, exercises: 8 });
+        expect(check.summary).toMatchObject({ modules: 1, sections: 11, exercises: 8 });
         DIMCI_M1_EXERCISES.forEach((e) => expect(e.draft).toBe(true));
     });
 
@@ -125,16 +125,16 @@ describe('WHO distance learning Module 1', () => {
         expect(all.some((b) => b.type === 'form')).toBe(true);
     });
 
-    it('imports as one unpublished course, one module and eight short lessons in order', () => {
+    it('imports as one unpublished course, one module and its short lessons in order, with the practice lessons in place', () => {
         const plan = packagePlan(PKG);
         const mod = plan.items.find((i) => i.kind === 'module');
         const secs = plan.items.filter((i) => i.kind === 'section');
         expect(plan.course.isPublished).toBe(false);
         expect(plan.existingCourseId).toBe(null);
         expect(secs.map((s) => s.title)).toEqual([
-            'Module overview', 'Greeting the caregiver', 'Checking for general danger signs',
-            'See the signs and practise with two cases', 'Urgent referral and pre-referral treatment',
-            'How to refer a child urgently', 'Using this module in your clinic', 'Review questions and Module 1 test']);
+            'How to study this course', 'Module overview', 'Greeting the caregiver', 'Checking for general danger signs',
+            'See the signs and practise with two cases', 'Practise: general danger signs', 'Urgent referral and pre-referral treatment',
+            'How to refer a child urgently', 'Using this module in your clinic', 'Review questions and Module 1 test', 'Module 1 wrap-up']);
         secs.forEach((s, i) => { expect(s.legacyModuleKey).toBe(mod.legacyKey); expect(s.order).toBe(i + 1); });
     });
 
@@ -161,7 +161,7 @@ describe('every section is one page', () => {
     });
 
     it('has activities in every teaching section, and no video transcript inside a section', () => {
-        const ACT = ['question', 'reveal', 'flip', 'sort', 'steps', 'story', 'exercise'];
+        const ACT = ['question', 'reveal', 'flip', 'sort', 'steps', 'story', 'exercise', 'scenario', 'spot', 'drill', 'classcards', 'reflect'];
         [...sections, ...sections2].forEach((s) => expect(s.read.some((b) => ACT.includes(b.type))).toBe(true));
         [...sections, ...sections2].flatMap((s) => s.read).filter((b) => b.type === 'video').forEach((v) => {
             expect(v.title).toBeTruthy();
@@ -175,7 +175,7 @@ describe('WHO distance learning Module 2', () => {
         const check = checkPackage(PKG2, []);
         expect(check.errors).toEqual([]);
         expect(check.warnings).toEqual([]);
-        expect(check.summary).toMatchObject({ modules: 1, sections: 25 });
+        expect(check.summary).toMatchObject({ modules: 1, sections: 28 });
         PKG2.exercises.forEach((e) => expect(e.draft).toBe(true));
         expect(PKG2.exercises.find((e) => e.id === 'dimci-m2-logbook').questions).toHaveLength(20);
     });
@@ -253,15 +253,15 @@ describe('WHO distance learning Modules 3 and 4', () => {
             expect(check.warnings).toEqual([]);
             pkg.exercises.forEach((e) => expect(e.draft).toBe(true));
         });
-        expect(checkPackage(PKG3, []).summary).toMatchObject({ modules: 1, sections: 14, exercises: 10 });
-        expect(checkPackage(PKG4, []).summary).toMatchObject({ modules: 1, sections: 17, exercises: 14 });
+        expect(checkPackage(PKG3, []).summary).toMatchObject({ modules: 1, sections: 16, exercises: 10 });
+        expect(checkPackage(PKG4, []).summary).toMatchObject({ modules: 1, sections: 19, exercises: 14 });
         const both = checkPackage(PKG34, []);
         expect(both.errors).toEqual([]);
-        expect(both.summary).toMatchObject({ modules: 2, sections: 31, exercises: 24 });
+        expect(both.summary).toMatchObject({ modules: 2, sections: 35, exercises: 24 });
         expect(PKG34.modules.map((m) => m.order)).toEqual([3, 4]);
         const all = checkPackage(read('who-dimci-modules-1-4.imnci.json'), []);
         expect(all.errors).toEqual([]);
-        expect(all.summary).toMatchObject({ modules: 4, sections: 64, exercises: 48 });
+        expect(all.summary).toMatchObject({ modules: 4, sections: 74, exercises: 48 });
     });
 
     it('have quiz answers that point at real options, and 20 logbook questions each', () => {
@@ -432,7 +432,9 @@ describe('short lessons', () => {
 
     it('has check-yourself answers that point at real options, and no stale section numbers', () => {
         const all = [...lessonsOf(PKG), ...lessonsOf(PKG2)];
-        const questions = all.flatMap((s) => s.read.filter((b) => b.type === 'question'));
+        // The lessons' own check-yourself questions; opening questions and the practice lessons are checked in practiceBlocks.
+        const questions = all.filter((s) => s.title !== 'How to study this course')
+            .flatMap((s) => s.read.filter((b) => b.type === 'question' && b.label !== 'Before you start'));
         expect(questions.length).toBe(10);
         questions.forEach((q) => { expect(q.options[q.answer]).toBeTruthy(); expect(q.explanation).toBeTruthy(); });
         expect(JSON.stringify([PKG, PKG2])).not.toMatch(/[Ss]ections? \d\.\d/);
@@ -445,7 +447,7 @@ describe('WHO distance learning Modules 5 to 9', () => {
     const lessonsOf = (pkg) => pkg.modules.flatMap((m) => m.sections);
 
     it('are valid course files with every exercise as a draft', () => {
-        const counts = [[16, 10], [16, 11], [11, 9], [27, 19], [16, 10]];
+        const counts = [[18, 10], [18, 11], [13, 9], [28, 19], [17, 10]];
         each.forEach((pkg, i) => {
             const check = checkPackage(pkg, []);
             expect(check.errors).toEqual([]);
@@ -455,10 +457,10 @@ describe('WHO distance learning Modules 5 to 9', () => {
         });
         const later = checkPackage(read('who-dimci-modules-5-9.imnci.json'), []);
         expect(later.errors).toEqual([]);
-        expect(later.summary).toMatchObject({ modules: 5, sections: 86, exercises: 59 });
+        expect(later.summary).toMatchObject({ modules: 5, sections: 94, exercises: 59 });
         const all = read('who-dimci-modules-1-9.imnci.json');
         expect(checkPackage(all, []).errors).toEqual([]);
-        expect(checkPackage(all, []).summary).toMatchObject({ modules: 9, sections: 150, exercises: 107 });
+        expect(checkPackage(all, []).summary).toMatchObject({ modules: 9, sections: 168, exercises: 107 });
         expect(all.modules.map((m) => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     });
 

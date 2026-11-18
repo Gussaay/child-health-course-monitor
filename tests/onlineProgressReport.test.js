@@ -59,7 +59,7 @@ describe('online course progress report', () => {
             { id: 'gone', kind: 'section', courseId: 'c1', moduleId: 'mA', title: 'X', order: 3, isDeleted: true },
         ];
         const prog = [
-            { id: 'u1', completed: { a1: { _seconds: 1790000000 } }, activities: { a2: ['quiz-1'] }, lastUpdatedAt: { _seconds: 1790000500 } },
+            { id: 'u1', completed: { a1: { _seconds: 1790000000 } }, activities: { a2: ['quiz-1', 'quiz-1@1', 'end@r4'] }, lastUpdatedAt: { _seconds: 1790000500 } },
             { id: 'u2', completed: { a1: { _seconds: 1790000000 }, a2: { _seconds: 1790000100 }, b1: { _seconds: 1790000200 } } },
         ];
         const r = buildReport({ caller: { role: 'super_user' }, courses, items: its, progress: prog, users });
@@ -71,6 +71,8 @@ describe('online course progress report', () => {
         expect(amna.perModule).toEqual({ mA: 1 });
         expect(amna.startedPerCourse).toEqual({ c1: 1 });
         expect(amna.at).toEqual({ c1: 'a2' });
+        expect(amna.ratings).toEqual({ mA: 4 });
+        expect(amna.firstTry).toEqual({ c1: [1, 1] });
         expect(amna.lastActive).toBe(1790000500 * 1000);
         const badr = r.learners.find((l) => l.uid === 'u2');
         expect(badr.perCourse).toEqual({ c1: 3 });

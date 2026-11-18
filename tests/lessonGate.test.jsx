@@ -61,6 +61,31 @@ describe('a lesson is completed by doing it', () => {
         expect(went.at(-1)).toMatchObject({ section: 's2' });
     });
 
+    it('starts the next lesson fresh even when it repeats an activity of the last one', async () => {
+        const twin = { ...lesson, id: 's3', title: 'Same cards again' };
+        let screen = null;
+        const saved = [];
+        const base = {
+            back: () => {}, compare: false, duration: (m) => `${m} min`, editingTab: null, fontScale: 1, go: () => {},
+            inOrder: true, isAdmin: false, minutesById: {}, modules: [{ id: 'm1' }], openModule: { id: 'm1', title: 'Module 1' },
+            progress: { completed: {}, activities: {} }, reload: () => {}, sectionsByModule: { m1: [lesson, twin, nextLesson] },
+            saveActivities: (id, keys) => saved.push([id, keys]), setCompare: () => {}, setEditingTab: () => {}, setScale: () => {},
+            toggleComplete: async () => {}, user: { uid: 'u1' },
+        };
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+        const root = createRoot(host);
+        const show = async (s) => { screen = { ...base, openSection: s }; await act(async () => { root.render(<CourseScreen.Provider value={screen}><SectionPage /></CourseScreen.Provider>); }); };
+        await show(lesson);
+        for (const b of [...host.querySelectorAll('button')].filter((x) => x.textContent.includes('Show the answer'))) await click(b);
+        expect(host.textContent).toContain('Every activity in this lesson is done');
+        await show(twin);
+        expect(host.textContent).toContain('0 of 2 done');
+        await click([...host.querySelectorAll('button')].find((x) => x.textContent.includes('Show the answer')));
+        expect(saved.at(-1)[0]).toBe('s3');
+        expect(saved.at(-1)[1]).toHaveLength(1);
+    });
+
     it('picks up what the learner did on another device', async () => {
         const { activityKeys } = await import('../src/components/imnci/onlineCourses/activityKeys');
         const keys = activityKeys(lesson.read);

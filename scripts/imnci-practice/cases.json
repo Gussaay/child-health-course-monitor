@@ -1,0 +1,946 @@
+[
+ {
+  "id": "danger-huda",
+  "options": [
+   "Yes: she vomits everything",
+   "No: she is awake and alert",
+   "Not sure until you count her breaths"
+  ],
+  "answer": 0,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "vomitsEverything": true
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 10,
+   "age": 12,
+   "expect": {
+    "danger": [
+     "General danger sign present"
+    ]
+   },
+   "right": [
+    "General danger sign present"
+   ]
+  }
+ },
+ {
+  "id": "danger-adam",
+  "options": [
+   "No, because he is alert now",
+   "Yes: convulsions during this illness",
+   "Only if he convulses in the clinic"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "historyOfConvulsions": true,
+    "hasFever": true,
+    "malariaTest": "negative"
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 10,
+   "age": 12,
+   "expect": {
+    "danger": [
+     "General danger sign present"
+    ]
+   },
+   "right": [
+    "General danger sign present"
+   ]
+  }
+ },
+ {
+  "id": "danger-mai",
+  "options": [
+   "Yes: she was asleep",
+   "No: she wakes easily and breastfeeds",
+   "Yes, because she has a cough"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "hasCough": true
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 10,
+   "age": 13,
+   "expect": {
+    "danger": [],
+    "cough": [
+     "Cough or Cold"
+    ]
+   },
+   "right": [
+    "No: she wakes easily and breastfeeds"
+   ]
+  }
+ },
+ {
+  "id": "cough-amna",
+  "options": [
+   "SEVERE PNEUMONIA OR VERY SEVERE DISEASE",
+   "PNEUMONIA",
+   "COUGH OR COLD"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "hasCough": true,
+    "fastBreathing": true
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 10,
+   "age": 18,
+   "expect": {
+    "cough": [
+     "Pneumonia"
+    ]
+   },
+   "right": [
+    "Pneumonia"
+   ]
+  }
+ },
+ {
+  "id": "cough-khalid",
+  "options": [
+   "PNEUMONIA",
+   "COUGH OR COLD",
+   "SEVERE PNEUMONIA OR VERY SEVERE DISEASE"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "hasCough": true
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 7.5,
+   "age": 7,
+   "expect": {
+    "cough": [
+     "Cough or Cold"
+    ]
+   },
+   "right": [
+    "Cough or Cold"
+   ]
+  }
+ },
+ {
+  "id": "cough-sara",
+  "options": [
+   "PNEUMONIA, because of fast breathing and chest indrawing",
+   "SEVERE PNEUMONIA OR VERY SEVERE DISEASE",
+   "COUGH OR COLD"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "hasCough": true,
+    "notAbleToDrink": true,
+    "fastBreathing": true,
+    "chestIndrawing": true
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 13,
+   "age": 36,
+   "expect": {
+    "cough": [
+     "Severe Pneumonia or Very Severe Disease"
+    ]
+   },
+   "right": [
+    "Severe Pneumonia or Very Severe Disease"
+   ]
+  }
+ },
+ {
+  "id": "cough-omer",
+  "options": [
+   "Fast breathing",
+   "Chest indrawing",
+   "Stridor in a calm child",
+   "None: his breathing is not fast"
+  ],
+  "answer": null,
+  "answers": [
+   1
+  ],
+  "check": {
+   "part": "child",
+   "ticks": {
+    "hasCough": true,
+    "chestIndrawing": true
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 12,
+   "age": 24,
+   "expect": {
+    "cough": [
+     "Pneumonia"
+    ]
+   },
+   "right": [
+    "Chest indrawing"
+   ]
+  }
+ },
+ {
+  "id": "diar-hiba",
+  "options": [
+   "SEVERE DEHYDRATION",
+   "SOME DEHYDRATION",
+   "NO DEHYDRATION"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "hasDiarrhea": true,
+    "diarrheaDays": 3,
+    "restlessIrritable": true,
+    "sunkenEyes": true,
+    "drinkEagerly": true
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 9,
+   "age": 14,
+   "expect": {
+    "diarrhea": [
+     "Some Dehydration"
+    ]
+   },
+   "right": [
+    "Some Dehydration"
+   ]
+  }
+ },
+ {
+  "id": "diar-yousif",
+  "options": [
+   "SEVERE DEHYDRATION",
+   "SOME DEHYDRATION",
+   "NO DEHYDRATION"
+  ],
+  "answer": 0,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "hasDiarrhea": true,
+    "diarrheaDays": 2,
+    "lethargicUnconscious": true,
+    "sunkenEyes": true,
+    "drinkPoorly": true,
+    "pinchVerySlow": true
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 7,
+   "age": 9,
+   "expect": {
+    "diarrhea": [
+     "Severe Dehydration"
+    ]
+   },
+   "right": [
+    "Severe Dehydration"
+   ]
+  }
+ },
+ {
+  "id": "diar-rayan",
+  "options": [
+   "SEVERE PERSISTENT DIARRHOEA",
+   "PERSISTENT DIARRHOEA",
+   "NO DEHYDRATION",
+   "DYSENTERY"
+  ],
+  "answer": null,
+  "answers": [
+   1,
+   2
+  ],
+  "check": {
+   "part": "child",
+   "ticks": {
+    "hasDiarrhea": true,
+    "diarrheaDays": 16
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 11.5,
+   "age": 24,
+   "expect": {
+    "diarrhea": [
+     "No Dehydration"
+    ],
+    "persistent_diarrhea": [
+     "Persistent Diarrhoea"
+    ]
+   },
+   "right": [
+    "No Dehydration",
+    "Persistent Diarrhoea"
+   ]
+  }
+ },
+ {
+  "id": "diar-nour",
+  "options": [
+   "SEVERE DEHYDRATION",
+   "SOME DEHYDRATION",
+   "NO DEHYDRATION",
+   "DYSENTERY"
+  ],
+  "answer": null,
+  "answers": [
+   1,
+   3
+  ],
+  "check": {
+   "part": "child",
+   "ticks": {
+    "hasDiarrhea": true,
+    "diarrheaDays": 5,
+    "bloodInStool": true,
+    "restlessIrritable": true,
+    "sunkenEyes": true
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 13,
+   "age": 36,
+   "expect": {
+    "diarrhea": [
+     "Some Dehydration"
+    ],
+    "dysentery": [
+     "Dysentery"
+    ]
+   },
+   "right": [
+    "Some Dehydration",
+    "Dysentery"
+   ]
+  }
+ },
+ {
+  "id": "fever-ahmed",
+  "options": [
+   "VERY SEVERE FEBRILE DISEASE",
+   "MALARIA",
+   "FEVER - NO MALARIA"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "hasFever": true,
+    "malariaTest": "positive"
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 12,
+   "age": 24,
+   "expect": {
+    "fever": [
+     "Malaria"
+    ]
+   },
+   "right": [
+    "Malaria"
+   ]
+  }
+ },
+ {
+  "id": "fever-salma",
+  "options": [
+   "MALARIA",
+   "FEVER - NO MALARIA",
+   "VERY SEVERE FEBRILE DISEASE"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "hasFever": true,
+    "malariaTest": "negative"
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 8,
+   "age": 11,
+   "expect": {
+    "fever": [
+     "Fever - No Malaria"
+    ]
+   },
+   "right": [
+    "Fever - No Malaria"
+   ]
+  }
+ },
+ {
+  "id": "fever-mustafa",
+  "options": [
+   "MALARIA, if the test is positive",
+   "VERY SEVERE FEBRILE DISEASE",
+   "FEVER - NO MALARIA"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "hasFever": true,
+    "neckStiffness": true
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 15,
+   "age": 48,
+   "expect": {
+    "fever": [
+     "Very Severe Febrile Disease"
+    ]
+   },
+   "right": [
+    "Very Severe Febrile Disease"
+   ]
+  }
+ },
+ {
+  "id": "fever-rawan",
+  "options": [
+   "SEVERE COMPLICATED MEASLES",
+   "MEASLES WITH EYE OR MOUTH COMPLICATIONS",
+   "MEASLES"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "hasFever": true,
+    "malariaTest": "negative",
+    "measlesRash": true,
+    "mouthUlcers": true
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 11,
+   "age": 24,
+   "expect": {
+    "measles": [
+     "Measles with Eye or Mouth Complications"
+    ]
+   },
+   "right": [
+    "Measles with Eye or Mouth Complications"
+   ]
+  }
+ },
+ {
+  "id": "ear-tamer",
+  "options": [
+   "MASTOIDITIS",
+   "ACUTE EAR INFECTION",
+   "NO EAR INFECTION"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "hasEarProblem": true,
+    "earPain": true
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 14,
+   "age": 36,
+   "expect": {
+    "ear": [
+     "Acute Ear Infection"
+    ]
+   },
+   "right": [
+    "Acute Ear Infection"
+   ]
+  }
+ },
+ {
+  "id": "ear-lina",
+  "options": [
+   "ACUTE EAR INFECTION",
+   "CHRONIC EAR INFECTION",
+   "MASTOIDITIS"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "hasEarProblem": true,
+    "earDischarge": true,
+    "earDischargeDays": 21
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 15,
+   "age": 48,
+   "expect": {
+    "ear": [
+     "Chronic Ear Infection"
+    ]
+   },
+   "right": [
+    "Chronic Ear Infection"
+   ]
+  }
+ },
+ {
+  "id": "ear-badr",
+  "options": [
+   "ACUTE EAR INFECTION",
+   "MASTOIDITIS",
+   "CHRONIC EAR INFECTION"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "hasEarProblem": true,
+    "earPain": true,
+    "tenderSwelling": true
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 11,
+   "age": 24,
+   "expect": {
+    "ear": [
+     "Mastoiditis"
+    ]
+   },
+   "right": [
+    "Mastoiditis"
+   ]
+  }
+ },
+ {
+  "id": "nut-mazin",
+  "options": [
+   "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+   "MODERATE ACUTE MALNUTRITION",
+   "NO ACUTE MALNUTRITION"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "muacCm": 12.0
+   },
+   "z": "Between -3 and -2 Z",
+   "temp": "",
+   "weight": 8.6,
+   "age": 18,
+   "expect": {
+    "malnutrition": [
+     "Moderate Acute Malnutrition"
+    ]
+   },
+   "right": [
+    "Moderate Acute Malnutrition"
+   ]
+  }
+ },
+ {
+  "id": "nut-hala",
+  "options": [
+   "COMPLICATED SEVERE ACUTE MALNUTRITION",
+   "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+   "MODERATE ACUTE MALNUTRITION"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "muacCm": 11.2,
+    "appetiteTest": "passed"
+   },
+   "z": "Between -3 and -2 Z",
+   "temp": "",
+   "weight": 8.4,
+   "age": 24,
+   "expect": {
+    "malnutrition": [
+     "Uncomplicated Severe Acute Malnutrition"
+    ]
+   },
+   "right": [
+    "Uncomplicated Severe Acute Malnutrition"
+   ]
+  }
+ },
+ {
+  "id": "nut-ibrahim",
+  "options": [
+   "NO ACUTE MALNUTRITION",
+   "MODERATE ACUTE MALNUTRITION",
+   "COMPLICATED SEVERE ACUTE MALNUTRITION"
+  ],
+  "answer": 2,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "edema": true,
+    "muacCm": 12.8
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 12,
+   "age": 36,
+   "expect": {
+    "malnutrition": [
+     "Complicated Severe Acute Malnutrition"
+    ]
+   },
+   "right": [
+    "Complicated Severe Acute Malnutrition"
+   ]
+  }
+ },
+ {
+  "id": "anaemia-reem",
+  "options": [
+   "SEVERE ANAEMIA",
+   "ANAEMIA",
+   "NO ANAEMIA"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "child",
+   "ticks": {
+    "pallor": "somePallor"
+   },
+   "z": "-2 Z or more",
+   "temp": "",
+   "weight": 10,
+   "age": 20,
+   "expect": {
+    "anemia": [
+     "Anaemia"
+    ]
+   },
+   "right": [
+    "Anaemia"
+   ]
+  }
+ },
+ {
+  "id": "inf-amal",
+  "options": [
+   "POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE",
+   "LOCAL BACTERIAL INFECTION",
+   "SEVERE DISEASE OR LOCAL INFECTION UNLIKELY"
+  ],
+  "answer": 0,
+  "answers": null,
+  "check": {
+   "part": "infant",
+   "ticks": {},
+   "z": "-2 Z or more",
+   "temp": "37.9",
+   "weight": 3.0,
+   "age": 12,
+   "expect": {
+    "bacterial_infection": [
+     "Possible Serious Bacterial Infection or Very Severe Disease"
+    ]
+   },
+   "right": [
+    "Possible Serious Bacterial Infection or Very Severe Disease"
+   ]
+  }
+ },
+ {
+  "id": "inf-omar",
+  "options": [
+   "POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE",
+   "LOCAL BACTERIAL INFECTION",
+   "SEVERE DISEASE OR LOCAL INFECTION UNLIKELY"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "infant",
+   "ticks": {
+    "umbilicusRedDraining": true
+   },
+   "z": "-2 Z or more",
+   "temp": "36.8",
+   "weight": 3.6,
+   "age": 12,
+   "expect": {
+    "bacterial_infection": [
+     "Local Bacterial Infection"
+    ]
+   },
+   "right": [
+    "Local Bacterial Infection"
+   ]
+  }
+ },
+ {
+  "id": "inf-tasneem",
+  "options": [
+   "POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE",
+   "PNEUMONIA",
+   "SEVERE DISEASE OR LOCAL INFECTION UNLIKELY"
+  ],
+  "answer": 0,
+  "answers": null,
+  "check": {
+   "part": "infant",
+   "ticks": {
+    "fastBreathing": true
+   },
+   "z": "-2 Z or more",
+   "temp": "36.9",
+   "weight": 4.2,
+   "age": 12,
+   "expect": {
+    "bacterial_infection": [
+     "Possible Serious Bacterial Infection or Very Severe Disease"
+    ]
+   },
+   "right": [
+    "Possible Serious Bacterial Infection or Very Severe Disease"
+   ]
+  }
+ },
+ {
+  "id": "inf-jaundice-2d",
+  "options": [
+   "SEVERE JAUNDICE",
+   "JAUNDICE",
+   "NO JAUNDICE"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "infant",
+   "ticks": {
+    "hasJaundice": true
+   },
+   "z": "-2 Z or more",
+   "temp": "36.9",
+   "weight": 3.1,
+   "age": 12,
+   "expect": {
+    "jaundice": [
+     "Jaundice"
+    ]
+   },
+   "right": [
+    "Jaundice"
+   ]
+  }
+ },
+ {
+  "id": "inf-jaundice-palms",
+  "options": [
+   "SEVERE JAUNDICE",
+   "JAUNDICE",
+   "NO JAUNDICE"
+  ],
+  "answer": 0,
+  "answers": null,
+  "check": {
+   "part": "infant",
+   "ticks": {
+    "hasJaundice": true,
+    "jaundiceSolesPalms": true
+   },
+   "z": "-2 Z or more",
+   "temp": "36.8",
+   "weight": 3.3,
+   "age": 12,
+   "expect": {
+    "jaundice": [
+     "Severe Jaundice"
+    ]
+   },
+   "right": [
+    "Severe Jaundice"
+   ]
+  }
+ },
+ {
+  "id": "inf-diar",
+  "options": [
+   "SEVERE DEHYDRATION",
+   "SOME DEHYDRATION",
+   "NO DEHYDRATION"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "infant",
+   "ticks": {
+    "hasDiarrhea": true,
+    "diarrheaDays": 3,
+    "diarrheaRestless": true,
+    "diarrheaSunkenEyes": true
+   },
+   "z": "-2 Z or more",
+   "temp": "37.0",
+   "weight": 4.0,
+   "age": 12,
+   "expect": {
+    "diarrhea": [
+     "Some Dehydration"
+    ]
+   },
+   "right": [
+    "Some Dehydration"
+   ]
+  }
+ },
+ {
+  "id": "feed-layla",
+  "options": [
+   "FEEDING PROBLEM OR LOW WEIGHT",
+   "NO FEEDING PROBLEM"
+  ],
+  "answer": 0,
+  "answers": null,
+  "check": {
+   "part": "infant",
+   "ticks": {
+    "breastfed": "yes",
+    "breastfeedTimes": 6,
+    "otherFoods": "no",
+    "wellPositioned": "yes",
+    "goodAttachment": "good",
+    "suckingEffectively": "effective",
+    "diffFeeding": "no"
+   },
+   "z": "-2 Z or more",
+   "temp": "36.8",
+   "weight": 4.3,
+   "age": 12,
+   "expect": {
+    "feeding_problem": [
+     "Feeding Problem or Low Weight"
+    ]
+   },
+   "right": [
+    "Feeding Problem or Low Weight"
+   ]
+  }
+ },
+ {
+  "id": "feed-yasir",
+  "options": [
+   "FEEDING PROBLEM OR LOW WEIGHT",
+   "NO FEEDING PROBLEM"
+  ],
+  "answer": 1,
+  "answers": null,
+  "check": {
+   "part": "infant",
+   "ticks": {
+    "breastfed": "yes",
+    "breastfeedTimes": 10,
+    "otherFoods": "no",
+    "wellPositioned": "yes",
+    "goodAttachment": "good",
+    "suckingEffectively": "effective",
+    "diffFeeding": "no"
+   },
+   "z": "-2 Z or more",
+   "temp": "36.9",
+   "weight": 4.0,
+   "age": 12,
+   "expect": {
+    "feeding_problem": [
+     "No Feeding Problem"
+    ]
+   },
+   "right": [
+    "No Feeding Problem"
+   ]
+  }
+ },
+ {
+  "id": "feed-rana",
+  "options": [
+   "She breastfeeds too few times",
+   "She receives other foods or drinks",
+   "She is fed from a bottle"
+  ],
+  "answer": null,
+  "answers": [
+   1,
+   2
+  ],
+  "check": {
+   "part": "infant",
+   "ticks": {
+    "breastfed": "yes",
+    "breastfeedTimes": 9,
+    "otherFoods": "yes",
+    "goodAttachment": "good",
+    "wellPositioned": "yes",
+    "suckingEffectively": "effective",
+    "diffFeeding": "no"
+   },
+   "z": "-2 Z or more",
+   "temp": "36.7",
+   "weight": 4.5,
+   "age": 12,
+   "expect": {
+    "feeding_problem": [
+     "Feeding Problem or Low Weight"
+    ]
+   },
+   "right": [
+    "She receives other foods or drinks",
+    "She is fed from a bottle"
+   ]
+  }
+ }
+]
