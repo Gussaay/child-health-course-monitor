@@ -1,7 +1,10 @@
 // One build serves three Firebase Hosting sites in the same project, so they
 // share data and logins:
-//   imnci-courses-monitor.web.app and ch-sudan.web.app  the full app
-//   emonc-sudan.web.app                                  home page with only Courses and Surveys,
+//   imnci-courses-monitor.web.app                        the full app
+//   ch-sudan.web.app                                     only the modules chosen in Admin > Sites
+//                                                        (default: Dashboard and Online Courses)
+//   emonc-sudan.web.app                                  only the modules chosen in Admin > Sites
+//                                                        (default: Courses and Surveys),
 //                                                        and only the EmONC package in it
 // The site is told apart by its address at run time, so every site gets the
 // exact same files. `VITE_SITE=emonc npm run dev` shows the EmONC site locally.
@@ -12,8 +15,8 @@ const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
 
 export const IS_EMONC_SITE = import.meta.env.VITE_SITE === 'emonc' || EMONC_HOSTS.includes(hostname);
 
-// ch-sudan is the full app like the main site; only its Android app, its
-// shared links and its "Get the app" button differ. `VITE_SITE=ch` is the
+// ch-sudan shows the modules chosen in Admin > Sites; its Android app, its
+// shared links and its "Get the app" button also differ. `VITE_SITE=ch` is the
 // ch-sudan app's build.
 const CH_HOSTS = ['ch-sudan.web.app', 'ch-sudan.firebaseapp.com'];
 export const IS_CH_SITE = import.meta.env.VITE_SITE === 'ch' || CH_HOSTS.includes(hostname);
@@ -61,12 +64,69 @@ export function siteApkUrl(url, app = NATIVE_APP) {
 // includes EENC courses (coursesForActiveType in Course.jsx); this site does not.
 export const EMONC_COURSE_TYPES = ['EmONC'];
 
-// Top-level modules the EmONC site does not offer. Anything not listed here is
-// the home page or part of the Courses module (course pages, participants,
-// monitoring, reports).
-export const EMONC_SITE_HIDDEN_VIEWS = new Set([
-    'dashboard', 'humanResources', 'facilitators', 'programTeams', 'partnersPage',
-    'facilitatorForm', 'facilitatorReport', 'childHealthServices', 'skillsMentorship', 'imciForm',
-    'projects', 'meetings', 'planning', 'localityPlan', 'supplyManagement', 'supervision',
-    'onlineCourses', 'downloads', 'admin', 'about',
-]);
+// --- Which modules each site shows ---------------------------------------
+// The main site shows everything. What the EmONC and ch-sudan sites show is
+// chosen by a super user in Admin > Sites on the main site and saved in
+// meta/siteSettings as { sites: { emonc: { modules: [...] }, ch: { modules: [...] } } }.
+// Until that document exists (or before sign-in, since meta/ needs a
+// signed-in user) each site uses its default below.
+
+// 'main', 'emonc' or 'ch'.
+export const CURRENT_SITE = IS_EMONC_SITE ? 'emonc' : IS_CH_SITE ? 'ch' : 'main';
+
+// The sites Admin > Sites manages, in the order shown there.
+export const MANAGED_SITES = [
+    { id: 'emonc', name: 'EmONC', host: 'emonc-sudan.web.app' },
+    { id: 'ch', name: 'CH Sudan', host: 'ch-sudan.web.app' },
+];
+
+// Every module a site can show, with the pages that belong to it. A page not
+// listed here (the home page, public links) is always shown. Admin is not
+// listed: it is only on the main site, where sites are managed.
+export const SITE_MODULES = [
+    { id: 'dashboard', label: 'Dashboard', views: ['dashboard'] },
+    { id: 'courses', label: 'Courses', views: ['courses', 'courseDetails', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'participantMigration', 'observe', 'monitoring', 'reports', 'finalReport', 'attendanceManager', 'test-dashboard', 'enter-test-scores'] },
+    { id: 'humanResources', label: 'Human Resources', views: ['humanResources', 'facilitators', 'programTeams', 'partnersPage', 'facilitatorForm', 'facilitatorReport'] },
+    { id: 'childHealthServices', label: 'Child Health Services', views: ['childHealthServices'] },
+    { id: 'skillsMentorship', label: 'Skills Mentorship', views: ['skillsMentorship'] },
+    { id: 'imciForm', label: 'IMNCI Protocol', views: ['imciForm'] },
+    { id: 'onlineCourses', label: 'Online Courses (online training)', views: ['onlineCourses'] },
+    { id: 'supervision', label: 'Supervision', views: ['supervision'] },
+    { id: 'survey', label: 'Surveys', views: ['survey'] },
+    { id: 'supplyManagement', label: 'Supply Management', views: ['supplyManagement'] },
+    { id: 'projects', label: 'Project Tracker', views: ['projects'] },
+    { id: 'meetings', label: 'Meeting Tracker', views: ['meetings'] },
+    { id: 'planning', label: 'Master Plan', views: ['planning'] },
+    { id: 'localityPlan', label: 'Bottom-up Planning', views: ['localityPlan'] },
+    { id: 'downloads', label: 'App Files & Downloads (Android app only)', views: ['downloads'] },
+    { id: 'about', label: 'About Team', views: ['about'] },
+];
+
+// Pages that only the main site has, whatever is chosen.
+const MAIN_SITE_ONLY_VIEWS = ['admin'];
+
+// What each site shows until a super user saves a choice in Admin > Sites.
+export const DEFAULT_SITE_MODULES = {
+    emonc: ['courses', 'survey'],
+    ch: ['dashboard', 'onlineCourses'],
+};
+
+// The module ids a site shows, from the saved settings (or the default).
+// Unknown ids in the saved list are ignored.
+export function siteModulesFor(site, settings) {
+    if (site === 'main') return SITE_MODULES.map(m => m.id);
+    const saved = settings?.sites?.[site]?.modules;
+    const list = Array.isArray(saved) ? saved : (DEFAULT_SITE_MODULES[site] || []);
+    const known = new Set(SITE_MODULES.map(m => m.id));
+    return list.filter(id => known.has(id));
+}
+
+// The pages a site hides: every page of every module it does not show, and
+// the main-site-only pages. The main site hides nothing.
+export function hiddenViewsFor(site, settings) {
+    if (site === 'main') return new Set();
+    const shown = new Set(siteModulesFor(site, settings));
+    const hidden = new Set(MAIN_SITE_ONLY_VIEWS);
+    SITE_MODULES.forEach(m => { if (!shown.has(m.id)) m.views.forEach(v => hidden.add(v)); });
+    return hidden;
+}
