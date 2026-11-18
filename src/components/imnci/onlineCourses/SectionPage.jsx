@@ -4,7 +4,7 @@
 // order they were written, the AI study helper, and Previous / Next within the
 // module. There are no tabs to step through: a learner reads, watches and
 // practises in one pass and then moves on to the next section.
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Pencil, ArrowLeft, ArrowRight, Columns2, CheckCircle2, ZoomIn, ZoomOut, Clock, Trophy,
@@ -30,23 +30,29 @@ function readDone(uid, id) {
 // lesson started on one device carries on where it stopped on another. What
 // is done is the two together: nothing done is ever taken away by a sync.
 function useSectionActivities(uid, sectionId, saved, save) {
-    const [local, setLocal] = useState(() => readDone(uid, sectionId));
-    useEffect(() => { setLocal(readDone(uid, sectionId)); }, [uid, sectionId]);
-    const done = useMemo(() => new Set([...local, ...(saved || [])]), [local, saved]);
+    // Everything here belongs to one learner and one lesson (`at`). On a move
+    // to another lesson, the first render already reads the new lesson's
+    // tally, never the last lesson's: activity keys come from block content,
+    // so an identical activity in the next lesson must not count as done.
+    const at = `${uid || 'guest'}|${sectionId}`;
+    const [local, setLocal] = useState(() => ({ at, set: readDone(uid, sectionId) }));
+    const localSet = local.at === at ? local.set : readDone(uid, sectionId);
+    const done = useMemo(() => new Set([...localSet, ...(saved || [])]), [localSet, saved]);
     // Kept in a ref as well, so two marks in the same tap (the first-try
     // record and "done") both land instead of the second overwriting the first.
-    const latest = useRef(done);
-    useEffect(() => { latest.current = new Set([...latest.current, ...done]); }, [done]);
-    useEffect(() => { latest.current = done; }, [uid, sectionId]); // eslint-disable-line react-hooks/exhaustive-deps
+    const latest = useRef({ at, set: done });
+    if (latest.current.at !== at) latest.current = { at, set: done };
+    else if ([...done].some((k) => !latest.current.set.has(k))) latest.current = { at, set: new Set([...latest.current.set, ...done]) };
     const markDone = useCallback((key) => {
-        if (latest.current.has(key)) return;
-        const next = new Set(latest.current).add(key);
-        latest.current = next;
+        const cur = latest.current.at === at ? latest.current.set : new Set();
+        if (cur.has(key)) return;
+        const next = new Set(cur).add(key);
+        latest.current = { at, set: next };
         try { localStorage.setItem(storeKey(uid, sectionId), JSON.stringify([...next])); } catch { /* private mode */ }
-        setLocal(next);
+        setLocal({ at, set: next });
         save?.(sectionId, [...next]);
-    }, [uid, sectionId, save]);
-    const value = useMemo(() => ({ isDone: (k) => done.has(k) || latest.current.has(k), markDone }), [done, markDone]);
+    }, [at, uid, sectionId, save]);
+    const value = useMemo(() => ({ isDone: (k) => done.has(k) || latest.current.set.has(k), markDone }), [done, markDone]);
     return [done, value];
 }
 
@@ -272,17 +278,17 @@ export function SectionPage() {
                             <div className="lg:max-h-[38rem] lg:overflow-y-auto pe-1">
                                 <div className="text-xs font-semibold text-slate-500 mb-2">{t('imnci_ui.courses.main.converted_text', 'Converted text')}</div>
                                 <ActivityContext.Provider value={activityValue}>
-                                    <ContentBlocks blocks={content.filter((b) => b.type !== 'page')} scale={fontScale} activities />
+                                    <ContentBlocks key={openSection.id} blocks={content.filter((b) => b.type !== 'page')} scale={fontScale} activities />
                                 </ActivityContext.Provider>
                             </div>
                             <div className="lg:max-h-[38rem] lg:overflow-y-auto ps-1 border-s">
                                 <div className="text-xs font-semibold text-slate-500 mb-2">{t('imnci_ui.courses.main.the_book', 'The book')}</div>
-                                <ContentBlocks blocks={pages} />
+                                <ContentBlocks key={openSection.id} blocks={pages} />
                             </div>
                         </div>
                     ) : content.length > 0 ? (
                         <ActivityContext.Provider value={activityValue}>
-                            <ContentBlocks blocks={content} scale={fontScale} activities />
+                            <ContentBlocks key={openSection.id} blocks={content} scale={fontScale} activities />
                         </ActivityContext.Provider>
                     ) : (
                         <div className="text-sm text-slate-500 py-12 text-center border border-dashed rounded-lg">

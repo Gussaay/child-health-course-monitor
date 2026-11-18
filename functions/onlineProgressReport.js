@@ -66,8 +66,7 @@ function buildReport({ caller, courses, items, progress, users }) {
     // Reading order: module by module, then lesson order; lessons outside a known module last.
     const ordered = [...secs].sort((a, b) => (modIndex[a.moduleId] ?? 1e6) - (modIndex[b.moduleId] ?? 1e6) || byOrder(a, b));
     const lessons = ordered.map((s) => ({ id: s.id, title: s.title || "", moduleId: s.moduleId || "", done: 0, started: 0 }));
-    // ratingSum / ratings: the 1 to 5 stars learners gave the module at its end.
-    const modules = mods.map((m) => ({ id: m.id, title: m.title || "", sections: lessons.filter((l) => l.moduleId === m.id).length, ratingSum: 0, ratings: 0 }))
+    const modules = mods.map((m) => ({ id: m.id, title: m.title || "", sections: lessons.filter((l) => l.moduleId === m.id).length }))
       .filter((m) => m.sections > 0);
     return { id: c.id, title: c.title || c.id, sections: lessons.length, modules, lessons };
   }).filter((c) => c.sections > 0);
@@ -84,6 +83,7 @@ function buildReport({ caller, courses, items, progress, users }) {
     const at = {};
     // First tries at practice questions: "<activity>@1" right, "<activity>@0" not.
     const firstTry = {};
+    const rating = {};
     courseList.forEach((c) => {
       let n = 0;
       let started = 0;
@@ -94,8 +94,9 @@ function buildReport({ caller, courses, items, progress, users }) {
           if (tag === "1") { ft[0] += 1; ft[1] += 1; }
           else if (tag === "0") ft[1] += 1;
           else if (/^r[1-5]$/.test(tag || "")) {
-            const m = c.modules.find((x) => x.id === l.moduleId);
-            if (m) { m.ratingSum += Number(tag.slice(1)); m.ratings += 1; }
+            // A module's 1 to 5 star rating, kept per learner so the dashboard
+            // can average it for whoever its filter shows.
+            if (l.moduleId) rating[l.moduleId] = Number(tag.slice(1));
           }
         });
         if (done[l.id]) {
@@ -125,6 +126,7 @@ function buildReport({ caller, courses, items, progress, users }) {
       perModule,
       startedPerCourse,
       firstTry,
+      ratings: rating,
       at,
       lastActive: last || null,
     };

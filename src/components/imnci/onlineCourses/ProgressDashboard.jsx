@@ -144,7 +144,8 @@ export function ProgressDashboard() {
             const started = people.filter((p) => (p.perModule || {})[m.id]).length;
             const finished = people.filter((p) => ((p.perModule || {})[m.id] || 0) >= m.sections).length;
             const avg = people.length ? Math.round(people.reduce((n, p) => n + pct(Math.min((p.perModule || {})[m.id] || 0, m.sections), m.sections), 0) / people.length) : 0;
-            return { ...m, started, finished, avg };
+            const rated = people.map((p) => (p.ratings || {})[m.id]).filter((r) => r >= 1 && r <= 5);
+            return { ...m, started, finished, avg, ratings: rated.length, ratingSum: rated.reduce((n, r) => n + r, 0) };
         });
         // Lesson counts come from the server for everyone in scope; with a state
         // chosen they are counted again from the learners' "on lesson".
