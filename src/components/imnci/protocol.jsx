@@ -17,8 +17,9 @@ import { NATIONAL_GUIDES, missingNationalBoxes, addMissingNationalBoxes } from '
 import { GuideBlock, addGuideBox } from './treatmentGuideView';
 import { GENERAL, FORM, topicsFor, drugsForTopic, guideForTopic, groupForNewBox } from './topics';
 import { diffProtocol, currentEditor } from './protocolHistory';
+import PhotoBooklet from './PhotoBooklet';
 import { useTranslation } from 'react-i18next';
-import { Save, Plus, Trash2, DownloadCloud, FolderPlus, Globe, Syringe, Activity, ChevronDown, ChevronRight, Lock, X, Pencil, Settings2, History, ClipboardList, Baby, User, ListChecks, MessageCircle, CalendarClock, Stethoscope, BookOpen } from 'lucide-react';
+import { Save, Plus, Trash2, DownloadCloud, FolderPlus, Globe, Syringe, Activity, ChevronDown, ChevronRight, Lock, X, Pencil, Settings2, History, ClipboardList, Baby, User, ListChecks, MessageCircle, CalendarClock, Stethoscope, BookOpen, Images } from 'lucide-react';
 
 // --- Predefined Conditions Mapping for Dropdowns ---
 const CHILD_CONDITIONS = [
@@ -343,6 +344,8 @@ export default function ProtocolEditor() {
     const ar = i18n.language === 'ar';
     const { protocols, fetchProtocols, isLoading } = useDataCache();
     const [part, setPart] = useState('child');
+    // The photograph booklet sits beside the two age groups; it has no protocol documents.
+    const [photos, setPhotos] = useState(false);
     const [topicChoice, setTopicChoice] = useState({});
     // Every protocol document of both parts, by formType, as being edited.
     const [docs, setDocs] = useState({});
@@ -439,7 +442,7 @@ export default function ProtocolEditor() {
     const viewMode = !editing ? 'booklet' : (advanced && !isFormTab ? 'advanced' : 'edit');
     const openTopic = (id) => { setTopicChoice((prev) => ({ ...prev, [part]: id })); setSearch(''); };
     // Nothing is lost by changing part or tab: every document stays in the editor.
-    const switchPart = (next) => { if (next !== part) { setPart(next); setIssues(null); setSearch(''); } };
+    const switchPart = (next) => { setPhotos(false); if (next !== part) { setPart(next); setIssues(null); setSearch(''); } };
 
     const docName = (ft) => t(`clinical_ui.protocol.history.tab.${ft}`, ft);
 
@@ -920,14 +923,18 @@ export default function ProtocolEditor() {
                         {PARTS.map((p) => {
                             const Icon = p === 'child' ? User : Baby;
                             return (
-                                <button key={p} type="button" role="tab" aria-selected={part === p} onClick={() => switchPart(p)}
-                                    className={`px-4 py-2 text-sm font-bold flex items-center gap-2 ${part === p ? 'bg-sky-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}>
+                                <button key={p} type="button" role="tab" aria-selected={!photos && part === p} onClick={() => switchPart(p)} disabled={photos && editing}
+                                    className={`px-4 py-2 text-sm font-bold flex items-center gap-2 ${!photos && part === p ? 'bg-sky-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}>
                                     <Icon size={16} /> {t(`clinical_ui.protocol.parts.${p}`, p === 'child' ? 'Sick child (2 months – 5 years)' : 'Young infant (up to 2 months)')}
                                 </button>
                             );
                         })}
+                        <button type="button" role="tab" aria-selected={photos} onClick={() => setPhotos(true)} disabled={editing} data-testid="photo-booklet-tab"
+                            className={`px-4 py-2 text-sm font-bold flex items-center gap-2 disabled:opacity-50 ${photos ? 'bg-sky-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}>
+                            <Images size={16} /> {t('clinical_ui.protocol.parts.photos', 'Photograph booklet')}
+                        </button>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    {!photos && <div className="flex flex-wrap items-center gap-2">
                         {!editing ? (
                             <>
                                 <Button onClick={startEditing} className="flex items-center gap-1.5 text-sm"><Pencil size={16} /> {t('clinical_ui.protocol.btn.edit', 'Edit')}</Button>
@@ -946,10 +953,10 @@ export default function ProtocolEditor() {
                                 <Button onClick={cancelEditing} disabled={isSaving} variant="secondary" className="text-sm">{t('clinical_ui.protocol.btn.cancel', 'Cancel')}</Button>
                             </>
                         )}
-                    </div>
+                    </div>}
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300">
+                {!photos && <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300">
                     <div className="flex flex-wrap" role="tablist" aria-label={t('clinical_ui.protocol.topics.label', 'Illness')}>
                         {topics.map((tp) => {
                             const Icon = tp.id === FORM ? ClipboardList : tp.id === GENERAL ? BookOpen : Stethoscope;
@@ -967,9 +974,9 @@ export default function ProtocolEditor() {
                             <Settings2 size={14} /> {t('clinical_ui.protocol.view.advanced_rules', 'Advanced rule builder')}
                         </label>
                     )}
-                </div>
+                </div>}
 
-                {viewMode === 'advanced' && (
+                {!photos && viewMode === 'advanced' && (
                     <div className="flex flex-wrap gap-2 items-center">
                         <input
                             type="text"
@@ -984,9 +991,11 @@ export default function ProtocolEditor() {
                 )}
             </div>
 
-            {showHistory && <div dir={ar ? 'rtl' : 'ltr'}><HistoryPanel entries={history} loading={historyLoading} onClose={() => setShowHistory(false)} t={t} /></div>}
+            {photos && <Card><div className="p-3 sm:p-4 bg-slate-50" dir={ar ? 'rtl' : 'ltr'}><PhotoBooklet /></div></Card>}
 
-            <Card>
+            {!photos && showHistory && <div dir={ar ? 'rtl' : 'ltr'}><HistoryPanel entries={history} loading={historyLoading} onClose={() => setShowHistory(false)} t={t} /></div>}
+
+            {!photos && <Card>
                 <div className="p-3 sm:p-4 bg-slate-50 space-y-4">
                     {issues && (issues.errors.length > 0 || issues.warnings.length > 0) && (
                         <div className="space-y-2">
@@ -1290,7 +1299,7 @@ export default function ProtocolEditor() {
                         )
                     )}
                 </div>
-            </Card>
+            </Card>}
         </div>
     );
 }

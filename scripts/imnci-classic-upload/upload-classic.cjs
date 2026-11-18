@@ -19,6 +19,9 @@ const COMMIT = a.includes('--commit'), UNDO = a.includes('--undo'), REPLACE = a.
 const BATCH = 'imnci-sudan-classic-modules-1-3-2026-11-17';
 const FILE = path.join(__dirname, '..', '..', 'course-packages', 'sudan-imnci-classic-modules-1-3.imnci.json');
 const FIG_DIR = path.join(__dirname, 'figures'), FIG_ROOT = 'online-courses/imnci-classic/';
+// The photograph booklet (photographs 1 to 82, Protocol management → Photograph booklet) is shared by every
+// course, so it carries its own tag and undo of this course leaves it in place.
+const PHOTO_DIR = path.join(__dirname, 'photos'), PHOTO_ROOT = 'online-courses/imnci-photos/', PHOTO_BATCH = 'imnci-photo-booklet-2026-11-18';
 const BUCKET = 'imnci-courses-monitor.firebasestorage.app';
 
 admin.initializeApp({ credential: admin.credential.cert(JSON.parse(fs.readFileSync(keyPath, 'utf8'))) });
@@ -139,7 +142,8 @@ async function undo() {
     `${exNew.length} new exercises. Every document is tagged importBatch=${BATCH}. Nothing already in the app is changed.`);
   // Figures
   const figs = fs.readdirSync(FIG_DIR).filter((f) => /\.(png|jpe?g)$/i.test(f)).sort();
-  const used = new Set(writes.flatMap((w) => w.data.read || []).filter((b) => (b.type === 'image' || b.type === 'page') && b.path).map((b) => b.path.replace(/^imnci-classic\//, '')));
+  const pics = writes.flatMap((w) => w.data.read || []).filter((b) => (b.type === 'image' || b.type === 'page') && b.path);
+  const used = new Set(pics.filter((b) => b.path.startsWith('imnci-classic/')).map((b) => b.path.replace(/^imnci-classic\//, '')));
   const unused = figs.filter((f) => !used.has(f)), lacking = [...used].filter((f) => !figs.includes(f));
   if (lacking.length) throw new Error(`Lessons show figures that are not in figures/: ${lacking}`);
   const figPlan = [];
@@ -150,8 +154,18 @@ async function undo() {
   console.log(`\nFigures for Storage (${FIG_ROOT}): ${figPlan.filter((x) => !x.exists).length} new, ${figPlan.filter((x) => x.exists).length} already there (overwritten)` +
     `${unused.length ? `; not used by any lesson: ${unused.join(', ')}` : ''}`);
   figPlan.forEach(({ f, exists }) => console.log(`  ${exists ? '^' : '+'} ${FIG_ROOT}${f}  ${Math.round(fs.statSync(path.join(FIG_DIR, f)).size / 1024)} KB`));
-  const photos = writes.flatMap((w) => w.data.read || []).filter((b) => b.type === 'image' && !b.path).length;
-  console.log(`  ${photos} photograph-booklet pictures have no file yet and show as "not uploaded" until added.`);
+  // Photograph booklet
+  const photoFiles = fs.readdirSync(PHOTO_DIR).filter((f) => /\.jpe?g$/i.test(f)).sort();
+  const photoUsed = new Set(pics.filter((b) => b.path.startsWith('imnci-photos/')).map((b) => b.path.replace(/^imnci-photos\//, '')));
+  const photoLacking = [...photoUsed].filter((f) => !photoFiles.includes(f));
+  if (photoLacking.length) throw new Error(`Lessons show photographs that are not in photos/: ${photoLacking}`);
+  const [inStorage] = await bucket.getFiles({ prefix: PHOTO_ROOT });
+  const have = new Set(inStorage.map((f) => f.name.slice(PHOTO_ROOT.length)));
+  const photoPlan = photoFiles.filter((f) => !have.has(f));
+  console.log(`\nPhotograph booklet for Storage (${PHOTO_ROOT}): ${photoFiles.length} photographs, ${photoPlan.length} to upload, ` +
+    `${photoFiles.length - photoPlan.length} already there (kept, so a photograph replaced in the app stays). Lessons show ${photoUsed.size} of them.`);
+  const blank = writes.flatMap((w) => w.data.read || []).filter((b) => b.type === 'image' && !b.path).length;
+  if (blank) console.log(`  ${blank} pictures have no file and show as "not uploaded".`);
   if (!COMMIT && !REPLACE) return console.log('\nDry run: nothing written.');
 
   const crypto = require('crypto');
@@ -159,6 +173,12 @@ async function undo() {
     await bucket.upload(path.join(FIG_DIR, f), { destination: FIG_ROOT + f, metadata: {
       contentType: /\.png$/i.test(f) ? 'image/png' : 'image/jpeg', cacheControl: 'public, max-age=3600',
       metadata: { firebaseStorageDownloadTokens: crypto.randomUUID(), importBatch: BATCH } } });
+  }
+
+  for (const f of photoPlan) {
+    await bucket.upload(path.join(PHOTO_DIR, f), { destination: PHOTO_ROOT + f, metadata: {
+      contentType: 'image/jpeg', cacheControl: 'public, max-age=3600',
+      metadata: { firebaseStorageDownloadTokens: crypto.randomUUID(), importBatch: PHOTO_BATCH } } });
   }
 
   for (let i = 0; i < oldItems.length; i += 400) {

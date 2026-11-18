@@ -13,8 +13,10 @@
 import os, re, html
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SRC = {k: open(os.path.join(HERE, "..", "sources", f"{k}.txt"), encoding="utf-8").read().split("\n")
-       for k in ("intro", "ac", "it")}
+SOURCES = os.path.join(HERE, "sources") if os.path.isdir(os.path.join(HERE, "sources")) else os.path.join(HERE, "..", "sources")
+BOOKS = ("intro", "ac", "it", "tr", "cm", "fu", "yi")
+SRC = {k: open(os.path.join(SOURCES, f"{k}.txt"), encoding="utf-8").read().split("\n")
+       for k in BOOKS if os.path.exists(os.path.join(SOURCES, f"{k}.txt"))}
 USED = {k: set() for k in SRC}   # line numbers placed in the course
 
 GLYPHS = {"‟": "’", "„": "’", "": "✓", "": "", "": "", "": "", "": "", "": "",

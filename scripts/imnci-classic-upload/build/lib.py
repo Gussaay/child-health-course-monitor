@@ -62,9 +62,11 @@ def pagepic(name, page, caption=""):
     b = {"type": "page", "path": f"imnci-classic/{name}.jpg", "page": page}
     if caption: b["caption"] = caption
     return b
-def photo(caption):
-    """A photograph from the course photograph booklet: not in the module PDF, so it shows as 'not uploaded' until added."""
-    return {"type": "image", "path": "", "caption": caption}
+def photo(n, caption=""):
+    """Photograph n of the IMNCI photograph booklet (Protocol management, Photograph booklet).
+    One shared file in Storage: online-courses/imnci-photos/photo-NN.jpg."""
+    b = {"type": "image", "path": f"imnci-photos/photo-{int(n):02d}.jpg", "caption": caption or f"Photograph {n}"}
+    return b
 def table(rows, caption=None):
     """A classification table: rows = [(colour, [signs, classification])]; colour severe | moderate | mild | note."""
     b = {"type": "table", "rows": [{"colour": c, "cells": list(cells)} for c, cells in rows]}
