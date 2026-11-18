@@ -29,6 +29,21 @@ pkg = {
     "exercises": [e for m in MODS for e in m.EXERCISES],
 }
 
+# ---- activities in the middle of long reading (midreads.py): inserted after a book paragraph, text unchanged
+import midreads
+def _plain(b):
+    if b["type"] == "list": return " ".join(b["items"])
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", str(b.get("text", "")))).strip()
+for _mi, _lessons in midreads.MID.items():
+    for _title, _adds in _lessons.items():
+        _sec = [s_ for s_ in pkg["modules"][_mi - 1]["sections"] if s_["title"] == _title]
+        if len(_sec) != 1: sys.exit(f"midreads: module {_mi} lesson {_title!r} not found once")
+        for _start, _blk in _adds:
+            _rd = _sec[0]["read"]
+            _hit = [i for i, b in enumerate(_rd) if b["type"] in ("paragraph", "rich", "list", "heading") and _plain(b).startswith(_start)]
+            if len(_hit) != 1: sys.exit(f"midreads: {_title!r}: {_start!r} matches {len(_hit)} blocks")
+            _rd.insert(_hit[0] + 1, _blk)
+
 # ---- video links (videos.json: code -> YouTube link)
 VID = json.load(open(os.path.join(HERE, "videos.json")))["videos"]
 for m in pkg["modules"]:
