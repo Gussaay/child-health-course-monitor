@@ -1999,13 +1999,21 @@ export default function App() {
     const refreshCourseDetailsFromServer = useCallback(async (courseId) => {
         if (!courseId || !isOnline()) return;
         try {
-            const [serverParticipants, serverTests] = await Promise.all([
+            // Monitoring cases and observations too: other facilitators enter them
+            // on their own devices, so the copy in this device's cache can be
+            // days behind (e.g. only Day 1 exercises in the course report).
+            const [serverParticipants, serverTests, serverCourseData] = await Promise.all([
                 listAllParticipantsForCourse(courseId, { source: 'server' }),
-                listParticipantTestsForCourse(courseId, { source: 'server' })
+                listParticipantTestsForCourse(courseId, { source: 'server' }),
+                listAllDataForCourse(courseId, { source: 'server' }).catch(() => null)
             ]);
             const activeParticipants = (serverParticipants || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
             const activeTests = (serverTests || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
-            setCourseDetailsCache(prev => ({ ...prev, [courseId]: { ...(prev[courseId] || {}), participants: activeParticipants, participantTests: activeTests } }));
+            const fresh = serverCourseData ? {
+                allObs: (serverCourseData.allObs || []).filter(o => o.isDeleted !== true && o.isDeleted !== "true"),
+                allCases: (serverCourseData.allCases || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"),
+            } : {};
+            setCourseDetailsCache(prev => ({ ...prev, [courseId]: { ...(prev[courseId] || {}), participants: activeParticipants, participantTests: activeTests, ...fresh } }));
         } catch (error) {
             console.error("Server refresh of course participants/tests failed:", error);
         }

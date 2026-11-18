@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { isOperationalGuideCourse } from './ExerciseMonitoring.jsx';
 import { ExerciseParticipantReport } from './OperationalGuideReports.jsx';
+import { isOnline } from '../firebase';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable"; 
 import html2canvas from '../utils/html2canvasLight';
@@ -160,38 +161,44 @@ export function ReportsView({ course, participants, allObs: propAllObs, allCases
             return;
         }
 
+        let cancelled = false;
         const fetchData = async () => {
             if (!course?.id) return;
             setLoading(true);
+            const needsTests = course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC' || course.course_type === 'EmONC';
+            const apply = (courseData, testData) => {
+                if (cancelled) return;
+                setAllObs((courseData.allObs || []).filter(o => o.isDeleted !== true && o.isDeleted !== "true"));
+                setAllCases((courseData.allCases || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"));
+                setAllTests((testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true"));
+            };
             try {
-                // 1. Try Cache First for instant rendering
-                let courseData = await listAllDataForCourse(course.id, { source: 'cache' }).catch(() => ({allObs: [], allCases: []}));
-                let testData = (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC' || course.course_type === 'EmONC') ? await listParticipantTestsForCourse(course.id, { source: 'cache' }).catch(() => []) : [];
+                // 1. The device cache first, for instant rendering.
+                const cached = await listAllDataForCourse(course.id, { source: 'cache' }).catch(() => ({allObs: [], allCases: []}));
+                const cachedTests = needsTests ? await listParticipantTestsForCourse(course.id, { source: 'cache' }).catch(() => []) : [];
+                const hasData = (cached.allObs && cached.allObs.length > 0) || (cached.allCases && cached.allCases.length > 0);
+                if (hasData) { apply(cached, cachedTests); setLoading(false); }
 
-                const hasData = (courseData.allObs && courseData.allObs.length > 0) || (courseData.allCases && courseData.allCases.length > 0);
-
-                // 2. Fetch from Server ONLY if Cache is empty
-                if (!hasData) {
-                    courseData = await listAllDataForCourse(course.id, { source: 'server' }).catch(() => ({allObs: [], allCases: []}));
-                    testData = (course.course_type === 'ICCM' || course.course_type === 'Comprehensive Package For Community Midwives' || course.course_type === 'EENC' || course.course_type === 'EmONC') ? await listParticipantTestsForCourse(course.id, { source: 'server' }).catch(() => []) : [];
+                // 2. Always read the server too. The cache only holds what this
+                // device has already downloaded, so results other facilitators
+                // entered on their own phones (later days, other exercises) were
+                // never shown when the report trusted a non-empty cache.
+                if (!hasData || isOnline()) {
+                    const [fresh, freshTests] = await Promise.all([
+                        listAllDataForCourse(course.id, { source: 'server' }).catch(() => null),
+                        needsTests ? listParticipantTestsForCourse(course.id, { source: 'server' }).catch(() => null) : Promise.resolve([]),
+                    ]);
+                    if (fresh) apply(fresh, freshTests ?? cachedTests);
+                    else if (!hasData) apply(cached, cachedTests);
                 }
-
-
-                // 3. Apply Soft Delete Filter
-                const activeObs = (courseData.allObs || []).filter(o => o.isDeleted !== true && o.isDeleted !== "true");
-                const activeCases = (courseData.allCases || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true");
-                const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
-
-                setAllObs(activeObs);
-                setAllCases(activeCases);
-                setAllTests(activeTests);
             } catch (error) {
                 console.error("Error fetching report data:", error);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
         fetchData();
+        return () => { cancelled = true; };
     }, [course?.id, course?.course_type, propAllObs, propAllCases, propAllTests]);
 
     if (loading) { return <PageSkeleton />; }
