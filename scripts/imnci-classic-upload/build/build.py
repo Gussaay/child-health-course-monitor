@@ -1,10 +1,10 @@
-# Builds the course file for the classic Sudan IMNCI course (Modules 1 to 3) and checks it.
+# Builds the course file for the classic Sudan IMNCI course (Modules 1 to 7) and checks it.
 #   python3 build.py <repo>
 import json, os, re, sys, itertools
 import importlib
 import src
 # Modules in course order; a module is built once its .py file exists.
-ORDER = ["intro", "ac", "it", "tr", "cm", "fu", "yi"]
+ORDER = ["intro", "ac", "it", "tr", "cm", "yi", "fu"]   # facilitator guide order: young infant before follow-up
 HERE = os.path.dirname(os.path.abspath(__file__))
 BUILT = [k for k in ORDER if os.path.exists(os.path.join(HERE, f"{k}.py"))]
 MODS = [importlib.import_module(k) for k in BUILT]
@@ -16,8 +16,9 @@ PHOTOS = os.path.join(REPO, "scripts", "imnci-classic-upload", "photos")
 pkg = {
     "format": "imnci-course-package", "version": 1,
     "about": ("The Sudan IMNCI course (classic, face-to-face course) as self-study lessons: Module 1 Introduction, Module 2 Assess and "
-              "classify the sick child age 2 months up to 5 years, Module 3 Identify treatment (Sudan National Child Health Program "
-              "books, 2023). The book text is kept word for word, in the order and with the activities of the facilitator guide "
+              "classify the sick child age 2 months up to 5 years, Module 3 Identify treatment, Module 4 Treat the child, Module 5 "
+              "Counsel the mother, Module 6 Management of the sick young infant, Module 7 Follow-up (Sudan National Child Health "
+              "Program books, 2023). Photographs come from the IMNCI photograph booklet in Protocol management. The book text is kept word for word, in the order and with the activities of the facilitator guide "
               "(December 2021): demonstrations and facilitator points as notes, drills as flip cards, exercises in the exercise "
               "manager. Videos are placeholders until the narration is recorded."),
     "course": {"title": "Sudan IMNCI course",
@@ -25,6 +26,14 @@ pkg = {
     "modules": [m.MODULE for m in MODS],
     "exercises": [e for m in MODS for e in m.EXERCISES],
 }
+
+# ---- video links (videos.json: code -> YouTube link)
+VID = json.load(open(os.path.join(HERE, "videos.json")))["videos"]
+for m in pkg["modules"]:
+    for s_ in m["sections"]:
+        for b in s_["read"]:
+            if b["type"] == "video" and VID.get(b.get("script")):
+                b["url"] = VID[b["script"]].strip()
 
 # ---- checks
 errors = []

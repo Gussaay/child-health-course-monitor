@@ -1,5 +1,5 @@
 {
- "note": "Photograph booklet of the Sudan IMNCI course. Files are in Storage at online-courses/imnci-photos/photo-NN.jpg. Captions are the explanations printed in the 2023 books; exercise photos carry the exercise question.",
+ "note": "Photograph booklet of the Sudan IMNCI course. Files are in Storage at online-courses/imnci-photos/photo-NN.jpg. Captions are the explanations printed in the 2023 books; exercise photos carry the exercise question. Answers for exercise photographs come from the facilitator guide (Dec 2021), lists of photographs; its young infant photographs 1 to 29 are booklet 60 to 82.",
  "sections": [
   {
    "id": "dehydration",
@@ -82,31 +82,36 @@
    "n": 3,
    "file": "imnci-photos/photo-03.jpg",
    "caption": "Look at the child's eyes. Are they sunken?",
-   "use": "Exercise D"
+   "use": "Exercise D",
+   "answer": "This child has sunken eyes."
   },
   {
    "n": 4,
    "file": "imnci-photos/photo-04.jpg",
    "caption": "Look at the child's eyes. Are they sunken?",
-   "use": "Exercise D"
+   "use": "Exercise D",
+   "answer": "The child has sunken eyes."
   },
   {
    "n": 5,
    "file": "imnci-photos/photo-05.jpg",
    "caption": "Look at the child's eyes. Are they sunken?",
-   "use": "Exercise D"
+   "use": "Exercise D",
+   "answer": "The child does not have sunken eyes."
   },
   {
    "n": 6,
    "file": "imnci-photos/photo-06.jpg",
    "caption": "Look at the child's eyes. Are they sunken?",
-   "use": "Exercise D"
+   "use": "Exercise D",
+   "answer": "The child has sunken eyes."
   },
   {
    "n": 7,
    "file": "imnci-photos/photo-07.jpg",
    "caption": "Photo of a skin pinch. Does the skin go back very slowly?",
-   "use": "Exercise D"
+   "use": "Exercise D",
+   "answer": "The child's skin pinch goes back very slowly."
   },
   {
    "n": 8,
@@ -136,61 +141,71 @@
    "n": 12,
    "file": "imnci-photos/photo-12.jpg",
    "caption": "Is the generalized rash of measles present?",
-   "use": "Exercise H"
+   "use": "Exercise H",
+   "answer": "This child has generalized rash of measles."
   },
   {
    "n": 13,
    "file": "imnci-photos/photo-13.jpg",
    "caption": "Is the generalized rash of measles present?",
-   "use": "Exercise H"
+   "use": "Exercise H",
+   "answer": "This child has scabies. It is not measles rash."
   },
   {
    "n": 14,
    "file": "imnci-photos/photo-14.jpg",
    "caption": "Is the generalized rash of measles present?",
-   "use": "Exercise H"
+   "use": "Exercise H",
+   "answer": "This child has generalized rash of measles."
   },
   {
    "n": 15,
    "file": "imnci-photos/photo-15.jpg",
    "caption": "Is the generalized rash of measles present?",
-   "use": "Exercise H"
+   "use": "Exercise H",
+   "answer": "This child has scabies. It is not measles rash."
   },
   {
    "n": 16,
    "file": "imnci-photos/photo-16.jpg",
    "caption": "Is the generalized rash of measles present?",
-   "use": "Exercise H"
+   "use": "Exercise H",
+   "answer": "This child has tinea versicolor. It is not measles rash."
   },
   {
    "n": 17,
    "file": "imnci-photos/photo-17.jpg",
    "caption": "Is the generalized rash of measles present?",
-   "use": "Exercise H"
+   "use": "Exercise H",
+   "answer": "This child has chicken Pox. it is not measles rash."
   },
   {
    "n": 18,
    "file": "imnci-photos/photo-18.jpg",
    "caption": "Is the generalized rash of measles present?",
-   "use": "Exercise H"
+   "use": "Exercise H",
+   "answer": "This child is malnourished and has normal skin."
   },
   {
    "n": 19,
    "file": "imnci-photos/photo-19.jpg",
    "caption": "Is the generalized rash of measles present?",
-   "use": "Exercise H"
+   "use": "Exercise H",
+   "answer": "This child has heat rash. It is not measles rash,"
   },
   {
    "n": 20,
    "file": "imnci-photos/photo-20.jpg",
    "caption": "Is the generalized rash of measles present?",
-   "use": "Exercise H"
+   "use": "Exercise H",
+   "answer": "This child has generalized rash of measles."
   },
   {
    "n": 21,
    "file": "imnci-photos/photo-21.jpg",
    "caption": "Is the generalized rash of measles present?",
-   "use": "Exercise H"
+   "use": "Exercise H",
+   "answer": "This child has normal skin."
   },
   {
    "n": 22,
@@ -214,19 +229,22 @@
    "n": 25,
    "file": "imnci-photos/photo-25.jpg",
    "caption": "Does the child have mouth ulcers?",
-   "use": "Exercise I"
+   "use": "Exercise I",
+   "answer": "This child has a mouth ulcer."
   },
   {
    "n": 26,
    "file": "imnci-photos/photo-26.jpg",
    "caption": "Does the child have mouth ulcers?",
-   "use": "Exercise I"
+   "use": "Exercise I",
+   "answer": "This child has a mouth ulcer."
   },
   {
    "n": 27,
    "file": "imnci-photos/photo-27.jpg",
    "caption": "Does the child have mouth ulcers?",
-   "use": "Exercise I"
+   "use": "Exercise I",
+   "answer": "This child does not have mouth ulcers."
   },
   {
    "n": 28,
@@ -250,43 +268,50 @@
    "n": 31,
    "file": "imnci-photos/photo-31.jpg",
    "caption": "Does the child have pus draining from the eye? Clouding of the cornea?",
-   "use": "Exercise J"
+   "use": "Exercise J",
+   "answer": "There is pus draining from the eye. Not able to tell whether there is clouding of the cornea."
   },
   {
    "n": 32,
    "file": "imnci-photos/photo-32.jpg",
    "caption": "Does the child have pus draining from the eye? Clouding of the cornea?",
-   "use": "Exercise J"
+   "use": "Exercise J",
+   "answer": "There is no pus draining from the eye. There is no clouding of the cornea."
   },
   {
    "n": 33,
    "file": "imnci-photos/photo-33.jpg",
    "caption": "Does the child have pus draining from the eye? Clouding of the cornea?",
-   "use": "Exercise J"
+   "use": "Exercise J",
+   "answer": "There is pus draining from the eye. Not able to tell whether there is clouding of the cornea."
   },
   {
    "n": 34,
    "file": "imnci-photos/photo-34.jpg",
    "caption": "Does the child have pus draining from the eye? Clouding of the cornea?",
-   "use": "Exercise J"
+   "use": "Exercise J",
+   "answer": "There is no pus draining from the eye. There is clouding of the cornea."
   },
   {
    "n": 35,
    "file": "imnci-photos/photo-35.jpg",
    "caption": "Does the child have pus draining from the eye? Clouding of the cornea?",
-   "use": "Exercise J"
+   "use": "Exercise J",
+   "answer": "There is no pus draining from the eye. There is clouding of the cornea."
   },
   {
    "n": 36,
    "file": "imnci-photos/photo-36.jpg",
    "caption": "Does the child have pus draining from the eye? Clouding of the cornea?",
-   "use": "Exercise J"
+   "use": "Exercise J",
+   "answer": "There is pus draining from the eye. Not able to tell whether there is clouding of the cornea."
   },
   {
    "n": 37,
    "file": "imnci-photos/photo-37.jpg",
    "caption": "Does the child have pus draining from the eye? Clouding of the cornea?",
-   "use": "Exercise J"
+   "use": "Exercise J",
+   "answer": "There is no pus draining from the eye. There is no clouding of the cornea."
   },
   {
    "n": 38,
@@ -310,37 +335,43 @@
    "n": 41,
    "file": "imnci-photos/photo-41.jpg",
    "caption": "Does the child have severe pallor, some pallor or no pallor?",
-   "use": "Exercise N"
+   "use": "Exercise N",
+   "answer": "The child has some palmar pallor."
   },
   {
    "n": 42,
    "file": "imnci-photos/photo-42.jpg",
    "caption": "Does the child have severe pallor, some pallor or no pallor?",
-   "use": "Exercise N"
+   "use": "Exercise N",
+   "answer": "The child has no palmar pallor."
   },
   {
    "n": 43,
    "file": "imnci-photos/photo-43.jpg",
    "caption": "Does the child have severe pallor, some pallor or no pallor? (43a and 43b)",
-   "use": "Exercise N"
+   "use": "Exercise N",
+   "answer": "43a: The child has severe palmar pallor. 43b: The child has no palmar pallor."
   },
   {
    "n": 44,
    "file": "imnci-photos/photo-44.jpg",
    "caption": "Does the child have severe pallor, some pallor or no pallor?",
-   "use": "Exercise N"
+   "use": "Exercise N",
+   "answer": "The child has severe palmar pallor."
   },
   {
    "n": 45,
    "file": "imnci-photos/photo-45.jpg",
    "caption": "Does the child have severe pallor, some pallor or no pallor?",
-   "use": "Exercise N"
+   "use": "Exercise N",
+   "answer": "The child has some palmar pallor."
   },
   {
    "n": 46,
    "file": "imnci-photos/photo-46.jpg",
    "caption": "Does the child have severe pallor, some pallor or no pallor?",
-   "use": "Exercise N"
+   "use": "Exercise N",
+   "answer": "The child has severe palmar pallor."
   },
   {
    "n": 47,
@@ -364,7 +395,8 @@
    "n": 50,
    "file": "imnci-photos/photo-50.jpg",
    "caption": "Oedema of the feet and legs.",
-   "use": "Older booklet"
+   "use": "Exercise N",
+   "answer": "This child has oedema of both feet. (Photograph 48 in the 2023 module, Exercise N.)"
   },
   {
    "n": 51,
@@ -417,8 +449,8 @@
   {
    "n": 59,
    "file": "imnci-photos/photo-59.jpg",
-   "caption": "Oedema of both feet: the pressed area stays dented.",
-   "use": "Exercise N"
+   "caption": "Oedema of the feet (older booklet).",
+   "use": "Older booklet"
   },
   {
    "n": 60,
@@ -442,19 +474,22 @@
    "n": 63,
    "file": "imnci-photos/photo-63.jpg",
    "caption": "Umbilicus: normal, redness or draining pus, or redness extending to the skin of the abdomen?",
-   "use": "Exercise A"
+   "use": "Exercise A",
+   "answer": "Redness extending to the skin of abdomen."
   },
   {
    "n": 64,
    "file": "imnci-photos/photo-64.jpg",
    "caption": "Umbilicus: normal, redness or draining pus, or redness extending to the skin of the abdomen?",
-   "use": "Exercise A"
+   "use": "Exercise A",
+   "answer": "This is a normal umbilicus."
   },
   {
    "n": 65,
    "file": "imnci-photos/photo-65.jpg",
    "caption": "Umbilicus: normal, redness or draining pus, or redness extending to the skin of the abdomen?",
-   "use": "Exercise A"
+   "use": "Exercise A",
+   "answer": "This umbilicus is draining pus."
   },
   {
    "n": 66,
@@ -490,25 +525,29 @@
    "n": 71,
    "file": "imnci-photos/photo-71.jpg",
    "caption": "Look for each sign of good attachment. Is the infant well attached?",
-   "use": "Exercise D"
+   "use": "Exercise D",
+   "answer": "Chin touching breast: no. Mouth wide open: no. Lower lip turned outward: yes. More areola above: no (equal above and below). Not well attached."
   },
   {
    "n": 72,
    "file": "imnci-photos/photo-72.jpg",
    "caption": "Look for each sign of good attachment. Is the infant well attached?",
-   "use": "Exercise D"
+   "use": "Exercise D",
+   "answer": "Chin touching breast: yes. Mouth wide open: yes. Lower lip turned outward: yes. More areola above: yes. Good attachment."
   },
   {
    "n": 73,
    "file": "imnci-photos/photo-73.jpg",
    "caption": "Look for each sign of good attachment. Is the infant well attached?",
-   "use": "Exercise D"
+   "use": "Exercise D",
+   "answer": "Chin touching breast: yes (almost). Mouth wide open: yes. Lower lip turned outward: yes. More areola above: yes. Good attachment."
   },
   {
    "n": 74,
    "file": "imnci-photos/photo-74.jpg",
    "caption": "Look for each sign of good attachment. Is the infant well attached?",
-   "use": "Exercise D"
+   "use": "Exercise D",
+   "answer": "Chin touching breast: yes. Mouth wide open: no. Lower lip turned outward: no. More areola above: no (more below). Not well attached; lower lip turned in."
   },
   {
    "n": 75,
@@ -544,19 +583,22 @@
    "n": 80,
    "file": "imnci-photos/photo-80.jpg",
    "caption": "Look for each sign of good positioning. Is the attachment good?",
-   "use": "Exercise G"
+   "use": "Exercise G",
+   "answer": "Head and body straight: no. Facing breast: no, body turned away. Body close: no. Supporting whole body: no, only neck and shoulders. Not well attached: mouth not wide open, lower lip not turned out, more areola below than above."
   },
   {
    "n": 81,
    "file": "imnci-photos/photo-81.jpg",
    "caption": "Look for each sign of good positioning. Is the attachment good?",
-   "use": "Exercise G"
+   "use": "Exercise G",
+   "answer": "Head and body straight: yes. Facing breast: yes. Body close: yes, very close. Supporting whole body: yes. Good attachment, chin touching breast."
   },
   {
    "n": 82,
    "file": "imnci-photos/photo-82.jpg",
    "caption": "Look for each sign of good positioning. Is the attachment good?",
-   "use": "Exercise G"
+   "use": "Exercise G",
+   "answer": "Head and neck twisted and bent forward, not straight with body. Body turned away, not close; only neck and shoulders supported. Not well attached: mouth not wide open."
   }
  ]
 }

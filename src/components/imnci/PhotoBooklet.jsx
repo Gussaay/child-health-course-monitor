@@ -77,6 +77,12 @@ export default function PhotoBooklet() {
                                 </div>
                                 <BookImage block={{ type: 'image', path: p.file, alt: `${p.n}` }} />
                                 <p className="text-sm text-slate-700">{p.caption}</p>
+                                {p.answer && (
+                                    <details className="mt-1 text-sm">
+                                        <summary className="cursor-pointer text-sky-800 font-semibold">{t('clinical_ui.protocol.photos.answer', 'Show the answer')}</summary>
+                                        <p className="text-slate-700 mt-1" data-testid="photo-answer">{p.answer}</p>
+                                    </details>
+                                )}
                             </div>
                         ))}
                     </div>

@@ -594,10 +594,10 @@ A23 = lesson("Exercise H: the rash of measles",
 ], (48, 48))
 
 exI = qz("sudan-imnci-ac-ex-i-mouth", "Exercise I: mouth ulcers (photographs)", [text_of(M, 1625, 1626), text_of(M, 1639, 1640)], [
-    open_q(f"i{n}", f"Photograph {n}. Does the child have mouth ulcers? Answer Yes or No.",
-           ["Your facilitator gives you the answer sheet: check your answer with it."],
-           "Mouth ulcers are not only found inside the mouth but may also be found on the child's lips and tongue.") for n in (25, 26, 27)
+    mcq(f"i{n}", f"Photograph {n}. Does the child have mouth ulcers?", ["Yes", "No"], a, w) for n, a, w in (
+        (25, 0, "This child has a mouth ulcer."), (26, 0, "This child has a mouth ulcer."), (27, 1, "This child does not have mouth ulcers."))
 ], 5)
+EXERCISES[-1]["narrative"].append("Answers from the facilitator guide's list of photographs of the sick child.")
 mark(M, 1642, 1650)
 
 A24 = lesson("Measles complications: mouth ulcers, and Exercise I",
@@ -926,10 +926,12 @@ A37 = lesson("Assess and classify anaemia",
 ], (79, 80))
 
 exN = qz("sudan-imnci-ac-ex-n-pallor", "Exercise N: palmar pallor and oedema (photographs)", [text_of(M, 2600, 2602), text_of(M, 2618, 2619)], [
-    *[open_q(f"n{p}", f"Photograph {p}. Does the child have severe pallor, some pallor or no pallor?",
-             ["Your facilitator gives you the answer sheet: check your answer with it."]) for p in ("41", "42", "43a", "43b", "44", "45", "46")],
-    open_q("n48", "Photograph 48. Does the child have oedema of the feet?", ["Your facilitator gives you the answer sheet: check your answer with it."]),
+    *[mcq(f"n{p}", f"Photograph {p}. Does the child have severe pallor, some pallor or no pallor?", ["Severe pallor", "Some pallor", "No pallor"], a,
+          f"The child has {['severe', 'some', 'no'][a]} palmar pallor.")
+      for p, a in (("41", 1), ("42", 2), ("43a", 0), ("43b", 2), ("44", 0), ("45", 1), ("46", 0))],
+    mcq("n48", "Photograph 48 (photograph 50 in the booklet). Does the child have oedema of the feet?", ["Yes", "No"], 0, "This child has oedema of both feet."),
 ], 8)
+EXERCISES[-1]["narrative"].append("Answers from the facilitator guide's list of photographs of the sick child.")
 mark(M, 2620, 2633)
 
 A38 = lesson("Exercise N: palmar pallor",
@@ -940,7 +942,7 @@ A38 = lesson("Exercise N: palmar pallor",
     photo(40, "Photograph 40: the child on the left (40a) has no palmar pallor; the child on the right (40b) has severe palmar pallor."),
     *T(M, 2604, 2616, headings=False),
     *[photo(p, "Photograph 43 (43a and 43b)" if p == 43 else "") for p in (41, 42, 43, 44, 45, 46)],
-    photo(59, "Photograph 48 in the book (photograph 59 in the booklet): does the child have oedema of the feet?"),
+    photo(50, "Photograph 48 in the book (photograph 50 in the booklet): does the child have oedema of the feet?"),
     exN,
     *T(M, 2635, 2635),
 ], (81, 81))

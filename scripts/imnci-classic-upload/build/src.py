@@ -25,6 +25,8 @@ BULLET = re.compile(r"^(\s*)(?:([•▪●►*])\s*|(o)\s+|
 HEAD = re.compile(r"^(\d+(\.\d+)*\.?\s+[A-Za-z]|(ASK|LOOK|COUNT|PINCH|OFFER|FEEL|MEASURE|DO|CHECK|ASSESS)\b[^.]{0,90}[:?]?$)")
 VERB = re.compile(r"^(ASK|LOOK|COUNT|PINCH|OFFER|FEEL|MEASURE|CHECK)\b[ A-Z&,]*:")
 PAGE = re.compile(r"^\s*\d{1,3}\s*$")
+# A line that is only an answer space ("……………", "-----", "_____"): not text, so it is left out.
+FILLER = re.compile(r"^[\s.…_\-–—�]*$")
 
 def clean(s):
     for a, b in GLYPHS.items():
@@ -58,12 +60,13 @@ def parse(raw_lines, headings=True):
     def flush_list():
         nonlocal lst
         if lst:
-            items.append(("list", [(lv, join(t)) for lv, t in lst]))
+            items.append(("list", [(x[0], join(x[1])) for x in lst if x is not None]))
             lst = None
     last_blank = False
     raw_lines = list(raw_lines)
     # A sentence broken by a page end: drop the blank lines and page number between the two halves.
     keep = []
+    raw_lines = ["" if (FILLER.match(r) and r.strip()) else r for r in raw_lines]
     for i, raw in enumerate(raw_lines):
         if PAGE.match(raw):
             continue
