@@ -185,7 +185,7 @@ const flushMonthlyUsage = () => {
 };
 const flushMonthlyWhenHidden = () => { if (document.visibilityState === 'hidden') flushMonthlyUsage(); };
 
-const dispatchOpEvent = (type, count = 1, collection = 'other', source) => {
+export const dispatchOpEvent = (type, count = 1, collection = 'other', source) => {
   if (count > 0 && currentUser) {
     recordOperation(type, count, { collection, source });
     window.dispatchEvent(new CustomEvent('firestoreOperation', { detail: { type, count } }));
@@ -313,7 +313,7 @@ const addToPendingQueue = (actionName) => {
 // cost nothing, so `metadata.fromCache` decides, not the options passed in.
 // A server query is billed one read per document, or one read if it
 // returned nothing.
-const servedByServer = (snapshot) => snapshot?.metadata?.fromCache === false;
+export const servedByServer = (snapshot) => snapshot?.metadata?.fromCache === false;
 
 // The modular getDocs() ignores a second argument, so `{ source: 'cache' }`
 // is honoured here by reading the device cache directly.

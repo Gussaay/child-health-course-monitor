@@ -1,9 +1,10 @@
 // hooks/liveCourseCore.js
-// The listeners behind useLiveCourseDetails (see useLiveCourse.js), loaded
-// only when a course is open so they stay out of the first-load bundle.
+// Live listeners (open course, approval queues, problem reports, daily
+// evaluation days). Loaded only when a page needs them, so they stay out of
+// the first-load bundle.
 import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
-import { getDocs, deltaChanges, listAllDataForCourse } from '../data.js';
+import { getDocs, deltaChanges, listAllDataForCourse, listAllParticipantsForCourse, listParticipantTestsForCourse, servedByServer, dispatchOpEvent } from '../data.js';
 import { newestServerStamp } from '../DataContext.jsx';
 
 // --- LIVE COURSE RECORDS ---
@@ -73,7 +74,25 @@ const withCorrectness = (cases, obs) => cases.map((c) => {
 });
 
 
-export function startLiveCourse({ courseId, base, loaded, setCourseDetailsCache, onFallback }) {
+// Fallback when the live listeners can't run (index not built, rules): one
+// full server read of the open course, as the app did before.
+async function refreshCourseFromServer(courseId, setCourseDetailsCache) {
+    try {
+        const [participants, participantTests, data] = await Promise.all([
+            listAllParticipantsForCourse(courseId, { source: 'server' }),
+            listParticipantTestsForCourse(courseId, { source: 'server' }),
+            listAllDataForCourse(courseId, { source: 'server' }),
+        ]);
+        setCourseDetailsCache((prev) => ({ ...prev, [courseId]: { ...(prev[courseId] || {}),
+            participants: (participants || []).filter(alive), participantTests: (participantTests || []).filter(alive),
+            allObs: (data?.allObs || []).filter(alive), allCases: (data?.allCases || []).filter(alive) } }));
+    } catch (e) {
+        console.warn('[live course] server refresh failed:', e?.message || e);
+    }
+}
+
+export function startLiveCourse({ courseId, base, loaded, setCourseDetailsCache }) {
+    const onFallback = (id) => refreshCourseFromServer(id, setCourseDetailsCache);
     let stopped = false;
     const unsubs = [];
     const stopAll = () => { unsubs.splice(0).forEach((u) => { try { u(); } catch { /* closed */ } }); };
@@ -159,4 +178,59 @@ export function startLiveCourse({ courseId, base, loaded, setCourseDetailsCache,
     });
 
     return () => { stopped = true; stopAll(); };
+}
+
+/**
+ * Live pending approval queue (status == "pending") of one submissions
+ * collection. The queue is small, so the first answer costs one read per
+ * pending request and each new, approved or rejected request one more.
+ * idField: "submissionId" for facility submissions, "id" for the others.
+ * Returns the unsubscribe; call it on unmount.
+ */
+export function subscribePendingSubmissions(col, onRows, onError, idField = 'id') {
+    const q = query(collection(db, col), where("status", "==", "pending"));
+    let first = true;
+    return onSnapshot(q, (snap) => {
+        if (servedByServer(snap)) {
+            const changed = snap.docChanges().filter(ch => !ch.doc.metadata.hasPendingWrites).length;
+            dispatchOpEvent('read', first ? Math.max(1, changed) : changed, col, 'live');
+            first = false;
+        }
+        onRows(snap.docs.map(d => ({ [idField]: d.id, ...d.data() })));
+    }, onError);
+}
+
+// New problem reports as they arrive: only reports sent after sinceMs are
+// read (one read each), so an open Admin tab costs nothing while none come in.
+export function subscribeNewProblemReports(sinceMs, onRows, onError) {
+    const q = query(collection(db, "problemReports"), where("createdAt", ">", Timestamp.fromMillis(Math.max(0, sinceMs || 0))));
+    return onSnapshot(q, (snap) => {
+        if (servedByServer(snap)) dispatchOpEvent('read', snap.docChanges().length, 'problemReports', 'live');
+        const rows = snap.docChanges().filter(ch => ch.type !== 'removed' && !ch.doc.metadata.hasPendingWrites).map(ch => ({ id: ch.doc.id, ...ch.doc.data() }));
+        if (rows.length) onRows(rows);
+    }, onError);
+}
+
+// The course's daily evaluation days, live. A course has a handful (one per
+// day), so the first answer costs that many reads and each change one more.
+export function subscribeDailyEvalForms(courseId, onRows, onError) {
+    const q = query(collection(db, "dailyEvalForms"), where("courseId", "==", courseId));
+    return onSnapshot(q, (snap) => {
+        if (servedByServer(snap)) dispatchOpEvent('read', Math.max(1, snap.docChanges().length), 'dailyEvalForms', 'live');
+        onRows(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(f => !f.isDeleted));
+    }, onError);
+}
+
+// Approval queues kept live in DataContext once loaded: a new request, or one
+// approved or rejected on another device, shows at once. Only pending
+// requests are read, so the cost is the size of each queue.
+const PENDING_LIVE = { pendingFacilitatorSubmissions: 'facilitatorSubmissions', pendingFederalSubmissions: 'federalCoordinatorSubmissions', pendingStateSubmissions: 'coordinatorSubmissions', pendingLocalitySubmissions: 'localityCoordinatorSubmissions' };
+export function startPendingQueues(keys, onRows) {
+    const unsubs = keys.filter((k) => PENDING_LIVE[k]).map((k) => {
+        try {
+            return subscribePendingSubmissions(PENDING_LIVE[k], (rows) => onRows(k, rows),
+                (e) => console.warn(`[live] ${k} listener stopped:`, e?.code || e?.message || e));
+        } catch { return null; }
+    });
+    return () => unsubs.forEach((u) => { try { u?.(); } catch { /* closed */ } });
 }

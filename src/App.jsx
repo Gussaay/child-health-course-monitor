@@ -1994,33 +1994,6 @@ export default function App() {
         setDataScope({ level: levelFromPermissions(permissions), states: userStates, localities: userLocalities });
     }, [user, permissionsLoading, permissions, userStates, userLocalities, setDataScope]);
 
-    // The offline cache only holds what THIS device last read. Tests and scores
-    // entered on another phone (or a cache that never held this course's tests,
-    // which comes back as an empty list rather than a miss) stay invisible until
-    // the server is asked, so every cache hit is followed by a server refresh.
-    const refreshCourseDetailsFromServer = useCallback(async (courseId) => {
-        if (!courseId || !isOnline()) return;
-        try {
-            // Monitoring cases and observations too: other facilitators enter them
-            // on their own devices, so the copy in this device's cache can be
-            // days behind (e.g. only Day 1 exercises in the course report).
-            const [serverParticipants, serverTests, serverCourseData] = await Promise.all([
-                listAllParticipantsForCourse(courseId, { source: 'server' }),
-                listParticipantTestsForCourse(courseId, { source: 'server' }),
-                listAllDataForCourse(courseId, { source: 'server' }).catch(() => null)
-            ]);
-            const activeParticipants = (serverParticipants || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
-            const activeTests = (serverTests || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
-            const fresh = serverCourseData ? {
-                allObs: (serverCourseData.allObs || []).filter(o => o.isDeleted !== true && o.isDeleted !== "true"),
-                allCases: (serverCourseData.allCases || []).filter(c => c.isDeleted !== true && c.isDeleted !== "true"),
-            } : {};
-            setCourseDetailsCache(prev => ({ ...prev, [courseId]: { ...(prev[courseId] || {}), participants: activeParticipants, participantTests: activeTests, ...fresh } }));
-        } catch (error) {
-            console.error("Server refresh of course participants/tests failed:", error);
-        }
-    }, []);
-
     useEffect(() => {
         if (selectedCourseId && !courseDetailsCache[selectedCourseId]?.allObs && !courseDetailsLoading) {
             const fetchFullCourseDetails = async () => {
@@ -2067,7 +2040,7 @@ export default function App() {
             };
             fetchFullCourseDetails();
         }
-    }, [selectedCourseId, courseDetailsCache, courseDetailsLoading, refreshCourseDetailsFromServer]); 
+    }, [selectedCourseId, courseDetailsCache, courseDetailsLoading]); 
 
     const canSeeAllData = useMemo(() => permissions.canUseSuperUserAdvancedFeatures || permissions.canUseFederalManagerAdvancedFeatures, [permissions]);
 
@@ -2490,7 +2463,7 @@ export default function App() {
         } finally { 
             setLoading(false); setCourseDetailsLoading(false); 
         }
-    }, [navigate, courseDetailsCache, courseDetailsLoading, t, refreshCourseDetailsFromServer]);
+    }, [navigate, courseDetailsCache, courseDetailsLoading, t]);
 
     const handleOpenCourseForTestForm = useCallback(async (courseId) => {
         setLoading(true); setSelectedCourseId(courseId); setSelectedParticipantId(null); 
@@ -2517,7 +2490,7 @@ export default function App() {
         } finally { 
             setLoading(false); 
         }
-    }, [navigate, t, refreshCourseDetailsFromServer]); 
+    }, [navigate, t]); 
 
     const handleApproveSubmission = useCallback(async (submission) => {
         if (await confirmDialog(t('app_extra.confirm.approve', 'Approve {{name}}?', { name: submission.name }))) {
@@ -3220,7 +3193,7 @@ case 'meetings':
         <div className="min-h-screen bg-surface flex flex-col pt-0 relative">
             {/* A shared link opened in a phone browser: offer the Android app. */}
             <GetAppBanner />
-            {selectedCourseId && user && <Suspense fallback={null}><LiveCourseSync courseId={selectedCourseId} details={courseDetailsCache[selectedCourseId]} user={user} setCourseDetailsCache={setCourseDetailsCache} onFallback={refreshCourseDetailsFromServer} /></Suspense>}
+            {selectedCourseId && user && <Suspense fallback={null}><LiveCourseSync courseId={selectedCourseId} details={courseDetailsCache[selectedCourseId]} user={user} setCourseDetailsCache={setCourseDetailsCache} /></Suspense>}
             
             <style>{`
                 @media (max-width: 768px) {

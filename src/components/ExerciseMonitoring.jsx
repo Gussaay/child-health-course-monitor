@@ -11,6 +11,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { listCasesForCourse, upsertCaseAndObservations } from '../data.js';
 import { Pencil } from 'lucide-react';
+import { useLiveCases } from '../hooks/useLiveCases.js';
 import { confirmDialog } from './dialogs';
 import { Button, EmptyState, Select, SkeletonCard, Spinner } from './CommonComponents';
 
@@ -99,6 +100,9 @@ export default function OperationalGuideExerciseMonitoring({ course, participant
             .then(list => setCases(list.filter(c => c.setting === EXERCISE_SETTING)))
             .catch(() => setCases([]));
     }, [course.id]);
+
+    // Exercises other facilitators record show up while the form is open.
+    useLiveCases({ courseId: course.id, setCases, keep: (c) => c.setting === EXERCISE_SETTING });
 
     const saved = useMemo(() => {
         const m = {};

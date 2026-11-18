@@ -33,7 +33,7 @@ function useAppActive() {
 
 const FIELDS = ['participants', 'participantTests', 'allCases', 'allObs'];
 
-export function useLiveCourseDetails({ courseId, details, user, setCourseDetailsCache, onFallback }) {
+export function useLiveCourseDetails({ courseId, details, user, setCourseDetailsCache }) {
     const active = useAppActive();
     const detailsRef = useRef(details);
     detailsRef.current = details;
@@ -43,7 +43,7 @@ export function useLiveCourseDetails({ courseId, details, user, setCourseDetails
 
     useEffect(() => {
         if (!courseId || !user || !active || !loaded) return undefined;
-        const stop = startLiveCourse({ courseId, base: detailsRef.current, loaded, setCourseDetailsCache, onFallback });
+        const stop = startLiveCourse({ courseId, base: detailsRef.current, loaded, setCourseDetailsCache });
         return () => stop();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [courseId, user, active, loaded]);

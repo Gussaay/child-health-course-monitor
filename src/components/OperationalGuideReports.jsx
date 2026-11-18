@@ -10,7 +10,7 @@ import { ClipboardCheck, MessageSquareText, Users } from 'lucide-react';
 import './chartSetup';
 import { CHART_COLORS } from './chartSetup';
 import { listDailyEvalForms, listDailyEvalResponses } from '../data.js';
-import { subscribeCourseRecords } from '../hooks/liveCourseCore.js';
+import { subscribeCourseRecords, subscribeDailyEvalForms } from '../hooks/liveCourseCore.js';
 import { Card, EmptyState, Select, SkeletonCard } from './CommonComponents';
 import { DAYS, EXERCISE_SETTING, OPERATIONAL_GUIDE_EXERCISES, TOTAL_MAX, exNo, pctClass, summarize } from './ExerciseMonitoring.jsx';
 import { DEFAULT_GENERAL } from './DailyEvaluation.jsx';
@@ -191,6 +191,20 @@ export function DailyEvaluationDashboard({ course }) {
             })
             .catch(e => { setError(e?.message || 'Could not load the evaluation results.'); setData({ forms: [], responses: [] }); });
     }, [course.id]);
+
+    // Days added or edited from the Share dialog (on any device) show here too.
+    useEffect(() => {
+        if (!data || !course.id) return undefined;
+        let unsub = null;
+        try {
+            unsub = subscribeDailyEvalForms(course.id, (forms) => {
+                forms.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+                setData(d => (d ? { ...d, forms } : d));
+                setFormId(cur => cur || forms[forms.length - 1]?.id || '');
+            }, (e) => console.warn('[live] daily evaluation days listener stopped:', e?.code || e?.message || e));
+        } catch { /* the loaded list stays */ }
+        return () => { try { unsub?.(); } catch { /* closed */ } };
+    }, [course.id, data !== null]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // New answers arrive live while the dashboard is open: the listener asks
     // only for answers sent after the newest one already loaded, so an idle
