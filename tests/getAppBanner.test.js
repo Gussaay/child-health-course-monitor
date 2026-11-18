@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => false } }));
+vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => false, isPluginAvailable: () => false }, registerPlugin: () => ({}) }));
 
 const { appIntentUrl, shouldShowGetAppBanner } = await import('../src/components/GetAppBanner.jsx');
 
@@ -13,10 +13,13 @@ describe('get-the-app banner', () => {
         expect(shouldShowGetAppBanner(base)).toBe(true);
         expect(shouldShowGetAppBanner({ ...base, pathname: '/monitor/course/c1' })).toBe(true);
     });
-    it('stays hidden inside the app, on other phones and on non-shared pages', () => {
+    it('shows on any other page too, since a phone browser means no app', () => {
+        expect(shouldShowGetAppBanner({ ...base, pathname: '/' })).toBe(true);
+        expect(shouldShowGetAppBanner({ ...base, pathname: '/online-courses' })).toBe(true);
+    });
+    it('stays hidden inside the app, on other phones and on training links', () => {
         expect(shouldShowGetAppBanner({ ...base, native: true })).toBe(false);
         expect(shouldShowGetAppBanner({ ...base, userAgent: IPHONE })).toBe(false);
-        expect(shouldShowGetAppBanner({ ...base, pathname: '/' })).toBe(false);
         expect(shouldShowGetAppBanner({ ...base, pathname: '/training/c1' })).toBe(false);
     });
     it('stays hidden for a week after it is closed', () => {

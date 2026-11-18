@@ -1668,7 +1668,9 @@
       "test_refresh_failed": "Failed to refresh test data.",
       "syncing": "Checking and syncing offline data...",
       "sync_done": "All offline data synced.",
-      "sync_failed": "Sync failed or timed out."
+      "sync_failed": "Sync failed or timed out.",
+      "app_link_copied": "The app download link was copied.",
+      "share_app_failed": "Could not share the app: {{message}}"
     },
     "confirm": {
       "approve": "Approve {{name}}?",
@@ -8443,7 +8445,8 @@
     "updates": "Check for updates",
     "close": "Close menu",
     "version": "App version",
-    "apk_version": "Installed APK: {{version}} (build {{build}})"
+    "apk_version": "Installed APK: {{version}} (build {{build}})",
+    "share_app": "Share the app"
   },
   "app": {
     "back": "Back",
@@ -8461,7 +8464,8 @@
     "offline_pill": "Offline",
     "no_internet_pill": "No internet",
     "offline_pill_label": "Offline. Showing saved data; changes sync later.",
-    "download_offline": "No internet right now, so this file cannot be downloaded. Try again when you are back online."
+    "download_offline": "No internet right now, so this file cannot be downloaded. Try again when you are back online.",
+    "subtitle_ch": "Online Course and Guidelines"
   },
   "imci": {
     "training": {

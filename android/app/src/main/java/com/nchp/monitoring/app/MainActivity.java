@@ -8,6 +8,8 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         BackgroundUpdateWorker.openActivities++;
+        // "Share the app" (AppSharePlugin): sends this APK through the share sheet.
+        registerPlugin(AppSharePlugin.class);
         super.onCreate(savedInstanceState);
         // New over-the-air releases are also fetched while the app is closed.
         BackgroundUpdateWorker.schedule(this);
