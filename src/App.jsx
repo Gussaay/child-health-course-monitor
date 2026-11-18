@@ -168,6 +168,7 @@ import { STATE_LOCALITIES } from './components/constants.js';
 import SudanMiniMap from './components/SudanMiniMap';
 import { Card, Button, Spinner, Toast, Modal, Input, PageSkeleton, Skeleton, MenuTile, MenuGrid } from './components/CommonComponents';
 import { auth, db, isOnline, getConnectivity } from './firebase';
+import { useLiveCourseDetails } from './hooks/useLiveCourse.js';
 import OfflinePill from './components/OfflinePill';
 
 import { doc, getDoc, getDocFromServer, waitForPendingWrites, onSnapshot } from 'firebase/firestore';
@@ -2019,6 +2020,11 @@ export default function App() {
         }
     }, []);
 
+    // The open course stays live: participants, test scores, monitoring and
+    // exercise results changed on any device show here (hooks/useLiveCourse.js).
+    // If its listeners can't run, one full server read is the fallback.
+    useLiveCourseDetails({ courseId: selectedCourseId, details: courseDetailsCache[selectedCourseId], user, setCourseDetailsCache, onFallback: refreshCourseDetailsFromServer });
+
     useEffect(() => {
         if (selectedCourseId && !courseDetailsCache[selectedCourseId]?.allObs && !courseDetailsLoading) {
             const fetchFullCourseDetails = async () => {
@@ -2048,7 +2054,6 @@ export default function App() {
 
                     if (!isCacheMiss) {
                         processAndSet(participantsData, allCourseData, finalReport, testData);
-                        refreshCourseDetailsFromServer(selectedCourseId);
                     } else {
                         const [serverParticipants, serverAllCourse, serverFinalReport, serverTestData] = await Promise.all([
                             listAllParticipantsForCourse(selectedCourseId, { source: 'server' }).catch(()=>[]),
@@ -2437,7 +2442,7 @@ export default function App() {
         setSelectedCourseId(courseId);
         navigate('courseReport', { courseId });
 
-        if (courseDetailsCache[courseId]?.allObs && courseDetailsCache[courseId]?.participants && courseDetailsCache[courseId]?.participantTests) { refreshCourseDetailsFromServer(courseId); return; }
+        if (courseDetailsCache[courseId]?.allObs && courseDetailsCache[courseId]?.participants && courseDetailsCache[courseId]?.participantTests) { return; } // kept current by useLiveCourseDetails
         // Already being fetched by another path; its result lands in the same
         // cache entry and the open page picks it up.
         if (courseDetailsLoading) return;
@@ -2477,7 +2482,6 @@ export default function App() {
             const activeFinalReport = (finalFinalReport && finalFinalReport.isDeleted !== true && finalFinalReport.isDeleted !== "true") ? finalFinalReport : null;
             
             setCourseDetailsCache(prev => ({ ...prev, [courseId]: { participants: activeParticipants, allObs: activeObs, allCases: activeCases, finalReport: activeFinalReport, participantTests: activeTests } }));
-            if (!isCacheMiss) refreshCourseDetailsFromServer(courseId);
         } catch (error) { 
             console.error("Error loading course report data:", error); 
             setToast({ show: true, message: t('app_extra.toast.course_report_load_failed', 'Failed to load course report data. Please try again.'), type: 'error' }); 
@@ -2509,7 +2513,6 @@ export default function App() {
             const activeParticipants = (participantsData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
             const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
             setCourseDetailsCache(prev => ({ ...prev, [courseId]: { ...(prev[courseId] || {}), participants: activeParticipants, participantTests: activeTests } }));
-            if (servedFromCache) refreshCourseDetailsFromServer(courseId);
             setActiveCoursesTab('test-dashboard'); setView('courses');
         } catch (error) { 
             console.error("Error loading data for test form:", error); 
@@ -2700,7 +2703,7 @@ export default function App() {
                 onOpenReport={handleOpenCourseReport} onOpenTestForm={handleOpenCourseForTestForm} 
                 onOpenAttendanceManager={(courseId) => { setSelectedCourseId(courseId); navigate('attendanceManager', { courseId }); }}
                 userStates={userStates} userLocalities={userLocalities} activeCoursesTab={activeCoursesTab} setActiveCoursesTab={setActiveCoursesTab}
-                selectedCourse={selectedCourse} participants={courseDetails.participants || []} participantTests={courseDetails.participantTests || []} 
+                selectedCourse={selectedCourse} participants={courseDetails.participants || []} participantTests={courseDetails.participantTests || []} allObs={courseDetails.allObs} allCases={courseDetails.allCases} 
                 onOpenParticipantReport={(pid) => { setSelectedCourseId(selectedCourse.id); setSelectedParticipantId(pid); navigate('participantReport'); }}
                 onAddFinalReport={handleAddFinalReport} onEditFinalReport={handleEditFinalReport}
                 selectedParticipantId={selectedParticipantId} onSetSelectedParticipantId={setSelectedParticipantId}
@@ -2778,7 +2781,7 @@ case 'meetings':
                 />
             ) : null;
 
-            case 'courseReport': return permissions.canViewCourse ? (selectedCourse && <CourseReportView course={selectedCourse} onSaveFinalReport={permissions.canUseFederalManagerAdvancedFeatures ? handleSaveFinalReport : undefined} onFinalReportChanged={(saved) => setCourseDetailsCache(prev => ({ ...prev, [selectedCourse.id]: { ...prev[selectedCourse.id], finalReport: saved } }))} isLoadingData={courseDetails.participants === null || courseDetails.allObs === null} loadFailed={!!courseDetails.loadFailed} onRetry={() => { setCourseDetailsCache(prev => { const next = { ...prev }; delete next[selectedCourse.id]; return next; }); handleOpenCourseReport(selectedCourse.id); }} participants={courseDetails.participants} allObs={courseDetails.allObs} allCases={courseDetails.allCases} finalReportData={courseDetails.finalReport} onBack={goBack} onEditFinalReport={handleEditFinalReport} onDeletePdf={handleDeletePdf} onViewParticipantReport={(pid) => { setSelectedParticipantId(pid); navigate('participantReport'); }} onShare={(course) => handleShare(course, 'course')} setToast={setToast} allHealthFacilities={healthFacilities} />) : null;
+            case 'courseReport': return permissions.canViewCourse ? (selectedCourse && <CourseReportView course={selectedCourse} onSaveFinalReport={permissions.canUseFederalManagerAdvancedFeatures ? handleSaveFinalReport : undefined} onFinalReportChanged={(saved) => setCourseDetailsCache(prev => ({ ...prev, [selectedCourse.id]: { ...prev[selectedCourse.id], finalReport: saved } }))} isLoadingData={courseDetails.participants === null || courseDetails.allObs === null} loadFailed={!!courseDetails.loadFailed} onRetry={() => { setCourseDetailsCache(prev => { const next = { ...prev }; delete next[selectedCourse.id]; return next; }); handleOpenCourseReport(selectedCourse.id); }} participants={courseDetails.participants} allObs={courseDetails.allObs} allCases={courseDetails.allCases} participantTests={courseDetails.participantTests || undefined} finalReportData={courseDetails.finalReport} onBack={goBack} onEditFinalReport={handleEditFinalReport} onDeletePdf={handleDeletePdf} onViewParticipantReport={(pid) => { setSelectedParticipantId(pid); navigate('participantReport'); }} onShare={(course) => handleShare(course, 'course')} setToast={setToast} allHealthFacilities={healthFacilities} />) : null;
 
             case 'facilitatorForm':
                 return permissions.canManageHumanResource ? (<FacilitatorForm 

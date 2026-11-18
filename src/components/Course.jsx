@@ -1717,6 +1717,7 @@ export function CourseManagementView({
     activeCoursesTab, setActiveCoursesTab, selectedCourse,
     participants,
     participantTests,
+    allObs: liveAllObs, allCases: liveAllCases,
     onOpenParticipantReport, onAddFinalReport, onEditFinalReport,
     selectedParticipantId, onSetSelectedParticipantId, onBatchUpdate,
     loadingDetails,
@@ -2605,7 +2606,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
 
 
 
-        {activeCoursesTab === 'reports' && selectedCourse && <Suspense fallback={<PageSkeleton />}><ReportsView course={selectedCourse} participants={participants} /></Suspense>}
+        {activeCoursesTab === 'reports' && selectedCourse && <Suspense fallback={<PageSkeleton />}><ReportsView course={selectedCourse} participants={participants} allObs={liveAllObs || undefined} allCases={liveAllCases || undefined} allTests={participantTests} /></Suspense>}
         
         {activeCoursesTab === 'enter-test-scores' && selectedCourse && (
             <CourseTestForm

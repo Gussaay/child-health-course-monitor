@@ -1,0 +1,22 @@
+name: Deploy Firestore indexes
+
+# One-off: adds the composite indexes in firestore.indexes.json (courseId +
+# lastUpdatedAt / createdAt) that the live course listeners need. It runs only
+# when the branch below is pushed, so it never runs with the main deploy.
+# Without --force, firebase-tools only adds indexes: indexes that exist in the
+# project but not in the file are listed and left alone.
+on:
+  push:
+    branches:
+      - claude/deploy-live-course-indexes
+
+jobs:
+  indexes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}'
+      - name: Deploy Firestore indexes (add only)
+        run: npx --yes firebase-tools@13 deploy --only firestore:indexes --project imnci-courses-monitor --non-interactive
