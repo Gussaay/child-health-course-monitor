@@ -5,6 +5,8 @@ import { Buffer } from 'buffer';
 import { Capacitor } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { registerSW } from 'virtual:pwa-register';
+// Before anything reads the address: a shared course link (/learn/<id>).
+import './utils/courseLink';
 
 import App from './App';
 import { DataProvider } from './DataContext';

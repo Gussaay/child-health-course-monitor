@@ -8096,6 +8096,12 @@
         "module_n": "Module {{n}}",
         "open": "Open in the learners' course",
         "missing": "This part of \"{{course}}\" is not in the app yet."
+      },
+      "share": {
+        "button": "Share link",
+        "message": "Online course: {{title}}",
+        "copied": "Course link copied. Paste it in WhatsApp, SMS or e-mail.",
+        "failed": "Could not share the link."
       }
     },
     "exercises": {

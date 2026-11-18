@@ -28,6 +28,8 @@
                 <data android:pathPrefix="/mentorship/" />
                 <data android:pathPrefix="/facilities/" />
                 <data android:pathPrefix="/submit/" />
+                <!-- A shared online course: /learn/<courseId> (src/utils/courseLink.js). -->
+                <data android:pathPrefix="/learn/" />
             </intent-filter>
         </activity>
     </application>

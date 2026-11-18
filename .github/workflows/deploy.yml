@@ -431,6 +431,22 @@ jobs:
             fi
           done
 
+      # Each app checks its own manifest from inside the phone (origin
+      # https://localhost), so the browser rules apply: without an
+      # Access-Control-Allow-Origin header the check fails with "Failed to
+      # fetch" and the app never updates. That is what happened to the EmONC
+      # and CH Sudan apps when firebase.json only covered /latest/.
+      - name: Check the site apps' update files can be read by the apps
+        run: |
+          for P in latest/update.json latest-emonc/update.json latest-ch/update.json native-version.json native-version-emonc.json native-version-ch.json; do
+            H=$(curl -fsS -D - -o /dev/null -H "Origin: https://localhost" "https://imnci-courses-monitor.web.app/$P?t=$(date +%s)" || echo "")
+            if printf '%s' "$H" | grep -qi '^access-control-allow-origin: \*'; then
+              echo "$P: OK"
+            else
+              echo "::warning::$P cannot be read by the app (no CORS header or missing). Check firebase.json."
+            fi
+          done
+
   # ---------------------------------------------------------------------------
   # Cloud Functions. Independent of the web app on purpose: the two have failed
   # for unrelated reasons (an IAM grant, then a missing npm install, then an

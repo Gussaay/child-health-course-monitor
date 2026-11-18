@@ -108,7 +108,7 @@
           ]
         },
         {
-          "source": "/latest/update.json",
+          "source": "/latest*/update.json",
           "headers": [
             {
               "key": "Cache-Control",
@@ -125,16 +125,20 @@
           ]
         },
         {
-          "source": "/native-version.json",
+          "source": "/native-version*.json",
           "headers": [
             {
               "key": "Cache-Control",
               "value": "no-cache, no-store, must-revalidate"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
             }
           ]
         },
         {
-          "source": "/latest/*.zip",
+          "source": "/latest*/*.zip",
           "headers": [
             {
               "key": "Cache-Control",
@@ -151,7 +155,7 @@
           ]
         },
         {
-          "source": "/latest/**",
+          "source": "/latest*/**",
           "headers": [
             {
               "key": "Access-Control-Allow-Origin",
@@ -305,7 +309,7 @@
           ]
         },
         {
-          "source": "/latest/update.json",
+          "source": "/latest*/update.json",
           "headers": [
             {
               "key": "Cache-Control",
@@ -322,16 +326,20 @@
           ]
         },
         {
-          "source": "/native-version.json",
+          "source": "/native-version*.json",
           "headers": [
             {
               "key": "Cache-Control",
               "value": "no-cache, no-store, must-revalidate"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
             }
           ]
         },
         {
-          "source": "/latest/*.zip",
+          "source": "/latest*/*.zip",
           "headers": [
             {
               "key": "Cache-Control",
@@ -348,7 +356,7 @@
           ]
         },
         {
-          "source": "/latest/**",
+          "source": "/latest*/**",
           "headers": [
             {
               "key": "Access-Control-Allow-Origin",
@@ -475,7 +483,7 @@
           ]
         },
         {
-          "source": "/latest/update.json",
+          "source": "/latest*/update.json",
           "headers": [
             {
               "key": "Cache-Control",
@@ -492,16 +500,20 @@
           ]
         },
         {
-          "source": "/native-version.json",
+          "source": "/native-version*.json",
           "headers": [
             {
               "key": "Cache-Control",
               "value": "no-cache, no-store, must-revalidate"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
             }
           ]
         },
         {
-          "source": "/latest/*.zip",
+          "source": "/latest*/*.zip",
           "headers": [
             {
               "key": "Cache-Control",
@@ -518,7 +530,7 @@
           ]
         },
         {
-          "source": "/latest/**",
+          "source": "/latest*/**",
           "headers": [
             {
               "key": "Access-Control-Allow-Origin",

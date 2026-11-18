@@ -12,7 +12,7 @@ import { useFormTitle } from '../../../utils/pageChrome';
 
 export function EnrolGate() {
     const { t } = useTranslation();
-    const { accessOf, back, enrolments, openCourse } = useCourseScreen();
+    const { accessOf, back, enrolments, openCourse, focusId } = useCourseScreen();
     const [busy, setBusy] = useState(false);
     const access = accessOf(openCourse);
     useFormTitle(openCourse.title, '');
@@ -26,9 +26,11 @@ export function EnrolGate() {
 
     return (
         <div className="max-w-xl mx-auto space-y-4">
-            <button onClick={back} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-sky-700">
-                <ArrowLeft size={15} className="rtl:rotate-180" /> {t('imnci_ui.courses.main.all_courses', 'All courses')}
-            </button>
+            {!focusId && (
+                <button onClick={back} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-sky-700">
+                    <ArrowLeft size={15} className="rtl:rotate-180" /> {t('imnci_ui.courses.main.all_courses', 'All courses')}
+                </button>
+            )}
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 text-center space-y-3" data-testid="enrol-gate">
                 <span className={`mx-auto w-12 h-12 rounded-full grid place-items-center text-white ${access === 'requested' ? 'bg-amber-500' : access === 'declined' ? 'bg-red-600' : 'bg-slate-700'}`}>
                     {access === 'requested' ? <Clock size={22} /> : access === 'declined' ? <XCircle size={22} /> : <Lock size={22} />}
