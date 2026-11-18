@@ -12,6 +12,119 @@
    "order": 1,
    "sections": [
     {
+     "title": "How to study this course",
+     "read": [
+      {
+       "type": "note",
+       "text": "Learn how this course works, so every activity counts. This lesson takes about 5 minutes.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "When you treat a sick child, what do you decide from?",
+       "options": [
+        "My memory",
+        "The signs I find and the chart booklet",
+        "What the mother asks for"
+       ],
+       "answer": 1,
+       "feedback": [
+        "Even experienced health workers use the chart booklet.",
+        "Right. You classify from the signs, using the chart booklet.",
+        "Listen to the mother, but classify from the signs."
+       ]
+      },
+      {
+       "type": "steps",
+       "title": "How each lesson works",
+       "steps": [
+        {
+         "title": "Start with a question",
+         "text": "Most lessons open with a short question. Answer it before you read; there is no penalty."
+        },
+        {
+         "title": "Do every activity",
+         "text": "Open the cards, sort, answer the questions and work the cases. A tick shows each one is done."
+        },
+        {
+         "title": "Unlock the next lesson",
+         "text": "The next lesson opens when every activity in this one is done. Modules open in order too."
+        },
+        {
+         "title": "Come back any time",
+         "text": "Your place is saved. When you come back, the lesson offers to take you to where you stopped."
+        }
+       ]
+      },
+      {
+       "type": "steps",
+       "title": "How to practise with cases",
+       "steps": [
+        {
+         "title": "Read the child's story",
+         "text": "Each case is a named child: age, weight, temperature and what the mother says."
+        },
+        {
+         "title": "Open the chart booklet table",
+         "text": "Use the pink button \"See the chart booklet table\". Read from the top row down."
+        },
+        {
+         "title": "Open the recording form",
+         "text": "The child's filled form shows what the health worker found and wrote."
+        },
+        {
+         "title": "Decide, then read the feedback",
+         "text": "Each option explains why it is right or wrong. Your first try is recorded; you can try again."
+        }
+       ]
+      },
+      {
+       "type": "booklet",
+       "part": "child",
+       "download": true,
+       "categories": [
+        "danger",
+        "cough",
+        "diarrhea",
+        "persistent_diarrhea",
+        "dysentery",
+        "fever",
+        "measles",
+        "ear",
+        "malnutrition",
+        "anemia"
+       ],
+       "caption": "The chart booklet in the app is the Sudan national chart booklet. Open the whole booklet to read it, or print it or save it as a PDF to keep beside you while you study."
+      },
+      {
+       "type": "question",
+       "text": "You answer a case wrongly the first time. What happens?",
+       "options": [
+        "The lesson is locked",
+        "You see why, and you can try again",
+        "You must restart the module"
+       ],
+       "explanation": "",
+       "answer": 1,
+       "feedback": [
+        "Nothing is locked by a wrong answer.",
+        "Right. Read the feedback, then try again. Your first try is kept for your progress page.",
+        "You only repeat the question."
+       ],
+       "label": "Check yourself"
+      },
+      {
+       "type": "note",
+       "text": "Finish every lesson of a module to earn its badge. Your progress page shows your lessons, your badges and how often you were right the first time.",
+       "label": "Badges"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 1
+    },
+    {
      "title": "Why integrated case management?",
      "read": [
       {
@@ -94,7 +207,7 @@
      "practise": [],
      "bookFromPage": 4,
      "bookToPage": 5,
-     "order": 1
+     "order": 2
     },
     {
      "title": "The case management process",
@@ -219,7 +332,7 @@
      "practise": [],
      "bookFromPage": 6,
      "bookToPage": 7,
-     "order": 2
+     "order": 3
     },
     {
      "title": "Purpose of this training course",
@@ -303,7 +416,7 @@
      "practise": [],
      "bookFromPage": 7,
      "bookToPage": 7,
-     "order": 3
+     "order": 4
     },
     {
      "title": "Course methods and materials",
@@ -375,7 +488,7 @@
      "practise": [],
      "bookFromPage": 8,
      "bookToPage": 8,
-     "order": 4
+     "order": 5
     },
     {
      "title": "Selecting the right chart",
@@ -479,7 +592,7 @@
      "practise": [],
      "bookFromPage": 9,
      "bookToPage": 9,
-     "order": 5
+     "order": 6
     },
     {
      "title": "Glossary: Abscess to Holoendemic",
@@ -525,7 +638,7 @@
      "practise": [],
      "bookFromPage": 10,
      "bookToPage": 13,
-     "order": 6
+     "order": 7
     },
     {
      "title": "Glossary: Hospital to Whipworm",
@@ -571,7 +684,40 @@
      "practise": [],
      "bookFromPage": 13,
      "bookToPage": 18,
-     "order": 7
+     "order": 8
+    },
+    {
+     "title": "Module 1 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>IMNCI looks at the whole child, not only the main complaint.</li><li>Assess, classify, identify treatment, treat, counsel and follow up.</li><li>Choose the right chart by the child's age.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for any illness, choosing the right chart for the child's age: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 9
     }
    ]
   },
@@ -761,6 +907,22 @@
        "type": "note",
        "text": "Ask and look for the five general danger signs, and know what to do when a child has one.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "A child sleeps on her mother's lap. Is she lethargic?",
+       "options": [
+        "Yes",
+        "Not necessarily: wake her and look",
+        "No, sleeping children are never sick"
+       ],
+       "answer": 1,
+       "feedback": [
+        "Sleeping is not the same as lethargic.",
+        "Right. Look at how she wakes and responds.",
+        "A sleeping child can be lethargic. You must look."
+       ]
       },
       {
        "type": "heading",
@@ -962,6 +1124,219 @@
      "order": 4
     },
     {
+     "title": "Practise: general danger signs",
+     "read": [
+      {
+       "type": "note",
+       "text": "Find the general danger signs in three children, and in a conversation with a mother.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Ask about the danger signs",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "Good morning. What is the problem with your son today?"
+          },
+          {
+           "who": "Mother",
+           "text": "He has had a cough and fever for three days."
+          },
+          {
+           "who": "You",
+           "text": "Is he able to drink or breastfeed?"
+          },
+          {
+           "who": "Mother",
+           "text": "Yes, he breastfeeds, but less than usual."
+          }
+         ],
+         "question": "What do you ask next?",
+         "options": [
+          "Does he vomit everything?",
+          "Has he had his vaccines?",
+          "How many children do you have?"
+         ],
+         "answer": 0,
+         "explanation": "Ask about each general danger sign in turn before anything else.",
+         "feedback": [
+          "Right. Ask about each danger sign, one at a time.",
+          "Immunization is checked later, after assess and classify.",
+          "This is not part of checking for danger signs."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "Mother",
+           "text": "No, he keeps the milk down."
+          },
+          {
+           "who": "You",
+           "text": "Has he had convulsions during this illness?"
+          },
+          {
+           "who": "Mother",
+           "text": "Yes, yesterday evening he shook all over for a short time."
+          }
+         ],
+         "question": "What does this mean?",
+         "options": [
+          "He has a general danger sign",
+          "It is only from the fever, so it does not count",
+          "Ask again tomorrow"
+         ],
+         "answer": 0,
+         "explanation": "Convulsions during this illness are a general danger sign: the child needs urgent attention.",
+         "feedback": [
+          "Right.",
+          "Convulsions in this illness count whatever the cause.",
+          "A child with a danger sign must not wait."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Does the child have a general danger sign?",
+       "part": "child",
+       "categories": [
+        "danger"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Huda",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 11,
+          "temp": 37.2,
+          "problem": "Vomiting"
+         },
+         "text": "Huda's mother says Huda has vomited since this morning. When you ask, she says Huda vomits everything she eats or drinks, even water. Huda is awake and looks at you. She has had no convulsions.",
+         "record": [
+          {
+           "title": "Check for general danger signs",
+           "lines": [
+            "Not able to drink or breastfeed: no",
+            "Vomits everything: yes",
+            "Convulsions: no",
+            "Lethargic or unconscious: no",
+            "Convulsing now: no"
+           ],
+           "classify": [
+            "General danger sign present"
+           ]
+          }
+         ],
+         "question": "Does Huda have a general danger sign?",
+         "options": [
+          "Yes: she vomits everything",
+          "No: she is awake and alert",
+          "Not sure until you count her breaths"
+         ],
+         "feedback": [
+          "Right. A child who cannot keep anything down vomits everything. This is a general danger sign.",
+          "Being awake does not rule out a danger sign. Huda vomits everything, even water.",
+          "Breathing is part of the cough assessment. The danger signs are checked first, and Huda already has one."
+         ],
+         "explanation": "A child with any general danger sign needs URGENT attention: complete the assessment and any pre-referral treatment immediately, then refer.",
+         "answer": 0
+        },
+        {
+         "child": {
+          "name": "Adam",
+          "age": "3 years",
+          "visit": "initial",
+          "weight": 13,
+          "temp": 38.6,
+          "problem": "Fever"
+         },
+         "text": "Adam has had fever for 2 days. His father says that last night Adam's arms and legs jerked and he did not respond for a few minutes. Now Adam is drinking and looks at you.",
+         "record": [
+          {
+           "title": "Check for general danger signs",
+           "lines": [
+            "Not able to drink: no",
+            "Vomits everything: no",
+            "Convulsions: yes, last night",
+            "Lethargic or unconscious: no"
+           ],
+           "classify": [
+            "General danger sign present"
+           ]
+          }
+         ],
+         "question": "Adam is drinking and alert now. Does he have a general danger sign?",
+         "options": [
+          "No, because he is alert now",
+          "Yes: convulsions during this illness",
+          "Only if he convulses in the clinic"
+         ],
+         "feedback": [
+          "A convulsion during this illness is a general danger sign even if the child looks well now.",
+          "Right. Convulsions during the current illness are a general danger sign.",
+          "Convulsing now is one sign; a history of convulsions in this illness is another. Either one is a danger sign."
+         ],
+         "explanation": "Ask about convulsions in every sick child: \"Has the child had convulsions during this illness?\"",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Mai",
+          "age": "13 months",
+          "visit": "initial",
+          "weight": 9,
+          "temp": 37.0,
+          "problem": "Cough"
+         },
+         "text": "Mai has a cough. She is sleeping on her mother's lap. When her mother speaks to her, she wakes, looks around and breastfeeds well. She has not vomited and has had no convulsions.",
+         "record": [
+          {
+           "title": "Check for general danger signs",
+           "lines": [
+            "Able to breastfeed: yes",
+            "Vomits everything: no",
+            "Convulsions: no",
+            "Lethargic or unconscious: no, wakes easily"
+           ],
+           "classify": [
+            "No general danger sign"
+           ]
+          }
+         ],
+         "question": "Is Mai lethargic?",
+         "options": [
+          "Yes: she was asleep",
+          "No: she wakes easily and breastfeeds",
+          "Yes, because she has a cough"
+         ],
+         "feedback": [
+          "A sleeping child is not lethargic if she wakes when spoken to and looks around. Wake the child and look.",
+          "Right. A lethargic child is not alert when she should be and does not look at her mother. Mai wakes and feeds.",
+          "Cough is not a danger sign. Check each danger sign on its own."
+         ],
+         "explanation": "Mai has no general danger sign. Go on to assess her cough.",
+         "answer": 1
+        }
+       ]
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 5
+    },
+    {
      "title": "The Recording Form and Exercise A",
      "read": [
       {
@@ -1021,7 +1396,7 @@
      "practise": [],
      "bookFromPage": 9,
      "bookToPage": 11,
-     "order": 5
+     "order": 6
     },
     {
      "title": "Assess cough or difficult breathing: how long, and count the breaths",
@@ -1030,6 +1405,22 @@
        "type": "note",
        "text": "Ask about cough or difficult breathing and its duration, count the breaths in one minute and decide if there is fast breathing.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "A child of 8 months breathes 48 times a minute. Is that fast?",
+       "options": [
+        "Yes",
+        "No",
+        "It depends on the child's age"
+       ],
+       "answer": 2,
+       "feedback": [
+        "48 is below the cut-off for 8 months (50).",
+        "Right for 8 months, but think about why.",
+        "Right. The cut-off is 50 from 2 up to 12 months and 40 from 12 months up to 5 years. At 8 months 48 is not fast."
+       ]
       },
       {
        "type": "heading",
@@ -1173,7 +1564,7 @@
      "practise": [],
      "bookFromPage": 12,
      "bookToPage": 13,
-     "order": 6
+     "order": 7
     },
     {
      "title": "Look for chest indrawing, stridor and wheeze",
@@ -1284,7 +1675,7 @@
      "practise": [],
      "bookFromPage": 14,
      "bookToPage": 15,
-     "order": 7
+     "order": 8
     },
     {
      "title": "Classification tables",
@@ -1362,7 +1753,7 @@
      "practise": [],
      "bookFromPage": 16,
      "bookToPage": 16,
-     "order": 8
+     "order": 9
     },
     {
      "title": "Classify cough or difficult breathing",
@@ -1426,6 +1817,34 @@
         "cough"
        ],
        "caption": "The classification table in your chart booklet (Sudan national protocol)."
+      },
+      {
+       "type": "classcards",
+       "title": "Cough or difficult breathing: the three classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "SEVERE PNEUMONIA OR VERY SEVERE DISEASE",
+         "action": "Refer urgently",
+         "signs": "Any general danger sign or Stridor in a calm child.",
+         "treat": "Give first dose of an appropriate antibiotic; Treat to prevent low blood sugar; Refer URGENTLY to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "PNEUMONIA",
+         "action": "Treat and follow up",
+         "signs": "Chest indrawing or Fast breathing",
+         "treat": "Give appropriate antibiotics for 5 days; If wheezing (or disappeared after rapidly acting bronchodilator) give an inhaled bronchodilator for 5 days; Soothe the throat and relieve the cough with a safe remedy; If coughing for 14 days or more refer to the hospital for further assessment; Advise mother when to return immediately"
+        },
+        {
+         "colour": "green",
+         "label": "COUGH OR COLD",
+         "action": "Home care",
+         "signs": "No signs of pneumonia or very severe disease.",
+         "treat": "If coughing for 14 days or more refer for assessment; Soothe the throat and relieve cough with a safe remedy; Treat wheezing if present; Advise mother when to return immediately; Follow up in 5 days if not improving"
+        }
+       ]
       },
       {
        "type": "note",
@@ -1549,7 +1968,7 @@
      "practise": [],
      "bookFromPage": 16,
      "bookToPage": 17,
-     "order": 9
+     "order": 10
     },
     {
      "title": "Exercise B: classify cough or difficult breathing",
@@ -1604,7 +2023,7 @@
      "practise": [],
      "bookFromPage": 18,
      "bookToPage": 21,
-     "order": 10
+     "order": 11
     },
     {
      "title": "Exercise C: video exercise",
@@ -1678,7 +2097,356 @@
      "practise": [],
      "bookFromPage": 22,
      "bookToPage": 23,
-     "order": 11
+     "order": 12
+    },
+    {
+     "title": "Practise: classify cough or difficult breathing",
+     "read": [
+      {
+       "type": "note",
+       "text": "Count, decide and classify cough or difficult breathing for four children, and find an error on a recording form.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "Which sign alone puts a child with cough in the pink row?",
+       "options": [
+        "Fast breathing",
+        "Chest indrawing",
+        "Stridor in a calm child"
+       ],
+       "answer": 2,
+       "feedback": [
+        "Fast breathing is in the yellow row.",
+        "In the Sudan chart booklet, chest indrawing is in the yellow row.",
+        "Right. Stridor in a calm child, or any general danger sign."
+       ]
+      },
+      {
+       "type": "drill",
+       "title": "Count the breaths: Ali, 2 years",
+       "url": "",
+       "videoTitle": "Counting breaths: Ali, 2 years (video to be recorded)",
+       "text": "Count the breaths for one full minute while the child is calm, then decide.",
+       "given": "Until this clip is recorded: you watch Ali's chest and count 43 breaths in one full minute.",
+       "count": {
+        "answer": 43,
+        "tolerance": 2,
+        "unit": "breaths per minute",
+        "question": "How many breaths did you count in one minute?"
+       },
+       "question": "Ali is 2 years old. Does he have fast breathing?",
+       "options": [
+        "Yes",
+        "No"
+       ],
+       "answer": 0,
+       "feedback": [
+        "Right. From 12 months up to 5 years, 40 breaths per minute or more is fast breathing.",
+        "Ali is 2 years old: 40 or more is fast. 43 is fast breathing."
+       ]
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Talk with Omer's mother",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "Does Omer have a cough or difficult breathing?"
+          },
+          {
+           "who": "Mother",
+           "text": "Yes, he has coughed for four days."
+          },
+          {
+           "who": "You",
+           "text": "I will count his breaths now. Can you keep him calm on your lap?"
+          }
+         ],
+         "question": "Why should Omer be calm?",
+         "options": [
+          "A crying child breathes faster, so the count would be wrong",
+          "So he does not cough",
+          "It does not matter"
+         ],
+         "answer": 0,
+         "explanation": "Count the breaths when the child is calm. Look for chest indrawing and listen for stridor when calm too.",
+         "feedback": [
+          "Right.",
+          "Coughing does not change the count much; crying does.",
+          "It matters: crying changes breathing."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "He breathes 36 times a minute, and I see his lower chest go in when he breathes in."
+          },
+          {
+           "who": "Mother",
+           "text": "Is that serious?"
+          }
+         ],
+         "question": "What do you say?",
+         "options": [
+          "\"He has pneumonia. I will give you a medicine for 5 days and show you how to give it.\"",
+          "\"No, the breathing is not fast, so it is a cold.\"",
+          "\"He must go to hospital now.\""
+         ],
+         "answer": 0,
+         "explanation": "Chest indrawing with no danger sign or stridor classifies PNEUMONIA: oral amoxicillin for 5 days and follow-up in 3 days.",
+         "feedback": [
+          "Right.",
+          "Chest indrawing is a sign of pneumonia even when breathing is not fast.",
+          "He has no general danger sign and no stridor, so he can be treated at home."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Classify cough or difficult breathing",
+       "part": "child",
+       "categories": [
+        "danger",
+        "cough"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Amna",
+          "age": "18 months",
+          "visit": "initial",
+          "weight": 10,
+          "temp": 37.0,
+          "problem": "Cough for 3 days"
+         },
+         "text": "Amna has coughed for 3 days. She has no general danger sign. You count 46 breaths in one minute. There is no chest indrawing and no stridor.",
+         "record": [
+          {
+           "title": "Check for general danger signs",
+           "lines": [
+            "None"
+           ]
+          },
+          {
+           "title": "Does the child have cough or difficult breathing? Yes",
+           "lines": [
+            "For how long? 3 days",
+            "Count the breaths: 46 per minute",
+            "Fast breathing: yes",
+            "Chest indrawing: no",
+            "Stridor: no"
+           ],
+           "classify": [
+            "PNEUMONIA"
+           ]
+          }
+         ],
+         "question": "How do you classify Amna's cough?",
+         "options": [
+          "SEVERE PNEUMONIA OR VERY SEVERE DISEASE",
+          "PNEUMONIA",
+          "COUGH OR COLD"
+         ],
+         "feedback": [
+          "That needs a general danger sign or stridor in a calm child. Amna has neither.",
+          "Right. At 18 months fast breathing is 40 breaths per minute or more. 46 is fast breathing.",
+          "Look at her age: from 12 months up to 5 years, 40 or more is fast. 46 is fast breathing, a sign of pneumonia."
+         ],
+         "explanation": "Fast breathing: 50 or more from 2 up to 12 months; 40 or more from 12 months up to 5 years.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Khalid",
+          "age": "7 months",
+          "visit": "initial",
+          "weight": 7.5,
+          "temp": 37.3,
+          "problem": "Cough for 2 days"
+         },
+         "text": "Khalid has coughed for 2 days. He has no general danger sign. You count 48 breaths in one minute. There is no chest indrawing and no stridor.",
+         "record": [
+          {
+           "title": "Does the child have cough or difficult breathing? Yes",
+           "lines": [
+            "For how long? 2 days",
+            "Count the breaths: 48 per minute",
+            "Fast breathing: no",
+            "Chest indrawing: no",
+            "Stridor: no"
+           ],
+           "classify": [
+            "COUGH OR COLD"
+           ]
+          }
+         ],
+         "question": "How do you classify Khalid's cough?",
+         "options": [
+          "PNEUMONIA",
+          "COUGH OR COLD",
+          "SEVERE PNEUMONIA OR VERY SEVERE DISEASE"
+         ],
+         "feedback": [
+          "Check the cut-off for his age. From 2 up to 12 months fast breathing is 50 or more. 48 is not fast.",
+          "Right. Khalid is 7 months old, so fast breathing is 50 or more. 48 is not fast, and he has no other sign.",
+          "Khalid has no general danger sign and no stridor."
+         ],
+         "explanation": "Use the child's age to choose the cut-off. The same count can be fast for one child and not for another.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Sara",
+          "age": "3 years",
+          "visit": "initial",
+          "weight": 13,
+          "temp": 37.8,
+          "problem": "Cough and not drinking"
+         },
+         "text": "Sara has coughed for 5 days. Her mother says that since yesterday Sara is not able to drink anything. You count 44 breaths per minute and see chest indrawing.",
+         "record": [
+          {
+           "title": "Check for general danger signs",
+           "lines": [
+            "Not able to drink or breastfeed: yes"
+           ],
+           "classify": [
+            "General danger sign present"
+           ]
+          },
+          {
+           "title": "Does the child have cough or difficult breathing? Yes",
+           "lines": [
+            "For how long? 5 days",
+            "44 breaths per minute: fast breathing",
+            "Chest indrawing: yes",
+            "Stridor: no"
+           ],
+           "classify": [
+            "SEVERE PNEUMONIA OR VERY SEVERE DISEASE"
+           ]
+          }
+         ],
+         "question": "How do you classify Sara's cough?",
+         "options": [
+          "PNEUMONIA, because of fast breathing and chest indrawing",
+          "SEVERE PNEUMONIA OR VERY SEVERE DISEASE",
+          "COUGH OR COLD"
+         ],
+         "feedback": [
+          "Fast breathing and chest indrawing are signs of pneumonia, but read the table from the top: Sara has a general danger sign.",
+          "Right. Any general danger sign puts a child with cough in the pink row. Sara is not able to drink.",
+          "Sara has several signs. Start at the pink row."
+         ],
+         "explanation": "Read the classification table from the top down and take the first row that fits.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Omer",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 12,
+          "temp": 37.1,
+          "problem": "Cough"
+         },
+         "text": "Omer has coughed for 4 days. He has no general danger sign. You count 36 breaths per minute, but you see that his lower chest wall goes in when he breathes in. He is calm and has no stridor.",
+         "record": [
+          {
+           "title": "Does the child have cough or difficult breathing? Yes",
+           "lines": [
+            "For how long? 4 days",
+            "36 breaths per minute: not fast",
+            "Chest indrawing: yes",
+            "Stridor: no"
+           ],
+           "classify": [
+            "PNEUMONIA"
+           ]
+          }
+         ],
+         "question": "Which signs does Omer have that need treatment? Select all that apply.",
+         "options": [
+          "Fast breathing",
+          "Chest indrawing",
+          "Stridor in a calm child",
+          "None: his breathing is not fast"
+         ],
+         "feedback": [
+          "36 is not fast at 2 years: fast is 40 or more.",
+          "Right. Chest indrawing is a sign of pneumonia, even when the breathing is not fast.",
+          "Omer is calm and you hear no stridor.",
+          "His breathing is not fast, but he has chest indrawing."
+         ],
+         "explanation": "In the Sudan chart booklet, chest indrawing OR fast breathing classifies PNEUMONIA. Omer needs oral amoxicillin for 5 days.",
+         "answers": [
+          1
+         ]
+        }
+       ]
+      },
+      {
+       "type": "spot",
+       "title": "Find the error on Hamid's form",
+       "part": "child",
+       "text": "A health worker filled in this part of the form for Hamid, 2 years. One entry is wrong. Tap it.",
+       "child": {
+        "name": "Hamid",
+        "age": "2 years",
+        "visit": "initial",
+        "weight": 12,
+        "temp": 37.2,
+        "problem": "Cough for 4 days"
+       },
+       "record": [
+        {
+         "title": "Does the child have cough or difficult breathing? Yes",
+         "lines": [
+          {
+           "text": "For how long? 4 days",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Count the breaths: 44 per minute",
+           "why": "The count is right."
+          },
+          {
+           "text": "Fast breathing: yes",
+           "why": "Right: at 2 years, 40 or more is fast breathing."
+          },
+          {
+           "text": "Chest indrawing: no",
+           "why": "This entry is right."
+          }
+         ],
+         "classify": [
+          {
+           "text": "COUGH OR COLD",
+           "why": "Hamid has fast breathing, so the classification is PNEUMONIA, not cough or cold.",
+           "error": true
+          }
+         ]
+        }
+       ],
+       "explanation": "The signs were recorded well, but the classification did not follow them. Read the table row by row."
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 13
     },
     {
      "title": "Diarrhoea: what it is, and its types",
@@ -1766,7 +2534,7 @@
      "practise": [],
      "bookFromPage": 24,
      "bookToPage": 24,
-     "order": 12
+     "order": 14
     },
     {
      "title": "Assess diarrhoea: how long, blood, general condition, sunken eyes",
@@ -1775,6 +2543,22 @@
        "type": "note",
        "text": "Ask about diarrhoea, its duration and blood in the stool; look at the child's general condition and for sunken eyes.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "Which of these is a sign of dehydration you can check without equipment?",
+       "options": [
+        "Skin pinch",
+        "Body temperature",
+        "Breathing rate"
+       ],
+       "answer": 0,
+       "feedback": [
+        "Right. You need only your fingers and your eyes.",
+        "Temperature is for fever.",
+        "Breathing is for cough."
+       ]
       },
       {
        "type": "heading",
@@ -1864,7 +2648,7 @@
      "practise": [],
      "bookFromPage": 25,
      "bookToPage": 26,
-     "order": 13
+     "order": 15
     },
     {
      "title": "Offer fluid and pinch the skin",
@@ -1933,13 +2717,33 @@
          "text": "Pinch for one second and then release. Look to see if the skin pinch goes back very slowly (longer than 2 seconds), slowly (less than 2 seconds) or immediately."
         }
        ]
+      },
+      {
+       "type": "steps",
+       "title": "Look for signs of dehydration, with photographs",
+       "steps": [
+        {
+         "title": "Look at the eyes",
+         "text": "Are they sunken? Ask the mother if the eyes look unusual to her.",
+         "image": "imnci-photos/photo-01.jpg"
+        },
+        {
+         "title": "Pinch the skin of the abdomen",
+         "text": "Halfway between the umbilicus and the side, with the fold up and down the body. Hold for one second, then release.",
+         "image": "imnci-photos/photo-02.jpg"
+        },
+        {
+         "title": "Decide how the skin goes back",
+         "text": "Very slowly (longer than 2 seconds), slowly, or immediately."
+        }
+       ]
       }
      ],
      "see": [],
      "practise": [],
      "bookFromPage": 26,
      "bookToPage": 27,
-     "order": 14
+     "order": 16
     },
     {
      "title": "Exercise D: signs of dehydration in photographs",
@@ -2011,7 +2815,7 @@
      "practise": [],
      "bookFromPage": 28,
      "bookToPage": 28,
-     "order": 15
+     "order": 17
     },
     {
      "title": "Classify dehydration",
@@ -2096,6 +2900,34 @@
        "caption": "The dehydration table in your chart booklet (Sudan national protocol)."
       },
       {
+       "type": "classcards",
+       "title": "Dehydration: the three classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "SEVERE DEHYDRATION",
+         "action": "Refer urgently",
+         "signs": "Two of the following signs: Lethargic or unconscious Sunken eyes Not able to drink or drinking poorly Skin pinch goes back very slowly.",
+         "treat": "If child has no other severe classification: Give fluid for severe dehydration (Plan C); If child has another severe classification: Refer URGENTLY to hospital with mother giving frequent sips of ORS on the way; Advise the mother to continue breastfeeding; If child is 2 years or older and there is cholera in your area, give antibiotic for cholera"
+        },
+        {
+         "colour": "yellow",
+         "label": "SOME DEHYDRATION",
+         "action": "Treat and follow up",
+         "signs": "Two of the following signs: Restless, irritable Sunken eyes Drinks eagerly, thirsty Skin pinch goes back slowly.",
+         "treat": "Give fluid for some dehydration (Plan B); Give Zinc; If child has a severe classification: Refer URGENTLY to hospital with mother giving frequent sips of ORS on the way; Advise the mother to continue breastfeeding; Advise mother when to return immediately"
+        },
+        {
+         "colour": "green",
+         "label": "NO DEHYDRATION",
+         "action": "Home care",
+         "signs": "Not enough signs to classify as severe or some dehydration.",
+         "treat": "Give fluid and food to treat diarrhoea at home (Plan A); Give Zinc; Advise mother when to return immediately; Follow-up in 5 days if not improving"
+        }
+       ]
+      },
+      {
        "type": "paragraph",
        "text": "To classify the child's dehydration, look at the table begin with pink row:"
       },
@@ -2136,7 +2968,7 @@
      "practise": [],
      "bookFromPage": 29,
      "bookToPage": 29,
-     "order": 16
+     "order": 18
     },
     {
      "title": "Example: how Mona's dehydration was classified",
@@ -2249,7 +3081,7 @@
      "practise": [],
      "bookFromPage": 30,
      "bookToPage": 31,
-     "order": 17
+     "order": 19
     },
     {
      "title": "Exercise E: classify dehydration",
@@ -2296,7 +3128,7 @@
      "practise": [],
      "bookFromPage": 32,
      "bookToPage": 34,
-     "order": 18
+     "order": 20
     },
     {
      "title": "Classify persistent diarrhoea and dysentery",
@@ -2378,6 +3210,34 @@
        "caption": "The persistent diarrhoea and dysentery tables in your chart booklet."
       },
       {
+       "type": "classcards",
+       "title": "Persistent diarrhoea and dysentery",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "SEVERE PERSISTENT DIARRHOEA",
+         "action": "Refer urgently",
+         "signs": "Dehydration present.",
+         "treat": "Treat dehydration before referral unless the child has another severe classification; Refer to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "PERSISTENT DIARRHOEA",
+         "action": "Treat and follow up",
+         "signs": "No dehydration.",
+         "treat": "Advise the mother on feeding a child who has PERSISTENT DIARRHOEA; Give dose of Vitamin A; Follow-up in 5 days"
+        },
+        {
+         "colour": "yellow",
+         "label": "DYSENTERY",
+         "action": "Treat and follow up",
+         "signs": "Blood in the stool.",
+         "treat": "Give an oral ciprofloxacin for 3 days; Follow-up in 3 days"
+        }
+       ]
+      },
+      {
        "type": "heading",
        "text": "DYSENTERY"
       },
@@ -2424,7 +3284,7 @@
      "practise": [],
      "bookFromPage": 35,
      "bookToPage": 35,
-     "order": 19
+     "order": 21
     },
     {
      "title": "Exercise F: classify cough and diarrhoea",
@@ -2467,7 +3327,7 @@
      "practise": [],
      "bookFromPage": 36,
      "bookToPage": 38,
-     "order": 20
+     "order": 22
     },
     {
      "title": "Exercise G: diarrhoea video exercise",
@@ -2513,7 +3373,346 @@
      "practise": [],
      "bookFromPage": 39,
      "bookToPage": 40,
-     "order": 21
+     "order": 23
+    },
+    {
+     "title": "Practise: classify diarrhoea",
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify dehydration, persistent diarrhoea and dysentery for four children, and find an error on a recording form.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "How many signs of a row do you need to classify dehydration?",
+       "options": [
+        "One",
+        "Two",
+        "All of them"
+       ],
+       "answer": 1,
+       "feedback": [
+        "One is not enough.",
+        "Right. Two signs of the pink row, or two of the yellow row.",
+        "Two are enough."
+       ]
+      },
+      {
+       "type": "drill",
+       "title": "The skin pinch",
+       "url": "",
+       "videoTitle": "Skin pinch (video to be recorded)",
+       "text": "Watch the skin pinch, then decide how it goes back.",
+       "given": "Until this clip is recorded: after you let go, the skin stays up for about 3 seconds before it goes back.",
+       "question": "How does the skin go back?",
+       "options": [
+        "Immediately",
+        "Slowly",
+        "Very slowly (longer than 2 seconds)"
+       ],
+       "answer": 2,
+       "feedback": [
+        "The skin stays up for a moment: it is not immediate.",
+        "Slowly means the skin stays up for a brief instant only.",
+        "Right. Longer than 2 seconds is very slowly, a sign of severe dehydration."
+       ]
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Offer Hiba a drink",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "Let us see if Hiba wants to drink. Can you give her some water from this cup?"
+          },
+          {
+           "who": "Mother",
+           "text": "Look, she grabs the cup and drinks fast!"
+          }
+         ],
+         "question": "What sign is this?",
+         "options": [
+          "Drinks eagerly, thirsty",
+          "Not able to drink",
+          "Drinks normally"
+         ],
+         "answer": 0,
+         "explanation": "A child who reaches for the cup and drinks fast is thirsty: a yellow-row sign.",
+         "feedback": [
+          "Right.",
+          "She is able to drink.",
+          "Drinking fast and wanting more is eager drinking."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "Mother",
+           "text": "Is she very sick?"
+          },
+          {
+           "who": "You",
+           "text": "She is restless, her eyes are sunken, and she is thirsty. She has some dehydration."
+          }
+         ],
+         "question": "What do you do now?",
+         "options": [
+          "Give ORS in the clinic (Plan B) and zinc",
+          "Send her home with Plan A",
+          "Refer urgently"
+         ],
+         "answer": 0,
+         "explanation": "SOME DEHYDRATION: give fluid, zinc supplements and food for some dehydration (Plan B).",
+         "feedback": [
+          "Right.",
+          "Plan A is for no dehydration.",
+          "Hiba has no severe classification."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Classify diarrhoea",
+       "part": "child",
+       "categories": [
+        "diarrhea",
+        "persistent_diarrhea",
+        "dysentery"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Hiba",
+          "age": "14 months",
+          "visit": "initial",
+          "weight": 9,
+          "temp": 37.4,
+          "problem": "Diarrhoea for 3 days"
+         },
+         "text": "Hiba has had diarrhoea for 3 days, with no blood. She is restless and irritable. Her eyes are sunken. When you offer her water, she drinks eagerly. The skin pinch goes back immediately.",
+         "record": [
+          {
+           "title": "Does the child have diarrhoea? Yes",
+           "lines": [
+            "For how long? 3 days",
+            "Blood in the stool: no",
+            "Restless, irritable: yes",
+            "Sunken eyes: yes",
+            "Drinks eagerly, thirsty: yes",
+            "Skin pinch: goes back immediately"
+           ],
+           "classify": [
+            "SOME DEHYDRATION"
+           ]
+          }
+         ],
+         "question": "How do you classify Hiba's dehydration?",
+         "options": [
+          "SEVERE DEHYDRATION",
+          "SOME DEHYDRATION",
+          "NO DEHYDRATION"
+         ],
+         "feedback": [
+          "Hiba has none of the pink-row signs except sunken eyes. Two pink-row signs are needed.",
+          "Right. She has restless and irritable, sunken eyes and drinks eagerly: two or more signs of the yellow row.",
+          "Hiba has three signs of the yellow row, more than enough to classify SOME DEHYDRATION."
+         ],
+         "explanation": "Some dehydration: give fluid, zinc supplements and food for some dehydration (Plan B).",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Yousif",
+          "age": "9 months",
+          "visit": "initial",
+          "weight": 7,
+          "temp": 37.0,
+          "problem": "Diarrhoea"
+         },
+         "text": "Yousif has had watery diarrhoea for 2 days. He is lethargic. His eyes are sunken. When you offer water, he drinks poorly. The skin pinch goes back very slowly.",
+         "record": [
+          {
+           "title": "Does the child have diarrhoea? Yes",
+           "lines": [
+            "For how long? 2 days",
+            "Lethargic: yes",
+            "Sunken eyes: yes",
+            "Drinking poorly: yes",
+            "Skin pinch: goes back very slowly"
+           ],
+           "classify": [
+            "SEVERE DEHYDRATION"
+           ]
+          }
+         ],
+         "question": "How do you classify Yousif's dehydration?",
+         "options": [
+          "SEVERE DEHYDRATION",
+          "SOME DEHYDRATION",
+          "NO DEHYDRATION"
+         ],
+         "feedback": [
+          "Right. He has all four signs of the pink row; two are enough.",
+          "Start at the top row. Two pink-row signs classify SEVERE DEHYDRATION.",
+          "Yousif has every sign of severe dehydration."
+         ],
+         "explanation": "Lethargic is also a general danger sign. If the child has no other severe classification, give fluid for severe dehydration (Plan C).",
+         "answer": 0
+        },
+        {
+         "child": {
+          "name": "Rayan",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 11.5,
+          "temp": 37.2,
+          "problem": "Diarrhoea for 16 days"
+         },
+         "text": "Rayan has had diarrhoea for 16 days, with no blood. He is alert, his eyes are not sunken, he drinks normally and the skin pinch goes back immediately.",
+         "record": [
+          {
+           "title": "Does the child have diarrhoea? Yes",
+           "lines": [
+            "For how long? 16 days",
+            "Blood in the stool: no",
+            "No signs of dehydration"
+           ],
+           "classify": [
+            "NO DEHYDRATION",
+            "PERSISTENT DIARRHOEA"
+           ]
+          }
+         ],
+         "question": "Which classifications does Rayan have for his diarrhoea? Select all that apply.",
+         "options": [
+          "SEVERE PERSISTENT DIARRHOEA",
+          "PERSISTENT DIARRHOEA",
+          "NO DEHYDRATION",
+          "DYSENTERY"
+         ],
+         "feedback": [
+          "Severe persistent diarrhoea needs dehydration as well. Rayan has no dehydration.",
+          "Right. Diarrhoea for 14 days or more with no dehydration is PERSISTENT DIARRHOEA.",
+          "Right. Classify dehydration for every child with diarrhoea. Rayan has no signs, so NO DEHYDRATION.",
+          "There is no blood in the stool."
+         ],
+         "explanation": "A child with diarrhoea is classified for dehydration, and also for persistent diarrhoea if it has lasted 14 days or more, and for dysentery if there is blood in the stool.",
+         "answers": [
+          1,
+          2
+         ]
+        },
+        {
+         "child": {
+          "name": "Nour",
+          "age": "3 years",
+          "visit": "initial",
+          "weight": 13,
+          "temp": 37.6,
+          "problem": "Diarrhoea with blood"
+         },
+         "text": "Nour has had diarrhoea for 5 days and her mother has seen blood in the stool. Nour is restless and irritable and her eyes are sunken. She drinks normally and the skin pinch goes back immediately.",
+         "record": [
+          {
+           "title": "Does the child have diarrhoea? Yes",
+           "lines": [
+            "For how long? 5 days",
+            "Blood in the stool: yes",
+            "Restless, irritable: yes",
+            "Sunken eyes: yes"
+           ],
+           "classify": [
+            "SOME DEHYDRATION",
+            "DYSENTERY"
+           ]
+          }
+         ],
+         "question": "Which classifications does Nour have? Select all that apply.",
+         "options": [
+          "SEVERE DEHYDRATION",
+          "SOME DEHYDRATION",
+          "NO DEHYDRATION",
+          "DYSENTERY"
+         ],
+         "feedback": [
+          "Nour has only one pink-row sign (sunken eyes).",
+          "Right. Restless and irritable plus sunken eyes are two yellow-row signs.",
+          "She has two signs of the yellow row, so she is dehydrated.",
+          "Right. Blood in the stool classifies DYSENTERY."
+         ],
+         "explanation": "Nour needs Plan B, zinc, and an antibiotic for dysentery (oral ciprofloxacin for 3 days in the Sudan booklet).",
+         "answers": [
+          1,
+          3
+         ]
+        }
+       ]
+      },
+      {
+       "type": "spot",
+       "title": "Find the error on Huda's form",
+       "part": "child",
+       "text": "One entry on this form is wrong. Tap it.",
+       "child": {
+        "name": "Huda",
+        "age": "16 months",
+        "visit": "initial",
+        "weight": 9.5,
+        "temp": 37.3,
+        "problem": "Diarrhoea for 2 days"
+       },
+       "record": [
+        {
+         "title": "Does the child have diarrhoea? Yes",
+         "lines": [
+          {
+           "text": "For how long? 2 days",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Blood in the stool: no",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Restless, irritable: yes",
+           "why": "This sign is in the yellow row."
+          },
+          {
+           "text": "Sunken eyes: yes",
+           "why": "This sign is in both rows."
+          },
+          {
+           "text": "Skin pinch: goes back immediately",
+           "why": "This entry is right."
+          }
+         ],
+         "classify": [
+          {
+           "text": "NO DEHYDRATION",
+           "why": "Restless and irritable plus sunken eyes are two signs: SOME DEHYDRATION.",
+           "error": true
+          }
+         ]
+        }
+       ],
+       "explanation": "Two signs of the yellow row are enough to classify SOME DEHYDRATION."
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 24
     },
     {
      "title": "Fever: malaria, measles and other causes",
@@ -2617,7 +3816,7 @@
      "practise": [],
      "bookFromPage": 41,
      "bookToPage": 42,
-     "order": 22
+     "order": 25
     },
     {
      "title": "Other causes of fever",
@@ -2709,7 +3908,7 @@
      "practise": [],
      "bookFromPage": 42,
      "bookToPage": 43,
-     "order": 23
+     "order": 26
     },
     {
      "title": "Assess fever: ask about fever, its duration and measles",
@@ -2718,6 +3917,22 @@
        "type": "note",
        "text": "Decide if a child has fever, and ask how long, if it has been present every day, and about measles in the last 3 months.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "A child with fever lives in Sudan, where there is malaria. What do you do first for the fever?",
+       "options": [
+        "Give an antimalarial",
+        "Do a malaria test",
+        "Give paracetamol and send home"
+       ],
+       "answer": 1,
+       "feedback": [
+        "Treat malaria only after a positive test.",
+        "Right. Classify fever from the malaria test.",
+        "First assess and classify."
+       ]
       },
       {
        "type": "heading",
@@ -2839,7 +4054,7 @@
      "practise": [],
      "bookFromPage": 44,
      "bookToPage": 45,
-     "order": 24
+     "order": 27
     },
     {
      "title": "Look for stiff neck, the rash of measles, other causes, and do a malaria test",
@@ -2934,7 +4149,7 @@
      "practise": [],
      "bookFromPage": 45,
      "bookToPage": 47,
-     "order": 25
+     "order": 28
     },
     {
      "title": "Exercise H: the rash of measles",
@@ -3044,7 +4259,7 @@
      "practise": [],
      "bookFromPage": 48,
      "bookToPage": 48,
-     "order": 26
+     "order": 29
     },
     {
      "title": "Measles complications: mouth ulcers, and Exercise I",
@@ -3139,7 +4354,7 @@
      "practise": [],
      "bookFromPage": 49,
      "bookToPage": 50,
-     "order": 27
+     "order": 30
     },
     {
      "title": "Measles complications: the eye, and Exercise J",
@@ -3240,6 +4455,32 @@
        "caption": "Photograph 37"
       },
       {
+       "type": "steps",
+       "title": "Look for measles and its complications, with photographs",
+       "steps": [
+        {
+         "title": "Look for the generalized rash",
+         "text": "A generalized rash with cough, runny nose or red eyes.",
+         "image": "imnci-photos/photo-08.jpg"
+        },
+        {
+         "title": "Look in the mouth for ulcers",
+         "text": "Are they deep or extensive?",
+         "image": "imnci-photos/photo-24.jpg"
+        },
+        {
+         "title": "Look for pus draining from the eye",
+         "text": "Wipe the eye and look again.",
+         "image": "imnci-photos/photo-29.jpg"
+        },
+        {
+         "title": "Look for clouding of the cornea",
+         "text": "A hazy cornea is a pink-row sign.",
+         "image": "imnci-photos/photo-30.jpg"
+        }
+       ]
+      },
+      {
        "type": "exercise",
        "exerciseId": "sudan-imnci-ac-ex-j-eye",
        "note": "Exercise J: eye complications of measles (photographs)"
@@ -3253,7 +4494,7 @@
      "practise": [],
      "bookFromPage": 51,
      "bookToPage": 52,
-     "order": 28
+     "order": 31
     },
     {
      "title": "Classify fever",
@@ -3344,6 +4585,34 @@
         "fever"
        ],
        "caption": "The fever classification table in your chart booklet (Sudan national protocol)."
+      },
+      {
+       "type": "classcards",
+       "title": "Fever: the three classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "VERY SEVERE FEBRILE DISEASE",
+         "action": "Refer urgently",
+         "signs": "Any general danger sign or Stiff neck.",
+         "treat": "Give IM quinine (first dose); Give first dose of an appropriate antibiotic; Treat the child to prevent low blood sugar; Give one dose of paracetamol in clinic for high fever (38.5°C or above); Refer URGENTLY to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "MALARIA",
+         "action": "Treat and follow up",
+         "signs": "Positive malaria test. Falciparum or Vivax",
+         "treat": "Give first line of oral antimalarial; In case of Vivax give primaquine after completion of the first line antimalarial; Give one dose of paracetamol in clinic for high fever (38.5°C or above); Advise mother when to return immediately; Follow-up in 3 days if fever persists"
+        },
+        {
+         "colour": "green",
+         "label": "FEVER — NO MALARIA",
+         "action": "Home care",
+         "signs": "Negative malaria test.",
+         "treat": "Assess for other cause of fever and treat accordingly; Give one dose of paracetamol for high fever (38.5°C or above); If fever for 7 days or more refer for assessment; Advise the mother when to return immediately; Follow up in 3 days if fever persists"
+        }
+       ]
       },
       {
        "type": "heading",
@@ -3493,7 +4762,7 @@
      "practise": [],
      "bookFromPage": 53,
      "bookToPage": 53,
-     "order": 29
+     "order": 32
     },
     {
      "title": "Classify measles",
@@ -3502,6 +4771,22 @@
        "type": "note",
        "text": "Classify measles as SEVERE COMPLICATED MEASLES, MEASLES WITH EYE OR MOUTH COMPLICATIONS or MEASLES.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "Which of these is NOT a complication of measles in the chart booklet?",
+       "options": [
+        "Mouth ulcers",
+        "Pus draining from the eye",
+        "Runny nose"
+       ],
+       "answer": 2,
+       "feedback": [
+        "Mouth ulcers are a complication.",
+        "Pus draining from the eye is a complication.",
+        "Right. A runny nose is one of the signs of measles, not a complication."
+       ]
       },
       {
        "type": "heading",
@@ -3544,6 +4829,34 @@
         "measles"
        ],
        "caption": "The measles classification table in your chart booklet (Sudan national protocol)."
+      },
+      {
+       "type": "classcards",
+       "title": "Measles: the three classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "SEVERE COMPLICATED MEASLES",
+         "action": "Refer urgently",
+         "signs": "Any general danger sign or Clouding of the cornea or Deep or extensive mouth ulcers.",
+         "treat": "Give Vitamin A treatment; Give first dose of an appropriate antibiotic; If clouding of the cornea or pus draining from the eye, apply tetracycline eye ointment; Refer URGENTLY to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "MEASLES WITH EYE OR MOUTH COMPLICATIONS",
+         "action": "Treat and follow up",
+         "signs": "Pus draining from the eye or Mouth ulcers.",
+         "treat": "Give Vitamin A treatment; If pus draining from the eye, treat eye infection with tetracycline eye ointment; If mouth ulcers, treat with gentian violet; Advise the mother when to return immediately; Follow-up in 3 days"
+        },
+        {
+         "colour": "green",
+         "label": "MEASLES",
+         "action": "Home care",
+         "signs": "Measles now or within the last 3 months.",
+         "treat": "Give Vitamin A; Advise the mother to feed the child"
+        }
+       ]
       },
       {
        "type": "heading",
@@ -3597,7 +4910,7 @@
      "practise": [],
      "bookFromPage": 54,
      "bookToPage": 54,
-     "order": 30
+     "order": 33
     },
     {
      "title": "Example: how the health worker classified Tariq",
@@ -3690,7 +5003,7 @@
      "practise": [],
      "bookFromPage": 55,
      "bookToPage": 57,
-     "order": 31
+     "order": 34
     },
     {
      "title": "Exercise K: classify fever and measles",
@@ -3753,7 +5066,7 @@
      "practise": [],
      "bookFromPage": 58,
      "bookToPage": 65,
-     "order": 32
+     "order": 35
     },
     {
      "title": "Exercise L: fever video exercise",
@@ -3784,7 +5097,290 @@
      "practise": [],
      "bookFromPage": 66,
      "bookToPage": 66,
-     "order": 33
+     "order": 36
+    },
+    {
+     "title": "Practise: classify fever and measles",
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify fever and measles for four children, and find an error on a recording form.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Talk with Ahmed's father",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "How long has Ahmed had fever?"
+          },
+          {
+           "who": "Father",
+           "text": "Two days."
+          },
+          {
+           "who": "You",
+           "text": "I will do a quick test for malaria from a drop of blood from his finger."
+          }
+         ],
+         "question": "Why test every child with fever?",
+         "options": [
+          "To treat malaria only when the test is positive",
+          "Because the father asked",
+          "It is not needed if the child is hot"
+         ],
+         "answer": 0,
+         "explanation": "Classify fever from the malaria test: positive is MALARIA, negative is FEVER - NO MALARIA.",
+         "feedback": [
+          "Right.",
+          "The test is part of assessing every child with fever.",
+          "Feeling hot does not tell you if it is malaria."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "The test is positive."
+          },
+          {
+           "who": "Father",
+           "text": "So what do we do?"
+          }
+         ],
+         "question": "What is the classification?",
+         "options": [
+          "MALARIA",
+          "VERY SEVERE FEBRILE DISEASE",
+          "FEVER - NO MALARIA"
+         ],
+         "answer": 0,
+         "explanation": "Ahmed has no danger sign and no stiff neck: MALARIA. Give the oral antimalarial and follow up in 3 days if fever persists.",
+         "feedback": [
+          "Right.",
+          "He has no danger sign and no stiff neck.",
+          "The test is positive."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Classify fever and measles",
+       "part": "child",
+       "categories": [
+        "fever",
+        "measles"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Ahmed",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 12,
+          "temp": 38.5,
+          "problem": "Fever for 2 days"
+         },
+         "text": "Ahmed has had fever for 2 days. He has no general danger sign and no stiff neck. There are no signs of measles. His malaria rapid diagnostic test (RDT) is positive.",
+         "record": [
+          {
+           "title": "Does the child have fever? Yes",
+           "lines": [
+            "For how long? 2 days",
+            "Stiff neck: no",
+            "Malaria test: positive",
+            "Measles now or in the last 3 months: no"
+           ],
+           "classify": [
+            "MALARIA"
+           ]
+          }
+         ],
+         "question": "How do you classify Ahmed's fever?",
+         "options": [
+          "VERY SEVERE FEBRILE DISEASE",
+          "MALARIA",
+          "FEVER - NO MALARIA"
+         ],
+         "feedback": [
+          "He has no general danger sign and no stiff neck.",
+          "Right. A positive malaria test classifies MALARIA.",
+          "The malaria test is positive, so this is not \"no malaria\"."
+         ],
+         "explanation": "Do a malaria test for every child with fever, and classify from the result.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Salma",
+          "age": "11 months",
+          "visit": "initial",
+          "weight": 8,
+          "temp": 38.2,
+          "problem": "Fever since yesterday"
+         },
+         "text": "Salma has had fever since yesterday. She has no general danger sign and no stiff neck. There is no rash. Her malaria test is negative.",
+         "record": [
+          {
+           "title": "Does the child have fever? Yes",
+           "lines": [
+            "For how long? 1 day",
+            "Stiff neck: no",
+            "Malaria test: negative"
+           ],
+           "classify": [
+            "FEVER - NO MALARIA"
+           ]
+          }
+         ],
+         "question": "How do you classify Salma's fever?",
+         "options": [
+          "MALARIA",
+          "FEVER - NO MALARIA",
+          "VERY SEVERE FEBRILE DISEASE"
+         ],
+         "feedback": [
+          "The malaria test is negative. Do not classify malaria without a positive test.",
+          "Right. A negative malaria test with no danger sign or stiff neck: FEVER - NO MALARIA.",
+          "Salma has no general danger sign and no stiff neck."
+         ],
+         "explanation": "For FEVER - NO MALARIA, look for and treat any other cause of fever, and give paracetamol for high fever.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Mustafa",
+          "age": "4 years",
+          "visit": "initial",
+          "weight": 15,
+          "temp": 39.0,
+          "problem": "Fever and headache"
+         },
+         "text": "Mustafa has had fever for 3 days. He has no general danger sign. When you ask him to look at his umbilicus, he cannot bend his neck forward: he has a stiff neck.",
+         "record": [
+          {
+           "title": "Does the child have fever? Yes",
+           "lines": [
+            "For how long? 3 days",
+            "Stiff neck: yes"
+           ],
+           "classify": [
+            "VERY SEVERE FEBRILE DISEASE"
+           ]
+          }
+         ],
+         "question": "How do you classify Mustafa's fever?",
+         "options": [
+          "MALARIA, if the test is positive",
+          "VERY SEVERE FEBRILE DISEASE",
+          "FEVER - NO MALARIA"
+         ],
+         "feedback": [
+          "Even with a positive test, a stiff neck puts the child in the pink row.",
+          "Right. A stiff neck classifies VERY SEVERE FEBRILE DISEASE: give the pre-referral treatment and refer urgently.",
+          "A stiff neck is a sign of very severe disease, such as meningitis."
+         ],
+         "explanation": "Pink row: any general danger sign or stiff neck.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Rawan",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 11,
+          "temp": 38.4,
+          "problem": "Fever and rash"
+         },
+         "text": "Rawan has had fever for 4 days. She has a generalized rash with cough and red eyes: measles now. You see mouth ulcers, but they are not deep or extensive. There is no pus draining from the eye and no clouding of the cornea. Her malaria test is negative.",
+         "record": [
+          {
+           "title": "Does the child have fever? Yes",
+           "lines": [
+            "Malaria test: negative",
+            "Generalized rash and red eyes: yes",
+            "Mouth ulcers: yes, not deep or extensive",
+            "Pus draining from the eye: no",
+            "Clouding of the cornea: no"
+           ],
+           "classify": [
+            "FEVER - NO MALARIA",
+            "MEASLES WITH EYE OR MOUTH COMPLICATIONS"
+           ]
+          }
+         ],
+         "question": "How do you classify Rawan's measles?",
+         "options": [
+          "SEVERE COMPLICATED MEASLES",
+          "MEASLES WITH EYE OR MOUTH COMPLICATIONS",
+          "MEASLES"
+         ],
+         "feedback": [
+          "Only deep or extensive mouth ulcers, clouding of the cornea or a danger sign make measles severe complicated.",
+          "Right. Mouth ulcers that are not deep or extensive put measles in the yellow row.",
+          "Rawan has a complication: mouth ulcers."
+         ],
+         "explanation": "Treat mouth ulcers with gentian violet and give vitamin A.",
+         "answer": 1
+        }
+       ]
+      },
+      {
+       "type": "spot",
+       "title": "Find the error on Musa's form",
+       "part": "child",
+       "text": "One entry on this form is wrong. Tap it.",
+       "child": {
+        "name": "Musa",
+        "age": "3 years",
+        "visit": "initial",
+        "weight": 14,
+        "temp": 38.7,
+        "problem": "Fever for 2 days"
+       },
+       "record": [
+        {
+         "title": "Does the child have fever? Yes",
+         "lines": [
+          {
+           "text": "For how long? 2 days",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Stiff neck: no",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Malaria test: positive",
+           "why": "The test was read correctly."
+          }
+         ],
+         "classify": [
+          {
+           "text": "FEVER - NO MALARIA",
+           "why": "The malaria test is positive: classify MALARIA.",
+           "error": true
+          }
+         ]
+        }
+       ],
+       "explanation": "Classify fever from the malaria test result."
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 37
     },
     {
      "title": "Assess ear problem",
@@ -3793,6 +5389,20 @@
        "type": "note",
        "text": "Ask about ear pain and discharge, look for pus draining from the ear and feel for tender swelling behind the ear.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "Pus has drained from a child's ear for 14 days. Acute or chronic?",
+       "options": [
+        "Acute",
+        "Chronic"
+       ],
+       "answer": 1,
+       "feedback": [
+        "Acute is less than 14 days.",
+        "Right. 14 days or more is chronic."
+       ]
       },
       {
        "type": "heading",
@@ -3905,7 +5515,7 @@
      "practise": [],
      "bookFromPage": 67,
      "bookToPage": 68,
-     "order": 34
+     "order": 38
     },
     {
      "title": "Classify ear problem, and Exercise M",
@@ -3965,6 +5575,41 @@
        "caption": "The ear classification table in your chart booklet (Sudan national protocol)."
       },
       {
+       "type": "classcards",
+       "title": "Ear problem: the four classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "MASTOIDITIS",
+         "action": "Refer urgently",
+         "signs": "Tender swelling behind the ear.",
+         "treat": "Give first dose of an appropriate antibiotic; Give first dose of paracetamol for pain; Refer URGENTLY to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "ACUTE EAR INFECTION",
+         "action": "Treat and follow up",
+         "signs": "Ear pain. or Pus is seen draining from the ear and discharge is reported for less than 14 days.",
+         "treat": "Give an appropriate oral antibiotic for 5 days; Give paracetamol for pain; Dry the ear by wicking; Advise the mother when to return immediately; Follow up in 5 days"
+        },
+        {
+         "colour": "yellow",
+         "label": "CHRONIC EAR INFECTION",
+         "action": "Treat and follow up",
+         "signs": "Pus is seen draining from the ear and discharge is reported for 14 days or more.",
+         "treat": "Dry the ear by wicking; Give Quinolone ear drops; Advise the mother when to return immediately"
+        },
+        {
+         "colour": "green",
+         "label": "NO EAR INFECTION (other ear problems)",
+         "action": "Home care",
+         "signs": "No ear pain and no pus seen draining from the ear.",
+         "treat": "No treatment advised; Refer for assessment if there is hearing problems"
+        }
+       ]
+      },
+      {
        "type": "heading",
        "text": "MASTOIDITIS"
       },
@@ -4008,7 +5653,253 @@
      "practise": [],
      "bookFromPage": 69,
      "bookToPage": 70,
-     "order": 35
+     "order": 39
+    },
+    {
+     "title": "Practise: classify ear problems",
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify the ear problems of three children, and find an error on a recording form.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Talk with Lina's mother",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "Does Lina have an ear problem?"
+          },
+          {
+           "who": "Mother",
+           "text": "Yes, pus comes from her ear."
+          },
+          {
+           "who": "You",
+           "text": "For how long?"
+          },
+          {
+           "who": "Mother",
+           "text": "About three weeks."
+          }
+         ],
+         "question": "How do you classify Lina?",
+         "options": [
+          "CHRONIC EAR INFECTION",
+          "ACUTE EAR INFECTION",
+          "MASTOIDITIS"
+         ],
+         "answer": 0,
+         "explanation": "Pus for 14 days or more: CHRONIC EAR INFECTION.",
+         "feedback": [
+          "Right.",
+          "Acute is less than 14 days.",
+          "There is no tender swelling behind the ear."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "Mother",
+           "text": "What should I do at home?"
+          }
+         ],
+         "question": "What do you teach her?",
+         "options": [
+          "Dry the ear by wicking",
+          "Put oil in the ear",
+          "Leave it alone"
+         ],
+         "answer": 0,
+         "explanation": "Teach the mother to dry the ear by wicking, three times daily, and give ear drops.",
+         "feedback": [
+          "Right.",
+          "Nothing should be put in the ear except the drops you give.",
+          "The ear must be dried."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Classify the ear problem",
+       "part": "child",
+       "categories": [
+        "ear"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Tamer",
+          "age": "3 years",
+          "visit": "initial",
+          "weight": 14,
+          "temp": 37.4,
+          "problem": "Ear pain"
+         },
+         "text": "Tamer has had ear pain for 2 days. You see no pus draining from the ear and there is no tender swelling behind the ear.",
+         "record": [
+          {
+           "title": "Does the child have an ear problem? Yes",
+           "lines": [
+            "Ear pain: yes",
+            "Ear discharge: no",
+            "Tender swelling behind the ear: no"
+           ],
+           "classify": [
+            "ACUTE EAR INFECTION"
+           ]
+          }
+         ],
+         "question": "How do you classify Tamer's ear problem?",
+         "options": [
+          "MASTOIDITIS",
+          "ACUTE EAR INFECTION",
+          "NO EAR INFECTION"
+         ],
+         "feedback": [
+          "There is no tender swelling behind the ear.",
+          "Right. Ear pain classifies ACUTE EAR INFECTION.",
+          "Ear pain is a sign of acute ear infection, even with no pus."
+         ],
+         "explanation": "Acute ear infection: oral amoxicillin for 5 days, paracetamol for pain, and follow up in 5 days.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Lina",
+          "age": "4 years",
+          "visit": "initial",
+          "weight": 15,
+          "temp": 37.0,
+          "problem": "Pus from the ear"
+         },
+         "text": "Lina's mother says pus has come from Lina's right ear for 3 weeks. You see pus draining. Lina has no ear pain and no swelling behind the ear.",
+         "record": [
+          {
+           "title": "Does the child have an ear problem? Yes",
+           "lines": [
+            "Ear pain: no",
+            "Pus seen draining: yes",
+            "For how long? 21 days",
+            "Tender swelling behind the ear: no"
+           ],
+           "classify": [
+            "CHRONIC EAR INFECTION"
+           ]
+          }
+         ],
+         "question": "How do you classify Lina's ear problem?",
+         "options": [
+          "ACUTE EAR INFECTION",
+          "CHRONIC EAR INFECTION",
+          "MASTOIDITIS"
+         ],
+         "feedback": [
+          "Pus for less than 14 days is acute. Lina's has lasted 21 days.",
+          "Right. Pus seen draining and discharge for 14 days or more: CHRONIC EAR INFECTION.",
+          "There is no tender swelling behind the ear."
+         ],
+         "explanation": "Chronic ear infection: dry the ear by wicking, give topical quinolone ear drops for 14 days, and follow up in 5 days.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Badr",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 11,
+          "temp": 38.6,
+          "problem": "Ear pain and swelling"
+         },
+         "text": "Badr has ear pain. Behind his left ear there is a swelling that is tender when you touch it.",
+         "record": [
+          {
+           "title": "Does the child have an ear problem? Yes",
+           "lines": [
+            "Ear pain: yes",
+            "Tender swelling behind the ear: yes"
+           ],
+           "classify": [
+            "MASTOIDITIS"
+           ]
+          }
+         ],
+         "question": "How do you classify Badr's ear problem?",
+         "options": [
+          "ACUTE EAR INFECTION",
+          "MASTOIDITIS",
+          "CHRONIC EAR INFECTION"
+         ],
+         "feedback": [
+          "Ear pain is in the yellow row, but read from the top: there is a tender swelling behind the ear.",
+          "Right. A tender swelling behind the ear classifies MASTOIDITIS: first dose of antibiotic, paracetamol, and refer urgently.",
+          "There is no long-lasting discharge, and the swelling puts him in the pink row."
+         ],
+         "explanation": "Pink row first: tender swelling behind the ear is MASTOIDITIS.",
+         "answer": 1
+        }
+       ]
+      },
+      {
+       "type": "spot",
+       "title": "Find the error on Salih's form",
+       "part": "child",
+       "text": "One entry on this form is wrong. Tap it.",
+       "child": {
+        "name": "Salih",
+        "age": "4 years",
+        "visit": "initial",
+        "weight": 15,
+        "temp": 37.1,
+        "problem": "Pus from the ear"
+       },
+       "record": [
+        {
+         "title": "Does the child have an ear problem? Yes",
+         "lines": [
+          {
+           "text": "Ear pain: no",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Pus seen draining: yes",
+           "why": "This entry is right."
+          },
+          {
+           "text": "For how long? 10 days",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Tender swelling behind the ear: no",
+           "why": "This entry is right."
+          }
+         ],
+         "classify": [
+          {
+           "text": "CHRONIC EAR INFECTION",
+           "why": "Pus for less than 14 days is ACUTE EAR INFECTION. Chronic is 14 days or more.",
+           "error": true
+          }
+         ]
+        }
+       ],
+       "explanation": "The number of days decides between acute (less than 14 days) and chronic (14 days or more)."
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 40
     },
     {
      "title": "Malnutrition and anaemia: why they matter",
@@ -4099,7 +5990,7 @@
      "practise": [],
      "bookFromPage": 71,
      "bookToPage": 71,
-     "order": 36
+     "order": 41
     },
     {
      "title": "Assess for acute malnutrition: oedema and weight for length or height",
@@ -4108,6 +5999,20 @@
        "type": "note",
        "text": "Look and feel for oedema of both feet and determine weight for length or height.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "A child's MUAC is normal. Can she still have severe acute malnutrition?",
+       "options": [
+        "No",
+        "Yes, if she has oedema of both feet or a very low weight for length"
+       ],
+       "answer": 1,
+       "feedback": [
+        "Check oedema of both feet and weight for length too.",
+        "Right. Check all three: oedema, WFH/L and MUAC."
+       ]
       },
       {
        "type": "heading",
@@ -4292,7 +6197,7 @@
      "practise": [],
      "bookFromPage": 72,
      "bookToPage": 73,
-     "order": 37
+     "order": 42
     },
     {
      "title": "MUAC, medical complications and the appetite test",
@@ -4422,7 +6327,7 @@
      "practise": [],
      "bookFromPage": 74,
      "bookToPage": 76,
-     "order": 38
+     "order": 43
     },
     {
      "title": "Classify nutritional status",
@@ -4532,6 +6437,41 @@
        "caption": "The classification table in your chart booklet (Sudan national protocol)."
       },
       {
+       "type": "classcards",
+       "title": "Nutritional status: the four classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "COMPLICATED SEVERE ACUTE MALNUTRITION (SAM)",
+         "action": "Refer urgently",
+         "signs": "Edema of both feet OR WFH/L less than -3 z-scores or MUAC less than 11.5 cm with any of the following: — Medical complication present, or — Not able to finish RUTF portion",
+         "treat": "Give first dose appropriate antibiotic; Treat the child to prevent low blood sugar; Keep the child warm; Refer URGENTLY to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "UNCOMPLICATED SEVERE ACUTE MALNUTRITION (SAM)",
+         "action": "Treat and follow up",
+         "signs": "WFH/L less than -3 z-scores OR MUAC less than 11.5 cm AND Able to finish RUTF portion and no medical complications",
+         "treat": "Give oral antibiotics for 5 days; Refer for Outpatient Therapeutic Program (OTP) for ready-to-use therapeutic food (RUTF) if a child aged 6 months or more; Counsel the mother on how to feed the child; Advise mother when to return immediately; Follow up in 14 days"
+        },
+        {
+         "colour": "yellow",
+         "label": "MODERATE ACUTE MALNUTRITION (MAM)",
+         "action": "Treat and follow up",
+         "signs": "WFH/L -3 up to -2 z-scores OR MUAC 11.5 up to 12.5 cm",
+         "treat": "Refer the child for Supplementary feeding program if available; Assess the child's feeding and counsel the mother on the feeding recommendations and refer for growth monitoring and health promotion; If feeding problem, follow up in 7 days; Advise mother when to return immediately; Follow-up in 30 days"
+        },
+        {
+         "colour": "green",
+         "label": "NO ACUTE MALNUTRITION",
+         "action": "Home care",
+         "signs": "WFH/L -2 z-scores or more OR MUAC 12.5 cm or more.",
+         "treat": "If child is less than 2 years old, assess the child's feeding and counsel the mother on feeding according to the feeding recommendations; If feeding problem, follow-up in 7 days"
+        }
+       ]
+      },
+      {
        "type": "note",
        "text": "Your facilitator demonstrates how to classify nutritional status on the enlarged table: start at the pink row; oedema of both feet is always COMPLICATED SEVERE ACUTE MALNUTRITION; SAM by WFH/L or MUAC is complicated if there is a medical complication or the child cannot finish the RUTF.",
        "label": "From your facilitator"
@@ -4566,7 +6506,7 @@
      "practise": [],
      "bookFromPage": 77,
      "bookToPage": 78,
-     "order": 39
+     "order": 44
     },
     {
      "title": "Assess and classify anaemia",
@@ -4575,6 +6515,22 @@
        "type": "note",
        "text": "Look for palmar pallor and classify SEVERE ANAEMIA, ANAEMIA or NO ANAEMIA.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "How do you look for palmar pallor?",
+       "options": [
+        "Compare the child's palm with your own",
+        "Ask the mother",
+        "Look at the tongue"
+       ],
+       "answer": 0,
+       "feedback": [
+        "Right.",
+        "Look yourself.",
+        "IMNCI uses the palm."
+       ]
       },
       {
        "type": "heading",
@@ -4673,6 +6629,34 @@
        "caption": "The anaemia table in your chart booklet (Sudan national protocol)."
       },
       {
+       "type": "classcards",
+       "title": "Anaemia: the three classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "SEVERE ANAEMIA",
+         "action": "Refer urgently",
+         "signs": "Severe palmar pallor",
+         "treat": "Refer URGENTLY to hospital"
+        },
+        {
+         "colour": "yellow",
+         "label": "ANAEMIA",
+         "action": "Treat and follow up",
+         "signs": "Some palmar pallor",
+         "treat": "Give iron; Give mebendazole if child is 1 year or older and has not received a dose in the last 6 months; Advise mother when to return immediately; Follow-up in 14 days; If child is less than 2 years old, assess the child's feeding and counsel the mother on feeding according to the feeding recommendations"
+        },
+        {
+         "colour": "green",
+         "label": "NO ANAEMIA",
+         "action": "Home care",
+         "signs": "No palmar pallor",
+         "treat": "No additional treatment; If child is less than 2 years old, assess the child's feeding and counsel the mother on feeding according to the feeding recommendations"
+        }
+       ]
+      },
+      {
        "type": "heading",
        "text": "Check yourself"
       },
@@ -4686,13 +6670,34 @@
        ],
        "answer": 0,
        "explanation": "If the skin of the palm is so pale that it looks white, the child has severe palmar pallor: SEVERE ANAEMIA."
+      },
+      {
+       "type": "steps",
+       "title": "Look for palmar pallor, with photographs",
+       "steps": [
+        {
+         "title": "Hold the child's palm open",
+         "text": "Do not stretch the fingers back: that can make the palm look pale.",
+         "image": "imnci-photos/photo-38.jpg"
+        },
+        {
+         "title": "Compare",
+         "text": "With your own palm and the palms of other children.",
+         "image": "imnci-photos/photo-39.jpg"
+        },
+        {
+         "title": "Decide",
+         "text": "Severe pallor (very pale, almost white), some pallor (pale), or no pallor.",
+         "image": "imnci-photos/photo-40.jpg"
+        }
+       ]
       }
      ],
      "see": [],
      "practise": [],
      "bookFromPage": 79,
      "bookToPage": 80,
-     "order": 40
+     "order": 45
     },
     {
      "title": "Exercise N: palmar pallor",
@@ -4790,7 +6795,291 @@
      "practise": [],
      "bookFromPage": 81,
      "bookToPage": 81,
-     "order": 41
+     "order": 46
+    },
+    {
+     "title": "Practise: classify malnutrition and anaemia",
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify the nutritional status and anaemia of four children, and find an error on a recording form.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Talk with Hala's mother",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "Hala's arm measures 11.2 centimetres. That is below the line."
+          },
+          {
+           "who": "Mother",
+           "text": "What does that mean?"
+          },
+          {
+           "who": "You",
+           "text": "She is severely thin. Let us see if she can eat this RUTF."
+          }
+         ],
+         "question": "Why do the appetite test?",
+         "options": [
+          "To see if she can be treated at home",
+          "To feed her before she leaves",
+          "It is optional"
+         ],
+         "answer": 0,
+         "explanation": "A child with SAM who finishes the RUTF portion and has no medical complication can be treated at home.",
+         "feedback": [
+          "Right.",
+          "It decides where she is treated.",
+          "It is part of the assessment of SAM."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "Mother",
+           "text": "She ate it all."
+          }
+         ],
+         "question": "How do you classify Hala?",
+         "options": [
+          "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+          "COMPLICATED SEVERE ACUTE MALNUTRITION",
+          "MODERATE ACUTE MALNUTRITION"
+         ],
+         "answer": 0,
+         "explanation": "MUAC below 11.5 cm, no complication, appetite test passed.",
+         "feedback": [
+          "Right.",
+          "She passed the appetite test and has no complication.",
+          "MUAC below 11.5 cm is severe."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Classify malnutrition and anaemia",
+       "part": "child",
+       "categories": [
+        "malnutrition",
+        "anemia"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Mazin",
+          "age": "18 months",
+          "visit": "initial",
+          "weight": 8.6,
+          "temp": 37.0,
+          "length": 80,
+          "muac": 12.0,
+          "problem": "Check-up"
+         },
+         "text": "Mazin has no oedema of both feet. On the weight-for-length chart he is between -3 and -2 z-scores. His MUAC is 12.0 cm.",
+         "record": [
+          {
+           "title": "Check for acute malnutrition",
+           "lines": [
+            "Oedema of both feet: no",
+            "WFL: between -3 and -2 z",
+            "MUAC: 12.0 cm"
+           ],
+           "classify": [
+            "MODERATE ACUTE MALNUTRITION"
+           ]
+          }
+         ],
+         "question": "How do you classify Mazin's nutritional status?",
+         "options": [
+          "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+          "MODERATE ACUTE MALNUTRITION",
+          "NO ACUTE MALNUTRITION"
+         ],
+         "feedback": [
+          "SAM needs WFL below -3 z or MUAC below 11.5 cm.",
+          "Right. WFL -3 up to -2 z, or MUAC 11.5 up to 12.5 cm: MODERATE ACUTE MALNUTRITION.",
+          "His WFL and MUAC are both in the moderate range."
+         ],
+         "explanation": "MAM: assess the child's feeding and counsel the mother, and follow up in 30 days.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Hala",
+          "age": "2 years",
+          "visit": "initial",
+          "weight": 8.4,
+          "temp": 37.1,
+          "length": 82,
+          "muac": 11.2,
+          "problem": "Not gaining weight"
+         },
+         "text": "Hala has no oedema. Her MUAC is 11.2 cm. She has no medical complication, and she finishes her RUTF portion in the appetite test.",
+         "record": [
+          {
+           "title": "Check for acute malnutrition",
+           "lines": [
+            "Oedema of both feet: no",
+            "MUAC: 11.2 cm",
+            "Medical complication: no",
+            "Appetite test: passed"
+           ],
+           "classify": [
+            "UNCOMPLICATED SEVERE ACUTE MALNUTRITION"
+           ]
+          }
+         ],
+         "question": "How do you classify Hala?",
+         "options": [
+          "COMPLICATED SEVERE ACUTE MALNUTRITION",
+          "UNCOMPLICATED SEVERE ACUTE MALNUTRITION",
+          "MODERATE ACUTE MALNUTRITION"
+         ],
+         "feedback": [
+          "Complicated SAM needs oedema of both feet, a medical complication or a failed appetite test.",
+          "Right. MUAC below 11.5 cm with no complication and a passed appetite test: UNCOMPLICATED SAM.",
+          "MUAC below 11.5 cm is severe, not moderate."
+         ],
+         "explanation": "Uncomplicated SAM is treated at home with RUTF, with follow-up in 7 days.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Ibrahim",
+          "age": "3 years",
+          "visit": "initial",
+          "weight": 12,
+          "temp": 37.0,
+          "muac": 12.8,
+          "problem": "Swollen feet"
+         },
+         "text": "When you press both of Ibrahim's feet with your thumbs for a few seconds, a dent stays in each foot. His MUAC is 12.8 cm.",
+         "record": [
+          {
+           "title": "Check for acute malnutrition",
+           "lines": [
+            "Oedema of both feet: yes",
+            "MUAC: 12.8 cm"
+           ],
+           "classify": [
+            "COMPLICATED SEVERE ACUTE MALNUTRITION"
+           ]
+          }
+         ],
+         "question": "His MUAC is normal. How do you classify Ibrahim?",
+         "options": [
+          "NO ACUTE MALNUTRITION",
+          "MODERATE ACUTE MALNUTRITION",
+          "COMPLICATED SEVERE ACUTE MALNUTRITION"
+         ],
+         "feedback": [
+          "Oedema of both feet is severe acute malnutrition whatever the MUAC.",
+          "Oedema of both feet is severe, not moderate.",
+          "Right. Oedema of both feet is in the pink row: COMPLICATED SEVERE ACUTE MALNUTRITION. Refer urgently."
+         ],
+         "explanation": "Always look and feel for oedema of both feet. A normal MUAC does not rule out severe malnutrition.",
+         "answer": 2
+        },
+        {
+         "child": {
+          "name": "Reem",
+          "age": "20 months",
+          "visit": "initial",
+          "weight": 10,
+          "temp": 37.0,
+          "problem": "Tired"
+         },
+         "text": "You compare Reem's palm with your own and with her mother's. Her palm is pale, but not white.",
+         "record": [
+          {
+           "title": "Check for anaemia",
+           "lines": [
+            "Palmar pallor: some"
+           ],
+           "classify": [
+            "ANAEMIA"
+           ]
+          }
+         ],
+         "question": "How do you classify Reem?",
+         "options": [
+          "SEVERE ANAEMIA",
+          "ANAEMIA",
+          "NO ANAEMIA"
+         ],
+         "feedback": [
+          "Severe palmar pallor is a very pale, almost white palm.",
+          "Right. Some palmar pallor classifies ANAEMIA: give iron, and mebendazole if 1 year or older and none in the last 6 months.",
+          "Her palm is pale: she has some palmar pallor."
+         ],
+         "explanation": "Severe palmar pallor: SEVERE ANAEMIA, refer urgently. Some palmar pallor: ANAEMIA.",
+         "answer": 1
+        }
+       ]
+      },
+      {
+       "type": "spot",
+       "title": "Find the error on Fatima's form",
+       "part": "child",
+       "text": "One entry on this form is wrong. Tap it.",
+       "child": {
+        "name": "Fatima",
+        "age": "2 years",
+        "visit": "initial",
+        "weight": 9,
+        "temp": 37.0,
+        "muac": 11.3,
+        "problem": "Check-up"
+       },
+       "record": [
+        {
+         "title": "Check for acute malnutrition",
+         "lines": [
+          {
+           "text": "Oedema of both feet: no",
+           "why": "This entry is right."
+          },
+          {
+           "text": "MUAC: 11.3 cm",
+           "why": "The MUAC was read correctly."
+          },
+          {
+           "text": "Medical complication: no",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Appetite test: passed",
+           "why": "This entry is right."
+          }
+         ],
+         "classify": [
+          {
+           "text": "MODERATE ACUTE MALNUTRITION",
+           "why": "MUAC below 11.5 cm is SEVERE acute malnutrition. With no complication and a passed appetite test: UNCOMPLICATED SAM.",
+           "error": true
+          }
+         ]
+        }
+       ],
+       "explanation": "MUAC below 11.5 cm is severe; 11.5 up to 12.5 cm is moderate."
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 47
     },
     {
      "title": "Exercise O: classify the whole child",
@@ -4839,7 +7128,7 @@
      "practise": [],
      "bookFromPage": 82,
      "bookToPage": 83,
-     "order": 42
+     "order": 48
     },
     {
      "title": "Check the child's immunization status",
@@ -4908,7 +7197,7 @@
      "practise": [],
      "bookFromPage": 84,
      "bookToPage": 84,
-     "order": 43
+     "order": 49
     },
     {
      "title": "Contraindications to immunization",
@@ -5003,7 +7292,7 @@
      "practise": [],
      "bookFromPage": 85,
      "bookToPage": 86,
-     "order": 44
+     "order": 50
     },
     {
      "title": "Check the child's vitamin A supplementation status",
@@ -5093,7 +7382,7 @@
      "practise": [],
      "bookFromPage": 87,
      "bookToPage": 87,
-     "order": 45
+     "order": 51
     },
     {
      "title": "Exercise Q: immunization and vitamin A",
@@ -5126,7 +7415,7 @@
      "practise": [],
      "bookFromPage": 88,
      "bookToPage": 89,
-     "order": 46
+     "order": 52
     },
     {
      "title": "Assess other problems",
@@ -5177,7 +7466,7 @@
      "practise": [],
      "bookFromPage": 90,
      "bookToPage": 90,
-     "order": 47
+     "order": 53
     },
     {
      "title": "Exercise R: the whole ASSESS & CLASSIFY chart",
@@ -5226,7 +7515,7 @@
      "practise": [],
      "bookFromPage": 91,
      "bookToPage": 92,
-     "order": 48
+     "order": 54
     },
     {
      "title": "Exercises S and T: video case studies, and summary",
@@ -5292,7 +7581,40 @@
      "practise": [],
      "bookFromPage": 93,
      "bookToPage": 94,
-     "order": 49
+     "order": 55
+    },
+    {
+     "title": "Module 2 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Check every sick child for the general danger signs first.</li><li>Not able to drink or breastfeed, vomits everything, convulsions, lethargic or unconscious, convulsing now.</li><li>A child with any danger sign needs urgent attention and referral after pre-referral treatment.</li><li>Any danger sign or stridor in a calm child: SEVERE PNEUMONIA OR VERY SEVERE DISEASE.</li><li>Two signs of a row classify dehydration: pink is severe, yellow is some.</li><li>Test every child with fever for malaria and classify from the result.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for any illness, assessing and classifying the whole child: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 56
     }
    ]
   },
@@ -5342,6 +7664,22 @@
        "type": "note",
        "text": "Follow the flowchart for identifying treatment, and say what the pink, yellow and green rows mean for treatment.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "A child has a pink classification and a yellow one. What do you do?",
+       "options": [
+        "Treat the yellow one at home first",
+        "Give urgent pre-referral treatment and refer",
+        "Wait and see"
+       ],
+       "answer": 1,
+       "feedback": [
+        "A pink classification comes first.",
+        "Right. Pink means urgent referral.",
+        "A pink classification cannot wait."
+       ]
       },
       {
        "type": "paragraph",
@@ -6399,6 +8737,39 @@
      "bookFromPage": 25,
      "bookToPage": 29,
      "order": 14
+    },
+    {
+     "title": "Module 3 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Pink classifications need urgent pre-referral treatment and referral.</li><li>Yellow classifications are treated in the clinic and at home, with follow-up.</li><li>Green classifications need home care and advice on when to return.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for any illness, writing the treatments you identified: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 15
     }
    ]
   },
@@ -6483,6 +8854,22 @@
        "type": "note",
        "text": "Choose the oral antibiotic for each classification and find its dose and schedule by weight or age.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "A child has a pink classification and a yellow one. What do you do?",
+       "options": [
+        "Treat the yellow one at home first",
+        "Give urgent pre-referral treatment and refer",
+        "Wait and see"
+       ],
+       "answer": 1,
+       "feedback": [
+        "A pink classification comes first.",
+        "Right. Pink means urgent referral.",
+        "A pink classification cannot wait."
+       ]
       },
       {
        "type": "heading",
@@ -7115,6 +9502,20 @@
        "type": "note",
        "text": "Ask good checking questions that the mother cannot answer with yes or no.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "A mother says \"yes\" when you ask if she understood. Is that enough?",
+       "options": [
+        "Yes",
+        "No: ask a checking question"
+       ],
+       "answer": 1,
+       "feedback": [
+        "\"Yes\" does not show she can do it.",
+        "Right. Ask her to tell you or show you what she will do."
+       ]
       },
       {
        "type": "heading",
@@ -10439,6 +12840,39 @@
      "bookFromPage": 86,
      "bookToPage": 86,
      "order": 52
+    },
+    {
+     "title": "Module 4 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Give the right drug, dose and schedule for the child's weight or age.</li><li>Teach the mother to give oral drugs and treat local infections at home, and check her understanding.</li><li>Choose Plan A, B or C for the child's dehydration.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for a treatment you gave or taught: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 53
     }
    ]
   },
@@ -10854,6 +13288,20 @@
        "type": "note",
        "text": "Ask the feeding questions on the COUNSEL chart and compare the answers with the recommendations.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "A mother says \"yes\" when you ask if she understood. Is that enough?",
+       "options": [
+        "Yes",
+        "No: ask a checking question"
+       ],
+       "answer": 1,
+       "feedback": [
+        "\"Yes\" does not show she can do it.",
+        "Right. Ask her to tell you or show you what she will do."
+       ]
       },
       {
        "type": "heading",
@@ -12279,6 +14727,39 @@
      "bookFromPage": 39,
      "bookToPage": 40,
      "order": 23
+    },
+    {
+     "title": "Module 5 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Assess the child's feeding and give relevant advice for each problem.</li><li>Use good communication skills and the Mother's Card.</li><li>Tell the mother when to return immediately and when to come for follow-up.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for feeding counselling: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 24
     }
    ]
   },
@@ -12372,6 +14853,22 @@
        "type": "note",
        "text": "Ask, look and listen for the signs of very severe disease and local bacterial infection in a young infant.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "What is fast breathing in a young infant under 2 months?",
+       "options": [
+        "40 or more",
+        "50 or more",
+        "60 or more"
+       ],
+       "answer": 2,
+       "feedback": [
+        "That is for children 12 months up to 5 years.",
+        "That is for children 2 up to 12 months.",
+        "Right. 60 or more, on a repeat count."
+       ]
       },
       {
        "type": "heading",
@@ -12547,6 +15044,27 @@
         {
          "front": "6 weeks, 62",
          "back": "Yes"
+        }
+       ]
+      },
+      {
+       "type": "steps",
+       "title": "Look at the umbilicus and the skin, with photographs",
+       "steps": [
+        {
+         "title": "A normal umbilicus",
+         "text": "Compare what you see with a normal umbilicus.",
+         "image": "imnci-photos/photo-60.jpg"
+        },
+        {
+         "title": "Red or draining pus?",
+         "text": "Does the redness extend to the skin of the abdomen?",
+         "image": "imnci-photos/photo-61.jpg"
+        },
+        {
+         "title": "Look at the skin",
+         "text": "Are there pustules? Many or severe pustules are a serious sign.",
+         "image": "imnci-photos/photo-62.jpg"
         }
        ]
       }
@@ -12734,6 +15252,34 @@
         "Follow-up in 2 days. BACTERIAL Advise mother to give home care for",
         "None of the above signs INFECTION the young infant. UNLIKELY"
        ]
+      },
+      {
+       "type": "classcards",
+       "title": "Very severe disease and local bacterial infection",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE",
+         "action": "Refer urgently",
+         "signs": "Any one of: not feeding well; convulsions; fast breathing (60 breaths per minute or more); severe chest indrawing; fever (37.5 °C or above); low body temperature (less than 35.5 °C); movement only when stimulated or no movement at all.",
+         "treat": "First dose of IM ampicillin and gentamicin; prevent low blood sugar; keep the infant warm on the way; refer urgently."
+        },
+        {
+         "colour": "yellow",
+         "label": "LOCAL BACTERIAL INFECTION",
+         "action": "Treat and follow up",
+         "signs": "Umbilicus red or draining pus; skin pustules; pus draining from the eyes.",
+         "treat": "Oral amoxicillin for 5 days; teach the mother to treat local infections at home; home care; follow up in 2 days."
+        },
+        {
+         "colour": "green",
+         "label": "SEVERE DISEASE OR LOCAL INFECTION UNLIKELY",
+         "action": "Home care",
+         "signs": "No signs of very severe disease or local bacterial infection.",
+         "treat": "Advise the mother on home care for the young infant."
+        }
+       ]
       }
      ],
      "see": [],
@@ -12797,6 +15343,22 @@
        "type": "note",
        "text": "Assess and classify a young infant for jaundice.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "Where do you look to decide if jaundice is severe?",
+       "options": [
+        "The palms and soles",
+        "The eyes only",
+        "The stool"
+       ],
+       "answer": 0,
+       "feedback": [
+        "Right. Yellow palms and soles at any age is severe jaundice.",
+        "Look at the palms and soles too.",
+        "Look at the skin, palms and soles."
+       ]
       },
       {
        "type": "video",
@@ -12869,6 +15431,34 @@
       {
        "type": "rich",
        "text": "<pre style=\"white-space: pre; overflow-x: auto; font-size: 12px; line-height: 1.35\">None of the signs of jandace         NO JAUNDACE             Advice the mother to to home\n or sever jaundace                                             care to the young infant</pre>"
+      },
+      {
+       "type": "classcards",
+       "title": "Jaundice: the three classifications",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "pink",
+         "label": "SEVERE JAUNDICE",
+         "action": "Refer urgently",
+         "signs": "Any jaundice if age less than 24 hours; or yellow palms and soles at any age; or any jaundice in an infant weighing less than 2.5 kg.",
+         "treat": "Prevent low blood sugar; keep the infant warm; refer urgently."
+        },
+        {
+         "colour": "yellow",
+         "label": "JAUNDICE",
+         "action": "Treat and follow up",
+         "signs": "Jaundice appearing after 24 hours of age, and palms and soles not yellow.",
+         "treat": "If 14 days or older, refer for assessment; home care; return immediately if palms and soles appear yellow; follow up in 1 day."
+        },
+        {
+         "colour": "green",
+         "label": "NO JAUNDICE",
+         "action": "Home care",
+         "signs": "No jaundice.",
+         "treat": "Advise the mother on home care for the young infant."
+        }
+       ]
       }
      ],
      "see": [],
@@ -13109,12 +15699,467 @@
      "order": 9
     },
     {
+     "title": "Practise: classify the sick young infant",
+     "read": [
+      {
+       "type": "note",
+       "text": "Count breaths, and classify very severe disease, local infection, jaundice and diarrhoea for six young infants.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "What is fast breathing in a young infant under 2 months?",
+       "options": [
+        "40 or more",
+        "50 or more",
+        "60 or more"
+       ],
+       "answer": 2,
+       "feedback": [
+        "That is for children 12 months up to 5 years.",
+        "That is for children 2 up to 12 months.",
+        "Right. 60 or more, on a repeat count."
+       ]
+      },
+      {
+       "type": "drill",
+       "title": "Count the breaths: a young infant",
+       "url": "",
+       "videoTitle": "Counting breaths: young infant (video to be recorded)",
+       "text": "Count for one full minute. If the count is 60 or more, count again.",
+       "given": "Until this clip is recorded: you count 64 breaths in one minute, and 62 when you count again.",
+       "count": {
+        "answer": 64,
+        "tolerance": 3,
+        "unit": "breaths per minute",
+        "question": "How many breaths did you count in one minute?"
+       },
+       "question": "Does this young infant have fast breathing?",
+       "options": [
+        "Yes",
+        "No, count once more"
+       ],
+       "answer": 0,
+       "feedback": [
+        "Right. Both counts are 60 or more: fast breathing, a sign of very severe disease.",
+        "Two counts of 60 or more confirm fast breathing. Do not delay referral."
+       ]
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Talk with Amal's mother",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "Congratulations on your baby. How old is she?"
+          },
+          {
+           "who": "Mother",
+           "text": "Ten days."
+          },
+          {
+           "who": "You",
+           "text": "Is she feeding well?"
+          },
+          {
+           "who": "Mother",
+           "text": "Yes, but she feels hot."
+          }
+         ],
+         "question": "What do you do next?",
+         "options": [
+          "Measure her temperature",
+          "Tell the mother that babies are often warm",
+          "Give paracetamol"
+         ],
+         "answer": 0,
+         "explanation": "Measure the temperature. In a young infant 37.5 °C or above is fever, a pink-row sign.",
+         "feedback": [
+          "Right.",
+          "Fever in a young infant can be a sign of very severe disease.",
+          "Assess and classify before treating."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "Her temperature is 37.9 degrees."
+          }
+         ],
+         "question": "How do you classify Amal?",
+         "options": [
+          "POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE",
+          "LOCAL BACTERIAL INFECTION",
+          "SEVERE DISEASE OR LOCAL INFECTION UNLIKELY"
+         ],
+         "answer": 0,
+         "explanation": "Fever 37.5 °C or above is a pink-row sign: first dose of IM antibiotics, keep warm, refer urgently.",
+         "feedback": [
+          "Right.",
+          "She has a pink-row sign.",
+          "37.9 °C is fever."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Classify the sick young infant",
+       "part": "infant",
+       "categories": [
+        "bacterial_infection",
+        "jaundice",
+        "diarrhea"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Baby Amal",
+          "age": "10 days",
+          "visit": "initial",
+          "weight": 3.0,
+          "temp": 37.9,
+          "problem": "Feels hot"
+         },
+         "text": "Amal is 10 days old. Her mother says she feels hot. She feeds well and moves on her own. Breathing 52 per minute. No chest indrawing. Her temperature is 37.9 °C.",
+         "record": [
+          {
+           "title": "Check for very severe disease and local bacterial infection",
+           "lines": [
+            "Feeding well: yes",
+            "Breaths: 52 per minute",
+            "Temperature: 37.9 °C",
+            "Movement: moves on her own"
+           ],
+           "classify": [
+            "POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE"
+           ]
+          }
+         ],
+         "question": "How do you classify Amal?",
+         "options": [
+          "POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE",
+          "LOCAL BACTERIAL INFECTION",
+          "SEVERE DISEASE OR LOCAL INFECTION UNLIKELY"
+         ],
+         "feedback": [
+          "Right. Fever of 37.5 °C or above is a sign of very severe disease in a young infant.",
+          "Amal has no umbilical redness, pustules or pus from the eyes, and she has a pink-row sign.",
+          "37.9 °C is fever in a young infant."
+         ],
+         "explanation": "Give the first dose of IM ampicillin and gentamicin, prevent low blood sugar, keep her warm, and refer urgently.",
+         "answer": 0
+        },
+        {
+         "child": {
+          "name": "Baby Omar",
+          "age": "3 weeks",
+          "visit": "initial",
+          "weight": 3.6,
+          "temp": 36.8,
+          "problem": "Red umbilicus"
+         },
+         "text": "Omar's umbilicus is red. He feeds well, breathes 48 times per minute, has no chest indrawing and moves on his own.",
+         "record": [
+          {
+           "title": "Check for very severe disease and local bacterial infection",
+           "lines": [
+            "Umbilicus red or draining pus: yes",
+            "Breaths: 48",
+            "Temperature: 36.8 °C"
+           ],
+           "classify": [
+            "LOCAL BACTERIAL INFECTION"
+           ]
+          }
+         ],
+         "question": "How do you classify Omar?",
+         "options": [
+          "POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE",
+          "LOCAL BACTERIAL INFECTION",
+          "SEVERE DISEASE OR LOCAL INFECTION UNLIKELY"
+         ],
+         "feedback": [
+          "Omar has no sign of the pink row.",
+          "Right. A red umbilicus is a local bacterial infection: oral amoxicillin for 5 days and treat the umbilicus at home.",
+          "A red umbilicus is a sign of local bacterial infection."
+         ],
+         "explanation": "Follow up a local bacterial infection in 2 days.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Baby Tasneem",
+          "age": "5 weeks",
+          "visit": "initial",
+          "weight": 4.2,
+          "temp": 36.9,
+          "problem": "Fast breathing"
+         },
+         "text": "You count 66 breaths in one minute. You count again: 64. Tasneem feeds well and has no other sign.",
+         "record": [
+          {
+           "title": "Check for very severe disease",
+           "lines": [
+            "Breaths: 66, repeat 64",
+            "Fast breathing: yes"
+           ],
+           "classify": [
+            "POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE"
+           ]
+          }
+         ],
+         "question": "How do you classify Tasneem?",
+         "options": [
+          "POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE",
+          "PNEUMONIA",
+          "SEVERE DISEASE OR LOCAL INFECTION UNLIKELY"
+         ],
+         "feedback": [
+          "Right. In a young infant, 60 or more breaths per minute on a repeated count is fast breathing, a pink-row sign.",
+          "Young infants are not classified for pneumonia. Fast breathing is a sign of very severe disease.",
+          "64 on the second count is fast breathing."
+         ],
+         "explanation": "If the first count is 60 or more, count again. Fast breathing is confirmed if the second count is also 60 or more.",
+         "answer": 0
+        },
+        {
+         "child": {
+          "name": "Baby Sana",
+          "age": "4 days",
+          "visit": "initial",
+          "weight": 3.1,
+          "temp": 36.9,
+          "problem": "Yellow eyes"
+         },
+         "text": "Sana is 4 days old. The jaundice appeared on day 3. Her face and body are yellow; her palms and soles are not. She weighs 3.1 kg.",
+         "record": [
+          {
+           "title": "Check for jaundice",
+           "lines": [
+            "Appeared in the first 24 hours: no",
+            "Palms and soles yellow: no",
+            "Weight: 3.1 kg"
+           ],
+           "classify": [
+            "JAUNDICE"
+           ]
+          }
+         ],
+         "question": "How do you classify Sana's jaundice?",
+         "options": [
+          "SEVERE JAUNDICE",
+          "JAUNDICE",
+          "NO JAUNDICE"
+         ],
+         "feedback": [
+          "Severe jaundice: jaundice in the first 24 hours, yellow palms and soles, or jaundice in an infant under 2.5 kg.",
+          "Right. Jaundice that appeared after 24 hours, with palms and soles not yellow: JAUNDICE.",
+          "Her face and body are yellow: she has jaundice."
+         ],
+         "explanation": "Advise the mother to return immediately if the palms and soles appear yellow, and follow up in 1 day.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Baby Hamza",
+          "age": "6 days",
+          "visit": "initial",
+          "weight": 3.3,
+          "temp": 36.8,
+          "problem": "Yellow"
+         },
+         "text": "Hamza's jaundice appeared on day 3. Today his palms and soles are yellow.",
+         "record": [
+          {
+           "title": "Check for jaundice",
+           "lines": [
+            "Appeared in the first 24 hours: no",
+            "Palms and soles yellow: yes"
+           ],
+           "classify": [
+            "SEVERE JAUNDICE"
+           ]
+          }
+         ],
+         "question": "How do you classify Hamza's jaundice?",
+         "options": [
+          "SEVERE JAUNDICE",
+          "JAUNDICE",
+          "NO JAUNDICE"
+         ],
+         "feedback": [
+          "Right. Yellow palms and soles at any age: SEVERE JAUNDICE. Refer urgently.",
+          "Read the pink row first: yellow palms and soles make jaundice severe.",
+          "Hamza is yellow."
+         ],
+         "explanation": "Before referral, prevent low blood sugar and keep the infant warm.",
+         "answer": 0
+        },
+        {
+         "child": {
+          "name": "Baby Ali",
+          "age": "5 weeks",
+          "visit": "initial",
+          "weight": 4.0,
+          "temp": 37.0,
+          "problem": "Diarrhoea"
+         },
+         "text": "Ali has had diarrhoea for 3 days. He is restless and irritable and his eyes are sunken. The skin pinch goes back immediately.",
+         "record": [
+          {
+           "title": "Does the young infant have diarrhoea? Yes",
+           "lines": [
+            "For how long? 3 days",
+            "Restless, irritable: yes",
+            "Sunken eyes: yes"
+           ],
+           "classify": [
+            "SOME DEHYDRATION"
+           ]
+          }
+         ],
+         "question": "How do you classify Ali's dehydration?",
+         "options": [
+          "SEVERE DEHYDRATION",
+          "SOME DEHYDRATION",
+          "NO DEHYDRATION"
+         ],
+         "feedback": [
+          "Severe dehydration needs two of: movement only when stimulated or no movement, sunken eyes, skin pinch very slow.",
+          "Right. Restless and irritable plus sunken eyes: SOME DEHYDRATION.",
+          "He has two signs of the yellow row."
+         ],
+         "explanation": "If the infant has no severe classification, give fluid for some dehydration (Plan B) and counsel on feeding.",
+         "answer": 1
+        }
+       ]
+      },
+      {
+       "type": "spot",
+       "title": "Find the error on Baby Rami's form",
+       "part": "infant",
+       "text": "One entry on this young infant's form is wrong. Tap it.",
+       "child": {
+        "name": "Baby Rami",
+        "age": "2 weeks",
+        "visit": "initial",
+        "weight": 3.4,
+        "temp": 37.8,
+        "problem": "Not well"
+       },
+       "record": [
+        {
+         "title": "Check for very severe disease and local bacterial infection",
+         "lines": [
+          {
+           "text": "Feeding well: yes",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Breaths: 54 per minute",
+           "why": "54 is below 60: not fast breathing."
+          },
+          {
+           "text": "Temperature: 37.8 °C",
+           "why": "The temperature is recorded correctly."
+          },
+          {
+           "text": "Umbilicus: normal",
+           "why": "This entry is right."
+          }
+         ],
+         "classify": [
+          {
+           "text": "SEVERE DISEASE OR LOCAL INFECTION UNLIKELY",
+           "why": "37.8 °C is fever (37.5 °C or above) in a young infant: POSSIBLE SERIOUS BACTERIAL INFECTION OR VERY SEVERE DISEASE.",
+           "error": true
+          }
+         ]
+        }
+       ],
+       "explanation": "In a young infant, fever of 37.5 °C or above is a pink-row sign."
+      },
+      {
+       "type": "spot",
+       "title": "Find the error on Baby Nada's form",
+       "part": "infant",
+       "text": "One entry is wrong. Tap it.",
+       "child": {
+        "name": "Baby Nada",
+        "age": "5 days",
+        "visit": "initial",
+        "weight": 3.0,
+        "temp": 36.9,
+        "problem": "Yellow"
+       },
+       "record": [
+        {
+         "title": "Check for jaundice",
+         "lines": [
+          {
+           "text": "Jaundice: yes",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Appeared in the first 24 hours: no",
+           "why": "This entry is right."
+          },
+          {
+           "text": "Palms and soles yellow: yes",
+           "why": "This sign was looked for and recorded correctly."
+          }
+         ],
+         "classify": [
+          {
+           "text": "JAUNDICE",
+           "why": "Yellow palms and soles at any age is SEVERE JAUNDICE.",
+           "error": true
+          }
+         ]
+        }
+       ],
+       "explanation": "Always look at the palms and soles."
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 10
+    },
+    {
      "title": "1.4 Check for feeding problem or low weight",
      "read": [
       {
        "type": "note",
        "text": "Ask about feeding and determine weight for age in a young infant.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "How many breastfeeds in 24 hours does a young infant need?",
+       "options": [
+        "4 or more",
+        "8 or more",
+        "12 or more"
+       ],
+       "answer": 1,
+       "feedback": [
+        "Fewer than 8 is a feeding problem.",
+        "Right.",
+        "8 or more is enough."
+       ]
       },
       {
        "type": "heading",
@@ -13241,7 +16286,7 @@
      "practise": [],
      "bookFromPage": 17,
      "bookToPage": 19,
-     "order": 10
+     "order": 11
     },
     {
      "title": "1.4.2 Assess breastfeeding",
@@ -13352,13 +16397,34 @@
         "Is the infant suckling effectively? (That is slow ,deep sucks, sometimes pausing) The infant is suckling effectively if he suckles with slow, deep sucks and sometimes pauses. You may see or hear the infant swallowing. If you can observe how the breastfeed finishes, look for signs that the infant is satisfied. If satisfied, the infant releases the breast spontaneously ( that is , the mother does not lead the infant to stop breastfeeding in any way), The infant appears relaxed, sleepy, and loses interest in the breast. An infant is not suckling effectively if he is taking only rapid, shallow sucks.You may also see indrawing of the cheeks. You do not see or hear swallowing. The infant is not satisfied at the end of the feed, and may be restless. He may cry or try to suckle again, or continue to breastfeed for along time. An infant who is not suckling at all is not able to suck breastmilk into his mouth and swallow . therefore he is not able to breastfeed at all. If a blocked nose seems to interfere with breastfeeding, clear the infant's nose. Then check whether the infant can suckle more effectively.",
         "Look for ulcers or white patches in the mouth (thrush) Look inside the mouth at the tongue and inside of the cheek. Thrush looks like milk curds on the inside the cheek, or a thick white coating of the tongue. Try to wipe white off. The white patches of thrush will remain."
        ]
+      },
+      {
+       "type": "steps",
+       "title": "Check attachment, with photographs",
+       "steps": [
+        {
+         "title": "Good attachment",
+         "text": "Chin touching breast, mouth wide open, lower lip turned outward, more areola above than below.",
+         "image": "imnci-photos/photo-66.jpg"
+        },
+        {
+         "title": "Not well attached",
+         "text": "Compare: chin not touching, mouth not wide open, areola equal above and below.",
+         "image": "imnci-photos/photo-67.jpg"
+        },
+        {
+         "title": "Good positioning",
+         "text": "Head and body straight, facing the breast, close to the mother, whole body supported.",
+         "image": "imnci-photos/photo-77.jpg"
+        }
+       ]
       }
      ],
      "see": [],
      "practise": [],
      "bookFromPage": 20,
      "bookToPage": 22,
-     "order": 11
+     "order": 12
     },
     {
      "title": "Exercise D: attachment for breastfeeding",
@@ -13477,7 +16543,7 @@
      "practise": [],
      "bookFromPage": 23,
      "bookToPage": 23,
-     "order": 12
+     "order": 13
     },
     {
      "title": "1.4.3 Classify feeding problems; 1.5 immunization; 1.6 other problems",
@@ -13544,13 +16610,34 @@
       {
        "type": "rich",
        "text": "<pre style=\"white-space: pre; overflow-x: auto; font-size: 12px; line-height: 1.35\">                         AGE:       VACCINE\nIMMUNIZATION SCHEDULE:   Birth       BCG, OPV-0\n                         6 weeks     Penta-1, OPV-1, Rota 1, PCV1</pre>"
+      },
+      {
+       "type": "classcards",
+       "title": "Feeding problem or low weight",
+       "text": "Open each card: the signs, then what to do. Pink first, then yellow, then green.",
+       "cards": [
+        {
+         "colour": "yellow",
+         "label": "FEEDING PROBLEM OR LOW WEIGHT",
+         "action": "Treat and follow up",
+         "signs": "Not well attached; or not suckling effectively; or less than 8 breastfeeds in 24 hours; or receives other foods or drinks; or low weight for age; or thrush.",
+         "treat": "Teach positioning and attachment; advise to breastfeed more often, day and night; counsel about other foods and a cup; treat thrush; follow up a feeding problem or thrush in 2 days and low weight in 14 days."
+        },
+        {
+         "colour": "green",
+         "label": "NO FEEDING PROBLEM",
+         "action": "Home care",
+         "signs": "Not low weight for age and no other signs of inadequate feeding.",
+         "treat": "Advise the mother on home care; praise her for feeding the infant well."
+        }
+       ]
       }
      ],
      "see": [],
      "practise": [],
      "bookFromPage": 24,
      "bookToPage": 26,
-     "order": 13
+     "order": 14
     },
     {
      "title": "1.4.3 Classify feeding problems; 1.5 immunization; 1.6 other problems (part 2)",
@@ -13651,7 +16738,7 @@
      "practise": [],
      "bookFromPage": 24,
      "bookToPage": 26,
-     "order": 14
+     "order": 15
     },
     {
      "title": "Exercise E: assess and classify feeding, weight and immunization",
@@ -13716,7 +16803,210 @@
      "practise": [],
      "bookFromPage": 26,
      "bookToPage": 28,
-     "order": 15
+     "order": 16
+    },
+    {
+     "title": "Practise: classify feeding problems",
+     "read": [
+      {
+       "type": "note",
+       "text": "Classify the feeding of three young infants, and practise the questions you ask a mother.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "story",
+       "label": "Conversation",
+       "title": "Talk with Layla's mother",
+       "self": [
+        "You"
+       ],
+       "stages": [
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "You",
+           "text": "How many times does Layla breastfeed in 24 hours, day and night?"
+          },
+          {
+           "who": "Mother",
+           "text": "About six times."
+          },
+          {
+           "who": "You",
+           "text": "Does she get any other food or drink?"
+          },
+          {
+           "who": "Mother",
+           "text": "No, only my milk."
+          }
+         ],
+         "question": "Is this a feeding problem?",
+         "options": [
+          "Yes: less than 8 times in 24 hours",
+          "No: only breast milk is fine",
+          "Only if she is losing weight"
+         ],
+         "answer": 0,
+         "explanation": "A young infant should breastfeed 8 times or more in 24 hours.",
+         "feedback": [
+          "Right.",
+          "Exclusive breastfeeding is good, but 6 times is not enough.",
+          "Fewer than 8 feeds is a problem whatever the weight."
+         ]
+        },
+        {
+         "text": "",
+         "dialogue": [
+          {
+           "who": "Mother",
+           "text": "She sleeps a lot at night."
+          }
+         ],
+         "question": "What do you advise?",
+         "options": [
+          "Breastfeed as often and for as long as she wants, day and night",
+          "Give her water between feeds",
+          "Feed only by day"
+         ],
+         "answer": 0,
+         "explanation": "Advise the mother to breastfeed as often and for as long as the infant wants, day and night.",
+         "feedback": [
+          "Right.",
+          "A young infant needs breast milk only.",
+          "Night feeds are important."
+         ]
+        }
+       ]
+      },
+      {
+       "type": "scenario",
+       "label": "Test your skill",
+       "title": "Classify feeding problem or low weight",
+       "part": "infant",
+       "categories": [
+        "feeding_problem"
+       ],
+       "cases": [
+        {
+         "child": {
+          "name": "Baby Layla",
+          "age": "6 weeks",
+          "visit": "initial",
+          "weight": 4.3,
+          "temp": 36.8,
+          "problem": "Check-up"
+         },
+         "text": "Layla is breastfed 6 times in 24 hours. She takes no other food or drink. Her weight for age is not low. She is well positioned and well attached and suckles effectively. No thrush.",
+         "record": [
+          {
+           "title": "Check for feeding problem or low weight",
+           "lines": [
+            "Breastfeeds: 6 times in 24 hours",
+            "Other foods or drinks: no",
+            "Weight for age: not low",
+            "Attachment: good",
+            "Suckling: effective"
+           ],
+           "classify": [
+            "FEEDING PROBLEM OR LOW WEIGHT"
+           ]
+          }
+         ],
+         "question": "How do you classify Layla's feeding?",
+         "options": [
+          "FEEDING PROBLEM OR LOW WEIGHT",
+          "NO FEEDING PROBLEM"
+         ],
+         "feedback": [
+          "Right. Breastfeeding less than 8 times in 24 hours is a feeding problem.",
+          "Her attachment is good, but she breastfeeds only 6 times. A young infant should breastfeed 8 times or more in 24 hours."
+         ],
+         "explanation": "Advise the mother to breastfeed as often and for as long as the infant wants, day and night.",
+         "answer": 0
+        },
+        {
+         "child": {
+          "name": "Baby Yasir",
+          "age": "4 weeks",
+          "visit": "initial",
+          "weight": 4.0,
+          "temp": 36.9,
+          "problem": "Check-up"
+         },
+         "text": "Yasir breastfeeds 10 times in 24 hours, day and night. He gets no other food or drink. His weight for age is not low. He is well attached and suckles effectively. No thrush.",
+         "record": [
+          {
+           "title": "Check for feeding problem or low weight",
+           "lines": [
+            "Breastfeeds: 10 times in 24 hours",
+            "Other foods or drinks: no",
+            "Weight for age: not low",
+            "Attachment: good"
+           ],
+           "classify": [
+            "NO FEEDING PROBLEM"
+           ]
+          }
+         ],
+         "question": "How do you classify Yasir's feeding?",
+         "options": [
+          "FEEDING PROBLEM OR LOW WEIGHT",
+          "NO FEEDING PROBLEM"
+         ],
+         "feedback": [
+          "Yasir has no sign of a feeding problem and his weight is not low.",
+          "Right. Praise the mother for feeding him well."
+         ],
+         "explanation": "No feeding problem: advise the mother on home care for the young infant and praise her.",
+         "answer": 1
+        },
+        {
+         "child": {
+          "name": "Baby Rana",
+          "age": "7 weeks",
+          "visit": "initial",
+          "weight": 4.5,
+          "temp": 36.7,
+          "problem": "Check-up"
+         },
+         "text": "Rana breastfeeds 9 times in 24 hours. Her mother also gives her water and goat's milk from a bottle. She is well attached.",
+         "record": [
+          {
+           "title": "Check for feeding problem or low weight",
+           "lines": [
+            "Breastfeeds: 9 times in 24 hours",
+            "Other foods or drinks: water, goat's milk",
+            "Feeds with: bottle"
+           ],
+           "classify": [
+            "FEEDING PROBLEM OR LOW WEIGHT"
+           ]
+          }
+         ],
+         "question": "What is Rana's feeding problem? Select all that apply.",
+         "options": [
+          "She breastfeeds too few times",
+          "She receives other foods or drinks",
+          "She is fed from a bottle"
+         ],
+         "feedback": [
+          "9 times in 24 hours is enough: 8 or more.",
+          "Right. A young infant should have breast milk only.",
+          "Right. Counsel the mother to stop the bottle and use a cup if she must give other milk."
+         ],
+         "explanation": "Counsel the mother to breastfeed more, reduce other foods and drinks, and use a cup instead of a bottle.",
+         "answers": [
+          1,
+          2
+         ]
+        }
+       ]
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 17
     },
     {
      "title": "2.0 Identify appropriate treatment",
@@ -13794,7 +17084,7 @@
      "practise": [],
      "bookFromPage": 29,
      "bookToPage": 30,
-     "order": 16
+     "order": 18
     },
     {
      "title": "3.0 to 3.2 Oral antibiotic and first dose of intramuscular antibiotics",
@@ -13886,7 +17176,7 @@
      "practise": [],
      "bookFromPage": 31,
      "bookToPage": 32,
-     "order": 17
+     "order": 19
     },
     {
      "title": "Exercise F: referral, antibiotics and treatments",
@@ -13930,7 +17220,7 @@
      "practise": [],
      "bookFromPage": 32,
      "bookToPage": 33,
-     "order": 18
+     "order": 20
     },
     {
      "title": "3.3 to 3.5 Diarrhoea, immunization and local infections",
@@ -14016,7 +17306,7 @@
      "practise": [],
      "bookFromPage": 34,
      "bookToPage": 34,
-     "order": 19
+     "order": 21
     },
     {
      "title": "3.6 Teach correct positioning and attachment for breastfeeding",
@@ -14094,7 +17384,7 @@
      "practise": [],
      "bookFromPage": 35,
      "bookToPage": 37,
-     "order": 20
+     "order": 22
     },
     {
      "title": "Exercise G: positioning and attachment",
@@ -14190,7 +17480,7 @@
      "practise": [],
      "bookFromPage": 37,
      "bookToPage": 38,
-     "order": 21
+     "order": 23
     },
     {
      "title": "3.7 Advise the mother to give home care for the young infant",
@@ -14295,7 +17585,7 @@
      "practise": [],
      "bookFromPage": 38,
      "bookToPage": 40,
-     "order": 22
+     "order": 24
     },
     {
      "title": "3.7 Advise the mother to give home care for the young infant (part 2)",
@@ -14342,7 +17632,7 @@
      "practise": [],
      "bookFromPage": 38,
      "bookToPage": 40,
-     "order": 23
+     "order": 25
     },
     {
      "title": "Exercise H: treatment at home and home care",
@@ -14419,7 +17709,40 @@
      "practise": [],
      "bookFromPage": 41,
      "bookToPage": 41,
-     "order": 24
+     "order": 26
+    },
+    {
+     "title": "Module 6 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>Check every sick young infant for very severe disease, local infection, jaundice, diarrhoea and feeding.</li><li>Fever 37.5 °C or above, low temperature, fast breathing 60 or more, severe chest indrawing, not feeding well, convulsions, or moving only when stimulated: refer urgently.</li><li>Jaundice in the first 24 hours or yellow palms and soles is severe.</li><li>A young infant needs 8 or more breastfeeds in 24 hours and good attachment.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for a sick young infant: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 27
     }
    ]
   },
@@ -14542,6 +17865,22 @@
        "type": "note",
        "text": "Reassess a child with PNEUMONIA after 3 days and decide the treatment.",
        "label": "In this lesson"
+      },
+      {
+       "type": "question",
+       "label": "Before you start",
+       "text": "At a follow-up visit for pneumonia, the child breathes more slowly and eats better. What do you do?",
+       "options": [
+        "Finish the 5 days of amoxicillin",
+        "Stop the antibiotic",
+        "Refer"
+       ],
+       "answer": 0,
+       "feedback": [
+        "Right. The child is improving: complete the 5 days.",
+        "The child should finish the course.",
+        "Referral is for a child who is worse."
+       ]
       },
       {
        "type": "heading",
@@ -15804,6 +19143,39 @@
      "bookFromPage": 33,
      "bookToPage": 33,
      "order": 17
+    },
+    {
+     "title": "Module 7 wrap-up",
+     "read": [
+      {
+       "type": "note",
+       "text": "Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this lesson the module badge is yours.",
+       "label": "In this lesson"
+      },
+      {
+       "type": "rich",
+       "label": "Recap",
+       "text": "<p><strong>What you learned</strong></p><ul><li>At a follow-up visit, use the follow-up box for the child's classification.</li><li>Check for new problems, and refer a child who is worse.</li><li>Complete the treatment for a child who is improving.</li></ul>"
+      },
+      {
+       "type": "note",
+       "text": "In your clinic this week, record in your logbook three children you see for a follow-up visit: what you found, how you classified them and what you did. Bring the logbook to your next supervision visit or course session.",
+       "label": "Your logbook"
+      },
+      {
+       "type": "reflect",
+       "title": "Reflect",
+       "prompts": [
+        "What is one thing you will do differently in your clinic after this module?",
+        "Which part was hardest for you? What will you practise again?"
+       ],
+       "rating": true,
+       "ratingText": "How useful was this module for your work?"
+      }
+     ],
+     "see": [],
+     "practise": [],
+     "order": 18
     }
    ]
   }

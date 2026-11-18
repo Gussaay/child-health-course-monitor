@@ -65,7 +65,7 @@ describe('online course progress report', () => {
         const r = buildReport({ caller: { role: 'super_user' }, courses, items: its, progress: prog, users });
         const c = r.courses[0];
         expect(c.lessons.map((l) => l.id)).toEqual(['a1', 'a2', 'b1']);
-        expect(c.modules).toEqual([{ id: 'mA', title: 'Module 1', sections: 2 }, { id: 'mB', title: 'Module 2', sections: 1 }]);
+        expect(c.modules).toEqual([{ id: 'mA', title: 'Module 1', sections: 2, ratingSum: 0, ratings: 0 }, { id: 'mB', title: 'Module 2', sections: 1, ratingSum: 0, ratings: 0 }]);
         expect(c.lessons.map((l) => [l.done, l.started])).toEqual([[2, 0], [1, 1], [1, 0]]);
         const amna = r.learners.find((l) => l.uid === 'u1');
         expect(amna.perModule).toEqual({ mA: 1 });

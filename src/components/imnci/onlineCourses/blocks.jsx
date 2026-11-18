@@ -2,11 +2,11 @@
 //
 // How a section's content is shown to the learner: text, figures, captured
 // book pages, videos, questions and links to practice cases.
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     BookOpenText, MonitorPlay, Stethoscope, CheckCircle2, GraduationCap, X, Lightbulb, ClipboardCheck,
-    Play, Pencil, Film, BookOpen, Syringe,
+    Play, Pencil, Film, BookOpen, Syringe, Printer,
 } from 'lucide-react';
 import { severityById } from '../../constants';
 import { videoSource, blockHtml } from '../book';
@@ -418,6 +418,18 @@ export function useLiveProtocols() {
 
 const pick = (obj, keys) => Object.fromEntries(Object.entries(obj || {}).filter(([k]) => !keys?.length || keys.includes(k)));
 
+/** Prints a part of the page (the whole chart booklet) in its own window, so it can be saved as a PDF. */
+function printHtml(title, node) {
+    if (!node) return;
+    const w = window.open('', '_blank');
+    if (!w) return;
+    const css = [...document.querySelectorAll('style, link[rel="stylesheet"]')].map((n) => n.outerHTML).join('');
+    const safeTitle = String(title).replace(/[<>&]/g, '');
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${safeTitle}</title>${css}</head><body style="background:#fff;padding:16px">${node.innerHTML}</body></html>`);
+    w.document.close();
+    w.addEventListener('load', () => { w.focus(); w.print(); });
+}
+
 export function BookletBlock({ block }) {
     const { t } = useTranslation();
     const live = useLiveProtocols();
@@ -427,6 +439,8 @@ export function BookletBlock({ block }) {
     const shown = { ...protocol, categories: pick(protocol?.categories, block.categories) };
     const screen = useCourseScreen();
     const [whole, setWhole] = useState(false);
+    const printRef = useRef(null);
+    const wholeTitle = part === 'infant' ? t('imnci_ui.courses.booklet.infant', 'Chart booklet: sick young infant') : t('imnci_ui.courses.booklet.child', 'Chart booklet: sick child');
     const canEdit = screen?.isAdmin && screen?.permissions?.canManageProtocols && screen?.setBuilder;
     return (
         <figure className="not-prose my-4">
@@ -440,7 +454,9 @@ export function BookletBlock({ block }) {
             <div className="flex flex-wrap justify-center gap-2 mt-2">
                 <button onClick={() => setWhole(true)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:border-sky-400 hover:text-sky-700">
-                    <BookOpen size={14} /> {t('imnci_ui.courses.booklet.open_whole', 'Open the whole chart booklet')}
+                    <BookOpen size={14} /> {block.download
+                        ? t('imnci_ui.courses.booklet.open_print', 'Open the whole chart booklet to read or print')
+                        : t('imnci_ui.courses.booklet.open_whole', 'Open the whole chart booklet')}
                 </button>
                 {canEdit && (
                     <button onClick={() => screen.setBuilder('protocol')}
@@ -450,9 +466,14 @@ export function BookletBlock({ block }) {
                 )}
             </div>
             {whole && (
-                <Overlay title={part === 'infant' ? t('imnci_ui.courses.booklet.infant', 'Chart booklet: sick young infant') : t('imnci_ui.courses.booklet.child', 'Chart booklet: sick child')}
-                    onClose={() => setWhole(false)}>
-                    <BookletProtocolView formType={part} protocol={protocol} doses={doses} />
+                <Overlay title={wholeTitle} onClose={() => setWhole(false)}>
+                    <div className="flex justify-end mb-2">
+                        <button onClick={() => printHtml(wholeTitle, printRef.current)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-700 text-white text-xs font-semibold hover:bg-sky-800">
+                            <Printer size={14} /> {t('imnci_ui.courses.booklet.print', 'Print or save as PDF')}
+                        </button>
+                    </div>
+                    <div ref={printRef}><BookletProtocolView formType={part} protocol={protocol} doses={doses} /></div>
                 </Overlay>
             )}
         </figure>
