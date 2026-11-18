@@ -16,40 +16,46 @@
      "read": [
       {
        "type": "note",
-       "text": "Learn how this course works, so every activity counts. This lesson takes about 5 minutes.",
+       "text": "Learn how to find your way in this course: opening modules and lessons, moving through a lesson, and the buttons you will use. This lesson takes about 5 minutes.",
        "label": "In this lesson"
       },
       {
-       "type": "question",
-       "label": "Before you start",
-       "text": "When you treat a sick child, what do you decide from?",
-       "options": [
-        "My memory",
-        "The signs I find and the chart booklet",
-        "What the mother asks for"
-       ],
-       "answer": 1,
-       "feedback": [
-        "Even experienced health workers use the chart booklet.",
-        "Right. You classify from the signs, using the chart booklet.",
-        "Listen to the mother, but classify from the signs."
+       "type": "steps",
+       "title": "Find your way to a lesson",
+       "steps": [
+        {
+         "title": "Open the course",
+         "text": "From Online Courses, tap the course. Start opens it the first time; Continue takes you back to where you stopped."
+        },
+        {
+         "title": "Choose the module",
+         "text": "The modules are listed in order. A module with a lock opens when you finish the module before it."
+        },
+        {
+         "title": "Choose the lesson",
+         "text": "Each module page lists its lessons. A tick shows a lesson you finished; lessons open one after the other."
+        },
+        {
+         "title": "Go back",
+         "text": "The back arrow at the top left takes you from a lesson to its module, and from a module to the course."
+        }
        ]
       },
       {
        "type": "steps",
-       "title": "How each lesson works",
+       "title": "Inside a lesson",
        "steps": [
         {
-         "title": "Start with a question",
-         "text": "Most lessons open with a short question. Answer it before you read; there is no penalty."
+         "title": "The top line",
+         "text": "It shows the lesson's name and where it sits: \"Module 1 · Lesson 2 of 9\". The two buttons beside it make the text smaller or larger."
         },
         {
-         "title": "Do every activity",
-         "text": "Open the cards, sort, answer the questions and work the cases. A tick shows each one is done."
+         "title": "Your progress in this lesson",
+         "text": "The bar under the top line counts the activities done. Tap it to see the list; tap a line to go to that activity."
         },
         {
-         "title": "Unlock the next lesson",
-         "text": "The next lesson opens when every activity in this one is done. Modules open in order too."
+         "title": "A part at a time",
+         "text": "A lesson opens a part at a time. Watch the video, answer the question or press Continue, and the next part appears below."
         },
         {
          "title": "Come back any time",
@@ -58,66 +64,87 @@
        ]
       },
       {
-       "type": "steps",
-       "title": "How to practise with cases",
-       "steps": [
+       "type": "flip",
+       "title": "The bar at the bottom of a lesson",
+       "cards": [
         {
-         "title": "Read the child's story",
-         "text": "Each case is a named child: age, weight, temperature and what the mother says."
+         "front": "← Previous",
+         "back": "Opens the lesson before this one. Going back is always allowed."
         },
         {
-         "title": "Open the chart booklet table",
-         "text": "Use the pink button \"See the chart booklet table\". Read from the top row down."
+         "front": "The progress bar (for example 2/5)",
+         "back": "How many of the lesson's activities you have done. Tap it to go to the next one still to do."
         },
         {
-         "title": "Open the recording form",
-         "text": "The child's filled form shows what the health worker found and wrote."
+         "front": "Go to the next activity",
+         "back": "Shown while something is left to do. It takes you straight to it."
         },
         {
-         "title": "Decide, then read the feedback",
-         "text": "Each option explains why it is right or wrong. Your first try is recorded; you can try again."
+         "front": "Complete & continue",
+         "back": "Shown when every activity is done. It finishes the lesson and opens the next one."
         }
        ]
       },
       {
-       "type": "booklet",
-       "part": "child",
-       "download": true,
-       "categories": [
-        "danger",
-        "cough",
-        "diarrhea",
-        "persistent_diarrhea",
-        "dysentery",
-        "fever",
-        "measles",
-        "ear",
-        "malnutrition",
-        "anemia"
-       ],
-       "caption": "The chart booklet in the app is the Sudan national chart booklet. Open the whole booklet to read it, or print it or save it as a PDF to keep beside you while you study."
+       "type": "steps",
+       "title": "Videos, questions and cases",
+       "steps": [
+        {
+         "title": "Videos",
+         "text": "Tap the picture to play. A video played to the end is ticked; you can also press \"I watched the video\" under it. Tap a paused video to carry on."
+        },
+        {
+         "title": "Questions",
+         "text": "Tap your answer. The card turns green when you are right and red when you are not. Read the hint and try again: your first try is kept for your progress page."
+        },
+        {
+         "title": "Cards, sorting and cases",
+         "text": "Tap a card to turn it, sort each item into its group, and work a case in the window that opens. Close a window with X or the phone's back button."
+        },
+        {
+         "title": "Pictures",
+         "text": "Tap a picture or a book page to see it full screen, then pinch to zoom."
+        }
+       ]
       },
       {
        "type": "question",
-       "text": "You answer a case wrongly the first time. What happens?",
+       "text": "The next part of the lesson is not showing yet. What do you do?",
        "options": [
-        "The lesson is locked",
-        "You see why, and you can try again",
-        "You must restart the module"
+        "Close the app and open it again",
+        "Do the activity just above it: watch the video, answer the question or press Continue",
+        "Wait for a manager to open it"
        ],
        "explanation": "",
        "answer": 1,
        "feedback": [
-        "Nothing is locked by a wrong answer.",
-        "Right. Read the feedback, then try again. Your first try is kept for your progress page.",
-        "You only repeat the question."
+        "The lesson keeps your place; opening it again shows the same part.",
+        "Right. Each part opens when the one before it is done.",
+        "No one needs to open it for you: doing the activity opens the next part."
+       ],
+       "label": "Check yourself"
+      },
+      {
+       "type": "question",
+       "text": "Where do you see how much of this lesson is done?",
+       "options": [
+        "On the bar at the bottom, beside Next",
+        "Only at the end of the module",
+        "Nowhere: it is not counted"
+       ],
+       "explanation": "",
+       "answer": 0,
+       "feedback": [
+        "Right. The bar shows the activities done, for example 2/5, and tapping it takes you to the next one.",
+        "Each lesson shows its own progress while you work.",
+        "Every activity you do is counted and saved."
        ],
        "label": "Check yourself"
       },
       {
        "type": "note",
-       "text": "Finish every lesson of a module to earn its badge. Your progress page shows your lessons, your badges and how often you were right the first time.",
-       "label": "Badges"
+       "text": "My progress, next to Courses, shows your lessons, the badge you earn for each module you finish, and how often you were right the first time. On a module page, Save for offline keeps the module on your phone so you can study without a connection.",
+       "label": "Your progress"
       }
      ],
      "see": [],
@@ -140,6 +167,17 @@
        "script": "IN.1"
       },
       {
+       "type": "question",
+       "text": "Think first: pneumonia, diarrhoea, malaria, measles and malnutrition together cause what share of deaths in children under five years of age?",
+       "options": [
+        "About one in five",
+        "About half",
+        "More than 70%"
+       ],
+       "answer": 2,
+       "explanation": "Pneumonia, diarrhoea, malaria, measles, and malnutrition cause more than 70% of deaths in children under five years of age."
+      },
+      {
        "type": "heading",
        "text": "INTRODUCTION"
       },
@@ -152,8 +190,37 @@
        "text": "Health workers have experience treating common childhood illnesses. They are often trained using separate, disease-specific guidelines, such as guidelines for treating malaria, or guidelines for managing diarrhoea. However, they may have difficulty combining different guidelines when caring for a sick child with several problems. They may not know which problems are most important to treat. With limited time and drugs, health workers may not be able to identify and treat all of a sick child’s problems. There are important relationships between the illnesses. For example, repeated diarrhoeal episodes often lead to malnutrition; diarrhoea, which often accompanies or follows measles, is particularly severe. Therefore, effective case management needs to consider all of a child’s symptoms."
       },
       {
+       "type": "flip",
+       "title": "How the illnesses are linked",
+       "cards": [
+        {
+         "front": "Repeated diarrhoeal episodes",
+         "back": "often lead to malnutrition."
+        },
+        {
+         "front": "Diarrhoea that accompanies or follows measles",
+         "back": "is particularly severe."
+        },
+        {
+         "front": "So effective case management…",
+         "back": "needs to consider all of a child's symptoms."
+        }
+       ]
+      },
+      {
        "type": "paragraph",
        "text": "A health worker can follow the integrated case management process taught in this course to quickly consider all of a child’s symptoms and not overlook any problems. The health worker can determine if a child is severely ill and needs urgent referral. If not, the health worker can follow the guidelines to treat the child’s illnesses. The guidelines also describe counseling for mothers and other caretakers."
+      },
+      {
+       "type": "question",
+       "text": "A health worker follows the integrated case management process. What can they determine first?",
+       "options": [
+        "Whether the child is severely ill and needs urgent referral",
+        "Which single disease the child has",
+        "Which hospital the mother prefers"
+       ],
+       "answer": 0,
+       "explanation": "The health worker can determine if a child is severely ill and needs urgent referral. If not, the health worker can follow the guidelines to treat the child's illnesses. The guidelines also describe counseling for mothers and other caretakers."
       },
       {
        "type": "paragraph",
@@ -164,8 +231,40 @@
        "text": "The case management guidelines describe how to care for a child who presents at a clinic with an illness for the first time or for a scheduled follow-up visit to check the child’s improvement. They address most but not all of the major reasons a child is brought to a clinic for illness. A child returning with chronic problems or less common illnesses may require special care, which is not described in this course. The course does not describe the management of trauma or other acute emergencies due to accidents or injuries."
       },
       {
+       "type": "sort",
+       "text": "Is it described in this course? Sort each one the way the book says.",
+       "groups": [
+        "Described in this course",
+        "Not described in this course"
+       ],
+       "items": [
+        {
+         "text": "A child who comes to the clinic with an illness for the first time",
+         "group": 0
+        },
+        {
+         "text": "A scheduled follow-up visit to check the child's improvement",
+         "group": 0
+        },
+        {
+         "text": "A child returning with chronic problems or less common illnesses that need special care",
+         "group": 1
+        },
+        {
+         "text": "Trauma or other acute emergencies due to accidents or injuries",
+         "group": 1
+        }
+       ],
+       "explanation": "The guidelines address most but not all of the major reasons a child is brought to a clinic for illness."
+      },
+      {
        "type": "paragraph",
        "text": "Although AIDS is not addressed specifically, the case management guidelines address the most common reasons children with HIV seek care: diarrhoea and respiratory infections. When a child who is believed to have HIV presents with any of these common illnesses, he can be treated like any child coming in with the illness for the first time. If a child’s illness does not respond to the standard treatments taught in this course, or if a child becomes severely malnourished, or returns to the clinic repeatedly, he is referred to a hospital for special care. This results in children with AIDS being referred."
+      },
+      {
+       "type": "reveal",
+       "text": "A child believed to have HIV is brought with diarrhoea. How is the child treated? And when is the child referred?",
+       "answer": "The child is treated like any child coming in with the illness for the first time. The child is referred to a hospital for special care if the illness does not respond to the standard treatments, if the child becomes severely malnourished, or returns to the clinic repeatedly."
       },
       {
        "type": "paragraph",
@@ -174,17 +273,6 @@
       {
        "type": "heading",
        "text": "Check yourself"
-      },
-      {
-       "type": "question",
-       "text": "Which illnesses cause more than 70% of deaths in children under five years of age?",
-       "options": [
-        "Pneumonia, diarrhoea, malaria, measles, and malnutrition",
-        "Trauma, burns and accidents",
-        "Tuberculosis and HIV only"
-       ],
-       "answer": 0,
-       "explanation": "Pneumonia, diarrhoea, malaria, measles, and malnutrition cause more than 70% of deaths in children under five years of age."
       },
       {
        "type": "question",

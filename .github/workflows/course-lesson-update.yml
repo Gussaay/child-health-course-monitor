@@ -1,0 +1,28 @@
+name: One-off - update course lessons in place (keeps learner progress)
+# Runs scripts/course-lesson-update/update-lessons.cjs for each course named in
+# courses.txt, with the mode in mode.txt (dry = read only, commit = write, undo = put back).
+on:
+  push:
+    branches: [claude/project-thread-1qukec]
+    paths: ['scripts/course-lesson-update/**', 'course-packages/*.imnci.json', '.github/workflows/course-lesson-update.yml']
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-save --ignore-scripts firebase-admin@13
+        working-directory: scripts/course-lesson-update
+      - env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}
+        working-directory: scripts/course-lesson-update
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/key.json"
+          MODE=$(tr -d '[:space:]' < mode.txt)
+          FLAG=""; [ "$MODE" = commit ] && FLAG=--commit; [ "$MODE" = undo ] && FLAG=--undo
+          echo "Mode: ${MODE}"
+          for C in $(cat courses.txt); do
+            echo; echo "=== ${C}"
+            KEY_FILE="$RUNNER_TEMP/key.json" node update-lessons.cjs "$C" $FLAG
+          done

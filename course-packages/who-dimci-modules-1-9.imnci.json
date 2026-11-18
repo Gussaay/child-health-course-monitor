@@ -16,40 +16,46 @@
      "read": [
       {
        "type": "note",
-       "text": "Learn how this course works, so every activity counts. This lesson takes about 5 minutes.",
+       "text": "Learn how to find your way in this course: opening modules and lessons, moving through a lesson, and the buttons you will use. This lesson takes about 5 minutes.",
        "label": "In this lesson"
       },
       {
-       "type": "question",
-       "label": "Before you start",
-       "text": "When you treat a sick child, what do you decide from?",
-       "options": [
-        "My memory",
-        "The signs I find and the chart booklet",
-        "What the mother asks for"
-       ],
-       "answer": 1,
-       "feedback": [
-        "Even experienced health workers use the chart booklet.",
-        "Right. You classify from the signs, using the chart booklet.",
-        "Listen to the mother, but classify from the signs."
+       "type": "steps",
+       "title": "Find your way to a lesson",
+       "steps": [
+        {
+         "title": "Open the course",
+         "text": "From Online Courses, tap the course. Start opens it the first time; Continue takes you back to where you stopped."
+        },
+        {
+         "title": "Choose the module",
+         "text": "The modules are listed in order. A module with a lock opens when you finish the module before it."
+        },
+        {
+         "title": "Choose the lesson",
+         "text": "Each module page lists its lessons. A tick shows a lesson you finished; lessons open one after the other."
+        },
+        {
+         "title": "Go back",
+         "text": "The back arrow at the top left takes you from a lesson to its module, and from a module to the course."
+        }
        ]
       },
       {
        "type": "steps",
-       "title": "How each lesson works",
+       "title": "Inside a lesson",
        "steps": [
         {
-         "title": "Start with a question",
-         "text": "Most lessons open with a short question. Answer it before you read; there is no penalty."
+         "title": "The top line",
+         "text": "It shows the lesson's name and where it sits: \"Module 1 · Lesson 2 of 9\". The two buttons beside it make the text smaller or larger."
         },
         {
-         "title": "Do every activity",
-         "text": "Open the cards, sort, answer the questions and work the cases. A tick shows each one is done."
+         "title": "Your progress in this lesson",
+         "text": "The bar under the top line counts the activities done. Tap it to see the list; tap a line to go to that activity."
         },
         {
-         "title": "Unlock the next lesson",
-         "text": "The next lesson opens when every activity in this one is done. Modules open in order too."
+         "title": "A part at a time",
+         "text": "A lesson opens a part at a time. Watch the video, answer the question or press Continue, and the next part appears below."
         },
         {
          "title": "Come back any time",
@@ -58,66 +64,87 @@
        ]
       },
       {
-       "type": "steps",
-       "title": "How to practise with cases",
-       "steps": [
+       "type": "flip",
+       "title": "The bar at the bottom of a lesson",
+       "cards": [
         {
-         "title": "Read the child's story",
-         "text": "Each case is a named child: age, weight, temperature and what the mother says."
+         "front": "← Previous",
+         "back": "Opens the lesson before this one. Going back is always allowed."
         },
         {
-         "title": "Open the chart booklet table",
-         "text": "Use the pink button \"See the chart booklet table\". Read from the top row down."
+         "front": "The progress bar (for example 2/5)",
+         "back": "How many of the lesson's activities you have done. Tap it to go to the next one still to do."
         },
         {
-         "title": "Open the recording form",
-         "text": "The child's filled form shows what the health worker found and wrote."
+         "front": "Go to the next activity",
+         "back": "Shown while something is left to do. It takes you straight to it."
         },
         {
-         "title": "Decide, then read the feedback",
-         "text": "Each option explains why it is right or wrong. Your first try is recorded; you can try again."
+         "front": "Complete & continue",
+         "back": "Shown when every activity is done. It finishes the lesson and opens the next one."
         }
        ]
       },
       {
-       "type": "booklet",
-       "part": "child",
-       "download": true,
-       "categories": [
-        "danger",
-        "cough",
-        "diarrhea",
-        "persistent_diarrhea",
-        "dysentery",
-        "fever",
-        "measles",
-        "ear",
-        "malnutrition",
-        "anemia"
-       ],
-       "caption": "The chart booklet in the app is the Sudan national chart booklet. Open the whole booklet to read it, or print it or save it as a PDF to keep beside you while you study."
+       "type": "steps",
+       "title": "Videos, questions and cases",
+       "steps": [
+        {
+         "title": "Videos",
+         "text": "Tap the picture to play. A video played to the end is ticked; you can also press \"I watched the video\" under it. Tap a paused video to carry on."
+        },
+        {
+         "title": "Questions",
+         "text": "Tap your answer. The card turns green when you are right and red when you are not. Read the hint and try again: your first try is kept for your progress page."
+        },
+        {
+         "title": "Cards, sorting and cases",
+         "text": "Tap a card to turn it, sort each item into its group, and work a case in the window that opens. Close a window with X or the phone's back button."
+        },
+        {
+         "title": "Pictures",
+         "text": "Tap a picture or a book page to see it full screen, then pinch to zoom."
+        }
+       ]
       },
       {
        "type": "question",
-       "text": "You answer a case wrongly the first time. What happens?",
+       "text": "The next part of the lesson is not showing yet. What do you do?",
        "options": [
-        "The lesson is locked",
-        "You see why, and you can try again",
-        "You must restart the module"
+        "Close the app and open it again",
+        "Do the activity just above it: watch the video, answer the question or press Continue",
+        "Wait for a manager to open it"
        ],
        "explanation": "",
        "answer": 1,
        "feedback": [
-        "Nothing is locked by a wrong answer.",
-        "Right. Read the feedback, then try again. Your first try is kept for your progress page.",
-        "You only repeat the question."
+        "The lesson keeps your place; opening it again shows the same part.",
+        "Right. Each part opens when the one before it is done.",
+        "No one needs to open it for you: doing the activity opens the next part."
+       ],
+       "label": "Check yourself"
+      },
+      {
+       "type": "question",
+       "text": "Where do you see how much of this lesson is done?",
+       "options": [
+        "On the bar at the bottom, beside Next",
+        "Only at the end of the module",
+        "Nowhere: it is not counted"
+       ],
+       "explanation": "",
+       "answer": 0,
+       "feedback": [
+        "Right. The bar shows the activities done, for example 2/5, and tapping it takes you to the next one.",
+        "Each lesson shows its own progress while you work.",
+        "Every activity you do is counted and saved."
        ],
        "label": "Check yourself"
       },
       {
        "type": "note",
-       "text": "Finish every lesson of a module to earn its badge. Your progress page shows your lessons, your badges and how often you were right the first time.",
-       "label": "Badges"
+       "text": "My progress, next to Courses, shows your lessons, the badge you earn for each module you finish, and how often you were right the first time. On a module page, Save for offline keeps the module on your phone so you can study without a connection.",
+       "label": "Your progress"
       }
      ],
      "see": [],

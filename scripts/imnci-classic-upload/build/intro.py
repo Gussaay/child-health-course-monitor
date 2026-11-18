@@ -12,11 +12,41 @@ SOURCE = "Sudan IMNCI module: Introduction (2023)"
 L1 = lesson("Why integrated case management?",
     "Explain why a sick child's illnesses are managed together, with one set of integrated guidelines.", [
     video("Welcome to the IMNCI course", "Watch this first. The narration is being recorded.", "IN.1"),
-    *T(M, 25, 82),
-    H("Check yourself"),
-    q("Which illnesses cause more than 70% of deaths in children under five years of age?",
-      ["Pneumonia, diarrhoea, malaria, measles, and malnutrition", "Trauma, burns and accidents", "Tuberculosis and HIV only"], 0,
+    # A question before the reading, then an activity after each paragraph or two,
+    # so the book's text (all of it, word for word) is read a part at a time.
+    q("Think first: pneumonia, diarrhoea, malaria, measles and malnutrition together cause what share of deaths in children "
+      "under five years of age?",
+      ["About one in five", "About half", "More than 70%"], 2,
       "Pneumonia, diarrhoea, malaria, measles, and malnutrition cause more than 70% of deaths in children under five years of age."),
+    *T(M, 25, 35),
+    *T(M, 36, 47),
+    flip("How the illnesses are linked", [
+        ("Repeated diarrhoeal episodes", "often lead to malnutrition."),
+        ("Diarrhoea that accompanies or follows measles", "is particularly severe."),
+        ("So effective case management…", "needs to consider all of a child's symptoms."),
+    ]),
+    *T(M, 48, 53),
+    q("A health worker follows the integrated case management process. What can they determine first?",
+      ["Whether the child is severely ill and needs urgent referral", "Which single disease the child has",
+       "Which hospital the mother prefers"], 0,
+      "The health worker can determine if a child is severely ill and needs urgent referral. If not, the health worker can follow "
+      "the guidelines to treat the child's illnesses. The guidelines also describe counseling for mothers and other caretakers."),
+    *T(M, 54, 59),
+    *T(M, 60, 67),
+    sort("Is it described in this course? Sort each one the way the book says.",
+         ["Described in this course", "Not described in this course"], [
+        ("A child who comes to the clinic with an illness for the first time", "Described in this course"),
+        ("A scheduled follow-up visit to check the child's improvement", "Described in this course"),
+        ("A child returning with chronic problems or less common illnesses that need special care", "Not described in this course"),
+        ("Trauma or other acute emergencies due to accidents or injuries", "Not described in this course"),
+    ], "The guidelines address most but not all of the major reasons a child is brought to a clinic for illness."),
+    *T(M, 68, 76),
+    reveal("A child believed to have HIV is brought with diarrhoea. How is the child treated? And when is the child referred?",
+           "The child is treated like any child coming in with the illness for the first time. The child is referred to a hospital for "
+           "special care if the illness does not respond to the standard treatments, if the child becomes severely malnourished, or "
+           "returns to the clinic repeatedly."),
+    *T(M, 77, 82),
+    H("Check yourself"),
     q("Why does effective case management need to consider all of a child's symptoms?",
       ["Because there are important relationships between the illnesses", "Because each illness has its own separate guideline",
        "Because the mother asks about only one problem"], 0,
