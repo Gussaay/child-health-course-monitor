@@ -1,3 +1,4 @@
+import re
 # Module 4 of the Sudan ETAT course: Coma and convulsion.
 # Facilitator guide, Day 2 14:00-17:00: review of the circulation questions, objectives,
 # summary of coma and convulsion, Exercise B (AVPU video), demonstrations (rectal diazepam,
@@ -212,16 +213,28 @@ DRILL3 = [("6 weeks", "3 kg", "15 ml", "60 ml", "0.3 ml"), ("3 months", "5 kg", 
           ("6 months, severely malnourished", "4 kg", "5 ml x 4 kg = 20 ml", "15 ml x 4 kg = 60 ml in 1 hour", "0.4 ml"),
           ("12 months", "12 kg", "60 ml", "240 ml", "1.2 ml"), ("2 months", "5 kg", "25 ml", "100 ml", "0.5 ml"),
           ("1 month", "3 kg", "15 ml", "60 ml", "0.3 ml")]
+def _ml(x):
+    """The dose in ml: the number after "=" if the working is shown, else the first number."""
+    return float(re.findall(r"[\d.]+", x.split("=")[-1])[0])
+
+D3_ASK = [("D10 bolus", 2, "10% glucose: 5 ml/kg."), ("Ringer’s lactate or normal saline bolus for shock", 3, "Shock: 20 ml/kg (15 ml/kg in 1 hour if severely malnourished)."),
+          ("rectal diazepam (10 mg/2 ml)", 4, "Rectal diazepam: 0.5 mg/kg, which is 0.1 ml/kg of the 10 mg/2 ml solution.")]
+
+def drill3(i, row):
+    age, wt = row[0], row[1]
+    what, k, hint = D3_ASK[(i - 1) % 3]
+    ans = _ml(row[k])
+    return calc(f"How many ml of {what}?", int(ans) if ans == int(ans) else ans, "ml", f"{age}, {wt}.", hint,
+                f"D10: {row[2]}. Ringer’s lactate or normal saline: {row[3]}. Diazepam: {row[4]}.", f"Child {i}", "Drill 3")
+
 L.append(lesson("Drill 3: determine correct doses",
     "Work out quickly the glucose, shock fluid and diazepam doses for each child.", [
     timing("Day 2, 15:25 (80 minutes): group work to practise giving diazepam rectally, giving IV glucose and drawing up the correct dose "
            "rapidly, repeated until everyone has practised several times. The facilitator does not demonstrate but observes and corrects."),
-    fgnote("Your facilitator asks, as in a drill: what dose would you give the following children? For each child, say the amount of "
-           "10% glucose (D10) as a bolus, the bolus of Ringer’s lactate or normal saline for shock, and the amount of rectal diazepam "
-           "(10 mg/2 ml solution). Say your answers aloud, then open the card."),
-    *[reveal(f"{age}, {wt}: D10 bolus? Shock fluid bolus? Rectal diazepam?",
-             f"D10: {g}. Ringer’s lactate or normal saline: {s}. Diazepam: {d}.", f"Child {i}")
-      for i, (age, wt, g, s, d) in enumerate(DRILL3, 1)],
+    note("What dose would you give the following children? For each child, work out the amount of 10% glucose (D10) as a bolus, "
+         "the bolus of Ringer’s lactate or normal saline for shock, and the amount of rectal diazepam (10 mg/2 ml solution). "
+         "Type the dose you are asked for and check it; the other two doses are shown with the answer.", "The drill"),
+    *[drill3(i, row) for i, row in enumerate(DRILL3, 1)],
 ]))
 
 AQ = _ex(equiz("sudan-etat-aq-coma-convulsion", 41, "Assessment questions: Coma and convulsion", [TX(2744, 2745)], [

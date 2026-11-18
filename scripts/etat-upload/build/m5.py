@@ -183,10 +183,12 @@ L.append(lesson("Drill 5: amounts of IV fluid on Plan C",
     "Work out how much IV fluid to give, and over how long, for each child with severe dehydration.", [
     timing("Day 3 (15 minutes): Drill 5 on the amounts of IV fluid to give a child on Plan C (diarrhoea with severe dehydration, without "
            "shock or severe malnutrition). You may look at Plan C during the drill. Use pencil and paper."),
-    fgnote("Your facilitator states the age and weight of each child. Say how much IV fluid should be given first and over how long, then "
-           "how much next and over how long. Remember: infants (under 12 months) 30 ml/kg in 1 hour then 70 ml/kg in 5 hours; children "
-           "30 ml/kg in 30 minutes then 70 ml/kg in 2½ hours."),
-    *[reveal(f"{c}: first give? then give?", f"First give {a1} over {t1}. Then give {a2} over {t2}. Total {a3} in {t3}.", f"Child {i}")
+    note("For each child, work out how much IV fluid should be given first and over how long, then how much next and over how long. "
+         "Remember: infants (under 12 months) 30 ml/kg in 1 hour then 70 ml/kg in 5 hours; children 30 ml/kg in 30 minutes then "
+         "70 ml/kg in 2½ hours.", "The drill"),
+    *[calc("How many ml of IV fluid do you give first?", int(a1.split()[0]), "ml", f"{c}.",
+           "First 30 ml/kg: in 1 hour under 12 months, in 30 minutes from 12 months.",
+           f"First give {a1} over {t1}. Then give {a2} over {t2}. Total {a3} in {t3}.", f"Child {i}", "Drill 5")
       for i, (c, a1, t1, a2, t2, a3, t3) in enumerate(DRILL5, 1)],
 ]))
 

@@ -44,14 +44,22 @@ def sort(text, groups, items, explanation=""):
     return b
 def steps(title, items):
     return {"type": "steps", "title": title, "steps": [{"title": t, "text": x} for t, x in items]}
-def stage(text, question="", options=(), answer=0, explanation=""):
+def stage(text, question="", options=(), answer=0, explanation="", feedback=None):
     s = {"text": text}
     if question:
         s.update({"question": question, "options": list(options), "answer": answer, "explanation": explanation})
+        if feedback: s["feedback"] = list(feedback)
     return s
-def story(title, stages, label=None):
+def story(title, stages, label=None, text=""):
     b = {"type": "story", "title": title, "stages": list(stages)}
     if label: b["label"] = label
+    if text: b["text"] = text
+    return b
+def calc(question, answer, unit="ml", text="", hint="", explanation="", title="", label=None, tolerance=None):
+    """Work it out: the learner types a number (calc block in the app)."""
+    b = {"type": "calc", "question": question, "answer": answer, "unit": unit}
+    for k, v in (("text", text), ("hint", hint), ("explanation", explanation), ("title", title), ("label", label), ("tolerance", tolerance)):
+        if v not in (None, ""): b[k] = v
     return b
 def q(text, options, answer, explanation=""):
     return {"type": "question", "text": text, "options": list(options), "answer": answer, "explanation": explanation}

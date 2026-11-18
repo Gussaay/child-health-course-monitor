@@ -3924,62 +3924,107 @@
       },
       {
        "type": "note",
-       "text": "Your facilitator asks, as in a drill: what dose would you give the following children? For each child, say the amount of 10% glucose (D10) as a bolus, the bolus of Ringer’s lactate or normal saline for shock, and the amount of rectal diazepam (10 mg/2 ml solution). Say your answers aloud, then open the card.",
-       "label": "From your facilitator"
+       "text": "What dose would you give the following children? For each child, work out the amount of 10% glucose (D10) as a bolus, the bolus of Ringer’s lactate or normal saline for shock, and the amount of rectal diazepam (10 mg/2 ml solution). Type the dose you are asked for and check it; the other two doses are shown with the answer.",
+       "label": "The drill"
       },
       {
-       "type": "reveal",
-       "text": "6 weeks, 3 kg: D10 bolus? Shock fluid bolus? Rectal diazepam?",
-       "answer": "D10: 15 ml. Ringer’s lactate or normal saline: 60 ml. Diazepam: 0.3 ml.",
-       "label": "Child 1"
+       "type": "calc",
+       "question": "How many ml of D10 bolus?",
+       "answer": 15,
+       "unit": "ml",
+       "text": "6 weeks, 3 kg.",
+       "hint": "10% glucose: 5 ml/kg.",
+       "explanation": "D10: 15 ml. Ringer’s lactate or normal saline: 60 ml. Diazepam: 0.3 ml.",
+       "title": "Child 1",
+       "label": "Drill 3"
       },
       {
-       "type": "reveal",
-       "text": "3 months, 5 kg: D10 bolus? Shock fluid bolus? Rectal diazepam?",
-       "answer": "D10: 25 ml. Ringer’s lactate or normal saline: 100 ml. Diazepam: 0.5 ml.",
-       "label": "Child 2"
+       "type": "calc",
+       "question": "How many ml of Ringer’s lactate or normal saline bolus for shock?",
+       "answer": 100,
+       "unit": "ml",
+       "text": "3 months, 5 kg.",
+       "hint": "Shock: 20 ml/kg (15 ml/kg in 1 hour if severely malnourished).",
+       "explanation": "D10: 25 ml. Ringer’s lactate or normal saline: 100 ml. Diazepam: 0.5 ml.",
+       "title": "Child 2",
+       "label": "Drill 3"
       },
       {
-       "type": "reveal",
-       "text": "4 years, 16 kg: D10 bolus? Shock fluid bolus? Rectal diazepam?",
-       "answer": "D10: 80 ml. Ringer’s lactate or normal saline: 320 ml. Diazepam: 1.6 ml.",
-       "label": "Child 3"
+       "type": "calc",
+       "question": "How many ml of rectal diazepam (10 mg/2 ml)?",
+       "answer": 1.6,
+       "unit": "ml",
+       "text": "4 years, 16 kg.",
+       "hint": "Rectal diazepam: 0.5 mg/kg, which is 0.1 ml/kg of the 10 mg/2 ml solution.",
+       "explanation": "D10: 80 ml. Ringer’s lactate or normal saline: 320 ml. Diazepam: 1.6 ml.",
+       "title": "Child 3",
+       "label": "Drill 3"
       },
       {
-       "type": "reveal",
-       "text": "6 months, 8 kg: D10 bolus? Shock fluid bolus? Rectal diazepam?",
-       "answer": "D10: 40 ml. Ringer’s lactate or normal saline: 160 ml. Diazepam: 0.8 ml.",
-       "label": "Child 4"
+       "type": "calc",
+       "question": "How many ml of D10 bolus?",
+       "answer": 40,
+       "unit": "ml",
+       "text": "6 months, 8 kg.",
+       "hint": "10% glucose: 5 ml/kg.",
+       "explanation": "D10: 40 ml. Ringer’s lactate or normal saline: 160 ml. Diazepam: 0.8 ml.",
+       "title": "Child 4",
+       "label": "Drill 3"
       },
       {
-       "type": "reveal",
-       "text": "18 months, 12 kg: D10 bolus? Shock fluid bolus? Rectal diazepam?",
-       "answer": "D10: 60 ml. Ringer’s lactate or normal saline: 240 ml. Diazepam: 1.2 ml.",
-       "label": "Child 5"
+       "type": "calc",
+       "question": "How many ml of Ringer’s lactate or normal saline bolus for shock?",
+       "answer": 240,
+       "unit": "ml",
+       "text": "18 months, 12 kg.",
+       "hint": "Shock: 20 ml/kg (15 ml/kg in 1 hour if severely malnourished).",
+       "explanation": "D10: 60 ml. Ringer’s lactate or normal saline: 240 ml. Diazepam: 1.2 ml.",
+       "title": "Child 5",
+       "label": "Drill 3"
       },
       {
-       "type": "reveal",
-       "text": "6 months, severely malnourished, 4 kg: D10 bolus? Shock fluid bolus? Rectal diazepam?",
-       "answer": "D10: 5 ml x 4 kg = 20 ml. Ringer’s lactate or normal saline: 15 ml x 4 kg = 60 ml in 1 hour. Diazepam: 0.4 ml.",
-       "label": "Child 6"
+       "type": "calc",
+       "question": "How many ml of rectal diazepam (10 mg/2 ml)?",
+       "answer": 0.4,
+       "unit": "ml",
+       "text": "6 months, severely malnourished, 4 kg.",
+       "hint": "Rectal diazepam: 0.5 mg/kg, which is 0.1 ml/kg of the 10 mg/2 ml solution.",
+       "explanation": "D10: 5 ml x 4 kg = 20 ml. Ringer’s lactate or normal saline: 15 ml x 4 kg = 60 ml in 1 hour. Diazepam: 0.4 ml.",
+       "title": "Child 6",
+       "label": "Drill 3"
       },
       {
-       "type": "reveal",
-       "text": "12 months, 12 kg: D10 bolus? Shock fluid bolus? Rectal diazepam?",
-       "answer": "D10: 60 ml. Ringer’s lactate or normal saline: 240 ml. Diazepam: 1.2 ml.",
-       "label": "Child 7"
+       "type": "calc",
+       "question": "How many ml of D10 bolus?",
+       "answer": 60,
+       "unit": "ml",
+       "text": "12 months, 12 kg.",
+       "hint": "10% glucose: 5 ml/kg.",
+       "explanation": "D10: 60 ml. Ringer’s lactate or normal saline: 240 ml. Diazepam: 1.2 ml.",
+       "title": "Child 7",
+       "label": "Drill 3"
       },
       {
-       "type": "reveal",
-       "text": "2 months, 5 kg: D10 bolus? Shock fluid bolus? Rectal diazepam?",
-       "answer": "D10: 25 ml. Ringer’s lactate or normal saline: 100 ml. Diazepam: 0.5 ml.",
-       "label": "Child 8"
+       "type": "calc",
+       "question": "How many ml of Ringer’s lactate or normal saline bolus for shock?",
+       "answer": 100,
+       "unit": "ml",
+       "text": "2 months, 5 kg.",
+       "hint": "Shock: 20 ml/kg (15 ml/kg in 1 hour if severely malnourished).",
+       "explanation": "D10: 25 ml. Ringer’s lactate or normal saline: 100 ml. Diazepam: 0.5 ml.",
+       "title": "Child 8",
+       "label": "Drill 3"
       },
       {
-       "type": "reveal",
-       "text": "1 month, 3 kg: D10 bolus? Shock fluid bolus? Rectal diazepam?",
-       "answer": "D10: 15 ml. Ringer’s lactate or normal saline: 60 ml. Diazepam: 0.3 ml.",
-       "label": "Child 9"
+       "type": "calc",
+       "question": "How many ml of rectal diazepam (10 mg/2 ml)?",
+       "answer": 0.3,
+       "unit": "ml",
+       "text": "1 month, 3 kg.",
+       "hint": "Rectal diazepam: 0.5 mg/kg, which is 0.1 ml/kg of the 10 mg/2 ml solution.",
+       "explanation": "D10: 15 ml. Ringer’s lactate or normal saline: 60 ml. Diazepam: 0.3 ml.",
+       "title": "Child 9",
+       "label": "Drill 3"
       }
      ],
      "see": [],
@@ -4651,86 +4696,151 @@
       },
       {
        "type": "note",
-       "text": "Your facilitator states the age and weight of each child. Say how much IV fluid should be given first and over how long, then how much next and over how long. Remember: infants (under 12 months) 30 ml/kg in 1 hour then 70 ml/kg in 5 hours; children 30 ml/kg in 30 minutes then 70 ml/kg in 2½ hours.",
-       "label": "From your facilitator"
+       "text": "For each child, work out how much IV fluid should be given first and over how long, then how much next and over how long. Remember: infants (under 12 months) 30 ml/kg in 1 hour then 70 ml/kg in 5 hours; children 30 ml/kg in 30 minutes then 70 ml/kg in 2½ hours.",
+       "label": "The drill"
       },
       {
-       "type": "reveal",
-       "text": "14 months, 9 kg: first give? then give?",
-       "answer": "First give 270 ml over 30 mins. Then give 630 ml over 2½ hrs. Total 900 ml in 3 hrs.",
-       "label": "Child 1"
+       "type": "calc",
+       "question": "How many ml of IV fluid do you give first?",
+       "answer": 270,
+       "unit": "ml",
+       "text": "14 months, 9 kg.",
+       "hint": "First 30 ml/kg: in 1 hour under 12 months, in 30 minutes from 12 months.",
+       "explanation": "First give 270 ml over 30 mins. Then give 630 ml over 2½ hrs. Total 900 ml in 3 hrs.",
+       "title": "Child 1",
+       "label": "Drill 5"
       },
       {
-       "type": "reveal",
-       "text": "8 months, 7 kg: first give? then give?",
-       "answer": "First give 210 ml over 1 hour. Then give 490 ml over 5 hrs. Total 700 ml in 6 hrs.",
-       "label": "Child 2"
+       "type": "calc",
+       "question": "How many ml of IV fluid do you give first?",
+       "answer": 210,
+       "unit": "ml",
+       "text": "8 months, 7 kg.",
+       "hint": "First 30 ml/kg: in 1 hour under 12 months, in 30 minutes from 12 months.",
+       "explanation": "First give 210 ml over 1 hour. Then give 490 ml over 5 hrs. Total 700 ml in 6 hrs.",
+       "title": "Child 2",
+       "label": "Drill 5"
       },
       {
-       "type": "reveal",
-       "text": "3 years, 13 kg: first give? then give?",
-       "answer": "First give 390 ml over 30 mins. Then give 910 ml over 2½ hrs. Total 1300 ml in 3 hrs.",
-       "label": "Child 3"
+       "type": "calc",
+       "question": "How many ml of IV fluid do you give first?",
+       "answer": 390,
+       "unit": "ml",
+       "text": "3 years, 13 kg.",
+       "hint": "First 30 ml/kg: in 1 hour under 12 months, in 30 minutes from 12 months.",
+       "explanation": "First give 390 ml over 30 mins. Then give 910 ml over 2½ hrs. Total 1300 ml in 3 hrs.",
+       "title": "Child 3",
+       "label": "Drill 5"
       },
       {
-       "type": "reveal",
-       "text": "3 months, 5 kg: first give? then give?",
-       "answer": "First give 150 ml over 1 hour. Then give 350 ml over 5 hrs. Total 500 ml in 6 hrs.",
-       "label": "Child 4"
+       "type": "calc",
+       "question": "How many ml of IV fluid do you give first?",
+       "answer": 150,
+       "unit": "ml",
+       "text": "3 months, 5 kg.",
+       "hint": "First 30 ml/kg: in 1 hour under 12 months, in 30 minutes from 12 months.",
+       "explanation": "First give 150 ml over 1 hour. Then give 350 ml over 5 hrs. Total 500 ml in 6 hrs.",
+       "title": "Child 4",
+       "label": "Drill 5"
       },
       {
-       "type": "reveal",
-       "text": "2 years, 12 kg: first give? then give?",
-       "answer": "First give 360 ml over 30 mins. Then give 840 ml over 2½ hrs. Total 1200 ml in 3 hrs.",
-       "label": "Child 5"
+       "type": "calc",
+       "question": "How many ml of IV fluid do you give first?",
+       "answer": 360,
+       "unit": "ml",
+       "text": "2 years, 12 kg.",
+       "hint": "First 30 ml/kg: in 1 hour under 12 months, in 30 minutes from 12 months.",
+       "explanation": "First give 360 ml over 30 mins. Then give 840 ml over 2½ hrs. Total 1200 ml in 3 hrs.",
+       "title": "Child 5",
+       "label": "Drill 5"
       },
       {
-       "type": "reveal",
-       "text": "15 months, 10 kg: first give? then give?",
-       "answer": "First give 300 ml over 30 mins. Then give 700 ml over 2½ hrs. Total 1000 ml in 3 hrs.",
-       "label": "Child 6"
+       "type": "calc",
+       "question": "How many ml of IV fluid do you give first?",
+       "answer": 300,
+       "unit": "ml",
+       "text": "15 months, 10 kg.",
+       "hint": "First 30 ml/kg: in 1 hour under 12 months, in 30 minutes from 12 months.",
+       "explanation": "First give 300 ml over 30 mins. Then give 700 ml over 2½ hrs. Total 1000 ml in 3 hrs.",
+       "title": "Child 6",
+       "label": "Drill 5"
       },
       {
-       "type": "reveal",
-       "text": "4 years, 15 kg: first give? then give?",
-       "answer": "First give 450 ml over 30 mins. Then give 1050 ml over 2½ hrs. Total 1500 ml in 3 hrs.",
-       "label": "Child 7"
+       "type": "calc",
+       "question": "How many ml of IV fluid do you give first?",
+       "answer": 450,
+       "unit": "ml",
+       "text": "4 years, 15 kg.",
+       "hint": "First 30 ml/kg: in 1 hour under 12 months, in 30 minutes from 12 months.",
+       "explanation": "First give 450 ml over 30 mins. Then give 1050 ml over 2½ hrs. Total 1500 ml in 3 hrs.",
+       "title": "Child 7",
+       "label": "Drill 5"
       },
       {
-       "type": "reveal",
-       "text": "23 months, 11.5 kg: first give? then give?",
-       "answer": "First give 345 ml over 30 mins. Then give 805 ml over 2½ hrs. Total 1150 ml in 3 hrs.",
-       "label": "Child 8"
+       "type": "calc",
+       "question": "How many ml of IV fluid do you give first?",
+       "answer": 345,
+       "unit": "ml",
+       "text": "23 months, 11.5 kg.",
+       "hint": "First 30 ml/kg: in 1 hour under 12 months, in 30 minutes from 12 months.",
+       "explanation": "First give 345 ml over 30 mins. Then give 805 ml over 2½ hrs. Total 1150 ml in 3 hrs.",
+       "title": "Child 8",
+       "label": "Drill 5"
       },
       {
-       "type": "reveal",
-       "text": "6 months, 6 kg: first give? then give?",
-       "answer": "First give 180 ml over 1 hour. Then give 420 ml over 5 hrs. Total 600 ml in 6 hrs.",
-       "label": "Child 9"
+       "type": "calc",
+       "question": "How many ml of IV fluid do you give first?",
+       "answer": 180,
+       "unit": "ml",
+       "text": "6 months, 6 kg.",
+       "hint": "First 30 ml/kg: in 1 hour under 12 months, in 30 minutes from 12 months.",
+       "explanation": "First give 180 ml over 1 hour. Then give 420 ml over 5 hrs. Total 600 ml in 6 hrs.",
+       "title": "Child 9",
+       "label": "Drill 5"
       },
       {
-       "type": "reveal",
-       "text": "12 months, 8 kg: first give? then give?",
-       "answer": "First give 240 ml over 30 mins. Then give 560 ml over 2½ hrs. Total 800 ml in 3 hrs.",
-       "label": "Child 10"
+       "type": "calc",
+       "question": "How many ml of IV fluid do you give first?",
+       "answer": 240,
+       "unit": "ml",
+       "text": "12 months, 8 kg.",
+       "hint": "First 30 ml/kg: in 1 hour under 12 months, in 30 minutes from 12 months.",
+       "explanation": "First give 240 ml over 30 mins. Then give 560 ml over 2½ hrs. Total 800 ml in 3 hrs.",
+       "title": "Child 10",
+       "label": "Drill 5"
       },
       {
-       "type": "reveal",
-       "text": "11½ months, 8 kg: first give? then give?",
-       "answer": "First give 240 ml over 1 hour. Then give 560 ml over 5 hrs. Total 800 ml in 6 hrs.",
-       "label": "Child 11"
+       "type": "calc",
+       "question": "How many ml of IV fluid do you give first?",
+       "answer": 240,
+       "unit": "ml",
+       "text": "11½ months, 8 kg.",
+       "hint": "First 30 ml/kg: in 1 hour under 12 months, in 30 minutes from 12 months.",
+       "explanation": "First give 240 ml over 1 hour. Then give 560 ml over 5 hrs. Total 800 ml in 6 hrs.",
+       "title": "Child 11",
+       "label": "Drill 5"
       },
       {
-       "type": "reveal",
-       "text": "5 months, 5 kg: first give? then give?",
-       "answer": "First give 150 ml over 1 hour. Then give 350 ml over 5 hrs. Total 500 ml in 6 hrs.",
-       "label": "Child 12"
+       "type": "calc",
+       "question": "How many ml of IV fluid do you give first?",
+       "answer": 150,
+       "unit": "ml",
+       "text": "5 months, 5 kg.",
+       "hint": "First 30 ml/kg: in 1 hour under 12 months, in 30 minutes from 12 months.",
+       "explanation": "First give 150 ml over 1 hour. Then give 350 ml over 5 hrs. Total 500 ml in 6 hrs.",
+       "title": "Child 12",
+       "label": "Drill 5"
       },
       {
-       "type": "reveal",
-       "text": "10 months, 7 kg: first give? then give?",
-       "answer": "First give 210 ml over 1 hour. Then give 490 ml over 5 hrs. Total 700 ml in 6 hrs.",
-       "label": "Child 13"
+       "type": "calc",
+       "question": "How many ml of IV fluid do you give first?",
+       "answer": 210,
+       "unit": "ml",
+       "text": "10 months, 7 kg.",
+       "hint": "First 30 ml/kg: in 1 hour under 12 months, in 30 minutes from 12 months.",
+       "explanation": "First give 210 ml over 1 hour. Then give 490 ml over 5 hrs. Total 700 ml in 6 hrs.",
+       "title": "Child 13",
+       "label": "Drill 5"
       }
      ],
      "see": [],
@@ -5006,6 +5116,11 @@
        "label": "From your facilitator"
       },
       {
+       "type": "note",
+       "text": "In the next lessons you are on shift in the emergency room, and 14 children come in one after another. You are in charge of each child. At each step, choose what you do next: what you assess first, second and so on, and what treatment you give. You are told what you find only after you choose to look for it. A wrong choice gives you a hint, and you try again; after two wrong choices you see the answer. At the end of each child you see which decisions you got right first time. Some children have doses to work out. The first time you will be slow and unsure: with practice you become quicker and more confident.",
+       "label": "How your shift works"
+      },
+      {
        "type": "sort",
        "text": "What comes first?",
        "groups": [
@@ -5037,11 +5152,11 @@
      "order": 1
     },
     {
-     "title": "Scenarios 1 to 4: dehydration, convulsion, airway",
+     "title": "Your shift, children 1 to 4: dehydration, convulsion, airway",
      "read": [
       {
        "type": "note",
-       "text": "Manage each child step by step: assess, treat as soon as you find an emergency sign, and reassess.",
+       "text": "Manage each child who comes in, step by step: assess, treat as soon as you find an emergency sign, and reassess.",
        "label": "In this lesson"
       },
       {
@@ -5051,323 +5166,457 @@
       },
       {
        "type": "story",
-       "title": "Scenario 1",
+       "title": "Child 1: Amna",
        "stages": [
         {
-         "text": "A 3-year-old girl is carried in her mother's arms wrapped in a blanket, in the line.",
-         "question": "What is the correct response?",
+         "text": "What do you do first?",
+         "question": "What do you do now?",
          "options": [
           "Triage as priority, lethargy",
           "Assess Airway and Breathing",
           "Check for dehydration"
          ],
          "answer": 1,
-         "explanation": "Assess Airway and Breathing"
+         "explanation": "Assess Airway and Breathing",
+         "feedback": [
+          "Follow ABCD: what do you always check first, before anything else?",
+          "",
+          "Follow ABCD: what do you always check first, before anything else?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Breathing OK",
-         "question": "What is the correct response?",
+         "text": "You find: Breathing OK",
+         "question": "What do you do now?",
          "options": [
           "Check blood glucose",
           "Assess airway",
           "Assess Circulation"
          ],
          "answer": 2,
-         "explanation": "Assess Circulation"
+         "explanation": "Assess Circulation",
+         "feedback": [
+          "Airway and breathing are done. What is the next letter of ABCD?",
+          "Airway and breathing are done. What is the next letter of ABCD?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: Cool hand",
-         "question": "What is the correct response?",
+         "text": "You find: Cool hand",
+         "question": "What do you do now?",
          "options": [
           "Check cap refill",
           "Triage as priority",
           "Check glucose"
          ],
          "answer": 0,
-         "explanation": "Check cap refill"
+         "explanation": "Check cap refill",
+         "feedback": [
+          "",
+          "The hand is cool. How do you tell whether this child is in shock?",
+          "The hand is cool. How do you tell whether this child is in shock?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Normal capillary refill (1.5 seconds)",
-         "question": "What is the correct response?",
+         "text": "You find: Normal capillary refill (1.5 seconds)",
+         "question": "What do you do now?",
          "options": [
           "Triage as emergency",
           "Assess Consciousness",
           "Triage as priority"
          ],
          "answer": 1,
-         "explanation": "Assess Consciousness"
+         "explanation": "Assess Consciousness",
+         "feedback": [
+          "Circulation is done. What is the next letter of ABCD?",
+          "",
+          "Circulation is done. What is the next letter of ABCD?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Alert",
-         "question": "What is the correct response?",
+         "text": "You find: Alert",
+         "question": "What do you do now?",
          "options": [
           "Continue assessment",
           "Assess airway",
           "Ask for Diarrhoea"
          ],
          "answer": 2,
-         "explanation": "Ask for Diarrhoea"
+         "explanation": "Ask for Diarrhoea",
+         "feedback": [
+          "Consciousness is done. What does the D of ABCD stand for?",
+          "Consciousness is done. What does the D of ABCD stand for?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: Diarrhoea x 2 days-mom says 4 to 5 loose watery stools",
-         "question": "What is the correct response?",
+         "text": "You find: Diarrhoea x 2 days-mom says 4 to 5 loose watery stools",
+         "question": "What do you do now?",
          "options": [
           "Assess for Dehydration",
           "Assess priority signs",
           "Diazepam pr or Paraldehyde"
          ],
          "answer": 0,
-         "explanation": "Assess for Dehydration"
+         "explanation": "Assess for Dehydration",
+         "feedback": [
+          "",
+          "The child has diarrhoea. What do you look for next?",
+          "The child has diarrhoea. What do you look for next?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Skin pinch takes 3 seconds",
-         "question": "What is the correct response?",
+         "text": "You find: Skin pinch takes 3 seconds",
+         "question": "What do you do now?",
          "options": [
           "Triage as emergency",
           "Continue assessment",
           "Check cap refill"
          ],
          "answer": 1,
-         "explanation": "Continue assessment"
+         "explanation": "Continue assessment",
+         "feedback": [
+          "Think of the ABCD order, and treat each emergency sign as soon as you find it.",
+          "",
+          "Think of the ABCD order, and treat each emergency sign as soon as you find it."
+         ]
         },
         {
-         "text": "Your facilitator tells you: Eyes appear sunken a bit",
-         "question": "What is the correct response?",
+         "text": "You find: Eyes appear sunken a bit",
+         "question": "What do you do now?",
          "options": [
           "Assess circulation",
           "Assess airway",
           "Triage as emergency"
          ],
          "answer": 2,
-         "explanation": "Triage as emergency"
+         "explanation": "Triage as emergency",
+         "feedback": [
+          "Is there an emergency sign? If yes, triage as emergency and treat it now.",
+          "Is there an emergency sign? If yes, triage as emergency and treat it now.",
+          ""
+         ]
         },
         {
-         "text": "Continue.",
-         "question": "What is the correct response?",
+         "text": "What do you do first?",
+         "question": "What do you do now?",
          "options": [
           "Check for severe malnutrition",
           "Triage as priority, lethargy",
           "Assess for Priority signs"
          ],
          "answer": 0,
-         "explanation": "Check for severe malnutrition"
+         "explanation": "Check for severe malnutrition",
+         "feedback": [
+          "",
+          "Before you give fluids for dehydration, what must you check?",
+          "Before you give fluids for dehydration, what must you check?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: If not checked for malnutrition: Child goes into shock and cardiac arrest."
+         "text": "What happens if this step is missed: If not checked for malnutrition: Child goes into shock and cardiac arrest."
         },
         {
-         "text": "Your facilitator tells you: Some oedema in both feet OR Visible severe wasting.",
-         "question": "What is the correct response?",
+         "text": "You find: Some oedema in both feet OR Visible severe wasting.",
+         "question": "What do you do now?",
          "options": [
           "Assess for priority signs Continuous irritable?",
           "Refer for immediate assessment by senior health worker",
           "After treatment of shock continue assessment"
          ],
          "answer": 1,
-         "explanation": "Refer for immediate assessment by senior health worker"
+         "explanation": "Refer for immediate assessment by senior health worker",
+         "feedback": [
+          "Think of the ABCD order, and treat each emergency sign as soon as you find it.",
+          "",
+          "Think of the ABCD order, and treat each emergency sign as soon as you find it."
+         ]
         },
         {
-         "text": "Your facilitator tells you: (Blood Glucose = 5mmol/l)",
-         "question": "What is the correct response?",
+         "text": "You find: (Blood Glucose = 5mmol/l)",
+         "question": "What do you do now?",
          "options": [
           "Plan C. 300mls in the first ½ hour. 700 mls in the next 2.5 hours of IV Ringers Lactate",
           "Treat for shock IV or intraosseous access Normal saline or Ringer's 20 mls/ kg = 280 mls stat Reassess (repeat x2) Blood samples for glucose/Hct/MPs",
           "Child severely malnourished, should receive oral ReSoMal, 5ml/kg in 30 mins for 2 hours 45 mls in first ½ hour."
          ],
          "answer": 2,
-         "explanation": "Child severely malnourished, should receive oral ReSoMal, 5ml/kg in 30 mins for 2 hours 45 mls in first ½ hour."
+         "explanation": "Child severely malnourished, should receive oral ReSoMal, 5ml/kg in 30 mins for 2 hours 45 mls in first ½ hour.",
+         "feedback": [
+          "Think of the ABCD order, and treat each emergency sign as soon as you find it.",
+          "Think of the ABCD order, and treat each emergency sign as soon as you find it.",
+          ""
+         ]
         }
        ],
-       "label": "Case management scenario"
+       "label": "Your shift",
+       "text": "Amna. A 3-year-old girl is carried in her mother's arms wrapped in a blanket, in the line."
       },
       {
        "type": "story",
-       "title": "Scenario 2",
+       "title": "Child 2: Omer",
        "stages": [
         {
-         "text": "2 year old male. Mother rushes in- he convulsed 30 minutes ago and she is frightened.",
-         "question": "What is the correct response?",
+         "text": "What do you do first?",
+         "question": "What do you do now?",
          "options": [
           "Assess for Priority signs",
           "Triage as Emergency Assess airway",
           "Assess Airway and Breathing"
          ],
          "answer": 2,
-         "explanation": "Assess Airway and Breathing"
+         "explanation": "Assess Airway and Breathing",
+         "feedback": [
+          "Follow ABCD: what do you always check first, before anything else?",
+          "Follow ABCD: what do you always check first, before anything else?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: Breathing fast but no cyanosis, no distress, no signs of obstructed breathing",
-         "question": "What is the correct response?",
+         "text": "You find: Breathing fast but no cyanosis, no distress, no signs of obstructed breathing",
+         "question": "What do you do now?",
          "options": [
           "Assess Circulation",
           "Continue assessment",
           "Assess consciousness"
          ],
          "answer": 0,
-         "explanation": "Assess Circulation"
+         "explanation": "Assess Circulation",
+         "feedback": [
+          "",
+          "Airway and breathing are done. What is the next letter of ABCD?",
+          "Airway and breathing are done. What is the next letter of ABCD?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Feels very hot. Capillary refill fast- less than a second. Fast but strong pulse",
-         "question": "What is the correct response?",
+         "text": "You find: Feels very hot. Capillary refill fast- less than a second. Fast but strong pulse",
+         "question": "What do you do now?",
          "options": [
           "Triage as emergency",
           "Assess Consciousness",
           "Triage as priority"
          ],
          "answer": 1,
-         "explanation": "Assess Consciousness"
+         "explanation": "Assess Consciousness",
+         "feedback": [
+          "Circulation is done. What is the next letter of ABCD?",
+          "",
+          "Circulation is done. What is the next letter of ABCD?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Lethargic but responds to voice by crying",
-         "question": "What is the correct response?",
+         "text": "You find: Lethargic but responds to voice by crying",
+         "question": "What do you do now?",
          "options": [
           "Continue assessment",
           "Assess airway",
           "Ask for Diarrhoea"
          ],
          "answer": 2,
-         "explanation": "Ask for Diarrhoea"
+         "explanation": "Ask for Diarrhoea",
+         "feedback": [
+          "Consciousness is done. What does the D of ABCD stand for?",
+          "Consciousness is done. What does the D of ABCD stand for?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: Diarrhoea today Skin pinch less than 2 seconds Eyes not sunken. Crying big tears",
-         "question": "What is the correct response?",
+         "text": "You find: Diarrhoea today Skin pinch less than 2 seconds Eyes not sunken. Crying big tears",
+         "question": "What do you do now?",
          "options": [
           "Assess for Priority signs",
           "IV glucose 55 mls of 10%.",
           "Assess consciousness"
          ],
          "answer": 0,
-         "explanation": "Assess for Priority signs"
+         "explanation": "Assess for Priority signs",
+         "feedback": [
+          "",
+          "There is no emergency sign. Does the child have a priority sign?",
+          "There is no emergency sign. Does the child have a priority sign?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: No visible wasting or oedema No pallor",
-         "question": "What is the correct response?",
+         "text": "You find: No visible wasting or oedema No pallor",
+         "question": "What do you do now?",
          "options": [
           "Continue assessment Assess Circulation",
           "Triage as Priority (hot and lethargy)",
           "Check for severe malnutrition"
          ],
          "answer": 1,
-         "explanation": "Triage as Priority (hot and lethargy)"
+         "explanation": "Triage as Priority (hot and lethargy)",
+         "feedback": [
+          "There is no emergency sign. Does the child have a priority sign?",
+          "",
+          "There is no emergency sign. Does the child have a priority sign?"
+         ]
         }
        ],
-       "label": "Case management scenario"
+       "label": "Your shift",
+       "text": "Omer. 2 year old male. Mother rushes in- he convulsed 30 minutes ago and she is frightened."
       },
       {
        "type": "story",
-       "title": "Scenario 3",
+       "title": "Child 3: Yousif",
        "stages": [
         {
-         "text": "1-year-old infant seized at home then again outside the clinic. Child is unconscious; breathing sounds very wet and noisy and there is drool coming from his mouth. He is looking a little blue. Your facilitator tells you: If participant goes to rest of the exam or does not adequately manage the airway, say the child is now very blue and is seizing",
-         "question": "What is the correct response?",
+         "text": "You go on to the rest of the examination without managing the airway. The child is now very blue and is seizing.",
+         "question": "What do you do now?",
          "options": [
           "Triage as emergency, cyanosis Manage airway, position child, insert Guedel's airway. Give oxygen Assess breathing",
           "Triage as Emergency (severe respiratory distress) O2 given by nasal cannula 1 litre/min (? Bag and mask). Assess circulation",
           "Triage as Emergency Give oxygen, assess breathing, if normal, assess Circulation"
          ],
          "answer": 0,
-         "explanation": "Triage as emergency, cyanosis Manage airway, position child, insert Guedel's airway. Give oxygen Assess breathing"
+         "explanation": "Triage as emergency, cyanosis Manage airway, position child, insert Guedel's airway. Give oxygen Assess breathing",
+         "feedback": [
+          "",
+          "Is there an emergency sign? If yes, triage as emergency and treat it now.",
+          "Is there an emergency sign? If yes, triage as emergency and treat it now."
+         ]
         },
         {
-         "text": "Your facilitator tells you: After participant manages the airway, say your airway management has helped. Child is breathing much better, not blue, and no longer noisy. Tongue must have been in the way",
-         "question": "What is the correct response?",
+         "text": "You find: You manage the airway. Your airway management has helped. Child is breathing much better, not blue, and no longer noisy. Tongue must have been in the way",
+         "question": "What do you do now?",
          "options": [
           "Position child Continue assessment",
           "Continue assessment Assess Circulation",
           "AVPU = Voice Ask for Diarrhoea"
          ],
          "answer": 1,
-         "explanation": "Continue assessment Assess Circulation"
+         "explanation": "Continue assessment Assess Circulation",
+         "feedback": [
+          "Airway and breathing are done. What is the next letter of ABCD?",
+          "",
+          "Airway and breathing are done. What is the next letter of ABCD?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Warm hand",
-         "question": "What is the correct response?",
+         "text": "You find: Warm hand",
+         "question": "What do you do now?",
          "options": [
           "Assess circulation",
           "Ask for diarrhoea",
           "Assess Consciousness"
          ],
          "answer": 2,
-         "explanation": "Assess Consciousness"
+         "explanation": "Assess Consciousness",
+         "feedback": [
+          "Circulation is done. What is the next letter of ABCD?",
+          "Circulation is done. What is the next letter of ABCD?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: Moves only to pain",
-         "question": "What is the correct response?",
+         "text": "You find: Moves only to pain",
+         "question": "What do you do now?",
          "options": [
           "Position child Continue assessment",
           "Check central pulses, femoral first",
           "Triage as priority, lethargy"
          ],
          "answer": 0,
-         "explanation": "Position child Continue assessment"
+         "explanation": "Position child Continue assessment",
+         "feedback": [
+          "",
+          "Think of the ABCD order, and treat each emergency sign as soon as you find it.",
+          "Think of the ABCD order, and treat each emergency sign as soon as you find it."
+         ]
         },
         {
-         "text": "Your facilitator tells you: AVPU = P",
-         "question": "What is the correct response?",
+         "text": "You find: AVPU = P",
+         "question": "What do you do now?",
          "options": [
           "Assess breathing",
           "Check glucose",
           "Assess consciousness"
          ],
          "answer": 1,
-         "explanation": "Check glucose"
+         "explanation": "Check glucose",
+         "feedback": [
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?",
+          "",
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Blood glucose < 2 mmol/L",
-         "question": "What is the correct response?",
+         "text": "You find: Blood glucose < 2 mmol/L",
+         "question": "What do you do now?",
          "options": [
           "Check central pulses, femoral first",
           "Treat for shock, check for bleeding, get help,",
           "IV Glucose give 25 mls of 10% glucose"
          ],
          "answer": 2,
-         "explanation": "IV Glucose give 25 mls of 10% glucose"
+         "explanation": "IV Glucose give 25 mls of 10% glucose",
+         "feedback": [
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?",
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: If no oxygen → stops breathing If no glucose check → seizures."
+         "text": "What happens if this step is missed: If no oxygen → stops breathing If no glucose check → seizures."
         }
        ],
-       "label": "Case management scenario"
+       "label": "Your shift",
+       "text": "Yousif. 1-year-old infant seized at home then again outside the clinic. Child is unconscious; breathing sounds very wet and noisy and there is drool coming from his mouth. He is looking a little blue."
       },
       {
        "type": "story",
-       "title": "Scenario 4",
+       "title": "Child 4: Hawa",
        "stages": [
         {
-         "text": "4-year-old girl with cough and pain in her throat. Crying loudly.",
-         "question": "What is the correct response?",
+         "text": "What do you do first?",
+         "question": "What do you do now?",
          "options": [
           "Triage as emergency",
           "Assess circulation",
           "Check cap refill"
          ],
          "answer": 1,
-         "explanation": "Assess circulation"
+         "explanation": "Assess circulation",
+         "feedback": [
+          "Airway and breathing are done. What is the next letter of ABCD?",
+          "",
+          "Airway and breathing are done. What is the next letter of ABCD?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Squirms away so you cannot touch her hand but foot feels warm Mother says she has not had diarrhoea Arm and legs are not thin",
-         "question": "What is the correct response?",
+         "text": "You find: Squirms away so you cannot touch her hand but foot feels warm Mother says she has not had diarrhoea Arm and legs are not thin",
+         "question": "What do you do now?",
          "options": [
           "While doing the above continue assessment",
           "Continue assessment Assess Circulation",
           "Assess for priority signs Continuous irritable?"
          ],
          "answer": 2,
-         "explanation": "Assess for priority signs Continuous irritable?"
+         "explanation": "Assess for priority signs Continuous irritable?",
+         "feedback": [
+          "There is no emergency sign. Does the child have a priority sign?",
+          "There is no emergency sign. Does the child have a priority sign?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: Yes, continuous irritable",
-         "question": "What is the correct response?",
+         "text": "You find: Yes, continuous irritable",
+         "question": "What do you do now?",
          "options": [
           "Triage as priority",
           "Assess circulation",
           "Check for dehydration"
          ],
          "answer": 0,
-         "explanation": "Triage as priority"
+         "explanation": "Triage as priority",
+         "feedback": [
+          "",
+          "There is no emergency sign. Does the child have a priority sign?",
+          "There is no emergency sign. Does the child have a priority sign?"
+         ]
         }
        ],
-       "label": "Case management scenario"
+       "label": "Your shift",
+       "text": "Hawa. 4-year-old girl with cough and pain in her throat. Crying loudly."
       }
      ],
      "see": [],
@@ -5375,187 +5624,270 @@
      "order": 2
     },
     {
-     "title": "Scenarios 5 to 7: trauma, breathing and shock",
+     "title": "Your shift, children 5 to 7: trauma, breathing and shock",
      "read": [
       {
        "type": "note",
-       "text": "Manage each child step by step: assess, treat as soon as you find an emergency sign, and reassess.",
+       "text": "Manage each child who comes in, step by step: assess, treat as soon as you find an emergency sign, and reassess.",
        "label": "In this lesson"
       },
       {
        "type": "story",
-       "title": "Scenario 5",
+       "title": "Child 5: Ahmed",
        "stages": [
         {
-         "text": "4-year-old boy hit by bicycle. Carried in on blanket. Your facilitator tells you: Unconscious- responds to deep pain Breathing sounds obstructed",
-         "question": "What is the correct response?",
+         "text": "You find: Unconscious- responds to deep pain Breathing sounds obstructed",
+         "question": "What do you do now?",
          "options": [
           "Triage as emergency, cyanosis Manage airway, position child, insert Guedel's airway. Give oxygen Assess breathing",
           "Plan C. 300mls in the first ½ hour. 700 mls in the next 2.5 hours of IV Ringers Lactate",
           "Triage as emergency Assess airway, stabilize neck, manage airway: inspect mouth. Remove foreign bodies, clear secretions, jaw thrust without head tilt, assess breathing, if normal continue assessment, if obstructed insert tube."
          ],
          "answer": 2,
-         "explanation": "Triage as emergency Assess airway, stabilize neck, manage airway: inspect mouth. Remove foreign bodies, clear secretions, jaw thrust without head tilt, assess breathing, if normal continue assessment, if obstructed insert tube."
+         "explanation": "Triage as emergency Assess airway, stabilize neck, manage airway: inspect mouth. Remove foreign bodies, clear secretions, jaw thrust without head tilt, assess breathing, if normal continue assessment, if obstructed insert tube.",
+         "feedback": [
+          "Is there an emergency sign? If yes, triage as emergency and treat it now.",
+          "Is there an emergency sign? If yes, triage as emergency and treat it now.",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: Cold hand with slow capillary refill",
-         "question": "What is the correct response?",
+         "text": "You find: Cold hand with slow capillary refill",
+         "question": "What do you do now?",
          "options": [
           "Treat for shock, check for bleeding, get help,",
           "Assess for priority signs Continuous irritable?",
           "IV Glucose give 25 mls of 10% glucose"
          ],
          "answer": 0,
-         "explanation": "Treat for shock, check for bleeding, get help,"
+         "explanation": "Treat for shock, check for bleeding, get help,",
+         "feedback": [
+          "",
+          "Cold hands and a slow capillary refill: what does this child have, and what does it need now?",
+          "Cold hands and a slow capillary refill: what does this child have, and what does it need now?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Bleeding from lower leg",
-         "question": "What is the correct response?",
+         "text": "You find: Bleeding from lower leg",
+         "question": "What do you do now?",
          "options": [
           "(? Bag and mask); assess breathing, if not obstructed, assess circulation",
           "Apply pressure. No tourniquet. Set up IV drip, Give oxygen Continue assessment",
           "Assess for priority signs Continuous irritable?"
          ],
          "answer": 1,
-         "explanation": "Apply pressure. No tourniquet. Set up IV drip, Give oxygen Continue assessment"
+         "explanation": "Apply pressure. No tourniquet. Set up IV drip, Give oxygen Continue assessment",
+         "feedback": [
+          "The leg is bleeding. How do you stop it?",
+          "",
+          "The leg is bleeding. How do you stop it?"
+         ]
         }
        ],
-       "label": "Case management scenario"
+       "label": "Your shift",
+       "text": "Ahmed. 4-year-old boy hit by bicycle. Carried in on blanket."
       },
       {
        "type": "story",
-       "title": "Scenario 6",
+       "title": "Child 6: Rania",
        "stages": [
         {
-         "text": "14-month-old girl has been sleeping all day. Irritable when awoken, rouses to loud voice or shaking her arm.",
-         "question": "What is the correct response?",
+         "text": "What do you do first?",
+         "question": "What do you do now?",
          "options": [
           "Assess Airway and Breathing",
           "Diazepam pr or Paraldehyde",
           "Assess priority signs"
          ],
          "answer": 0,
-         "explanation": "Assess Airway and Breathing"
+         "explanation": "Assess Airway and Breathing",
+         "feedback": [
+          "",
+          "Follow ABCD: what do you always check first, before anything else?",
+          "Follow ABCD: what do you always check first, before anything else?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Very deep breathing at normal rate, with some chest indrawing",
-         "question": "What is the correct response?",
+         "text": "You find: Very deep breathing at normal rate, with some chest indrawing",
+         "question": "What do you do now?",
          "options": [
           "(? Bag and mask); assess breathing, if not obstructed, assess circulation",
           "Triage as Emergency Give oxygen, assess breathing, if normal, assess Circulation",
           "Child severely malnourished, should receive oral ReSoMal, 5ml/kg in 30 mins for 2 hours 45 mls in first ½ hour."
          ],
          "answer": 1,
-         "explanation": "Triage as Emergency Give oxygen, assess breathing, if normal, assess Circulation"
+         "explanation": "Triage as Emergency Give oxygen, assess breathing, if normal, assess Circulation",
+         "feedback": [
+          "Is there an emergency sign? If yes, triage as emergency and treat it now.",
+          "",
+          "Is there an emergency sign? If yes, triage as emergency and treat it now."
+         ]
         },
         {
-         "text": "Your facilitator tells you: Warm hand",
-         "question": "What is the correct response?",
+         "text": "You find: Warm hand",
+         "question": "What do you do now?",
          "options": [
           "Check for dehydration",
           "Assess for Priority signs",
           "Assess Consciousness"
          ],
          "answer": 2,
-         "explanation": "Assess Consciousness"
+         "explanation": "Assess Consciousness",
+         "feedback": [
+          "Circulation is done. What is the next letter of ABCD?",
+          "Circulation is done. What is the next letter of ABCD?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: AVPU?",
-         "question": "What is the correct response?",
+         "text": "You find: AVPU?",
+         "question": "What do you do now?",
          "options": [
           "AVPU = Voice Ask for Diarrhoea",
           "Triage as priority, lethargy",
           "Diazepam pr or Paraldehyde"
          ],
          "answer": 0,
-         "explanation": "AVPU = Voice Ask for Diarrhoea"
+         "explanation": "AVPU = Voice Ask for Diarrhoea",
+         "feedback": [
+          "",
+          "Consciousness is done. What does the D of ABCD stand for?",
+          "Consciousness is done. What does the D of ABCD stand for?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: No diarrhoea says mother when asked",
-         "question": "What is the correct response?",
+         "text": "You find: No diarrhoea says mother when asked",
+         "question": "What do you do now?",
          "options": [
           "Triage as priority, lethargy",
           "Assess for Priority signs",
           "Check for severe malnutrition"
          ],
          "answer": 1,
-         "explanation": "Assess for Priority signs"
+         "explanation": "Assess for Priority signs",
+         "feedback": [
+          "There is no emergency sign. Does the child have a priority sign?",
+          "",
+          "There is no emergency sign. Does the child have a priority sign?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Some pallor No visible severe wasting or oedema",
-         "question": "What is the correct response?",
+         "text": "You find: Some pallor No visible severe wasting or oedema",
+         "question": "What do you do now?",
          "options": [
           "Give glucose 60 mls of 10% IV.",
           "Triage as Emergency Assess airway",
           "Triage as priority, lethargy"
          ],
          "answer": 2,
-         "explanation": "Triage as priority, lethargy"
+         "explanation": "Triage as priority, lethargy",
+         "feedback": [
+          "There is no emergency sign. Does the child have a priority sign?",
+          "There is no emergency sign. Does the child have a priority sign?",
+          ""
+         ]
         }
        ],
-       "label": "Case management scenario"
+       "label": "Your shift",
+       "text": "Rania. 14-month-old girl has been sleeping all day. Irritable when awoken, rouses to loud voice or shaking her arm."
       },
       {
        "type": "story",
-       "title": "Scenario 7",
+       "title": "Child 7: Mohamed",
        "stages": [
         {
-         "text": "A 3-year-old boy is carried into outpatient department in his father's arms. He is pale, floppy and having difficulty breathing. His father says he has been unwell and coughing for 3 days. Weight 14kg. Your facilitator tells you: Respiratory rate is fast with marked intercostal recession and a tracheal tug",
-         "question": "What is the correct response?",
+         "text": "You find: Respiratory rate is fast with marked intercostal recession and a tracheal tug",
+         "question": "What do you do now?",
          "options": [
           "Check central pulses, femoral first",
           "Triage as Emergency Assess airway",
           "Assess airway and breathing"
          ],
          "answer": 1,
-         "explanation": "Triage as Emergency Assess airway"
+         "explanation": "Triage as Emergency Assess airway",
+         "feedback": [
+          "Is there an emergency sign? If yes, triage as emergency and treat it now.",
+          "",
+          "Is there an emergency sign? If yes, triage as emergency and treat it now."
+         ]
         },
         {
-         "text": "Your facilitator tells you: Airway patency established",
-         "question": "What is the correct response?",
+         "text": "You find: Airway patency established",
+         "question": "What do you do now?",
          "options": [
           "Assess priority signs Triage as Priority (hot and irritable)",
           "Continue assessment Assess Circulation",
           "Give oxygen, 1-2L/min by nasal prongs or nasal catheter"
          ],
          "answer": 2,
-         "explanation": "Give oxygen, 1-2L/min by nasal prongs or nasal catheter"
+         "explanation": "Give oxygen, 1-2L/min by nasal prongs or nasal catheter",
+         "feedback": [
+          "Severe respiratory distress or cyanosis: what does the child need now?",
+          "Severe respiratory distress or cyanosis: what does the child need now?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: If no oxygen is given the child worsens to respiratory arrest",
-         "question": "What is the correct response?",
+         "text": "What happens if this step is missed: If no oxygen is given the child worsens to respiratory arrest",
+         "question": "What do you do now?",
          "options": [
           "(? Bag and mask); assess breathing, if not obstructed, assess circulation",
           "Triage as Emergency Give oxygen, assess breathing, if normal, assess Circulation",
           "Give oxygen, 1-2L/min by nasal prongs or nasal catheter"
          ],
          "answer": 0,
-         "explanation": "(? Bag and mask); assess breathing, if not obstructed, assess circulation"
+         "explanation": "(? Bag and mask); assess breathing, if not obstructed, assess circulation",
+         "feedback": [
+          "",
+          "Follow ABCD: after the airway, what comes next?",
+          "Follow ABCD: after the airway, what comes next?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: His hands are cold. Cap. Refill = 6 sec.",
-         "question": "What is the correct response?",
+         "text": "You find: His hands are cold. Cap. Refill = 6 sec.",
+         "question": "What do you do now?",
          "options": [
           "Child severely malnourished, should receive oral ReSoMal, 5ml/kg in 30 mins for 2 hours 45 mls in first ½ hour.",
           "Treat for shock IV or intraosseous access Normal saline or Ringer's 20 mls/ kg = 280 mls stat Reassess (repeat x2) Blood samples for glucose/Hct/MPs",
           "Triage as Emergency Give oxygen, assess breathing, if normal, assess Circulation"
          ],
          "answer": 1,
-         "explanation": "Treat for shock IV or intraosseous access Normal saline or Ringer's 20 mls/ kg = 280 mls stat Reassess (repeat x2) Blood samples for glucose/Hct/MPs"
+         "explanation": "Treat for shock IV or intraosseous access Normal saline or Ringer's 20 mls/ kg = 280 mls stat Reassess (repeat x2) Blood samples for glucose/Hct/MPs",
+         "feedback": [
+          "Cold hands and a slow capillary refill: what does this child have, and what does it need now?",
+          "",
+          "Cold hands and a slow capillary refill: what does this child have, and what does it need now?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: MPs 0 PCV = 26% Blood glucose = 4 mmols/L Pneumonia and shock",
-         "question": "What is the correct response?",
+         "text": "You find: MPs 0 PCV = 26% Blood glucose = 4 mmols/L Pneumonia and shock",
+         "question": "What do you do now?",
          "options": [
           "Continue assessment Assess Circulation",
           "Triage as Priority (hot and lethargy)",
           "After treatment of shock continue assessment"
          ],
          "answer": 2,
-         "explanation": "After treatment of shock continue assessment"
+         "explanation": "After treatment of shock continue assessment",
+         "feedback": [
+          "Cold hands and a slow capillary refill: what does this child have, and what does it need now?",
+          "Cold hands and a slow capillary refill: what does this child have, and what does it need now?",
+          ""
+         ]
         }
        ],
-       "label": "Case management scenario"
+       "label": "Your shift",
+       "text": "Mohamed. A 3-year-old boy is carried into outpatient department in his father's arms. He is pale, floppy and having difficulty breathing. His father says he has been unwell and coughing for 3 days. Weight 14kg."
+      },
+      {
+       "type": "calc",
+       "question": "Mohamed weighs 14 kg and is in shock. How many ml of Ringer’s lactate or normal saline for the first bolus?",
+       "answer": 280,
+       "unit": "ml",
+       "hint": "Shock: 20 ml/kg of Ringer’s lactate or normal saline.",
+       "explanation": "20 ml/kg × 14 kg = 280 ml",
+       "title": "Doses for Mohamed",
+       "label": "Work it out"
       }
      ],
      "see": [],
@@ -5563,265 +5895,418 @@
      "order": 3
     },
     {
-     "title": "Scenarios 8 to 10: shock, glucose and convulsion",
+     "title": "Your shift, children 8 to 10: shock, glucose and convulsion",
      "read": [
       {
        "type": "note",
-       "text": "Manage each child step by step: assess, treat as soon as you find an emergency sign, and reassess.",
+       "text": "Manage each child who comes in, step by step: assess, treat as soon as you find an emergency sign, and reassess.",
        "label": "In this lesson"
       },
       {
        "type": "story",
-       "title": "Scenario 8",
+       "title": "Child 8: Khalid",
        "stages": [
         {
-         "text": "A 4 months old baby is brought to hospital with fever, rapid breathing and refusing to breast-feed. He has had 2 episodes of vomiting and diarrhoea. Weight 5 kg. Your facilitator tells you: Airway patency established",
-         "question": "What is the correct response?",
+         "text": "You find: Airway patency established",
+         "question": "What do you do now?",
          "options": [
           "Assess circulation",
           "Check for dehydration",
           "Assess Breathing"
          ],
          "answer": 2,
-         "explanation": "Assess Breathing"
+         "explanation": "Assess Breathing",
+         "feedback": [
+          "Follow ABCD: after the airway, what comes next?",
+          "Follow ABCD: after the airway, what comes next?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: Respiratory rate is fast, no severe distress",
-         "question": "What is the correct response?",
+         "text": "You find: Respiratory rate is fast, no severe distress",
+         "question": "What do you do now?",
          "options": [
           "Assess Circulation",
           "Continue assessment",
           "Assess consciousness"
          ],
          "answer": 0,
-         "explanation": "Assess Circulation"
+         "explanation": "Assess Circulation",
+         "feedback": [
+          "",
+          "Airway and breathing are done. What is the next letter of ABCD?",
+          "Airway and breathing are done. What is the next letter of ABCD?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Hands are cool Cap refill is 6 sec. If attempted: Peripheral pulses not palpable",
-         "question": "What is the correct response?",
+         "text": "You find: Hands are cool Cap refill is 6 sec. If attempted: Peripheral pulses not palpable",
+         "question": "What do you do now?",
          "options": [
           "Continue assessment Assess Circulation",
           "Check central pulses, femoral first",
           "Give glucose 60 mls of 10% IV."
          ],
          "answer": 1,
-         "explanation": "Check central pulses, femoral first"
+         "explanation": "Check central pulses, femoral first",
+         "feedback": [
+          "The peripheral pulses cannot be felt. Where else can you feel a pulse?",
+          "",
+          "The peripheral pulses cannot be felt. Where else can you feel a pulse?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Femoral pulse palpable is fast and weak",
-         "question": "What is the correct response?",
+         "text": "You find: Femoral pulse palpable is fast and weak",
+         "question": "What do you do now?",
          "options": [
           "Triage as emergency, cyanosis Manage airway, position child, insert Guedel's airway. Give oxygen Assess breathing",
           "Plan C. 300mls in the first ½ hour. 700 mls in the next 2.5 hours of IV Ringers Lactate",
           "Triage as emergency, treat for shock Obtain venous access or intraosseous, sample for glucose/MPs and Hct; start drip with 20mls/kg Ringers Lactate = 100 mls IV stat Give oxygen, 1L/min O2 via nasal catheter or nasal prongs"
          ],
          "answer": 2,
-         "explanation": "Triage as emergency, treat for shock Obtain venous access or intraosseous, sample for glucose/MPs and Hct; start drip with 20mls/kg Ringers Lactate = 100 mls IV stat Give oxygen, 1L/min O2 via nasal catheter or nasal prongs"
+         "explanation": "Triage as emergency, treat for shock Obtain venous access or intraosseous, sample for glucose/MPs and Hct; start drip with 20mls/kg Ringers Lactate = 100 mls IV stat Give oxygen, 1L/min O2 via nasal catheter or nasal prongs",
+         "feedback": [
+          "Is there an emergency sign? If yes, triage as emergency and treat it now.",
+          "Is there an emergency sign? If yes, triage as emergency and treat it now.",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: AVPU = P",
-         "question": "What is the correct response?",
+         "text": "You find: AVPU = P",
+         "question": "What do you do now?",
          "options": [
           "While doing the above continue assessment",
           "After treatment of shock continue assessment",
           "O2 by nasal cannula; 1 litre/min (+ Bag and mask)"
          ],
          "answer": 0,
-         "explanation": "While doing the above continue assessment"
+         "explanation": "While doing the above continue assessment",
+         "feedback": [
+          "",
+          "Think of the ABCD order, and treat each emergency sign as soon as you find it.",
+          "Think of the ABCD order, and treat each emergency sign as soon as you find it."
+         ]
         },
         {
-         "text": "Your facilitator tells you: Blood glucose < 2 mmol/L (MPs. 0 PCV = 40%)",
-         "question": "What is the correct response?",
+         "text": "You find: Blood glucose < 2 mmol/L (MPs. 0 PCV = 40%)",
+         "question": "What do you do now?",
          "options": [
           "Refer for immediate assessment by senior health worker",
           "Check glucose IV Glucose give 25 mls of 10% glucose",
           "IV Glucose give 25 mls of 10% glucose"
          ],
          "answer": 1,
-         "explanation": "Check glucose IV Glucose give 25 mls of 10% glucose"
+         "explanation": "Check glucose IV Glucose give 25 mls of 10% glucose",
+         "feedback": [
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?",
+          "",
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: If no oxygen → stops breathing If no glucose check → seizures If no shock treatment → death."
+         "text": "What happens if this step is missed: If no oxygen → stops breathing If no glucose check → seizures If no shock treatment → death."
         }
        ],
-       "label": "Case management scenario"
+       "label": "Your shift",
+       "text": "Khalid. A 4 months old baby is brought to hospital with fever, rapid breathing and refusing to breast-feed. He has had 2 episodes of vomiting and diarrhoea. Weight 5 kg."
+      },
+      {
+       "type": "calc",
+       "question": "Khalid weighs 5 kg and is in shock. How many ml of Ringer’s lactate for the first bolus?",
+       "answer": 100,
+       "unit": "ml",
+       "hint": "Shock: 20 ml/kg of Ringer’s lactate or normal saline.",
+       "explanation": "20 ml/kg × 5 kg = 100 ml",
+       "title": "Doses for Khalid",
+       "label": "Work it out"
+      },
+      {
+       "type": "calc",
+       "question": "His blood glucose is below 2 mmol/L. How many ml of 10% glucose?",
+       "answer": 25,
+       "unit": "ml",
+       "hint": "10% glucose: 5 ml/kg.",
+       "explanation": "5 ml/kg × 5 kg = 25 ml",
+       "title": "Doses for Khalid",
+       "label": "Work it out"
       },
       {
        "type": "story",
-       "title": "Scenario 9",
+       "title": "Child 9: Nour",
        "stages": [
         {
-         "text": "A 10 months old baby boy is bought in with history of 24 hours of vomiting and diarrhoea. Weight 8 kg.",
-         "question": "What is the correct response?",
+         "text": "What do you do first?",
+         "question": "What do you do now?",
          "options": [
           "Assess airway and breathing",
           "Check for severe malnutrition",
           "Give glucose 40 mls of 10% IV."
          ],
          "answer": 0,
-         "explanation": "Assess airway and breathing"
+         "explanation": "Assess airway and breathing",
+         "feedback": [
+          "",
+          "Follow ABCD: what do you always check first, before anything else?",
+          "Follow ABCD: what do you always check first, before anything else?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Her breathing is normal with no distress",
-         "question": "What is the correct response?",
+         "text": "You find: Her breathing is normal with no distress",
+         "question": "What do you do now?",
          "options": [
           "Triage as emergency",
           "Assess circulation",
           "Check cap refill"
          ],
          "answer": 1,
-         "explanation": "Assess circulation"
+         "explanation": "Assess circulation",
+         "feedback": [
+          "Airway and breathing are done. What is the next letter of ABCD?",
+          "",
+          "Airway and breathing are done. What is the next letter of ABCD?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Her hands feet are cold and look grey Cap refill - 4 sec.",
-         "question": "What is the correct response?",
+         "text": "You find: Her hands feet are cold and look grey Cap refill - 4 sec.",
+         "question": "What do you do now?",
          "options": [
           "Triage as Emergency (severe respiratory distress) Give oxygen via nasal prongs 1 litre/min. Assess circulation",
           "Apply pressure. No tourniquet. Set up IV drip, Give oxygen Continue assessment",
           "Triage as Emergency (shock) Establish IV/IO access, give 160 mls of Ringers Lactate x 2 Give oxygen, 1-2L/min O2 by nasal catheter"
          ],
          "answer": 2,
-         "explanation": "Triage as Emergency (shock) Establish IV/IO access, give 160 mls of Ringers Lactate x 2 Give oxygen, 1-2L/min O2 by nasal catheter"
+         "explanation": "Triage as Emergency (shock) Establish IV/IO access, give 160 mls of Ringers Lactate x 2 Give oxygen, 1-2L/min O2 by nasal catheter",
+         "feedback": [
+          "Is there an emergency sign? If yes, triage as emergency and treat it now.",
+          "Is there an emergency sign? If yes, triage as emergency and treat it now.",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: AVPU = P",
-         "question": "What is the correct response?",
+         "text": "You find: AVPU = P",
+         "question": "What do you do now?",
          "options": [
           "Check blood glucose",
           "Continue assessment",
           "Assess for Dehydration"
          ],
          "answer": 0,
-         "explanation": "Check blood glucose"
+         "explanation": "Check blood glucose",
+         "feedback": [
+          "",
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?",
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Blood glucose 1.5mmols/L",
-         "question": "What is the correct response?",
+         "text": "You find: Blood glucose 1.5mmols/L",
+         "question": "What do you do now?",
          "options": [
           "Give glucose 60 mls of 10% IV.",
           "Give glucose 40 mls of 10% IV.",
           "IV glucose 55 mls of 10%."
          ],
          "answer": 1,
-         "explanation": "Give glucose 40 mls of 10% IV."
+         "explanation": "Give glucose 40 mls of 10% IV.",
+         "feedback": [
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?",
+          "",
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: If no shock management → dies If no glucose → seizures, and if untreated → to coma and death."
+         "text": "What happens if this step is missed: If no shock management → dies If no glucose → seizures, and if untreated → to coma and death."
         },
         {
-         "text": "Your facilitator tells you: She continues to have D and V",
-         "question": "What is the correct response?",
+         "text": "You find: She continues to have D and V",
+         "question": "What do you do now?",
          "options": [
           "Check glucose",
           "Assess consciousness",
           "Plan C"
          ],
          "answer": 2,
-         "explanation": "Plan C"
+         "explanation": "Plan C",
+         "feedback": [
+          "Severe dehydration without severe malnutrition: which treatment plan?",
+          "Severe dehydration without severe malnutrition: which treatment plan?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: No improvement until oral fluids, she is thirsty!."
+         "text": "You find: No improvement until oral fluids, she is thirsty!."
         }
        ],
-       "label": "Case management scenario"
+       "label": "Your shift",
+       "text": "Nour. A 10 months old baby boy is bought in with history of 24 hours of vomiting and diarrhoea. Weight 8 kg."
+      },
+      {
+       "type": "calc",
+       "question": "Nour weighs 8 kg and is in shock. How many ml of Ringer’s lactate for each bolus?",
+       "answer": 160,
+       "unit": "ml",
+       "hint": "Shock: 20 ml/kg of Ringer’s lactate or normal saline.",
+       "explanation": "20 ml/kg × 8 kg = 160 ml",
+       "title": "Doses for Nour",
+       "label": "Work it out"
+      },
+      {
+       "type": "calc",
+       "question": "The blood glucose is 1.5 mmol/L. How many ml of 10% glucose?",
+       "answer": 40,
+       "unit": "ml",
+       "hint": "10% glucose: 5 ml/kg.",
+       "explanation": "5 ml/kg × 8 kg = 40 ml",
+       "title": "Doses for Nour",
+       "label": "Work it out"
       },
       {
        "type": "story",
-       "title": "Scenario 10",
+       "title": "Child 10: Hassan",
        "stages": [
         {
-         "text": "A 2-year-old boy is carried in by his grandmother. Weight 12kg. He is hot and having a seizure.",
-         "question": "What is the correct response?",
+         "text": "What do you do first?",
+         "question": "What do you do now?",
          "options": [
           "Triage as Emergency (severe respiratory distress) Give oxygen via nasal prongs 1 litre/min. Assess circulation",
           "Triage as Emergency (convulsion). Position child, jaw thrust, suction Diazepam pr or Paraldehyde Assess airway and breathing",
           "Triage as Emergency Give oxygen, assess breathing, if normal, assess Circulation"
          ],
          "answer": 1,
-         "explanation": "Triage as Emergency (convulsion). Position child, jaw thrust, suction Diazepam pr or Paraldehyde Assess airway and breathing"
+         "explanation": "Triage as Emergency (convulsion). Position child, jaw thrust, suction Diazepam pr or Paraldehyde Assess airway and breathing",
+         "feedback": [
+          "Is there an emergency sign? If yes, triage as emergency and treat it now.",
+          "",
+          "Is there an emergency sign? If yes, triage as emergency and treat it now."
+         ]
         },
         {
-         "text": "Your facilitator tells you: Airway patency established but noisy,",
-         "question": "What is the correct response?",
+         "text": "You find: Airway patency established but noisy,",
+         "question": "What do you do now?",
          "options": [
           "Refer for immediate assessment by senior health worker",
           "Assess priority signs Triage as Priority (hot and irritable)",
           "O2 by nasal cannula; 1 litre/min (+ Bag and mask)"
          ],
          "answer": 2,
-         "explanation": "O2 by nasal cannula; 1 litre/min (+ Bag and mask)"
+         "explanation": "O2 by nasal cannula; 1 litre/min (+ Bag and mask)",
+         "feedback": [
+          "Think of the ABCD order, and treat each emergency sign as soon as you find it.",
+          "Think of the ABCD order, and treat each emergency sign as soon as you find it.",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: If no airway established → apnoea and finally death."
+         "text": "What happens if this step is missed: If no airway established → apnoea and finally death."
         },
         {
-         "text": "Your facilitator tells you: Improves",
-         "question": "What is the correct response?",
+         "text": "You find: Improves",
+         "question": "What do you do now?",
          "options": [
           "Assess circulation",
           "Triage as priority",
           "Check for dehydration"
          ],
          "answer": 0,
-         "explanation": "Assess circulation"
+         "explanation": "Assess circulation",
+         "feedback": [
+          "",
+          "Airway and breathing are done. What is the next letter of ABCD?",
+          "Airway and breathing are done. What is the next letter of ABCD?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Hands are warm, colour pink",
-         "question": "What is the correct response?",
+         "text": "You find: Hands are warm, colour pink",
+         "question": "What do you do now?",
          "options": [
           "Check blood glucose",
           "Assess consciousness",
           "Check cap refill"
          ],
          "answer": 1,
-         "explanation": "Assess consciousness"
+         "explanation": "Assess consciousness",
+         "feedback": [
+          "Circulation is done. What is the next letter of ABCD?",
+          "",
+          "Circulation is done. What is the next letter of ABCD?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: AVPU = U",
-         "question": "What is the correct response?",
+         "text": "You find: AVPU = U",
+         "question": "What do you do now?",
          "options": [
           "Assess circulation",
           "Assess airway",
           "Check blood glucose"
          ],
          "answer": 2,
-         "explanation": "Check blood glucose"
+         "explanation": "Check blood glucose",
+         "feedback": [
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?",
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: Blood glucose 2 mmol/L",
-         "question": "What is the correct response?",
+         "text": "You find: Blood glucose 2 mmol/L",
+         "question": "What do you do now?",
          "options": [
           "Give glucose 60 mls of 10% IV.",
           "Triage as priority, lethargy",
           "Diazepam pr or Paraldehyde"
          ],
          "answer": 0,
-         "explanation": "Give glucose 60 mls of 10% IV."
+         "explanation": "Give glucose 60 mls of 10% IV.",
+         "feedback": [
+          "",
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?",
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Continues to convulse MPs+++",
-         "question": "What is the correct response?",
+         "text": "You find: Continues to convulse MPs+++",
+         "question": "What do you do now?",
          "options": [
           "Check for severe malnutrition",
           "Diazepam pr or Paraldehyde",
           "Give glucose 40 mls of 10% IV."
          ],
          "answer": 1,
-         "explanation": "Diazepam pr or Paraldehyde"
+         "explanation": "Diazepam pr or Paraldehyde",
+         "feedback": [
+          "The child is convulsing. What stops the convulsion?",
+          "",
+          "The child is convulsing. What stops the convulsion?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: If no BM stick, continues to convulse → seizures continue and then apnoea, and finally death",
-         "question": "What is the correct response?",
+         "text": "What happens if this step is missed: If no BM stick, continues to convulse → seizures continue and then apnoea, and finally death",
+         "question": "What do you do now?",
          "options": [
           "While doing the above continue assessment",
           "Continue assessment Assess Circulation",
           "Paraldehyde pr or Diazepam Phenobarbitone IM/IV"
          ],
          "answer": 2,
-         "explanation": "Paraldehyde pr or Diazepam Phenobarbitone IM/IV"
+         "explanation": "Paraldehyde pr or Diazepam Phenobarbitone IM/IV",
+         "feedback": [
+          "The child is convulsing. What stops the convulsion?",
+          "The child is convulsing. What stops the convulsion?",
+          ""
+         ]
         }
        ],
-       "label": "Case management scenario"
+       "label": "Your shift",
+       "text": "Hassan. A 2-year-old boy is carried in by his grandmother. Weight 12kg. He is hot and having a seizure."
+      },
+      {
+       "type": "calc",
+       "question": "Hassan weighs 12 kg and his blood glucose is 2 mmol/L. How many ml of 10% glucose?",
+       "answer": 60,
+       "unit": "ml",
+       "hint": "10% glucose: 5 ml/kg.",
+       "explanation": "5 ml/kg × 12 kg = 60 ml",
+       "title": "Doses for Hassan",
+       "label": "Work it out"
       }
      ],
      "see": [],
@@ -5829,318 +6314,487 @@
      "order": 4
     },
     {
-     "title": "Scenarios 11 to 14: putting it all together",
+     "title": "Your shift, children 11 to 14: putting it all together",
      "read": [
       {
        "type": "note",
-       "text": "Manage each child step by step: assess, treat as soon as you find an emergency sign, and reassess.",
+       "text": "Manage each child who comes in, step by step: assess, treat as soon as you find an emergency sign, and reassess.",
        "label": "In this lesson"
       },
       {
        "type": "story",
-       "title": "Scenario 11",
+       "title": "Child 11: Musa",
        "stages": [
         {
-         "text": "An 18 month old boy has been unwell and feverish for 2 days. He complains of abdominal pain and his mum has noticed that he has fast breathing. Weight 11 kg.",
-         "question": "What is the correct response?",
+         "text": "What do you do first?",
+         "question": "What do you do now?",
          "options": [
           "Assess circulation",
           "Continue assessment",
           "Assess airway"
          ],
          "answer": 2,
-         "explanation": "Assess airway"
+         "explanation": "Assess airway",
+         "feedback": [
+          "Follow ABCD: what do you always check first, before anything else?",
+          "Follow ABCD: what do you always check first, before anything else?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: Patency established",
-         "question": "What is the correct response?",
+         "text": "You find: Patency established",
+         "question": "What do you do now?",
          "options": [
           "Assess breathing",
           "Check cap refill",
           "Assess consciousness"
          ],
          "answer": 0,
-         "explanation": "Assess breathing"
+         "explanation": "Assess breathing",
+         "feedback": [
+          "",
+          "Follow ABCD: after the airway, what comes next?",
+          "Follow ABCD: after the airway, what comes next?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: He is grunting and distressed with subcostal recessions with fast breathing",
-         "question": "What is the correct response?",
+         "text": "You find: He is grunting and distressed with subcostal recessions with fast breathing",
+         "question": "What do you do now?",
          "options": [
           "Triage as Emergency (shock) Establish IV/IO access, give 160 mls of Ringers Lactate x 2 Give oxygen, 1-2L/min O2 by nasal catheter",
           "Triage as Emergency (severe respiratory distress) O2 given by nasal cannula 1 litre/min (? Bag and mask). Assess circulation",
           "Position child, give Diazepam pr or Paraldehyde; check and give glucose"
          ],
          "answer": 1,
-         "explanation": "Triage as Emergency (severe respiratory distress) O2 given by nasal cannula 1 litre/min (? Bag and mask). Assess circulation"
+         "explanation": "Triage as Emergency (severe respiratory distress) O2 given by nasal cannula 1 litre/min (? Bag and mask). Assess circulation",
+         "feedback": [
+          "Is there an emergency sign? If yes, triage as emergency and treat it now.",
+          "",
+          "Is there an emergency sign? If yes, triage as emergency and treat it now."
+         ]
         },
         {
-         "text": "Your facilitator tells you: His hands are hot",
-         "question": "What is the correct response?",
+         "text": "You find: His hands are hot",
+         "question": "What do you do now?",
          "options": [
           "Check for dehydration",
           "Assess for Priority signs",
           "Assess consciousness"
          ],
          "answer": 2,
-         "explanation": "Assess consciousness"
+         "explanation": "Assess consciousness",
+         "feedback": [
+          "Circulation is done. What is the next letter of ABCD?",
+          "Circulation is done. What is the next letter of ABCD?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: He starts to convulse",
-         "question": "What is the correct response?",
+         "text": "You find: He starts to convulse",
+         "question": "What do you do now?",
          "options": [
           "Position child, give Diazepam pr or Paraldehyde; check and give glucose",
           "Triage as Emergency Give oxygen, assess breathing, if normal, assess Circulation",
           "Plan C. 300mls in the first ½ hour. 700 mls in the next 2.5 hours of IV Ringers Lactate"
          ],
          "answer": 0,
-         "explanation": "Position child, give Diazepam pr or Paraldehyde; check and give glucose"
+         "explanation": "Position child, give Diazepam pr or Paraldehyde; check and give glucose",
+         "feedback": [
+          "",
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?",
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Blood glucose 1.5mmol/L",
-         "question": "What is the correct response?",
+         "text": "You find: Blood glucose 1.5mmol/L",
+         "question": "What do you do now?",
          "options": [
           "Triage as priority, lethargy",
           "IV glucose 55 mls of 10%.",
           "Check for severe malnutrition"
          ],
          "answer": 1,
-         "explanation": "IV glucose 55 mls of 10%."
+         "explanation": "IV glucose 55 mls of 10%.",
+         "feedback": [
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?",
+          "",
+          "A child who is not alert or who convulses: what must you always check, and treat if it is low?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: If given glucose stops seizure If given anticonvulsants without glucose continues to seize",
-         "question": "What is the correct response?",
+         "text": "What happens if this step is missed: If given glucose stops seizure If given anticonvulsants without glucose continues to seize",
+         "question": "What do you do now?",
          "options": [
           "Ask for diarrhoea",
           "Check blood glucose",
           "Pneumonia"
          ],
          "answer": 2,
-         "explanation": "Pneumonia"
+         "explanation": "Pneumonia",
+         "feedback": [
+          "Think of the ABCD order, and treat each emergency sign as soon as you find it.",
+          "Think of the ABCD order, and treat each emergency sign as soon as you find it.",
+          ""
+         ]
         }
        ],
-       "label": "Case management scenario"
+       "label": "Your shift",
+       "text": "Musa. An 18 month old boy has been unwell and feverish for 2 days. He complains of abdominal pain and his mum has noticed that he has fast breathing. Weight 11 kg."
+      },
+      {
+       "type": "calc",
+       "question": "Musa weighs 11 kg and his blood glucose is 1.5 mmol/L. How many ml of 10% glucose?",
+       "answer": 55,
+       "unit": "ml",
+       "hint": "10% glucose: 5 ml/kg.",
+       "explanation": "5 ml/kg × 11 kg = 55 ml",
+       "title": "Doses for Musa",
+       "label": "Work it out"
       },
       {
        "type": "story",
-       "title": "Scenario 12",
+       "title": "Child 12: Adam",
        "stages": [
         {
-         "text": "A 10-week-old baby is brought in. His mother says he will not suckle today. Yesterday he was crying a lot. Weight 3.5 kg.",
-         "question": "What is the correct response?",
+         "text": "What do you do first?",
+         "question": "What do you do now?",
          "options": [
           "Assess airway",
           "Check glucose",
           "Triage as emergency"
          ],
          "answer": 0,
-         "explanation": "Assess airway"
+         "explanation": "Assess airway",
+         "feedback": [
+          "",
+          "Follow ABCD: what do you always check first, before anything else?",
+          "Follow ABCD: what do you always check first, before anything else?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Patency established",
-         "question": "What is the correct response?",
+         "text": "You find: Patency established",
+         "question": "What do you do now?",
          "options": [
           "Ask for diarrhoea",
           "Assess breathing",
           "Assess priority signs"
          ],
          "answer": 1,
-         "explanation": "Assess breathing"
+         "explanation": "Assess breathing",
+         "feedback": [
+          "Follow ABCD: after the airway, what comes next?",
+          "",
+          "Follow ABCD: after the airway, what comes next?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Breathing is normal",
-         "question": "What is the correct response?",
+         "text": "You find: Breathing is normal",
+         "question": "What do you do now?",
          "options": [
           "Check blood glucose",
           "Assess airway",
           "Assess circulation"
          ],
          "answer": 2,
-         "explanation": "Assess circulation"
+         "explanation": "Assess circulation",
+         "feedback": [
+          "Airway and breathing are done. What is the next letter of ABCD?",
+          "Airway and breathing are done. What is the next letter of ABCD?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: The hands are cool, the Cap. Refill = 3 sec.",
-         "question": "What is the correct response?",
+         "text": "You find: The hands are cool, the Cap. Refill = 3 sec.",
+         "question": "What do you do now?",
          "options": [
           "Assess consciousness",
           "Continue assessment",
           "Assess for Dehydration"
          ],
          "answer": 0,
-         "explanation": "Assess consciousness"
+         "explanation": "Assess consciousness",
+         "feedback": [
+          "",
+          "Circulation is done. What is the next letter of ABCD?",
+          "Circulation is done. What is the next letter of ABCD?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: AVPU = A but he is irritable He is hot and jittery",
-         "question": "What is the correct response?",
+         "text": "You find: AVPU = A but he is irritable He is hot and jittery",
+         "question": "What do you do now?",
          "options": [
           "Check blood glucose",
           "Ask for diarrhoea",
           "Assess consciousness"
          ],
          "answer": 1,
-         "explanation": "Ask for diarrhoea"
+         "explanation": "Ask for diarrhoea",
+         "feedback": [
+          "Consciousness is done. What does the D of ABCD stand for?",
+          "",
+          "Consciousness is done. What does the D of ABCD stand for?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: No history of diarrhoea, but has vomited twice",
-         "question": "What is the correct response?",
+         "text": "You find: No history of diarrhoea, but has vomited twice",
+         "question": "What do you do now?",
          "options": [
           "Position child, give Diazepam pr or Paraldehyde; check and give glucose",
           "Paraldehyde pr or Diazepam Phenobarbitone IM/IV",
           "Assess priority signs Triage as Priority (hot and irritable)"
          ],
          "answer": 2,
-         "explanation": "Assess priority signs Triage as Priority (hot and irritable)"
+         "explanation": "Assess priority signs Triage as Priority (hot and irritable)",
+         "feedback": [
+          "There is no emergency sign. Does the child have a priority sign?",
+          "There is no emergency sign. Does the child have a priority sign?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: Blood glucose = 1mmol/L Give glucose 10% 17.5 ml iv Diagnosis meningitis with hypoglycaemia."
+         "text": "You find: Blood glucose = 1mmol/L Give glucose 10% 17.5 ml iv Diagnosis meningitis with hypoglycaemia."
         }
        ],
-       "label": "Case management scenario"
+       "label": "Your shift",
+       "text": "Adam. A 10-week-old baby is brought in. His mother says he will not suckle today. Yesterday he was crying a lot. Weight 3.5 kg."
+      },
+      {
+       "type": "calc",
+       "question": "Adam weighs 3.5 kg and his blood glucose is 1 mmol/L. How many ml of 10% glucose?",
+       "answer": 17.5,
+       "unit": "ml",
+       "hint": "10% glucose: 5 ml/kg.",
+       "explanation": "5 ml/kg × 3.5 kg = 17.5 ml",
+       "title": "Doses for Adam",
+       "label": "Work it out"
       },
       {
        "type": "story",
-       "title": "Scenario 13",
+       "title": "Child 13: Fatima",
        "stages": [
         {
-         "text": "1-year-old baby girl with a 2-day history of diarrhoea and vomiting. Weight 10 kg. She is listless.",
-         "question": "What is the correct response?",
+         "text": "What do you do first?",
+         "question": "What do you do now?",
          "options": [
           "Triage as priority, lethargy",
           "Assess airway and breathing",
           "Check for dehydration"
          ],
          "answer": 1,
-         "explanation": "Assess airway and breathing"
+         "explanation": "Assess airway and breathing",
+         "feedback": [
+          "Follow ABCD: what do you always check first, before anything else?",
+          "",
+          "Follow ABCD: what do you always check first, before anything else?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Airway and breathing OK",
-         "question": "What is the correct response?",
+         "text": "You find: Airway and breathing OK",
+         "question": "What do you do now?",
          "options": [
           "Check blood glucose",
           "Assess airway",
           "Assess circulation"
          ],
          "answer": 2,
-         "explanation": "Assess circulation"
+         "explanation": "Assess circulation",
+         "feedback": [
+          "Airway and breathing are done. What is the next letter of ABCD?",
+          "Airway and breathing are done. What is the next letter of ABCD?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: Warm hand",
-         "question": "What is the correct response?",
+         "text": "You find: Warm hand",
+         "question": "What do you do now?",
          "options": [
           "Assess consciousness",
           "Continue assessment",
           "Assess for Dehydration"
          ],
          "answer": 0,
-         "explanation": "Assess consciousness"
+         "explanation": "Assess consciousness",
+         "feedback": [
+          "",
+          "Circulation is done. What is the next letter of ABCD?",
+          "Circulation is done. What is the next letter of ABCD?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: AVPU = voice. Will not drink",
-         "question": "What is the correct response?",
+         "text": "You find: AVPU = voice. Will not drink",
+         "question": "What do you do now?",
          "options": [
           "Continue assessment",
           "Check for dehydration",
           "Triage as priority"
          ],
          "answer": 1,
-         "explanation": "Check for dehydration"
+         "explanation": "Check for dehydration",
+         "feedback": [
+          "The child has diarrhoea. What do you look for next?",
+          "",
+          "The child has diarrhoea. What do you look for next?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: Skin pinch lasts 3 seconds Eyes sunken, mum agrees",
-         "question": "What is the correct response?",
+         "text": "You find: Skin pinch lasts 3 seconds Eyes sunken, mum agrees",
+         "question": "What do you do now?",
          "options": [
           "Give oxygen, 1-2L/min by nasal prongs or nasal catheter",
           "Plan C. 300mls in the first ½ hour. 700 mls in the next 2.5 hours of IV Ringers Lactate",
           "Triage as emergency, severe dehydration Check for severe malnutrition"
          ],
          "answer": 2,
-         "explanation": "Triage as emergency, severe dehydration Check for severe malnutrition"
+         "explanation": "Triage as emergency, severe dehydration Check for severe malnutrition",
+         "feedback": [
+          "Is there an emergency sign? If yes, triage as emergency and treat it now.",
+          "Is there an emergency sign? If yes, triage as emergency and treat it now.",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: No visible wasting or oedema",
-         "question": "What is the correct response?",
+         "text": "You find: No visible wasting or oedema",
+         "question": "What do you do now?",
          "options": [
           "Plan C. 300mls in the first ½ hour. 700 mls in the next 2.5 hours of IV Ringers Lactate",
           "Triage as Emergency Give oxygen, assess breathing, if normal, assess Circulation",
           "Give oxygen, 1-2L/min by nasal prongs or nasal catheter"
          ],
          "answer": 0,
-         "explanation": "Plan C. 300mls in the first ½ hour. 700 mls in the next 2.5 hours of IV Ringers Lactate"
+         "explanation": "Plan C. 300mls in the first ½ hour. 700 mls in the next 2.5 hours of IV Ringers Lactate",
+         "feedback": [
+          "",
+          "Severe dehydration without severe malnutrition: which treatment plan?",
+          "Severe dehydration without severe malnutrition: which treatment plan?"
+         ]
         }
        ],
-       "label": "Case management scenario"
+       "label": "Your shift",
+       "text": "Fatima. 1-year-old baby girl with a 2-day history of diarrhoea and vomiting. Weight 10 kg. She is listless."
+      },
+      {
+       "type": "calc",
+       "question": "Fatima weighs 10 kg and is on Plan C. How many ml of Ringer’s lactate in the first ½ hour?",
+       "answer": 300,
+       "unit": "ml",
+       "hint": "Plan C, from 12 months: 30 ml/kg in the first ½ hour.",
+       "explanation": "30 ml/kg × 10 kg = 300 ml",
+       "title": "Doses for Fatima",
+       "label": "Work it out"
+      },
+      {
+       "type": "calc",
+       "question": "How many ml in the next 2½ hours?",
+       "answer": 700,
+       "unit": "ml",
+       "hint": "Plan C, from 12 months: 70 ml/kg in the next 2½ hours.",
+       "explanation": "70 ml/kg × 10 kg = 700 ml",
+       "title": "Doses for Fatima",
+       "label": "Work it out"
       },
       {
        "type": "story",
-       "title": "Scenario 14",
+       "title": "Child 14: Salma",
        "stages": [
         {
-         "text": "A 14-month-old girl who has been sleeping all day and her mother has been worried about her. Weight 11 kg.",
-         "question": "What is the correct response?",
+         "text": "What do you do first?",
+         "question": "What do you do now?",
          "options": [
           "Assess for Priority signs",
           "Triage as Emergency Assess airway",
           "Assess airway and breathing"
          ],
          "answer": 2,
-         "explanation": "Assess airway and breathing"
+         "explanation": "Assess airway and breathing",
+         "feedback": [
+          "Follow ABCD: what do you always check first, before anything else?",
+          "Follow ABCD: what do you always check first, before anything else?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: Airway OK Breathing fast, recession ++ and harsh inspiratory noise. No cyanosis",
-         "question": "What is the correct response?",
+         "text": "You find: Airway OK Breathing fast, recession ++ and harsh inspiratory noise. No cyanosis",
+         "question": "What do you do now?",
          "options": [
           "Triage as Emergency (severe respiratory distress) Give oxygen via nasal prongs 1 litre/min. Assess circulation",
           "Triage as Emergency (severe respiratory distress) O2 given by nasal cannula 1 litre/min (? Bag and mask). Assess circulation",
           "Triage as Emergency Give oxygen, assess breathing, if normal, assess Circulation"
          ],
          "answer": 0,
-         "explanation": "Triage as Emergency (severe respiratory distress) Give oxygen via nasal prongs 1 litre/min. Assess circulation"
+         "explanation": "Triage as Emergency (severe respiratory distress) Give oxygen via nasal prongs 1 litre/min. Assess circulation",
+         "feedback": [
+          "",
+          "Is there an emergency sign? If yes, triage as emergency and treat it now.",
+          "Is there an emergency sign? If yes, triage as emergency and treat it now."
+         ]
         },
         {
-         "text": "Your facilitator tells you: Warm hands",
-         "question": "What is the correct response?",
+         "text": "You find: Warm hands",
+         "question": "What do you do now?",
          "options": [
           "Triage as emergency",
           "Assess consciousness",
           "Triage as priority"
          ],
          "answer": 1,
-         "explanation": "Assess consciousness"
+         "explanation": "Assess consciousness",
+         "feedback": [
+          "Circulation is done. What is the next letter of ABCD?",
+          "",
+          "Circulation is done. What is the next letter of ABCD?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: AVPU = Voice (Blood glucose = 4mmol/l)",
-         "question": "What is the correct response?",
+         "text": "You find: AVPU = Voice (Blood glucose = 4mmol/l)",
+         "question": "What do you do now?",
          "options": [
           "Continue assessment",
           "Assess airway",
           "Ask for diarrhoea"
          ],
          "answer": 2,
-         "explanation": "Ask for diarrhoea"
+         "explanation": "Ask for diarrhoea",
+         "feedback": [
+          "Consciousness is done. What does the D of ABCD stand for?",
+          "Consciousness is done. What does the D of ABCD stand for?",
+          ""
+         ]
         },
         {
-         "text": "Your facilitator tells you: No diarrhoea",
-         "question": "What is the correct response?",
+         "text": "You find: No diarrhoea",
+         "question": "What do you do now?",
          "options": [
           "Assess priority signs",
           "Check for dehydration",
           "Assess for Priority signs"
          ],
          "answer": 0,
-         "explanation": "Assess priority signs"
+         "explanation": "Assess priority signs",
+         "feedback": [
+          "",
+          "There is no emergency sign. Does the child have a priority sign?",
+          "There is no emergency sign. Does the child have a priority sign?"
+         ]
         },
         {
-         "text": "Your facilitator tells you: No other signs",
-         "question": "What is the correct response?",
+         "text": "You find: No other signs",
+         "question": "What do you do now?",
          "options": [
           "Continue assessment",
           "Triage as emergency",
           "Check cap refill"
          ],
          "answer": 1,
-         "explanation": "Triage as emergency"
+         "explanation": "Triage as emergency",
+         "feedback": [
+          "Is there an emergency sign? If yes, triage as emergency and treat it now.",
+          "",
+          "Is there an emergency sign? If yes, triage as emergency and treat it now."
+         ]
         }
        ],
-       "label": "Case management scenario"
+       "label": "Your shift",
+       "text": "Salma. A 14-month-old girl who has been sleeping all day and her mother has been worried about her. Weight 11 kg."
       },
       {
        "type": "note",

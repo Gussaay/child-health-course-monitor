@@ -3,7 +3,7 @@ name: One-off - Sudan ETAT course upload
 # (dry = read only, commit = write, replace = swap the uploaded lessons for the file's, undo = remove what was written).
 on:
   push:
-    branches: [claude/project-thread-uunwaz]
+    branches: [claude/project-thread-uunwaz, claude/project-thread-hlzu8z]
     paths: ['scripts/etat-upload/upload-etat.cjs', 'scripts/etat-upload/mode.txt', 'scripts/etat-upload/figures/**', 'course-packages/sudan-etat-training.imnci.json', '.github/workflows/etat-upload.yml']
 jobs:
   run:

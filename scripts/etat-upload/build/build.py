@@ -38,7 +38,7 @@ errors = []
 ids = [e["id"] for e in pkg["exercises"]]
 if len(ids) != len(set(ids)): errors.append("duplicate exercise ids")
 blocks = [b for m in pkg["modules"] for s in m["sections"] for b in s["read"]]
-acts = ("reveal", "flip", "sort", "steps", "story", "question", "video", "exercise")
+acts = ("reveal", "flip", "sort", "steps", "story", "question", "video", "exercise", "calc")
 for m in pkg["modules"]:
     for s in m["sections"]:
         if not any(b["type"] in acts for b in s["read"]): errors.append(f"no activity: {m['title']} / {s['title']}")
