@@ -278,18 +278,29 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
     // A course can open every section at once instead (its author's choice,
     // in the course's settings): a refresher, or a course used in a classroom
     // where the trainer moves around the book.
-    // Facilitators and managers open any lesson, so the guide's links work.
-    const inOrder = openCourse?.lockOrder !== false && !followsAnyLesson({ canSeeProgress, isFacilitator });
+    // Everyone in Learn mode reads the course in order, managers and
+    // facilitators included, so they see the course as their learners do.
+    // Manage mode (isAdmin) opens everything. A facilitator or manager who
+    // follows a link from a facilitator guide may open that one lesson or
+    // module out of order (guidePass), so the guide's links still work.
+    const inOrder = openCourse?.lockOrder !== false;
+    const mayFollowGuide = followsAnyLesson({ canSeeProgress, isFacilitator }) || canManage;
+    const [guidePass, setGuidePass] = useState(null);
+    const openFromGuide = useCallback((target) => {
+        if (mayFollowGuide) setGuidePass(target ? { moduleId: target.moduleId || null, sectionId: target.sectionId || null } : null);
+    }, [mayFollowGuide]);
 
     const moduleLocked = useCallback((index) => {
         if (isAdmin || !inOrder || index <= 0) return false;
+        if (guidePass?.moduleId && guidePass.moduleId === modules[index]?.id) return false;
         return !moduleComplete(modules[index - 1]);
-    }, [isAdmin, inOrder, modules, moduleComplete]);
+    }, [isAdmin, inOrder, modules, moduleComplete, guidePass]);
 
     const sectionLocked = useCallback((secs, index) => {
         if (isAdmin || !inOrder || index <= 0) return false;
+        if (guidePass?.sectionId && guidePass.sectionId === secs[index]?.id) return false;
         return !sectionDone(secs[index - 1]);
-    }, [isAdmin, inOrder, sectionDone]);
+    }, [isAdmin, inOrder, sectionDone, guidePass]);
 
     // Where "Continue" goes: the first section the learner has not finished, in
     // the first module they have not finished.
@@ -391,7 +402,7 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
         itemModal, items, loadBooks, minutesById, minutesLeft, mode, moduleComplete, moduleLocked,
         modules, nextUp, onlineCourseItems, onlineCourses, openBookId, openCourse, openCourseId,
         openModule, openModuleId, openSection, openSectionId, permissions, place, progress, query,
-        refreshExercises, reload, removeCourse, removeFromCache, removeItem, resync, saveActivities, sectionDone,
+        openFromGuide, refreshExercises, reload, removeCourse, removeFromCache, removeItem, resync, saveActivities, sectionDone,
         sectionLocked, sectionTab, sectionsByModule, setAiBooks, setBookForm, setBuilder, setCompare,
         setConvertOpen, setCourseModal, setEditing, setEditingTab, setFontScale, setImportOpen,
         setItemModal, setMode, setProgress, setQuery, setScale, setSectionTab, setSyncing, setTopTab,

@@ -97,15 +97,17 @@ describe('a link to the learners\' course', () => {
     };
 
     it('opens the lesson it names', async () => {
-        const went = [];
+        const went = []; const passes = [];
         const b = links.find((x) => x.lesson);
-        const host = await render(b, { allCourses: courses, allItems: items, go: (p) => went.push(p) });
+        const host = await render(b, { allCourses: courses, allItems: items, go: (p) => went.push(p), openFromGuide: (x) => passes.push(x) });
         const el = host.querySelector('[data-testid="course-link"]');
         expect(el.dataset.found).toBe('true');
         await act(async () => { el.querySelector('button').click(); });
         expect(went).toHaveLength(1);
         expect(went[0]).toMatchObject({ course: 'c-learn', tab: 'read' });
         expect(went[0].section).toBeTruthy();
+        // The lesson the guide names may open out of order; nothing else does.
+        expect(passes).toEqual([{ moduleId: went[0].module, sectionId: went[0].section }]);
     });
 
     it('says so, and does nothing, when the lesson is not in the app yet', async () => {
@@ -129,7 +131,7 @@ describe('who sees the facilitator guide', () => {
         expect(canSeeCourse(guide, { canManage: true })).toBe(true);
         expect(isFacilitatorRole(['state_coordinator'])).toBe(false);
     });
-    it('lets facilitators open any lesson of the learners\' course', () => {
+    it('lets facilitators follow guide links into the learners\' course', () => {
         expect(followsAnyLesson({ isFacilitator: true })).toBe(true);
         expect(followsAnyLesson({})).toBe(false);
     });
