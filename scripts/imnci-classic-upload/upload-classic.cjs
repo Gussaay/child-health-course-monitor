@@ -75,7 +75,7 @@ async function undo() {
   const existing = already.docs[0] || null;
   if (existing && COMMIT) { console.error(`This upload was already written (course ${existing.id}). Use replace to bring it up to date.`); process.exit(1); }
   if (!existing && REPLACE) { console.error('Nothing to replace: this upload is not in the app. Use commit.'); process.exit(1); }
-  let oldItems = [];
+  let oldItems = [], orphans = [];
   if (existing) {
     const c = existing.data();
     oldItems = (await db.collection('onlineCourseItems').where('courseId', '==', existing.id).get()).docs;
@@ -85,12 +85,17 @@ async function undo() {
     console.log(`  It has ${oldItems.length} modules/sections: ${mine.length} from this upload, ${oldItems.length - mine.length} added in the app since.`);
     console.log(`  Edited in the app since the upload: ${edited.length}${edited.length ? ' — ' + edited.map((d) => `"${d.data().title}"`).join(', ') : ''}`);
     console.log('  Replace removes the modules and sections from this upload and writes the ones below. Anything added in the app since is kept.');
+    // Lessons added in the app under a module this upload wrote: moved to the new module with the same number.
+    const oldMods = new Map(mine.filter((d) => d.data().kind === 'module').map((d) => [d.id, d.data().order]));
+    orphans = oldItems.filter((d) => d.data().importBatch !== BATCH && d.data().kind === 'section' && oldMods.has(d.data().moduleId))
+      .map((d) => ({ ref: d.ref, title: d.data().title, order: oldMods.get(d.data().moduleId) }));
+    if (orphans.length) console.log(`  Lessons added in the app inside this upload's modules (moved to the new module with the same number): ${orphans.map((o) => `"${o.title}" (module ${o.order})`).join(', ')}`);
     oldItems = mine;
   }
   const courses = await db.collection('onlineCourses').get();
   console.log(`\nOnline courses now in the app (${courses.size}):`);
   courses.docs.forEach((d) => { const c = d.data(); console.log(`  ${d.id}  "${c.title}"${c.isDeleted ? ' (deleted)' : ''}${c.isPublished ? ' (published)' : ''}`); });
-  const same = courses.docs.filter((d) => !d.data().isDeleted && String(d.data().title).trim() === pkg.course.title);
+  const same = courses.docs.filter((d) => d.id !== existing?.id && !d.data().isDeleted && String(d.data().title).trim() === pkg.course.title);
   if (same.length) console.log(`  NOTE: ${same.length} course(s) already called "${pkg.course.title}" — this upload adds a separate new course.`);
 
   // Exercises: new ones are written; ones already in the app are left as they are (same as the Import dialog without "replace").
@@ -192,6 +197,11 @@ async function undo() {
     const b = db.batch();
     writes.slice(i, i + 400).forEach((w) => b.set(w.ref, { ...w.data, isDeleted: false, importBatch: BATCH, createdAt: now(), lastUpdatedAt: now() }));
     await b.commit();
+  }
+  for (const o of orphans) {
+    const mod = writes.find((w) => w.data.kind === 'module' && w.data.order === o.order);
+    if (mod) await o.ref.update({ moduleId: mod.ref.id, legacyModuleKey: mod.data.legacyKey, lastUpdatedAt: now() });
+    else console.log(`  WARNING: no module ${o.order} in the file for "${o.title}"; it was left as it is.`);
   }
   console.log(`\n${existing ? 'Replaced in' : 'Wrote'} course ${courseRef.id}: ${writes.length} modules/sections written, ${oldItems.length} removed, ${exNew.length} exercises added, ${exUpdate.length} updated.`);
 })().then(() => process.exit(0)).catch((e) => { console.error(e.message); process.exit(1); });
