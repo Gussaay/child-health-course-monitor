@@ -186,6 +186,7 @@ L.append(lesson("Give oxygen: sources of oxygen",
     R(ul([TX(1464, 1470), TX(1474, 1480)])),
     *X(1482, 1484),
     video("Oxygen: sources and delivery", "The oxygen video: concentrator, cylinder, nasal prongs and nasal catheter.", "ET2.5"),
+    video("Signs that a child needs oxygen", "WHO ETAT video: when to give oxygen, and who to give it to first if the supply is limited.", "ET2.6"),
     sort("Concentrator or cylinder?", ["Oxygen concentrator", "Oxygen cylinder"], [
         ("Needs a continuous electrical supply", "Oxygen concentrator"),
         ("Works even when there is no electrical supply", "Oxygen cylinder"),

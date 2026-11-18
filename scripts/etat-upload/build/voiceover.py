@@ -54,6 +54,9 @@ S = {
     "A nasal catheter is measured from the side of the nostril to the inner eyebrow, and passed into the nostril to that distance. It should not be visible below the uvula.",
     "Set a flow rate of 0.5 to 1 litre per minute in infants and 1 to 2 litres per minute in older children, and check that the oxygen is flowing and the prongs or catheter stay in place.",
 ]),
+"ET2.6": ("Video supplied: WHO ETAT clip \"Signs for oxygen\" (no recording needed).", [
+    "The following clinical signs are used to recognize when oxygen is needed to treat a child. Central cyanosis, or a child who is not able to drink or has difficulty breastfeeding because of breathlessness.",
+]),
 "ET3.1": ("What to film: a nurse feeling a child's hand, pressing the nail, finding radial, brachial and carotid pulses.", [
     "Circulation: first, feel the child's hand. Are the hands warm? If they are warm, the child does not have shock: move on to consciousness.",
     "If the hands are cold, check the capillary refill. Press the nail of the thumb or the big toe for 3 seconds, until it turns white, release, and count the seconds until the pink colour returns. More than 3 seconds is a sign of shock.",
