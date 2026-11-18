@@ -12,8 +12,11 @@ import React, { createContext, useContext, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Eye, RotateCcw, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Lightbulb, Layers, Shuffle, ListOrdered, BookOpenCheck,
+    Stethoscope, UserRound,
 } from 'lucide-react';
 import { RichText } from '../shared';
+import { AnswerOptions } from './practice';
+import { useAssetUrl } from './blocks';
 
 // -----------------------------------------------------------------------------
 // Activity tracking
@@ -26,6 +29,28 @@ export function useActivity(key) {
     const ctx = useContext(ActivityContext);
     if (!ctx || key == null) return [false, () => {}];
     return [ctx.isDone(key), () => ctx.markDone(key)];
+}
+
+/**
+ * Records whether the learner's first answer to an activity (or to one part of
+ * it, `sub`) was right, once: later tries change nothing. It is kept with the
+ * lesson's done list as "<key>@1" or "<key>@0", which the progress pages read
+ * as first-try accuracy. `.rate(n)` keeps a 1 to 5 rating the same way.
+ */
+export function useFirstTry(key) {
+    const ctx = useContext(ActivityContext);
+    const record = (right, sub) => {
+        if (!ctx || key == null) return;
+        const base = sub ? `${key}#${sub}` : key;
+        if (ctx.isDone(`${base}@1`) || ctx.isDone(`${base}@0`)) return;
+        ctx.markDone(`${base}@${right ? 1 : 0}`);
+    };
+    record.rate = (n) => {
+        if (!ctx || key == null) return;
+        if ([1, 2, 3, 4, 5].some((k) => ctx.isDone(`${key}@r${k}`))) return;
+        ctx.markDone(`${key}@r${n}`);
+    };
+    return record;
 }
 
 export const Html = ({ html, className = '' }) => (
@@ -201,6 +226,14 @@ export function SortBlock({ block, activityKey }) {
 // Step by step
 // -----------------------------------------------------------------------------
 
+// A photograph for one step (a path in the course files, such as a page of the
+// photograph booklet). The step reads without it while it loads.
+function StepImage({ path, alt }) {
+    const { url } = useAssetUrl(path);
+    if (!url) return null;
+    return <img src={url} alt={alt || ''} loading="lazy" className="mt-2 w-full max-h-72 object-contain rounded-lg border border-slate-200 bg-slate-50" />;
+}
+
 export function StepsBlock({ block, activityKey }) {
     const { t } = useTranslation();
     const steps = block.steps || [];
@@ -224,6 +257,7 @@ export function StepsBlock({ block, activityKey }) {
                 <div className="min-w-0 flex-1">
                     <div className="font-bold text-slate-900"><Html html={step.title} /></div>
                     {step.text && <div className="text-sm sm:text-base text-slate-700 mt-1"><Html html={step.text} /></div>}
+                    {step.image && <StepImage path={step.image} alt={step.title} />}
                 </div>
             </div>
             <div className="flex items-center justify-between mt-4">
@@ -252,67 +286,67 @@ export function StepsBlock({ block, activityKey }) {
 // A case in stages
 // -----------------------------------------------------------------------------
 
+// A line of the conversation: the health worker on one side, the mother (or
+// anyone else) on the other, as a chat reads.
+const SELF = ['you', 'health worker', 'أنت', 'العامل الصحي', 'الكادر الصحي'];
+function Dialogue({ lines, self = [] }) {
+    const mine = (who) => [...SELF, ...self.map((x) => String(x).toLowerCase())].includes(String(who || '').trim().toLowerCase());
+    return (
+        <div className="space-y-2 my-2">
+            {lines.map((l, k) => {
+                const me = mine(l.who);
+                return (
+                    <div key={k} className={`flex items-end gap-2 ${me ? 'flex-row-reverse' : ''}`}>
+                        <span className={`w-8 h-8 rounded-full grid place-items-center shrink-0 ${me ? 'bg-sky-700 text-white' : 'bg-amber-200 text-amber-900'}`} aria-hidden="true">
+                            {me ? <Stethoscope size={15} /> : <UserRound size={15} />}
+                        </span>
+                        <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm sm:text-base ${me ? 'bg-sky-50 border border-sky-200 rounded-ee-sm' : 'bg-amber-50 border border-amber-200 rounded-es-sm'}`}>
+                            {l.who && <div className={`text-[11px] font-bold ${me ? 'text-sky-800' : 'text-amber-800'}`}>{l.who}</div>}
+                            <Html html={l.text} />
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 export function StoryBlock({ block, activityKey }) {
     const { t } = useTranslation();
     const stages = block.stages || [];
     const [reached, setReached] = useState(0);
-    const [picks, setPicks] = useState({});
+    const [answered, setAnswered] = useState({});
     const [done, markDone] = useActivity(activityKey);
+    const firstTry = useFirstTry(activityKey);
     const next = (i) => { const n = i + 1; setReached(n); if (n >= stages.length) markDone(); };
     return (
         <Frame icon={BookOpenCheck} tone="sky" done={done}
             label={block.label || t('imnci_ui.courses.activity.case', 'Case')} title={block.title}>
             <ol className="space-y-4">
                 {stages.slice(0, Math.min(reached + 1, stages.length)).map((s, i) => {
-                    const options = s.options || [];
-                    const picked = picks[i];
-                    const hasQuestion = options.length > 0;
-                    const answered = picked !== undefined;
-                    const right = picked === (s.answer ?? 0);
+                    const hasQuestion = (s.options || []).length > 0;
+                    const ok = !hasQuestion || answered[i];
                     return (
                         <li key={i} className="relative ps-5 border-s-2 border-sky-200">
                             <span className="absolute -start-[7px] top-1.5 w-3 h-3 rounded-full bg-sky-600" aria-hidden="true" />
                             {s.text && <div className="text-sm sm:text-base text-slate-800"><Html html={s.text} /></div>}
+                            {(s.dialogue || []).length > 0 && <Dialogue lines={s.dialogue} self={block.self || []} />}
                             {hasQuestion && (
                                 <div className="mt-2">
-                                    <div className="font-semibold text-slate-900 text-sm sm:text-base"><Html html={s.question} /></div>
-                                    <div className="space-y-1.5 mt-2">
-                                        {options.map((o, oi) => {
-                                            const isAns = oi === (s.answer ?? 0);
-                                            const tone = answered && isAns ? 'border-sky-500 bg-sky-50'
-                                                : answered && picked === oi ? 'border-rose-400 bg-rose-50'
-                                                    : 'border-slate-200 bg-slate-50 hover:border-sky-400';
-                                            return (
-                                                <button key={oi} disabled={answered}
-                                                    onClick={() => setPicks((p) => ({ ...p, [i]: oi }))}
-                                                    className={`w-full text-start min-h-[40px] px-3 py-2 rounded-lg border text-sm flex items-center gap-2 ${tone}`}>
-                                                    <span className="w-6 h-6 rounded-full border border-slate-300 bg-white grid place-items-center text-[11px] font-bold shrink-0">
-                                                        {String.fromCharCode(65 + oi)}
-                                                    </span>
-                                                    <span className="flex-1"><Html html={o} /></span>
-                                                    {answered && isAns && <CheckCircle2 size={16} className="text-sky-700" />}
-                                                    {answered && picked === oi && !isAns && <XCircle size={16} className="text-rose-600" />}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                    {answered && (
-                                        <div className={`mt-2 rounded-lg border p-3 text-sm ${right ? 'bg-sky-50 border-sky-200' : 'bg-rose-50 border-rose-200'}`}>
-                                            <span className={`font-semibold ${right ? 'text-sky-900' : 'text-rose-900'}`}>
-                                                {right ? t('imnci_ui.courses.question.correct', 'Correct.') : t('imnci_ui.courses.question.not_quite', 'Not quite.')}
-                                            </span>{' '}
-                                            {s.explanation && <span className="text-slate-700"><Html html={s.explanation} /></span>}
-                                        </div>
-                                    )}
+                                    <div className="font-semibold text-slate-900 text-sm sm:text-base mb-2"><Html html={s.question} /></div>
+                                    <AnswerOptions compact q={s} onAnswered={(right) => { firstTry(right, `s${i}`); setAnswered((a) => ({ ...a, [i]: true })); }} />
                                 </div>
                             )}
-                            {i === reached && i < stages.length - 1 && (!hasQuestion || answered) && (
+                            {hasQuestion && !ok && i === reached && (
+                                <div className="mt-2 text-xs text-slate-500">{t('imnci_ui.courses.practice.answer_first', 'Answer the question to continue the case.')}</div>
+                            )}
+                            {i === reached && i < stages.length - 1 && ok && (
                                 <button onClick={() => next(i)}
                                     className="mt-3 inline-flex items-center gap-1 min-h-[40px] px-3 rounded-lg bg-sky-700 text-white text-sm font-semibold hover:bg-sky-800">
                                     {t('imnci_ui.courses.activity.continue_case', 'Continue the case')} <ArrowRight size={16} className="rtl:rotate-180" />
                                 </button>
                             )}
-                            {i === stages.length - 1 && (!hasQuestion || answered) && !done && (
+                            {i === stages.length - 1 && ok && !done && (
                                 <button onClick={() => next(i)}
                                     className="mt-3 inline-flex items-center gap-1 min-h-[40px] px-3 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">
                                     <CheckCircle2 size={16} /> {t('imnci_ui.courses.activity.finish_case', 'Finish the case')}

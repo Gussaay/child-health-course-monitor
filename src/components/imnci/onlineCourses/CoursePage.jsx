@@ -100,11 +100,23 @@ export function CoursePage() {
                     {!inOrder && (<><span>·</span><span>{t('imnci_ui.courses.main.any_order', 'Open in any order')}</span></>)}
                 </div>
                 {courseSections.length > 0 && (
-                    <div className="flex items-center gap-3 mt-3">
-                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden flex-1">
-                            <div className="h-full bg-sky-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    // The course as a ring, and a badge for each module: one is
+                    // earned when every lesson of that module is done.
+                    <div className="flex items-center gap-4 mt-3">
+                        <ProgressRing pct={pct} />
+                        <div className="min-w-0 flex-1">
+                            <div className="text-sm font-semibold text-slate-800">
+                                {t('imnci_ui.courses.practice.badges_n', 'Module badges: {{n}} of {{total}}', { n: moduleInfo.filter((x) => x.status === 'done').length, total: modules.length })}
+                            </div>
+                            <div className="flex flex-wrap gap-1 mt-1" data-testid="module-badges">
+                                {moduleInfo.map((x) => (
+                                    <span key={x.m.id} title={`${t('imnci_ui.courses.look.module_n', 'Module {{n}}', { n: x.i + 1 })}: ${x.m.title}`}
+                                        className={`w-7 h-7 rounded-full grid place-items-center text-[11px] font-bold ${x.status === 'done' ? 'bg-amber-400 text-amber-950' : 'bg-slate-100 text-slate-400'}`}>
+                                        {x.status === 'done' ? <Award size={15} /> : x.i + 1}
+                                    </span>
+                                ))}
+                            </div>
                         </div>
-                        <span className="text-sm font-bold text-sky-700 tabular-nums">{pct}%</span>
                     </div>
                 )}
                 {next ? (
@@ -242,7 +254,7 @@ function ModuleRow({ info, saved }) {
                             {t('imnci_ui.courses.look.module_n', 'Module {{n}}', { n: i + 1 })}
                         </span>
                         {locked && <LockedBadge>{t('imnci_ui.courses.look.locked', 'Locked')}</LockedBadge>}
-                        {status === 'done' && <Pill tone="done">{t('imnci_ui.courses.look.completed', 'Completed')}</Pill>}
+                        {status === 'done' && <Pill tone="done"><Award size={12} className="inline -mt-0.5" /> {t('imnci_ui.courses.practice.badge_earned', 'Badge earned')}</Pill>}
                         {status === 'active' && <Pill tone="active">{t('imnci_ui.courses.look.in_progress', 'In progress')}</Pill>}
                         {saved && <CloudDownload size={13} className="text-emerald-600" aria-label={t('imnci_ui.courses.offline.saved', 'Saved on this device')} />}
                     </span>
@@ -262,6 +274,20 @@ function ModuleRow({ info, saved }) {
                 {!locked && <ChevronRight size={20} className="text-slate-400 shrink-0 rtl:rotate-180" />}
             </button>
         </li>
+    );
+}
+
+// The share of the course done, as a ring with the percent in the middle.
+function ProgressRing({ pct }) {
+    const r = 26;
+    const c = 2 * Math.PI * r;
+    return (
+        <svg width="64" height="64" viewBox="0 0 64 64" className="shrink-0" role="img" aria-label={`${pct}%`}>
+            <circle cx="32" cy="32" r={r} fill="none" stroke="#e2e8f0" strokeWidth="7" />
+            <circle cx="32" cy="32" r={r} fill="none" stroke="#0369a1" strokeWidth="7" strokeLinecap="round"
+                strokeDasharray={`${(pct / 100) * c} ${c}`} transform="rotate(-90 32 32)" />
+            <text x="32" y="37" textAnchor="middle" className="fill-sky-800" style={{ fontSize: 15, fontWeight: 800 }}>{pct}%</text>
+        </svg>
     );
 }
 

@@ -4,7 +4,7 @@
 // order they were written, the AI study helper, and Previous / Next within the
 // module. There are no tabs to step through: a learner reads, watches and
 // practises in one pass and then moves on to the next section.
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Pencil, ArrowLeft, ArrowRight, Columns2, CheckCircle2, ZoomIn, ZoomOut, Clock, Trophy,
@@ -33,14 +33,20 @@ function useSectionActivities(uid, sectionId, saved, save) {
     const [local, setLocal] = useState(() => readDone(uid, sectionId));
     useEffect(() => { setLocal(readDone(uid, sectionId)); }, [uid, sectionId]);
     const done = useMemo(() => new Set([...local, ...(saved || [])]), [local, saved]);
+    // Kept in a ref as well, so two marks in the same tap (the first-try
+    // record and "done") both land instead of the second overwriting the first.
+    const latest = useRef(done);
+    useEffect(() => { latest.current = new Set([...latest.current, ...done]); }, [done]);
+    useEffect(() => { latest.current = done; }, [uid, sectionId]); // eslint-disable-line react-hooks/exhaustive-deps
     const markDone = useCallback((key) => {
-        if (done.has(key)) return;
-        const next = new Set(done).add(key);
+        if (latest.current.has(key)) return;
+        const next = new Set(latest.current).add(key);
+        latest.current = next;
         try { localStorage.setItem(storeKey(uid, sectionId), JSON.stringify([...next])); } catch { /* private mode */ }
         setLocal(next);
         save?.(sectionId, [...next]);
-    }, [uid, sectionId, done, save]);
-    const value = useMemo(() => ({ isDone: (k) => done.has(k), markDone }), [done, markDone]);
+    }, [uid, sectionId, save]);
+    const value = useMemo(() => ({ isDone: (k) => done.has(k) || latest.current.has(k), markDone }), [done, markDone]);
     return [done, value];
 }
 
@@ -122,6 +128,7 @@ export function SectionPage() {
     } = useCourseScreen();
 
     const isDone = !!progress.completed?.[openSection.id];
+    const [resumeShown, setResumeShown] = useState(null);
     const content = sectionContent(openSection);
     const [doneKeys, activityValue] = useSectionActivities(user?.uid, openSection.id, progress.activities?.[openSection.id], saveActivities);
     const outline = useMemo(() => activityOutline(content), [openSection]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -231,6 +238,23 @@ export function SectionPage() {
                     )}
                 </header>
 
+                {!editingTab && !isDone && activitiesDone > 0 && firstLeft && resumeShown !== openSection.id && (
+                    // Back in a lesson started earlier: offer to go straight to
+                    // the first activity not done yet, as "return to your last
+                    // location" does, rather than make the learner scroll for it.
+                    <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 flex flex-wrap items-center gap-3">
+                        <span className="text-sm text-sky-900 flex-1 min-w-[12rem]">
+                            {t('imnci_ui.courses.practice.resume_text', 'You stopped after {{n}} of {{total}} activities. Continue where you stopped?', { n: activitiesDone, total: keys.length })}
+                        </span>
+                        <button onClick={() => { setResumeShown(openSection.id); goToActivity(firstLeft.key); }}
+                            className="inline-flex items-center gap-1 min-h-[40px] px-3 rounded-lg bg-sky-700 text-white text-sm font-semibold hover:bg-sky-800">
+                            {t('imnci_ui.courses.practice.resume_go', 'Continue')} <ArrowRight size={16} className="rtl:rotate-180" />
+                        </button>
+                        <button onClick={() => setResumeShown(openSection.id)} className="text-xs text-slate-500 underline underline-offset-2">
+                            {t('imnci_ui.courses.practice.resume_top', 'Start from the top')}
+                        </button>
+                    </div>
+                )}
                 {!editingTab && outline.length > 0 && <LessonChecklist key={openSection.id} outline={outline} doneKeys={doneKeys} />}
 
                 <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6 space-y-4">

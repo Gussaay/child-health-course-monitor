@@ -12,7 +12,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { RefreshCw, Users, PlayCircle, CheckCircle2, Search, Download, Moon, X, MapPin } from 'lucide-react';
+import { RefreshCw, Users, PlayCircle, CheckCircle2, Search, Download, Moon, X, MapPin, Target } from 'lucide-react';
 
 import { Card, CardBody, Button, Table, EmptyState, SkeletonTable } from '../../CommonComponents';
 import { getLocalizedStateName } from '../../constants';
@@ -125,6 +125,11 @@ export function ProgressDashboard() {
             completed: people.filter((p) => p.status === 'completed').length,
             quiet: people.filter((p) => p.quiet).length,
             average: people.length ? Math.round(people.reduce((n, p) => n + p.percent, 0) / people.length) : 0,
+            // First tries at practice questions, right out of all, for the courses shown.
+            firstTry: people.reduce((acc, p) => {
+                courses.forEach((c) => { const f = (p.firstTry || {})[c.id]; if (f) { acc[0] += f[0]; acc[1] += f[1]; } });
+                return acc;
+            }, [0, 0]),
             byState: [...byState.values()].sort((a, b) => b.people - a.people),
         };
     }, [report, courseId, state, status, query, now]);
@@ -220,18 +225,20 @@ export function ProgressDashboard() {
             </div>
             {scope && <p className="text-xs text-slate-500">{t('imnci_ui.progress.scope', 'Showing the people of {{place}}', { place: scope })}</p>}
 
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
                 <Kpi icon={Users} label={t('imnci_ui.progress.people', 'People')} value={view.people.length} />
                 <Kpi icon={PlayCircle} label={t('imnci_ui.progress.started_kpi', 'Started')} value={view.started} sub={`${pct(view.started, view.people.length)}%`} />
                 <Kpi icon={CheckCircle2} label={t('imnci_ui.progress.completed_kpi', 'Finished')} value={view.completed} sub={`${pct(view.completed, view.people.length)}%`} />
                 <Kpi icon={PlayCircle} label={t('imnci_ui.progress.average', 'Average done')} value={`${view.average}%`} sub={t('imnci_ui.progress.of_lessons', 'of {{n}} lessons', { n: view.total })} />
                 <Kpi icon={Moon} label={statusLabel.quiet} value={view.quiet} sub={t('imnci_ui.progress.quiet_sub', 'started, not finished')} />
+                <Kpi icon={Target} label={t('imnci_ui.progress.first_try', 'Right first time')} value={view.firstTry[1] ? `${pct(view.firstTry[0], view.firstTry[1])}%` : '—'}
+                    sub={t('imnci_ui.progress.first_try_sub', '{{n}} practice answers', { n: view.firstTry[1] })} />
             </div>
 
             {detail && detail.modules.length > 0 && (
                 <Card><CardBody>
                     <h3 className="mb-2 font-semibold text-slate-800">{t('imnci_ui.progress.by_module', 'By module')}</h3>
-                    <Table headers={[t('imnci_ui.progress.module', 'Module'), t('imnci_ui.progress.lessons', 'Lessons'), t('imnci_ui.progress.started_kpi', 'Started'), t('imnci_ui.progress.completed_kpi', 'Finished'), t('imnci_ui.progress.average', 'Average done')]}>
+                    <Table headers={[t('imnci_ui.progress.module', 'Module'), t('imnci_ui.progress.lessons', 'Lessons'), t('imnci_ui.progress.started_kpi', 'Started'), t('imnci_ui.progress.completed_kpi', 'Finished'), t('imnci_ui.progress.average', 'Average done'), t('imnci_ui.progress.rating', 'Rating')]}>
                         {detail.modules.map((m) => (
                             <tr key={m.id}>
                                 <td className="font-medium">{m.title}</td>
@@ -239,6 +246,7 @@ export function ProgressDashboard() {
                                 <td className="tabular-nums">{m.started} ({pct(m.started, detail.people)}%)</td>
                                 <td className="tabular-nums">{m.finished} ({pct(m.finished, detail.people)}%)</td>
                                 <td><Bar value={m.avg} /></td>
+                                <td className="tabular-nums whitespace-nowrap">{m.ratings ? `${(m.ratingSum / m.ratings).toFixed(1)} ★ (${m.ratings})` : '—'}</td>
                             </tr>
                         ))}
                     </Table>
@@ -301,7 +309,7 @@ export function ProgressDashboard() {
             {view.byState.length > 1 && (
                 <Card><CardBody>
                     <h3 className="mb-2 font-semibold text-slate-800">{t('imnci_ui.progress.by_state', 'By state')}</h3>
-                    <Table headers={[t('imnci_ui.progress.state', 'State'), t('imnci_ui.progress.people', 'People'), t('imnci_ui.progress.started_kpi', 'Started'), t('imnci_ui.progress.completed_kpi', 'Finished'), t('imnci_ui.progress.average', 'Average done')]}>
+                    <Table headers={[t('imnci_ui.progress.state', 'State'), t('imnci_ui.progress.people', 'People'), t('imnci_ui.progress.started_kpi', 'Started'), t('imnci_ui.progress.completed_kpi', 'Finished'), t('imnci_ui.progress.average', 'Average done'), t('imnci_ui.progress.rating', 'Rating')]}>
                         {view.byState.map((g) => (
                             <tr key={g.state || '-'} className="cursor-pointer" onClick={() => setState(g.state)}>
                                 <td>{stateLabel(g.state)}</td>

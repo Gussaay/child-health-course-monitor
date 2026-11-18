@@ -87,7 +87,8 @@ export function MyProgress() {
                     value={`${summary.lessonsDone}/${summary.lessonsTotal}`}
                     sub={`${summary.lessonsTotal ? Math.round((summary.lessonsDone * 100) / summary.lessonsTotal) : 0}%`} />
                 <Kpi icon={Target} label={t('imnci_ui.my_progress.activities', 'Activities done')}
-                    value={`${summary.activitiesDone}/${summary.activities}`} />
+                    value={`${summary.activitiesDone}/${summary.activities}`}
+                    sub={summary.firstTotal ? t('imnci_ui.my_progress.first_try', '{{p}}% right first time', { p: Math.round((summary.firstRight * 100) / summary.firstTotal) }) : undefined} />
                 <Kpi icon={CalendarDays} label={t('imnci_ui.my_progress.this_week', 'Lessons this week')} value={summary.thisWeek}
                     sub={t('imnci_ui.my_progress.last_active', 'Last active {{date}}', { date: date(summary.lastActive) })} />
                 <Kpi icon={Flame} label={t('imnci_ui.my_progress.streak', 'Days in a row')} value={summary.streak}

@@ -66,7 +66,8 @@ function buildReport({ caller, courses, items, progress, users }) {
     // Reading order: module by module, then lesson order; lessons outside a known module last.
     const ordered = [...secs].sort((a, b) => (modIndex[a.moduleId] ?? 1e6) - (modIndex[b.moduleId] ?? 1e6) || byOrder(a, b));
     const lessons = ordered.map((s) => ({ id: s.id, title: s.title || "", moduleId: s.moduleId || "", done: 0, started: 0 }));
-    const modules = mods.map((m) => ({ id: m.id, title: m.title || "", sections: lessons.filter((l) => l.moduleId === m.id).length }))
+    // ratingSum / ratings: the 1 to 5 stars learners gave the module at its end.
+    const modules = mods.map((m) => ({ id: m.id, title: m.title || "", sections: lessons.filter((l) => l.moduleId === m.id).length, ratingSum: 0, ratings: 0 }))
       .filter((m) => m.sections > 0);
     return { id: c.id, title: c.title || c.id, sections: lessons.length, modules, lessons };
   }).filter((c) => c.sections > 0);
@@ -81,10 +82,22 @@ function buildReport({ caller, courses, items, progress, users }) {
     const perModule = {};
     const startedPerCourse = {};
     const at = {};
+    // First tries at practice questions: "<activity>@1" right, "<activity>@0" not.
+    const firstTry = {};
     courseList.forEach((c) => {
       let n = 0;
       let started = 0;
+      const ft = [0, 0];
       c.lessons.forEach((l) => {
+        (Array.isArray(acts[l.id]) ? acts[l.id] : []).forEach((k) => {
+          const tag = String(k).split("@")[1];
+          if (tag === "1") { ft[0] += 1; ft[1] += 1; }
+          else if (tag === "0") ft[1] += 1;
+          else if (/^r[1-5]$/.test(tag || "")) {
+            const m = c.modules.find((x) => x.id === l.moduleId);
+            if (m) { m.ratingSum += Number(tag.slice(1)); m.ratings += 1; }
+          }
+        });
         if (done[l.id]) {
           n += 1;
           l.done += 1;
@@ -99,6 +112,7 @@ function buildReport({ caller, courses, items, progress, users }) {
       if (current) at[c.id] = current.id;
       if (n) perCourse[c.id] = n;
       if (started) startedPerCourse[c.id] = started;
+      if (ft[1]) firstTry[c.id] = ft;
     });
     return {
       uid: u.id,
@@ -110,6 +124,7 @@ function buildReport({ caller, courses, items, progress, users }) {
       perCourse,
       perModule,
       startedPerCourse,
+      firstTry,
       at,
       lastActive: last || null,
     };
