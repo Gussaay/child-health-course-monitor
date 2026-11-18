@@ -1,0 +1,454 @@
+[
+ {
+  "n": 1,
+  "intro": "A 3-year-old girl is carried in her mother's arms wrapped in a blanket, in the line.",
+  "rows": [
+   [
+    "",
+    "Assess Airway and Breathing"
+   ],
+   [
+    "Breathing OK",
+    "Assess Circulation"
+   ],
+   [
+    "Cool hand",
+    "Check cap refill"
+   ],
+   [
+    "Normal capillary refill (1.5 seconds)",
+    "Assess Consciousness"
+   ],
+   [
+    "Alert",
+    "Ask for Diarrhoea"
+   ],
+   [
+    "Diarrhoea x 2 days-mom says 4 to 5 loose watery stools",
+    "Assess for Dehydration"
+   ],
+   [
+    "Skin pinch takes 3 seconds",
+    "Continue assessment"
+   ],
+   [
+    "Eyes appear sunken a bit",
+    "Triage as emergency"
+   ],
+   [
+    "",
+    "Check for severe malnutrition"
+   ],
+   [
+    "If not checked for malnutrition: Child goes into shock and cardiac arrest",
+    ""
+   ],
+   [
+    "Some oedema in both feet OR Visible severe wasting.",
+    "Refer for immediate assessment by senior health worker"
+   ],
+   [
+    "(Blood Glucose = 5mmol/l)",
+    "Child severely malnourished, should receive oral ReSoMal, 5ml/kg in 30 mins for 2 hours 45 mls in first ½ hour."
+   ]
+  ]
+ },
+ {
+  "n": 2,
+  "intro": "2 year old male. Mother rushes in- he convulsed 30 minutes ago and she is frightened.",
+  "rows": [
+   [
+    "",
+    "Assess Airway and Breathing"
+   ],
+   [
+    "Breathing fast but no cyanosis, no distress, no signs of obstructed breathing",
+    "Assess Circulation"
+   ],
+   [
+    "Feels very hot. Capillary refill fast- less than a second. Fast but strong pulse",
+    "Assess Consciousness"
+   ],
+   [
+    "Lethargic but responds to voice by crying",
+    "Ask for Diarrhoea"
+   ],
+   [
+    "Diarrhoea today Skin pinch less than 2 seconds Eyes not sunken. Crying big tears",
+    "Assess for Priority signs"
+   ],
+   [
+    "No visible wasting or oedema No pallor",
+    "Triage as Priority (hot and lethargy)"
+   ]
+  ]
+ },
+ {
+  "n": 3,
+  "intro": "1-year-old infant seized at home then again outside the clinic. Child is unconscious; breathing sounds very wet and noisy and there is drool coming from his mouth. He is looking a little blue.",
+  "rows": [
+   [
+    "If participant goes to rest of the exam or does not adequately manage the airway, say the child is now very blue and is seizing",
+    "Triage as emergency, cyanosis Manage airway, position child, insert Guedel's airway. Give oxygen Assess breathing"
+   ],
+   [
+    "After participant manages the airway, say your airway management has helped. Child is breathing much better, not blue, and no longer noisy. Tongue must have been in the way",
+    "Continue assessment Assess Circulation"
+   ],
+   [
+    "Warm hand",
+    "Assess Consciousness"
+   ],
+   [
+    "Moves only to pain",
+    "Position child Continue assessment"
+   ],
+   [
+    "AVPU = P",
+    "Check glucose"
+   ],
+   [
+    "Blood glucose < 2 mmol/L",
+    "IV Glucose give 25 mls of 10% glucose"
+   ],
+   [
+    "If no oxygen                  Æ stops breathing If no glucose check           Æ seizures",
+    ""
+   ]
+  ]
+ },
+ {
+  "n": 4,
+  "intro": "4-year-old girl with cough and pain in her throat. Crying loudly.",
+  "rows": [
+   [
+    "",
+    "Assess circulation"
+   ],
+   [
+    "Squirms away so you cannot touch her hand but foot feels warm Mother says she has not had diarrhoea Arm and legs are not thin",
+    "Assess for priority signs Continuous irritable?"
+   ],
+   [
+    "Yes, continuous irritable",
+    "Triage as priority"
+   ]
+  ]
+ },
+ {
+  "n": 5,
+  "intro": "4-year-old boy hit by bicycle. Carried in on blanket.",
+  "rows": [
+   [
+    "Unconscious- responds to deep pain Breathing sounds obstructed",
+    "Triage as emergency Assess airway, stabilize neck, manage airway: inspect mouth. Remove foreign bodies, clear secretions, jaw thrust without head tilt, assess breathing, if normal continue assessment, if obstructed insert tube."
+   ],
+   [
+    "Cold hand with slow capillary refill",
+    "Treat for shock, check for bleeding, get help,"
+   ],
+   [
+    "Bleeding from lower leg",
+    "Apply pressure. No tourniquet. Set up IV drip, Give oxygen Continue assessment"
+   ]
+  ]
+ },
+ {
+  "n": 6,
+  "intro": "14-month-old girl has been sleeping all day. Irritable when awoken, rouses to loud voice or shaking her arm.",
+  "rows": [
+   [
+    "",
+    "Assess Airway and Breathing"
+   ],
+   [
+    "Very deep breathing at normal rate, with some chest indrawing",
+    "Triage as Emergency Give oxygen, assess breathing, if normal, assess Circulation"
+   ],
+   [
+    "Warm hand",
+    "Assess Consciousness"
+   ],
+   [
+    "AVPU?",
+    "AVPU = Voice Ask for Diarrhoea"
+   ],
+   [
+    "No diarrhoea says mother when asked",
+    "Assess for Priority signs"
+   ],
+   [
+    "Some pallor No visible severe wasting or oedema",
+    "Triage as priority, lethargy"
+   ]
+  ]
+ },
+ {
+  "n": 7,
+  "intro": "A 3-year-old boy is carried into outpatient department in his father's arms. He is pale, floppy and having difficulty breathing. His father says he has been unwell and coughing for 3 days. Weight 14kg.",
+  "rows": [
+   [
+    "Respiratory rate is fast with marked intercostal recession and a tracheal tug",
+    "Triage as Emergency Assess airway"
+   ],
+   [
+    "Airway patency established",
+    "Give oxygen, 1-2L/min by nasal prongs or nasal catheter"
+   ],
+   [
+    "If no oxygen is given the child worsens to respiratory arrest",
+    "(? Bag and mask); assess breathing, if not obstructed, assess circulation"
+   ],
+   [
+    "His hands are cold. Cap. Refill = 6 sec.",
+    "Treat for shock IV or intraosseous access Normal saline or Ringer's 20 mls/ kg = 280 mls stat Reassess (repeat x2) Blood samples for glucose/Hct/MPs"
+   ],
+   [
+    "MPs 0 PCV                     = 26% Blood glucose                 = 4 mmols/L Pneumonia and shock",
+    "After treatment of shock continue assessment"
+   ]
+  ]
+ },
+ {
+  "n": 8,
+  "intro": "A 4 months old baby is brought to hospital with fever, rapid breathing and refusing to breast-feed. He has had 2 episodes of vomiting and diarrhoea. Weight 5 kg.",
+  "rows": [
+   [
+    "Airway patency established",
+    "Assess Breathing"
+   ],
+   [
+    "Respiratory rate is fast, no severe distress",
+    "Assess Circulation"
+   ],
+   [
+    "Hands are cool Cap refill is 6 sec. If attempted: Peripheral pulses not palpable",
+    "Check central pulses, femoral first"
+   ],
+   [
+    "Femoral pulse palpable is fast and weak",
+    "Triage as emergency, treat for shock Obtain venous access or intraosseous, sample for glucose/MPs and Hct; start drip with 20mls/kg Ringers Lactate = 100 mls IV stat Give oxygen, 1L/min O2 via nasal catheter or nasal prongs"
+   ],
+   [
+    "AVPU = P",
+    "While doing the above continue assessment"
+   ],
+   [
+    "Blood glucose < 2 mmol/L (MPs. 0 PCV = 40%)",
+    "Check glucose IV Glucose give 25 mls of 10% glucose"
+   ],
+   [
+    "If no oxygen              Æ stops breathing If no glucose check       Æ seizures If no shock treatment     Æ death",
+    ""
+   ]
+  ]
+ },
+ {
+  "n": 9,
+  "intro": "A 10 months old baby boy is bought in with history of 24 hours of vomiting and diarrhoea. Weight 8 kg.",
+  "rows": [
+   [
+    "",
+    "Assess airway and breathing"
+   ],
+   [
+    "Her breathing is normal with no distress",
+    "Assess circulation"
+   ],
+   [
+    "Her hands feet are cold and look grey Cap refill - 4 sec.",
+    "Triage as Emergency (shock) Establish IV/IO access, give 160 mls of Ringers Lactate x 2 Give oxygen, 1-2L/min O2 by nasal catheter"
+   ],
+   [
+    "AVPU = P",
+    "Check blood glucose"
+   ],
+   [
+    "Blood glucose 1.5mmols/L",
+    "Give glucose 40 mls of 10% IV."
+   ],
+   [
+    "If no shock management Æ dies If no glucose Æ seizures, and if untreated Æ to coma and death",
+    ""
+   ],
+   [
+    "She continues to have D and V",
+    "Plan C"
+   ],
+   [
+    "No improvement until oral fluids, she is thirsty!",
+    ""
+   ]
+  ]
+ },
+ {
+  "n": 10,
+  "intro": "A 2-year-old boy is carried in by his grandmother. Weight 12kg. He is hot and having a seizure.",
+  "rows": [
+   [
+    "",
+    "Triage as Emergency (convulsion). Position child, jaw thrust, suction Diazepam pr or Paraldehyde Assess airway and breathing"
+   ],
+   [
+    "Airway patency established but noisy,",
+    "O2 by nasal cannula; 1 litre/min (+ Bag and mask)"
+   ],
+   [
+    "If no airway established Æ apnoea and finally death",
+    ""
+   ],
+   [
+    "Improves",
+    "Assess circulation"
+   ],
+   [
+    "Hands are warm, colour pink",
+    "Assess consciousness"
+   ],
+   [
+    "AVPU = U",
+    "Check blood glucose"
+   ],
+   [
+    "Blood glucose 2 mmol/L",
+    "Give glucose 60 mls of 10% IV."
+   ],
+   [
+    "Continues to convulse MPs+++",
+    "Diazepam pr or Paraldehyde"
+   ],
+   [
+    "If no BM stick, continues to convulse Æ seizures continue and then apnoea, and finally death",
+    "Paraldehyde pr or Diazepam Phenobarbitone IM/IV"
+   ]
+  ]
+ },
+ {
+  "n": 11,
+  "intro": "An 18 month old boy has been unwell and feverish for 2 days. He complains of abdominal pain and his mum has noticed that he has fast breathing. Weight 11 kg.",
+  "rows": [
+   [
+    "",
+    "Assess airway"
+   ],
+   [
+    "Patency established",
+    "Assess breathing"
+   ],
+   [
+    "He is grunting and distressed with subcostal recessions with fast breathing",
+    "Triage as Emergency (severe respiratory distress) O2 given by nasal cannula 1 litre/min (? Bag and mask). Assess circulation"
+   ],
+   [
+    "His hands are hot",
+    "Assess consciousness"
+   ],
+   [
+    "He starts to convulse",
+    "Position child, give Diazepam pr or Paraldehyde; check and give glucose"
+   ],
+   [
+    "Blood glucose 1.5mmol/L",
+    "1V glucose 55 mls of 10%."
+   ],
+   [
+    "If given glucose stops seizure If given anticonvulsants without glucose continues to seize",
+    "Pneumonia"
+   ]
+  ]
+ },
+ {
+  "n": 12,
+  "intro": "A 10-week-old baby is brought in. His mother says he will not suckle today. Yesterday he was crying a lot. Weight 3.5 kg.",
+  "rows": [
+   [
+    "",
+    "Assess airway"
+   ],
+   [
+    "Patency established",
+    "Assess breathing"
+   ],
+   [
+    "Breathing is normal",
+    "Assess circulation"
+   ],
+   [
+    "The hands are cool, the Cap. Refill = 3 sec.",
+    "Assess consciousness"
+   ],
+   [
+    "AVPU = A but he is irritable He is hot and jittery",
+    "Ask for diarrhoea"
+   ],
+   [
+    "No history of diarrhoea, but has vomited twice",
+    "Assess priority signs Triage as Priority (hot and irritable)"
+   ],
+   [
+    "Blood glucose = 1mmol/L Give glucose 10% 17.5 ml iv Diagnosis meningitis with hypoglycaemia",
+    ""
+   ]
+  ]
+ },
+ {
+  "n": 13,
+  "intro": "1-year-old baby girl with a 2-day history of diarrhoea and vomiting. Weight 10 kg. She is listless.",
+  "rows": [
+   [
+    "",
+    "Assess airway and breathing"
+   ],
+   [
+    "Airway and breathing OK",
+    "Assess circulation"
+   ],
+   [
+    "Warm hand",
+    "Assess consciousness"
+   ],
+   [
+    "AVPU = voice. Will not drink",
+    "Check for dehydration"
+   ],
+   [
+    "Skin pinch lasts 3 seconds Eyes sunken, mum agrees",
+    "Triage as emergency, severe dehydration Check for severe malnutrition"
+   ],
+   [
+    "No visible wasting or oedema",
+    "Plan C. 300mls in the first ½ hour. 700 mls in the next 2.5 hours of IV Ringers Lactate"
+   ]
+  ]
+ },
+ {
+  "n": 14,
+  "intro": "A 14-month-old girl who has been sleeping all day and her mother has been worried about her. Weight 11 kg.",
+  "rows": [
+   [
+    "",
+    "Assess airway and breathing"
+   ],
+   [
+    "Airway OK Breathing fast, recession ++ and harsh inspiratory noise. No cyanosis",
+    "Triage as Emergency (severe respiratory distress) Give oxygen via nasal prongs 1 litre/min. Assess circulation"
+   ],
+   [
+    "Warm hands",
+    "Assess consciousness"
+   ],
+   [
+    "AVPU = Voice (Blood glucose = 4mmol/l)",
+    "Ask for diarrhoea"
+   ],
+   [
+    "No diarrhoea",
+    "Assess priority signs"
+   ],
+   [
+    "No other signs",
+    "Triage as emergency"
+   ]
+  ]
+ }
+]

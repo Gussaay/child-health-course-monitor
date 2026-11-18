@@ -1,0 +1,4149 @@
+                                                                  Emergency Triage Assessment and Treatment (ETAT)
+                                                                                                                     Emergency Triage
+                                                                                                                     Assessment
+                                                                                                                     and
+                                                                                                                     Treatment
+                                                                                                                     (ETAT)
+
+
+For further information, please contact:
+
+Department of Child and Adolescent Health and Development (CAH)
+                                                                                                                                 Facilitator
+
+                                                                  Facilitator Guide
+World Health Organization
+
+20, Avenue Appia
+1211 Geneva 27
+Switzerland
+                                                                                                                                    Guide
+Tel: +41 22 791 2632
+Fax: +41 22 791 4853
+E-mail: cah@who.int
+Web site: http://www.who.int/child-adolescent-health
+
+
+
+
+ISBN 92 4 154688 3
+
+
+                                                                                                                                        World Health
+                                                                                                                                        Organization
+                                                                  WHO
+ EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+Emergency Triage
+Assessment
+and
+Treatment
+(ETAT)
+
+
+
+                                             Facilitator
+                                                Guide
+
+
+                                                World Health
+                                                Organization
+                                                               I
+Acknowledgements
+
+
+The WHO Department of Child and Adolescent Health and Development wishes to acknowledge the
+help and support of Professor Elizabeth Molyneux, who developed the training course for the Emergency
+Triage Assessment and Treatment on which these course materials are based. We would like to extend our
+thanks to Dr. Jan Eshuis, Royal Tropical Institute, Amsterdam, and Dr Carolyn Maclennan, Royal Children’s
+Hospiral, Melbourne, Australia, who developed the training materials further. In addition, we are grateful
+to the participants and facilitators of several field tests of these materials for their comments. We wish to
+thank Dr. Diana Silimperi and Lauri Winter, Quality Assurance Project, Bethesda, USA for providing
+substantial comments and revisions during these field tests, and the WHO Regional Offices for Africa,
+Southeast Asia and the Western Pacific for their support.
+
+
+
+
+WHO Library Cataloguing-in-Publication Data
+
+
+Emergency triage assessment and treatment (ETAT).
+Contents: Manual for participants — Facilitator guide.
+1. Triage. 2. Emergency treatment. 3. Child health services. 4. Teaching materials. I. World Health
+Organization.
+
+
+ISBN 92 4 154687 5 (participants)                                           (NLM classification: WS 205)
+ISBN 92 4 154688 3 (facilitator)
+
+
+© World Health Organization 2005
+All rights reserved. Publications of the World Health Organization can be obtained from WHO Press,
+World Health Organization, 20 Avenue Appia, 1211 Geneva 27, Switzerland (tel: +41 22 791 2476; fax:
++41 22 791 4857; email: bookorders@who.int). Requests for permission to reproduce or translate WHO
+publications – whether for sale or for noncommercial distribution – should be addressed to WHO Press,
+at the above address (fax: +41 22 791 4806; email: permissions@who.int).
+The designations employed and the presentation of the material in this publication do not imply the
+expression of any opinion whatsoever on the part of the World Health Organization concerning the legal
+status of any country, territory, city or area or of its authorities, or concerning the delimitation of its
+frontiers or boundaries. Dotted lines on maps represent approximate border lines for which there may not
+yet be full agreement.
+The mention of specific companies or of certain manufacturers’ products does not imply that they are
+endorsed or recommended by the World Health Organization in preference to others of a similar nature
+that are not mentioned. Errors and omissions excepted, the names of proprietary products are distinguished
+by initial capital letters.
+All reasonable precautions have been taken by WHO to verify the information contained in this publication.
+However, the published material is being distributed without warranty of any kind, either express or
+implied. The responsibility for the interpretation and use of the material lies with the reader. In no event
+shall the World Health Organization be liable for damages arising from its use.
+Printed in
+
+
+
+II
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+                                            Table of contents
+
+
+Introduction                                                                               1
+       Preparing for the training course                                                   2
+             Preparation steps                                                             3
+                    Decide on specific course objectives                                   3
+                    Selection of the course director                                       3
+                    Selection of the facilitators                                          3
+                    Selection of the facilitator candidates                                3
+                    Selection of the training site                                         3
+                    Prepare the budget                                                     4
+                    Draft agenda                                                           4
+                    Training materials                                                     4
+                    Recruitment of consultants                                             4
+                    Obtain necessary authorizations and clearances                         4
+                    Selection of participants                                              5
+                    Invitation of participants and sending out of participants' manuals    5
+                    Planning for the opening session                                       5
+                    Press release                                                          5
+       Guidelines for all chapters                                                         6
+             Introduction of ETAT theory                                                   6
+             Conducting drills                                                             6
+             When demonstrating procedures and guiding clinical practice                   6
+                    Clinical practice                                                      6
+             Practical sessions                                                            7
+             Participant's checklist of practical experiences                              7
+             Practical sessions completed                                                  8
+                    Assessment questions                                                   8
+                    ETAT course test                                                       8
+                    ETAT modules                                                           8
+Module One: Triage and the "ABCD" concept                                                  9
+       Module overview                                                                     9
+       Objectives                                                                          9
+       Materials                                                                           9
+       Contents of Day 1: Module 1                                                        10
+       Drill 1                                                                            11
+Module Two: Airway and breathing                                                          13
+       Module overview                                                                    13
+       Objectives                                                                         13
+       Materials                                                                          13
+       Contents of Day 1: Module 2                                                        14
+
+
+                                                                                          III
+Module Three: Circulation                                                                    19
+     Module overview                                                                         19
+     Objectives                                                                              19
+     Materials                                                                               19
+     Contents of Day 2: Review and Module 3                                                  20
+     Drill 2: Oral drill on flow of triage assessment                                        23
+     Exercise A on "Severe malnutrition"                                                     23
+Module Four: Coma and convulsion                                                             25
+     Module overview                                                                         25
+     Objectives                                                                              25
+     Materials                                                                               25
+     Contents of Day 2: Module 4                                                             26
+     Exercise B: Video exercise AVPU coma score                                              29
+     Drill 3: Determine correct doses                                                        29
+Module Five: Dehydration                                                                     31
+     Module overview                                                                         31
+     Objectives                                                                              31
+     Materials                                                                               31
+     Contents of Day 3: Review, clinical practice and Module 5                               32
+     Drill 4: Oral drill on flow of triage assessment                                        35
+     Exercise C: Answer table to video exercise                                              36
+     Drill 5 for treatment plan C                                                            37
+     Flow Chart 1: Management of the child with severe dehydration                           38
+     Case scenarios table A for group work (children with shock or severe dehydration with
+     or without severe malnutrition)                                                         39
+Module Six: Case management scenarios                                                        41
+     Module overview                                                                         41
+     Objectives                                                                              41
+     Materials                                                                               41
+     Contents of Day 3: Module 6                                                             42
+     Case management scenarios table B                                                       44
+Module Seven: Implementing ETAT                                                              53
+     Module overview                                                                         53
+     Objectives                                                                              53
+     Materials                                                                               53
+     Contents of Day 4: Module 7                                                             54
+     ETAT Standards                                                                          55
+Annexes
+     Annex 1:   Generic agenda for a four-day training on ETAT                               57
+     Annex 2:   Supplies and equipment for ETAT course                                       61
+     Annex 3:   Training participants in triage only and ETAT and IMCI                       63
+     Annex 4:   Participant's checklists                                                     65
+     Annex 5:   Answers to ETAT assessment questions                                         67
+     Annex 6:   Evaluation                                                                   79
+
+
+
+
+IV
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+                                                           Introduction
+
+
+
+The Emergency Triage Assessment and Treatment (ETAT) course is designed to
+familiarize health workers with the ETAT guidelines and to provide them with
+the necessary knowledge and skills for applying the guidelines. After participating
+in the course health workers will be able to:
+      Triage all sick children when they arrive at a health facility, into three
+       categories:
+       - those with emergency signs
+       - those with priority signs
+       - those who are non-urgent cases.
+      Assess a child’s airway and breathing and give emergency treatments.
+      Assess the child’s status of circulation and level of consciousness.
+      Manage shock, coma, and convulsions in a child.
+      Assess and manage severe dehydration in a child with diarrhoea.
+      Plan and implement ETAT in their working area and respective health
+       facility.
+These ETAT guidelines are adapted from the Advanced Paediatric Life Support
+(APLS) guidelines used in many countries. ETAT guidelines identify children
+with immediate life-threatening conditions that are most frequently seen in
+developing countries, such as obstruction of the airway and breathing problems,
+shock, altered central nervous system function (coma or convulsions), and severe
+dehydration. The standards of care of the ETAT guidelines correspond to the
+minimum standards that should be maintained even in small hospitals and where
+resources are limited. The principles for triaging are universally applicable and
+should not be modified, while the criteria for priority cases are more dependent
+on the local epidemiology or services available. It may be necessary to adapt the
+priority signs of the ETAT guidelines to obtain an appropriate balance between
+priority and normal cases. If emergency treatment is provided according to the
+guidelines outlined in the course, it will be possible to stabilize most critically
+sick children and to manage the underlying condition. Thus, ETAT is a tool to
+reduce facility mortality rates, particularly in the first 24-hours.
+You should consider teaching the ETAT course if:
+      you have noticed that facility mortality rates in the first 24-hours are high
+      delays occur from the time that sick children reach a health facility to
+       when they receive appropriate treatment
+      no system for triage is in place
+
+                                                                                       1
+                                                                                                                               INTRODUCTION
+
+
+
+
+                                     ETAT can be introduced in the context of a systematic approach to improving
+                                     the quality of care of children in hospital that involves multiple hospitals sharing
+                                     experiences. Otherwise your hospital may choose to implement ETAT on its
+                                     own.
+                                     Emergency Triage Assessment and Treatment (ETAT) can be applied everywhere
+                                     where sick children are managed but the guidelines are most useful for busy
+                                     first-level health facilities and outpatient departments of hospitals. It is important
+                                     to have a programmatic approach to decide which health facilities or departments
+                                     require the ETAT course. In general any formally trained health worker, who is
+                                     likely to receive patients soon after they arrive at the facility should be trained
+                                     in the entire ETAT course, whereas non-clinical staff should be trained in
+                                     emergency triage only. For formally trained health workers the standard course
+                                     is conducted while a reduced version is taught for non-clinical staff.
+
+
+
+                                     Preparing for the training course
+                                     The steps necessary to prepare well for the ETAT course are laid out in Figure 1.
+                                     How much time the individual activities take will depend on whether it is the
+                                     first time that such a course is organised in your setting or if ETAT is already
+                                     well established. If it is the first time, you should plan at least two months
+                                     ahead. The following list will give you all necessary information for each step.
+
+
+
+     Decide on specific
+     course objectives
+
+
+     Selection of :
+     - course director,
+     - instructors,
+     - instructor candidates,
+     - training site
+
+         Prepare budget                 Draft agenda
+
+             Release funds
+                                                                                                          ETAT Course
+
+
+
+
+         Prepare training materials. Important! Plan for:                       Arrange
+         - Translation of course modules                                        training site
+         - Collect materials and supplied including ordering of
+                                                                                                                        Select
+            resuscitation dolls
+                                                                                                                        instructor
+                                                                                                                        candidates
+         Recruit consultants
+
+         Obtain necessary authorizations clearances
+
+             Select participants                              Send out ETAT manuals
+
+
+                                        Invite participants                           Pay per diem
+
+                                                       Plan for opening               Press release
+
+
+    -8          -7              -6          -5           -4        -3        -2            -1         0                  1           2
+                                                         Weeks around the course
+
+
+    Figure 1 Course preparations
+
+
+
+
+2
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+PREPARATION STEPS
+      Decide on specific course objectives
+       Decide on the specific course objectives. Whether you plan to conduct
+       the entire ETAT course for health workers or whether you want to train
+       non-clinical staff in emergency triage only, will influence the selection of
+       course directors and facilitators, the size of the course, the selection of
+       participants and the budget for the course.
+
+      Selection of the course director
+       The course director should be an experienced clinician with working
+       experience in paediatrics or emergency medicine who has acted as facilitator
+       of the ETAT course several times, at least once under the guidance of
+       another experienced course director. A course director should have
+       conducted a course or acted as facilitator at least once in the last twelve
+       months. If a suitable course director is not available in your setting, you
+       have to plan well in advance in order to identify and recruit a suitable
+       course director.
+
+      Selection of the facilitators
+       The number of facilitators depends on the size of your course. There
+       should be at least one experienced facilitator for each group of 6 to 8
+       participants. Facilitators for the ETAT course should be health professionals
+       with clinical experience. They should have gone through the ETAT course
+       themselves and have acted at least once as facilitator candidate under the
+       guidance of an experienced facilitator. In order to maintain their skills, a
+       facilitator should participate in at least one ETAT course per year. If there
+       are not sufficient facilitators available, you have to plan well in advance
+       to build up this capacity, either by sending facilitator candidates elsewhere
+       to be trained as facilitators or by recruiting them.
+
+      Selection of the facilitator candidates
+       In order to be able to act as facilitators for the ETAT course a candidate
+       must have gone through the ETAT course as a participant and expressed
+       interest in facilitating an ETAT course. The candidate should be
+       recommended as facilitator candidate by an ETAT course director, who is
+       familiar with this person’s capabilities. Any facilitator candidate should
+       be familiar with the facilitation techniques used in the course. This is
+       usually the case for persons who have undergone the Integrated
+       Management of Childhood Illness (IMCI) Facilitators Training Course.
+       Any other training of trainers courses that includes facilitation techniques
+       such as those for the Breastfeeding Counselling Course will provide
+       appropriate skills. One experienced ETAT facilitator should supervise one
+       to a maximum of two facilitator candidates. During each ETAT course,
+       potential facilitator candidates should be identified and the names be
+       communicated to ETAT course organizers.
+
+      Selection of the training site
+       Select a site for the training with a supply of severely ill children and
+       classroom space. Paediatric hospitals with a busy outpatient department
+       or a general hospital, which sees a considerable number of paediatric
+       patients in its outpatient department should be chosen. There should be
+       one room big enough to fit all participants for plenary sessions. Also,
+
+
+
+                                                                                       3
+                                                                          INTRODUCTION
+
+
+
+
+        there should be a classroom for the practical sessions with a table around
+        which each group of six to eight participants can collect.
+
+       Prepare the budget
+        For preparing the budget please consider the following points:
+        - Per diem for participants
+        - Per diem or remunerations for resource persons (course director,
+           facilitators, facilitator candidates)
+        - Travel costs
+        - Training materials, including those to be ordered internationally
+        - Audiovisual equipment, such as video recorder, television screen,
+           LCD and/or overhead projector etc. (see list of training materials)
+        - Banners, course certificates, refreshments
+
+       Draft agenda
+        The standard agenda of the ETAT course is a three and a half-days as
+        shown in Annex 1. Prepare an agenda based on the background of the
+        participants and the available time. More practice in practical sessions
+        and with patients will enable participants to develop more accuracy,
+        confidence, speed and ease with assessment and treatments, so it is better
+        to have a course of at least three and a half days in duration.
+
+       Training materials
+        Collect all training materials and supplies necessary for conducting the
+        course. For a complete list of all necessary training materials refer to the
+        checklist in Annex 2.
+        Some training materials such as the resuscitation dolls might not be
+        available locally. Please plan well in advance for any international
+        procurement. Resuscitation dolls are expensive and if resources are limited
+        at least 2 sets including both a child and infant doll should be made
+        available at a central location in the country and released for each ETAT
+        course. Other materials for the ETAT course should be available in first
+        level health facilities or prepared for the course. It is recommended that a
+        box containing a full set of all equipment is made available for each group
+        for all practical sessions, thus avoiding having to prepare specific equipment
+        for each session (Practical session box, Annex 2). Each participant should
+        have a copy of the participants’ manual and each facilitator or facilitator
+        candidate should have a facilitator’s guide.
+        If you would like to include other priority signs, allow enough time to
+        make those modifications and obtain their endorsement. If the ETAT
+        materials are not available in the working language of your setting, please
+        plan well in advance for the translation and editing.
+
+       Recruitment of consultants
+        If any resource persons such as the course director or facilitators need to
+        be recruited as consultants, allow sufficient time for the recruitment.
+
+       Obtain necessary authorizations and clearances
+        The authorizations of the relevant authorities should be obtained. These
+        include typically the Ministry of Health and local health authorities. The
+        director of the hospital chosen as training site, should authorize that the
+        course is conducted in the facility under her/his responsibility. Consultants
+        might require Government and or security clearance.
+
+
+4
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+        Selection of participants
+         As there are two different target groups for the ETAT course, different
+         criteria for the selection of participants apply as shown in the table below.
+         More information on training in triage assessment only, is provided in
+         Annex 3:A. Some participants in the ETAT course will have completed
+         training on the Integrated Management of Childhood Illness for first-level health
+         workers. This will be helpful for the participant and will partly serve as
+         revision of some knowledge (see Annex 3:B).
+
+
+
+                              ETAT course:                            Emergency Triage Assessment only:
+
+    Selection criteria        Health professionals who are likely     Any staff likely to have contacts with sick
+                              to manage sick children soon after      children soon after they arrive in hospital. For
+                              they come to a health facility, such    example:
+                              as:                                        - Watchmen,
+                                 - Emergency room staff                  - Gate keepers,
+                                 - Paediatricians and surgeons           - Administrative staff,
+                                 - Any physicians with on-call           - Drivers
+                                   duties
+                              Teachers of medical and nursing
+                              schools as well as health
+                              professionals for in-service training
+                              programmes
+
+    Number of participants    18 to 24 participants divided into      18 to 24 participants divided into three
+                              three groups of 6 to 8                  groups of 6 to 8
+
+
+
+         Eighteen to 24 participants divided into three groups of 6 to 8 can be
+         trained in one ETAT course provided that there are at least three facilitators
+         including one course director and three classrooms. It is desirable that
+         there is another person, possibly a facilitator candidate, per small group.
+
+        Invitation of participants and sending out of participants’
+         manuals
+         Participants should be invited several weeks in advance. They should also
+         obtain the participants’ manual in advance and be instructed to read it
+         before attending the course. This enables more time spent on practising
+         skills and clarifying issues.
+
+        Planning for the opening session
+         It may be useful to invite policy makers or senior officials of the Ministry
+         of Health, representatives from international or bilateral agencies (e.g.
+         WHO or UNICEF) or representatives from professional organizations
+         such as from the national medical and or nursing association or the national
+         paediatric society.
+
+        Press release
+         Visibility becomes more and more important. Therefore, consideration
+         should be given to issuing a press release on the course, particularly if it is
+         the first one or part of a larger quality improvement approach.
+
+
+
+                                                                                                                         5
+                                                                           INTRODUCTION
+
+
+
+
+    Guidelines for all chapters
+    INTRODUCTION OF ETAT THEORY
+    The ETAT course suggests that participants receive the ETAT manual before the
+    course begins. It is recognised that this may not always be possible and that
+    participants may only receive material at the beginning of the course. Participants
+    should also read each evening, the material relevant for the following day.
+    Facilitators need to consider what individual preparation the participants have
+    undertaken when introducing sessions in plenary particularly on the first day of
+    the course. There are several possibilities.
+         Participants pre-read ETAT material and facilitator provides short
+          summary during the course
+         No pre-reading: short lecture on the session’s content
+         No pre-reading: reading sessions during the course
+
+
+    CONDUCTING DRILLS
+    During the ETAT course, facilitators will be conducting several drills. These are
+    group exercises designed to quickly review material presented during the course
+    and to perform calculations of fluid volumes and drugs necessary in emergency
+    management of sick children. Participants are given sufficient information to
+    answer the question and depending on the drill they may refer to the ETAT
+    charts and tables. Participants should be informed that they may use pencil and
+    paper to do quick calculations. Each participant is asked a question in turn and
+    you should praise the participant for a correct answer. If a participant gives an
+    incorrect answer, ask the next participant to answer. If you feel one or more
+    participants do not understand, pause to explain. Then resume the drill. To
+    keep the drill lively, encourage participants to be prepared to answer as quickly
+    as they can. Keep the drill moving at a quick pace. Repeat the list of questions
+    for each drill or make up additional questions if you believe participants need
+    more practice. The drill ends when you believe that all participants are skilled
+    and comfortable with the material reviewed in the drill.
+
+
+    WHEN DEMONSTRATING PROCEDURES AND GUIDING CLINICAL PRACTICE
+         Gather the participants together close to the demonstration
+         Explain what you are going to demonstrate, use job aids such as
+          flowcharts or treatment boxes
+         Demonstrate the skill and describe the steps in the correct order
+         At the end of your demonstration, give participants an opportunity to
+          ask any questions before they begin practicing with patients
+         Check the participants knowledge by asking them to repeat the
+          necessary steps
+         Provide immediate feedback and correct any mistakes
+         For some skills, ask one of the participants to demonstrate for his/her
+          colleagues
+
+    Clinical Practice
+    The facilitator and group of participants should wait for children to arrive in the
+    emergency room. As children arrive, the facilitator assigns them sequentially to
+    participants. The assigned participant quickly assesses the child, speaking aloud
+
+
+
+6
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+his findings and the treatments indicated. Other participants who are not assessing
+a child should watch the assessment. Participants should practice doing the
+steps relevant to the session’s objectives with as many children as possible.
+Observe each participant working with his assigned patient. Make sure he is
+doing the clinical skills correctly. Provide specific feedback and guidance as often
+as necessary. Remark on things that are done well and give additional guidance
+when improvement is needed.
+
+
+PRACTICAL SESSIONS
+The practical sessions for this course will take place in small groups. Each group
+will have an area set up for demonstrating and practicing a particular skill. The
+practice area should have all the necessary supplies and equipment for all practical
+sessions collected together in one box (Practical session box). The facilitator
+needs to ensure each day that the box is complete and then teach the specific
+skills and observe participants practicing the skills. Since it is not possible to
+use sick children for this repeated practice of skills required in the ETAT course,
+this must be provided through the practical sessions. There must be simulation
+of the situation to some extent. For example, an animal leg instead of a human
+leg, or a doll or diagram instead of a child may be used.
+The facilitator’s guidelines describe the objectives, materials and contents of
+each module and what facilitators need to do in each module. These guidelines
+are intended to provide helpful suggestions and structure, but should not limit
+a creative teacher. The purpose of the practical sessions is to give information
+and practice by showing and doing. The more participants are involved with the
+equipment and “hands on” participation in this simulated situation, the better
+prepared they will be when they confront real patients.
+If a participant is not able to successfully perform the skill, the facilitator gives
+him guidance about what to do differently and he then tries again. The participant
+should repeat as needed until he can successfully perform the skill.
+If a participant is having repeated difficulty, the facilitator will ask him to watch
+while another participant performs the skill. This should help the participant
+see what he is doing wrong.
+
+
+PARTICIPANT’S CHECKLIST OF PRACTICAL EXPERIENCES
+Each participant is given a checklist (see Annex 4: A), to keep and use throughout
+the training. Participants can monitor their own clinical practice experience by
+marking on a checklist the clinical signs that they observe. They will mark clinical
+signs that they have seen in children during a demonstration or during clinical
+practice.
+Ask participants to let a facilitator know after 2 clinical sessions if there are
+clinical signs that they are lacking. The facilitator can then be alert to this so
+that when a case with a clinical sign presents, he can ensure participants see the
+case. The facilitator will also keep this in mind when selecting children for
+demonstration and assigning cases in the clinical sessions so that all participants
+have opportunity to gain the experience they need.
+
+
+
+
+                                                                                        7
+                                                                               INTRODUCTION
+
+
+
+
+    PRACTICAL SESSIONS COMPLETED
+    When a participant completes a skill, the facilitator will initial the participant’s
+    practical skills checklist (see Annex 4: B). Participants can track their progress
+    using the checklist. Facilitators can also assess a participant’s progress at a glance.
+
+    Assessment questions
+    At the end of each module in the participant’s manual there are assessment
+    questions, this enables participants to monitor their progress during the ETAT
+    course. Model answers to these questions are provided in Annex 5.
+
+    ETAT course test
+    Countries implementing ETAT may wish to introduce a test at the end of the
+    ETAT course. Candidates would require to pass this test to ensure that they are
+    competent in ETAT and specific competency certificates would then be issued
+    to those passing the test. It is suggested that the test is a clinical scenario on
+    managing a sick child presenting to a health facility. To introduce a test would
+    require addition of ½ day to the current 3 and ½ day course.
+
+    ETAT modules
+    The ETAT facilitator’s guide is presented as 7 modules. This allows the course
+    to be taught in an alternative format. For example, the contents of the ETAT
+    course could be taught in 2-hour sessions over several weeks. This would be
+    useful in busy hospitals where many children are seen in the morning and when
+    things are quieter later in the afternoon. In this way participants could learn
+    new knowledge and skills but not be absent from their place of work. Also the
+    new skills could be immediately practiced in the real working environment of
+    participant’s own department.
+
+
+
+
+8
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+                                                                       Module One
+
+                 Triage and the "ABCD"
+                               concept
+
+
+          General introductions                                          MODULE OVERVIEW
+
+          Introduce module objectives
+          Review the ‘Triage’ concept
+          Review the ABCD concept
+          Review the priority signs concept
+          Review triaging process
+          Review the emergency and priority Signs
+          Review the general principles of treatment of emergencies
+          Conduct drill on emergency and triage
+
+
+   z       To understand the definition of triage                               OBJECTIVES
+
+   z       To understand and to apply the “ABCD” Concept
+
+
+          Computer with LCD projector or overhead projector                     MATERIALS
+
+          ETAT wall charts
+          Overheads or powerpoint presentations
+          Doll for drill
+
+
+
+
+                                                                                         9
+                                                                    MODULE ONE - TRIAGE AND THE "ABCD" CONCEPT
+
+
+
+
+CONTENTS OF DAY 1: MODULE 1
+
+ Time           Activities                                                      Methods, resources,
+                                                                                comments
+
+ Start 8:00     Opening
+                Introduction: Welcome participants and facilitators.
+                Everyone introduces themselves.
+
+ 5 mins         Present the module objectives                                   Overhead/LCD
+
+ Start 9:00     Review the concept of triage                                    Overhead/LCD
+ 10 mins        Ask participants, if they have read Module 1 of the ETAT        Questions and
+                Participants Manual. Depending on how many have read            answers
+                the module, spend more or less time presenting the
+                rational and concept of triage. Allow questions about the
+                triage concept, answer them or, if appropriate refer to later
+                sessions of the course.
+
+ 10 mins        Review the ABCD concept                                         Overhead/LCD
+                Emphasis that each letter relates to an emergency sign          Questions and
+                indicating that immediate attention is required. Ask who        answers
+                is familiar with the ABCD concept to get an impression of
+                the participants familiarity with the subject. Allow
+                questions and answer them or, if appropriate refer to later
+                sessions of the course.
+
+ 10 mins        Review the priority signs concept                               Overhead/LCD
+                Would partipicants suggest other priority signs in their
+                settings?
+
+ 10 mins        Review triaging process                                         Overhead/LCD
+                Ask participants when and where should triage take place,       ETAT wall chart 1
+                who should triage and how to triage? Review the triage          Interactive session
+                steps as contained in the table of page 8 of the ETAT
+                manual.
+
+ 10 mins        Review the emergency and priority signs                         ETAT wall chart 1
+                Facilitator present or ask a participant to go through          Interactive session
+                ETAT chart 1.
+
+ 10 mins        Review the general principles of treatment of                   Overhead/LCD
+ End 10:00      emergencies
+
+ 10:00-10:15    Tea
+
+ Start 10:15    Conduct drill on emergency and triage                           Drill 1
+ 10 mins                                                                        Resuscitation doll
+
+ 5mins          Summary                                                         Overhead/LCD
+ Finish 10:30
+
+
+
+
+10
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+DRILL 1
+
+  Tell participant                          Findings                      Correct response
+
+  Mother running in, baby in                                              Assess A and B
+  arms
+
+                                            Obstructed breathing          Go to emergency
+
+                                            Central cyanosis              Go to emergency
+
+                                            Severe respiratory distress   Go to emergency
+
+  A and B stable, assess C                  Warm hand                     Assess consciousness
+
+  A and B stable, assess C                  Cold hand                     Assess capillary refill
+
+  A and B stable, assess C                  Capillary refill fast         Assess consciousness
+
+  A and B stable, assess C                  Capillary refill slow         Check pulse
+
+  A and B stable, circulation               Alert child                   Ask for diarrhoea
+  stable
+
+  A and B stable, circulation               Convulsing child              Go to emergency
+  stable
+
+  A and B stable, circulation               Lethargy                      Assess for diarrhoea and
+  stable                                                                  dehydration
+
+  A adn B stable, circulation               Unconscious child             Go to emergency
+  stable
+
+  A and B and C stable                      No diarrhoea                  Assess priority signs
+
+  A and B and C and D stable                Child is very hot             Priority patient
+
+  A and B and C and D stable                No priority signs             Child waits in queue
+
+
+
+
+                                                                                                     11
+     MODULE ONE - TRIAGE AND THE "ABCD" CONCEPT
+
+
+
+
+12
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+                                                                         Module Two
+
+                    Airway and breathing
+
+
+
+          Summarise assess airway and manage choking child                    MODULE OVERVIEW
+          Demonstrations: management of choking child, assessment and
+           management of airway and breathing, neck stabilisation, log roll,
+           positioning the child to open the airway
+          Video to demonstrate signs
+          Show oxygen video (oxygen delivery), demonstrate oxygen
+           concentrator and cylinder
+          Practical sessions
+          Summary: Review the module, give assignments, reading on all "C"
+           signs and self assessments on A and B
+
+                                                                                     OBJECTIVES
+   z       Assessment of airway
+   z       Assessment of breathing
+   z       Management of the choking child
+   z       Management of the airway
+           -   positioning of the child to open the airway
+           -   neck stabilisation
+           -   log roll
+   z       Management of breathing
+   z       Ventilation with bag and mask
+   z       Giving oxygen
+
+
+          Computer with LCD projector or overhead projector                           MATERIALS
+          Video player and TV screen
+          ETAT video
+          Photographs of clinical signs
+          ETAT wall charts 2-5
+          Overheads or powerpoint presentations                                continue next page
+
+
+
+
+                                                                                               13
+                                                                           MODULE TWO - AIRWAY AND BREATHING
+
+
+
+
+MATERIALS                    Practical session box including:
+                              -   Resuscitation dolls
+                              -   Materials for stabilizing the neck, infusion bottles, tight roll
+                                  of towel, tape
+                              -   Oro-pharyngeal airways in several sizes
+                              -   Self inflating bags of different sizes
+                              -   Face masks of varying sizes
+                              -   Oxygen and equipment for delivering oxygen from an
+                                  oxygen cylinder (spanner or key wheel, regulator with
+                                  pressure gauge, flow control device, and non-crush plastic
+                                  tubing) or from an oxygen concentrator (non-crush plastic
+                                  oxygen delivery tubing).
+                              -   Oxygen tubing
+                              -   Nasal prongs and/or nasal catheter
+                              -   Tape
+                              -   Electric of foot suction pump
+                              -   Yanker sucker
+                              -   Suction catheter
+
+
+
+
+CONTENTS OF DAY 1: MODULE 2
+
+ Time          Activities                                                      Methods, resources,
+                                                                               comments
+
+ Start 10:30   Presentation of "Airway and Breathing"                          Plenary session
+ 15 mins       - Present module objectives                                     ETAT charts 2 - 5
+               - Demonstrate the airway and breathing section of chart 2
+               - Summarize the links to the following charts 3 and 4
+               - Invite and answer any questions on the topic
+
+ 15 mins       Management of choking child                                     Plenary session
+               Facilitator demonstrates:                                       ETAT chart 2
+               - Assess history of choking child                               Demonstration using
+               - Recognize signs of a choking child                            dolls and participant
+               - Do back slaps and chest thrusts in infants, use doll          volunteer
+               - Give back blows and perform Heimlich maneouvre on
+                  older child, simulate on adult volunteer
+
+
+
+
+14
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+  Time                Activities                                                    Methods, resources,
+                                                                                    comments
+
+  20 mins             Assessment and management of airway                           Plenary session
+                      Facilitator explains and demonstrates:                        ETAT chart 3 and 5
+                      - how to assess the airway                                    Suction pump
+                          Is the child breathing?                                  Gauze
+                          Does the child have severe respiratory distress?         Oro-pharyngeal
+                          Is there obstruction to airflow?                         airways
+                      - steps to manage the airway and their sequence
+                      - steps if child is not breathing or breathing appears to
+                         be obstructed
+                      - positioning to improve airway
+                          Chin lift to open the airway if no trauma
+
+                          Infants – neutral position
+
+                          Children – sniffing position
+
+                      - where to look for foreign body (mouth, pharynx)
+                      - what to use to clear secretions from the throat (finger,
+                         finger wrapped in gauze, or mechanical suction device
+                         if available)
+                      - steps of managing the airway if child is breathing with
+                         no apparent obstruction (let child assume position of
+                         maximal comfort; support infant's head in neutral
+                         position)
+                      - steps for insertion of an oropharyngeal airway
+
+  20 mins             Manage the airway in a child with possible neck               Plenary session
+                      trauma                                                        ETAT chart 3 and 5
+                      Facilitator explains and demonstrates:                        IV fluid bottles (to
+                      - how management of the airway differs if the child has       stabilise neck) or
+                         suspected head or neck trauma                              towels
+                          jaw thrust without head tilt, used when trauma is        Tape
+                             suspected                                              Demonstration with
+                      - steps to stabilize the cervical spine                       doll and volunteer
+                      - log roll
+
+  20 mins             Ventilate with bag and mask                                   Plenary session
+                      Facilitator explains and demonstrates:                        ETAT chart 4
+                      - when to use a bag and mask to ventilate the child           Resuscitation doll
+                         (child's breathing is very shallow, or slow, or            Self-inflating bags
+                         obstructed, or child is not breathing.)                    Masks of different
+                      - steps for using a bag and mask to ventilate the child       sizes
+                      - correct rate of ventilation (oxygen flow should be 10       Oxygen tubing
+                         litres/minute, or as high as possible in a concentrator)
+                      - if chest does not rise and fall when using bag and mask,
+                         possible causes to investigate:
+                          Inappropriate head/jaw position
+
+                          Mouth is closed
+
+                          Insufficient pressure on bag
+
+                          Mucous, blood, foreign body in airway
+
+                          Poor seal between mouth and face
+
+
+
+
+                                                                                                           15
+                                                                        MODULE TWO - AIRWAY AND BREATHING
+
+
+
+
+ Time          Activities                                                    Methods, resources,
+                                                                             comments
+
+               -  when and how to stop ventilation (stop after a few
+                  minutes; look to see if child revives and starts to
+                  breathe spontaneously. If not breathing adequately,
+                  continue for 45 minutes or according to decision of
+                  clinician.)
+               Allow questions and answers
+
+ 15 mins       Review practice                                               Practical skills
+               Ask individual participants to demonstrate in front of        demonstration
+               others:                                                       Equipment as above
+               - Management of the choking child
+               - Opening airways
+               - Ventilation with bag and mask
+               - Positioning of the child with possible neck trauma
+
+ 12:45         Lunch break
+
+ Start 14:00   Demonstration of clinical signs for giving oxygen, and        ETAT chart 2
+ 30 mins       severe respiratory distress                                   Video of respiratory
+               Show video sequences of                                       signs
+               - Cyanosis
+               - Severe respiratory distress
+               - Very fast breathing
+               - Severe lower chest wall indrawing
+               - Use of auxiliary muscles
+               - Stridor
+               - Grunting
+               Discuss the signs and the relation to respiratory distress
+
+ 15 mins       Explain and demonstrate oxygen sources                        Show cylinder and
+               - Correct equipment for delivering oxygen from an             concentrator, if
+                 oxygen cylinder (spanner or key wheel, regulator with       possible
+                 pressure gauge, flow control device, and non-crush          Show sequence from
+                 plastic oxygen delivery tubing)                             video
+               - Equipment needed if oxygen source is to be used for
+                 more than one child (a 4-way adaptor and additional
+                 flow control devices, tubing)
+               - Correct equipment for delivering oxygen from an
+                 oxygen concentrator (non-crush plastic oxygen delivery
+                 tubing) and if source is to be used for more than one
+                 child (a flow splitter, 0.5 and 1.0 litre/minute nozzles,
+                 blanking plugs and flow indicators, with additional
+                 tubing)
+               - Steps for assembling the equipment, checking that it is
+                 working properly (covered already by the video.)
+               - There must be no smoking in the room when oxygen is
+                 being used.
+
+
+
+
+16
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+  Time                Activities                                                      Methods, resources,
+                                                                                      comments
+
+  5 mins              Explain and demonstrate oxygen delivery devices                 Equipment as above
+  Finish 15:00        - Circumstances in which nasal catheter or nasal prongs         Show actual tubing
+                        are preferable (usually individual preference/comfort         Show sequence from
+                        with procedure)                                               video
+                      - Correct position for nasal prongs, taped in place just        Demonstrate on doll
+                        above the upper lip
+                      - Appropriate tube (8FG size tube) for a nasal catheter
+                      - How and where to measure to determine how much of
+                        the tube to insert
+                      - How to insert the tube into the nasal passage
+                      - How to secure it with tape (good place to tape it)
+                      - Proper flow rate for oxygen (0.5-1 litres per minute for
+                        infants and 1-2 litres per minute for older children for
+                        nasal prongs or nasal catheter; 8-10 litres for bag/
+                        mask). If oxygen is not available, use room air, but
+                        oxygen is preferable
+                      - Position and secure nasal prongs
+                      - Measure how much of a nasal catheter to insert (length
+                        from side of nostril to the inner eyebrow margin)
+                      - Insert the nasal catheter and secure it with tape
+                      - Assemble appropriate equipment to deliver oxygen
+                      - Check that there is oxygen in tank
+                      - Show how to check the flow rate of the oxygen (2 litres
+                        per minute to start)
+
+  15:00               Tea
+
+  Start 15:15         Group work to practice skills                                   Practical group session
+  90 mins             The participants practice all skills in small groups with the   box including airway
+                      guidance of the facilitators, who give short scenarios for      and breathing
+                      the participants to act on.                                     equipment
+                      - Triage for airways and breathing                              If only few dolls are
+                      - Management of choking child                                   available, the different
+                      - Opening airways                                               sizes need to be
+                      - Opening airways in neck trauma and log roll                   rotated through the
+                      - Insert an oropharyngeal airway                                groups
+                      - Ventilate with bag and mask
+                      - Give Oxygen
+
+  15 mins             Facilitator summarises airway and breathing section, Ask        Presentation and
+  Finish 17:00        for questions and allow discussion.                             questions and answers
+                      Give assignments, reading on all "C" signs.                     Refer to participants
+                      Self- assessment questions on triage, A and B                   manual
+
+  30 mins             Facilitators meeting
+                      - Meet with facilitators, review day, ask for comments
+                         and impressions, areas to improve
+                      - Prepare for clinical session; identify severe cases on
+                         wards
+                      - Order chicken thighs
+
+                                                                                                            17
+     MODULE TWO - AIRWAY AND BREATHING
+
+
+
+
+18
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+                                                                        Module Three
+
+                                                                Circulation
+
+
+
+          Plenary session                                                          MODULE OVERVIEW
+          Assessment questions "Airway and Breathing"
+          Summarise Circulation
+          Oral drill, "Airway and Breathing" and assessment Circulation and
+           Consciousness;
+          Clinical session at OPD, practicing triage and assessment
+          Demonstrations management of shock: IV fluids, demonstration of
+           IV access and intraosseous infusion, calculation of shock fluids
+          Practical sessions
+          Summarize the circulation section
+
+
+   z       Assess circulation in a child at the OPD or emergency room                     OBJECTIVES
+
+   z       List the signs of a shocked child
+   z       Treat a shocked child with appropriate fluids and volume
+   z       Explain where and how to achieve IV access
+   z       Demonstrate on a model how to insert an intraosseous needle for
+           fluids
+
+
+          Computer with LCD projector or overhead projector                                MATERIALS
+
+          Video player and TV screen
+          Overheads or powerpoint presentations
+          Practical session box including:
+           -   IV bottles, tubing and burettes, tape
+           -   21g "green" IV needle or a stout spinal needle (i.e., large gauge)
+           -   3-way taps x 2
+           -   Syringes 10 cc or 20 cc x 2
+           -   IV bottles, tubing and burettes, tape, blood tubes
+           -   Alcohol wipe or other spirit to clean skin                            continue next page
+
+
+
+
+                                                                                                    19
+                                                                              MODULE THREE - CIRCULATION
+
+
+
+
+MATERIALS                    Resuscitation doll
+                             Diagram of a child's body with veins (Figure 33, page 59
+                              Participant’s manual)
+                             ETAT charts 6 and 7 (charts for treatment of shock)
+                             Paper and pencils for calculations
+                             Food colouring
+                             Water
+                             Tray (preferably metal) to practice intraosseous insertion
+                             Table or surface on which to teach, demonstrate and trainees to
+                              practice
+                             Chicken thigh bones (or other animal bone, young pig ribs)
+
+
+
+CONTENTS OF DAY 2: REVIEW AND MODULE 3
+
+ Time          Activities                                                Methods, resources,
+                                                                         comments
+
+ Start 8:00    Revise assessment questions for triage, airway and        Plenary session
+ 15 mins       breathing                                                 Participants manual
+               Discuss answers to questions. Ask for comments; refer     Answers in facilitators
+               to the main text in participant's manual, clarify if      manual Annex 5
+               needed.                                                   (photocopied for all
+                                                                         participants)
+
+ 15 mins       Oral drill on triage                                      Drill 2
+                                                                         Resuscitation doll
+                                                                         Facilitator may use drill
+                                                                         below or make up own
+                                                                         examples
+
+ Start 8:30    Clinical session in OPD and on inpatient ward             Practicing flow of triage
+ 90 mins                                                                 in OPD session
+
+ 10:00         Tea
+
+ Start 10:15   Present objectives of module 3                            Plenary session
+ 5 mins        Explain that each objective will be presented in more     Overheads or
+               detail later in the session                               powerpoint
+
+ 15 mins       Summarise circulation                                     Plenary session
+               Facilitator should now present the section on             Overheads or
+               circulation (see pages 24-30 of participants manual).     powerpoint
+               Facilitator should present information on an overhead     ETAT charts 1, 6 and 7
+               or power-point including:                                 Tables 3 and 4 of
+               - Assess the circulation                                  participants manual
+               - Shock                                                   (p29 and 30)
+               - Treatment of shock in the child with and without
+                   severe malnutrition
+
+
+
+
+20
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+  Time                Activities                                                       Methods, resources,
+                                                                                       comments
+
+                      Reference should be made to the appropriate ETAT
+                      charts (6 and 7) and how these can be used in the
+                      emergency setting
+                      Finally show tables 3 and 4 so that participants may
+                      see differences in treatment of shock in the child with
+                      and without severe malnutrition
+
+  10 mins             Exercise on "severe malnutrition"                                Video or IMCI chart
+                      The facilitator should introduce an exercise on "severe          booklet
+                      malnutrition" using either a video or the IMCI                   Pen and paper
+                      photograph booklet. Facilitator should ask participants          Exercise A
+                      to look at each child in the video or the photograph
+                      booklet to identify the presence or absence of "visible
+                      severe wasting" or "oedema of both feet". Participants
+                      should document their answers on a piece of paper.
+                      Answers should be discussed after all the children in
+                      the video or photographs have been reviewed
+
+  20 mins             Demonstration on management of shock                             Plenary session
+                      1. Insert an IV line                                             Practical sessions box
+                         - First site to try to insert an intravenous line             Resuscitation doll
+                         - Equipment needed to insert an IV line                       ETAT charts 6 and 7
+                         - Steps to insert an IV line correctly, safely                Materials above
+                         - How to take blood for emergency laboratory                  Tell participants that
+                            investigations while inserting IV and before               first you will
+                            starting infusion of fluids                                demonstrate this skill
+                         - Equipment needed to take blood for each of the              but that participants
+                            emergency laboratory investigations                        will practice during the
+                         - Steps to send to the laboratory the blood for the           group practical sessions
+                            blood smear and haemoglobin tests
+                         - Possible problems preventing the infusion from
+                            running well and what to do about them
+                         - Procedure for safe disposal of needles
+                      2. Give fluids rapidly for shock
+                         - What IV fluids to give for treating shock
+                         - Rate at which to infuse fluid (20 ml/kg as
+                            rapidly as possible; if severely malnourished, 15
+                            ml/kg over 1 hour)
+                         - Definition of bolus, infusion
+                         - How to tell when desired amount has been infused
+                            (if giving fluid from bottle, put tape on bottle at
+                            level where desired amount will have been given)
+                         - Signs to check to see if child has improved with the
+                            fluids (Check same signs -- cold hand, capillary refill,
+                            weak and fast pulse -- and also lethargy/conscious)
+                         - What to do if child has not improved --
+                            sequence of treatments to give if child does not
+                            improve (more fluids, as described in box)
+                         - Steps for giving blood; amount of blood to give
+                            and rate
+
+                                                                                                                  21
+                                                                                 MODULE THREE - CIRCULATION
+
+
+
+
+ Time           Activities                                                  Methods, resources,
+                                                                            comments
+
+                3. Insert intraosseous line
+                   - Necessary equipment for inserting an
+                      intraosseous line and the names of the items
+                   - Sequence of steps to insert an intraosseous line
+                      and confirm correct placement
+                   - Correct position of the knee (bent at a 30 degree
+                      angle, with knee supported and heel resting on
+                      the table)
+                   - Location to insert an intraosseous line (the
+                      cannulation site) and the steps to find it
+                   - Definition of tibial tuberosity, "medial to", tibia,
+                      proximal tibia, palpating, infiltration
+                   - Steps for sterility (wash hands, put on sterile
+                      gloves, cleanse the skin with an iodine-
+                      containing solution using a spiral motion)
+                   - How to stabilize the proximal tibia, and not
+                      poke your own hand with needle
+                   - Also demonstrate on chicken thigh bone or
+                      other animal bone
+
+ Start 11:05    Group work to practice skills                               For each group
+ 90 mins        1. Insert an IV line                                        - All materials above
+ Finish 12:35   2. Give fluids rapidly for shock                            - Practical sessions box
+                3. Insert intraosseous line                                 - Resuscitation doll
+                In task 3 participants will be using a chicken thigh        - ETAT charts 6 and 7
+                bone or other animal bone.                                  During each practical
+                                                                            session the facilitator
+                                                                            should not demonstrate
+                                                                            the skill but observe
+                                                                            each participant
+                                                                            practicing the skill and
+                                                                            provide encouragement
+                                                                            and correct any
+                                                                            mistakes
+
+ 10 mins        Wind-up                                                     Power point or
+ Finish 12:45   Summarize circulation section                               overheads
+                Ask for questions and allow discussion
+                Review the session, give perspective for next session,
+                give assignment on the assessment questions on
+                circulation (to be completed over lunch if time allows)
+
+ 12:45-14:00    Lunch
+
+
+
+
+22
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+DRILL 2: ORAL DRILL ON FLOW OF TRIAGE ASSESSMENT
+
+  If you assess:           And you find (the signs below), what    Correct response
+                           should you do next?
+
+  Breathing,               Breathing is adequate                   Assess circulation
+
+  Circulation              Warm hand                               Assess consciousness
+
+  Circulation              Cold hand                               Assess capillary refill
+
+  Circulation              Capillary refill is quick               Assess consciousness
+
+  Circulation              Weak and fast pulse                     Assess consciousness
+
+  Consciousness            Alert, not convulsing                   Ask for diarrhoea
+
+  Consciousness            Child is convulsing                     Check for head or neck trauma,
+                                                                   and then treat for convulsions,
+                                                                   and then quickly continue
+                                                                   assessment
+
+  Consciousness            Lethargy (no other neurological signs   Assess for diarrhoea and severe
+                           present)                                dehydration
+
+
+EXERCISE A ON "SEVERE MALNUTRITION"
+
+   Read through the sections “Look for visible severe wasting” and “Check for oedema of both
+   feet” and then be ready to do the exercise. For each photograph, answer the question:
+
+   Does the child have visible severe wasting?                     Yes                   No
+
+   Photograph 51
+
+   Photograph 52
+
+   Photograph 53
+
+   Photograph 54
+
+   Photograph 55
+
+   Photograph 56
+
+   Photograph 57
+
+   Photograph 58
+
+   Does the child have oedema?                                     Yes                   No
+
+   Photograph 59
+
+
+
+
+                                                                                                     23
+     MODULE THREE - CIRCULATION
+
+
+
+
+24
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+                                                                       Module Four
+
+                  Coma and convulsion
+
+
+
+          Plenary session                                                        MODULE OVERVIEW
+          Assessment questions “Circulation"
+          Summarise Coma and Convulsions
+          Video exercise using AVPU Coma score
+          Demonstrations: Give diazepam rectally, Give IV glucose
+          Drill: determine correct dosage
+          Practical sessions: Give diazepam rectally, Give IV glucose, Draw up
+           correct doses
+          Summarise management of coma and convulsion
+
+
+   z       Assess consciousness using the AVPU coma score                               OBJECTIVES
+
+   z       Identify the child in coma
+   z       Identify the child having convulsions
+   z       Treat the child with coma and convulsions
+   z       Explain the importance of measuring glucose
+
+
+          Computer with LCD projector or overhead projector                              MATERIALS
+
+          Video player and TV screen
+          Overheads or powerpoint presentations
+          ETAT video
+          Practical session box including:
+           -   Tuberculin syringe with no needle
+           -   D10 (10% dextrose solution); D50 (50% dextrose solution)
+           -   Syringe for IV push
+           -   NG tubing
+           -   Alcohol wipe or other spirit to clean skin
+           -   Syringes and needles (various sizes)
+           -   Ringers Lactate or normal saline solution                           continue next page
+
+
+
+
+                                                                                                  25
+                                                                          MODULE FOUR - COMA AND CONVULSION
+
+
+
+
+MATERIALS                     Dextrostix (one per participant and some extras for
+                               demonstration)
+                              Sterile lancets (one per participant and extras)
+                              Water bottle and pan (water to wash blood off dextrostix)
+                              Diazepam
+                              Bottles for diluting D50
+                              Sugar, water, teaspoon measure, measuring cup for 200 ml water
+                              Resuscitation doll
+
+
+
+CONTENTS OF DAY 2: MODULE 4
+
+ Time          Activities                                                  Methods, resources,
+                                                                           comments
+
+ Start 14:00   Revise assessment questions for circulation                 Plenary session
+ 5 mins        Distribute model answers, and give participants the         Participants manual
+               opportunity to compare these with their answers. Ask        Answers in facilitators
+               for comments; refer to the main text in participant's       manual Annex 5
+               manual, if needed. If participants have been unable to      (photocopied for all
+               complete, give as homework                                  participants)
+
+ 5 mins        Present objectives of module 4                              Plenary session
+               Explain that each objective will be presented in more       Overheads or powerpoint
+               detail later in the session                                 presentations
+
+ 15 mins       Summarise Assess Coma and Convulsions                       Plenary session
+               Facilitator should now present the section on coma          Overheads or powerpoint
+               and convulsions (see pages 33-38 of participants            presentations
+               manual). If the participants have not read this section     ETAT charts 3, 4, 8
+               they should do so at this point. Facilitator should         and 9
+               present information on an overhead or power-point
+               including:
+               Assess for coma and convulsions
+               - Is the child in coma?
+               - Is the child convulsing?
+               Treatment of coma and convulsion including manage
+               the airway, position the child, check the blood glucose,
+               give IV glucose and give an anti-convulsant
+               Reference should be made to the appropriate ETAT
+               charts and how these can be used in the emergency
+               setting
+
+ 15 mins       Video exercise AVPU Coma score                              ETAT video
+                                                                           Notes see Exercise B
+
+
+
+
+26
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+  Time                Activities                                                 Methods, resources,
+                                                                                 comments
+
+  Start 14:40         Demonstration on coma and convulsion                       For each group
+  30 mins             1. Give diazepam rectally                                  - Practical sessions box
+                         - Steps for giving diazepam rectally                    - Resuscitation doll
+                         - Do not do this treatment for infant less than 1       - Diazepam
+                            month of age                                         - Glucose 10% or 50%
+                         - Dosage of diazepam for rectal administration          - ETAT charts 8 and 9
+                         - Diazepam should be given rectally, with a             - Table 6, 7 and 8
+                            tuberculin syringe with no needle                        (participants
+                         - How far to insert the syringe into the rectum (4-         manual)
+                            5 centimeters)                                       Tell participants that
+                         - Interval before giving another dose (if               first you will
+                            convulsion doesn't stop) is 10 minutes               demonstrate this skill
+                         - Respiratory depression is a possible effect of        but that participants
+                            diazepam                                             will practice during the
+                         - If convulsion continues another 10 minutes, can       group practical sessions.
+                            give another dose of diazepam. If needed after
+                            another 10 minutes, can give a third dose of
+                            diazepam, or paraldehyde or phenobarbitone IV
+                            or IM. Three doses is the maximum.
+                         - Logic of using paraldehyde as the third dose,
+                            after two doses of diazepam (less danger of
+                            respiratory depression)
+                         - If the child already has an IV cannula in place,
+                            or is receiving IV fluids, this route may be used
+                            to give diazepam.
+                         - Dosage of diazepam differs if giving by IV
+                            (instead of rectally)
+                         - Rate to inject diazepam via IV route
+                            (0.25 mg/kg given slowly over 1 minute)
+                         - If fever is high, lower the fever by sponging the
+                            child with room-temperature water.
+                         - Paracetamol, other oral medications or fluids are
+                            not given until that is no danger of aspiration.
+                      2. Give IV glucose
+                         - D10 solution is recommended (10% dextrose).
+                         - How to make 10% dextrose if only D50 is
+                            available (dilute 1 part D50 with 4 parts sterile
+                            water to make 10% dextrose).
+                         - Insert an IV line
+                         - 1-2 ml syringe is needed to take blood for the
+                            blood glucose test
+                         - Definition of bolus; definition of IV push
+                         - Steps to do a blood glucose (dextrostix) test (put
+                            drop of blood on the strip; it is not necessary to
+                            cover all of the reagent area; after 60 seconds,
+                            wash the blood off gently with drops of cold
+                            water; compare colour with the key on the side
+                            of the bottle)
+
+
+
+
+                                                                                                         27
+                                                                          MODULE FOUR - COMA AND CONVULSION
+
+
+
+
+ Time           Activities                                                 Methods, resources,
+                                                                           comments
+
+                   - Threshold for low blood glucose (less than 2.5
+                     mmol/liter)
+                   - If blood glucose is low, it should be rechecked in
+                     30 minutes
+                   - What to do if 30 minutes later blood glucose is
+                     still low (repeat 5 ml/kg of D10 solution bolus)
+                   - How to tell when it is "safe" to feed the child
+                   - What to do if not able to feed without danger of
+                     aspiration (give milk or sugar water by NG or
+                     give IV continuing 5-10% dextrose)
+                   - Steps to insert an NG tube, how to measure how
+                     far to insert the tube
+                3. Draw Up Correct Dose Rapidly
+                   - Knowing the age or weight of a child, calculate
+                     the correct dose of the drug for the child
+                   - Draw up the dose, as quickly as possible
+
+ 15:10-15:25    Tea
+
+ Start 15:25    Group work to practice skills                              For each group
+ 80 mins        1. Give diazepam rectally                                  - Drill 3
+                2. Give IV glucose                                         - Practical sessions box
+                3. Draw Up Correct Dose Rapidly                            - Resuscitation doll
+                Repeat the task 3 until all participants have practiced    - Diazepam
+                several times to develop their speed and confidence        - Glucose 10% or 50%
+                                                                           - ETAT charts 8 and 9
+                                                                           Table 6, 7 and 8
+                                                                           (participants manual).
+                                                                           During each practical
+                                                                           session the facilitator
+                                                                           should not demonstrate
+                                                                           the skill but observe
+                                                                           each participant
+                                                                           practicing the skill and
+                                                                           provide encouragement
+                                                                           and correct any
+                                                                           mistakes
+
+ 15 mins        Wind-up                                                    Power-point/overhead
+ Finish 17:00   Summarise the coma and convulsion section, give
+                perspective for next day, give assignments, reading on
+                all "D" signs and self- assessment questions on C
+
+ 30 mins        Facilitators meeting
+
+
+
+
+28
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+EXERCISE B: VIDEO EXERCISE AVPU COMA SCORE
+
+   Convulsing (now)                 IMCI VIDEO, Tape 1, Exercise C
+
+   Lethargy                         5 minutes of explanation and examples including examples lethargic
+                                    and unconscious. (The video uses the term "unconscious." Explain
+                                    that this is coma. Some explanation and signs do not apply.) You may
+                                    show these examples, or just forward to the exercise.
+
+   Continually irritable            Practice exercise for identifying lethargic or unconscious (coma)-- 4
+   and restless                     children. (Turn off the sound and discuss the answers for each child
+                                    to be clear which children are lethargic and which are in coma.
+                                    Because the danger sign taught in the video is "lethargic or
+                                    unconscious," the video does not distinguish between the two.)
+
+
+
+DRILL 3: DETERMINE CORRECT DOSES
+
+   Ask participants, as in a drill, what dose would you give the following children?
+
+ Child's Age          Child's       IF IV GLUCOSE IS         IF IV FLUIDS ARE           IF DIAZEPAM IS
+                      Weight        NEEDED - Amount          NEEDED FOR                 NEEDED --
+                                    of D10 as bolus          SHOCK -- Ringers           Amount of 10mg/
+                                                             lactate or normal          2ml solution given
+                                                             saline as bolus            rectally
+
+ 6 weeks              3 Kg          15 ml                    60 ml                      0.3 ml
+
+ 3 months             5 Kg          25 ml                    100 ml                     0.5 ml
+
+ 4 years              16 Kg         80 ml                    320 ml                     1.6 ml
+
+ 6 months             8 Kg          40 ml                    160 ml                     0.8 ml
+
+ 18 months            12 Kg         60 ml                    240 ml                     1.2 ml
+
+ 6 months1,           4 Kg          5 ml x 4 kg = 20 ml      15 ml x 4 kg = 60 ml       0.4 ml
+ severely                                                    in 1 hour
+ malnourished
+
+ 12 months            12 Kg         60 ml                    240 ml                     1.2 ml
+
+ 2 months             5 Kg          25 ml                    100 ml                     0.5 ml
+
+ 1 month              3 Kg          15 ml                    60 ml                      0.3 ml
+
+
+
+
+                                                                                                             29
+     MODULE FOUR - COMA AND CONVULSION
+
+
+
+
+30
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+                                                                           Module Five
+
+                                                           Dehydration
+
+
+
+          Demonstration of signs of dehydration in an emergency setting            MODULE OVERVIEW
+          Management of severe dehydration in a child without malnutrition
+          Management of severe dehydration in a child with severe
+           malnutrition
+          Principles of fluid management
+          Calculation of fluid dosages
+          Follow-up treatment of the child with shock and assessment of
+           improvement
+
+
+   z       Describe the steps for assessing and classifying a child for diarrhoea         OBJECTIVES
+           and severe dehydration
+   z       Manage dehydration in the child without severe malnutrition
+   z       Manage dehydration in the child with severe malnutrition
+
+
+          Practical session box including:                                                 MATERIALS
+           -   IV cannulae
+           -   Ringers Lactate or normal saline solution
+           -   IV tubing and burettes
+          Simulated limb (e.g., a towel rolled tightly; several will be needed)
+          Tape
+          Alcohol wipe or other spirit to clean skin
+          Computer with LCD projector
+          Overhead projector
+          Video player and TV screen
+          Overheads or powerpoint presentations
+          ETAT wall charts 10 and 11
+          Flow chart 1
+          Overhead transparencies or presentation slides for computer
+                                                                                     continue next page
+
+
+
+
+                                                                                                    31
+                                                                               MODULE FIVE - DEHYDRATION
+
+
+
+
+MATERIALS                    ETAT video for lethargy, visible severe wasting and signs of
+                              dehydration
+                             IMCI Photographs booklet:
+                              -   Photographs 47-50 are examples to discuss visible severe
+                                  wasting and oedema:
+                              -   Photographs 18, 51-59 as exercise on identifying wasting and
+                                  oedema
+
+
+CONTENTS OF DAY 2: REVIEW, CLINICAL PRACTICE AND MODULE 5
+
+ Time          Activities                                                Methods, resources,
+                                                                         comments
+
+ Time          Review of self assessment day 2 "C"                       Self assessment question
+ Start 8:00    Distribute model answers, invite questions and answer     answers see Annex 5
+ 10 mins                                                                 (photocopied for all
+                                                                         participants)
+
+ 20 mins       Oral drill on flow of triage assessment                   Drill 4
+
+ Start 8:30    Clinical session in outpatients and on ward
+ 90 mins
+
+ 10:00-10:15   Tea
+
+ Start 10:15   Summarise Assess Dehydration                              Chart 1 and 10
+ 10 mins       Show ETAT chart 1 and chart 10 and talk through           Overheads or
+               - Mention how dehydration links with shock                powerpoint
+               - Explain difference between chart 10 and treatment       presentations
+                 plan C                                                  Summary flow chart
+               - Describe the steps for assessing and classifying a      from slides
+                 child for diarrhoea and severe dehydration.             Treatment Plan C
+                 Mention the signs of dehydration that you will
+                 assess: the child's general condition, whether the
+                 child has sunken eyes, and a skin pinch.
+               - Review the technique for doing a skin pinch
+               - Mention treatment (more detail later)
+
+ 15 mins       Video exercise: C                                         ETAT video
+               - Lethargy: mention how it links with AVPU                - Exercise to practice
+               - Sunken eyes                                                identifying sunken
+               - Skin pinch                                                 eyes-6 children
+               To conduct the video exercise:                               (about 7 minutes)
+               - Tell participants that during the video they will see   - Exercise to practice
+                  examples of how to assess a child with diarrhoea for      identifying slow skin
+                  severe dehydration                                        pinch-5 children
+               - For each of the children shown, answer the question        (about 6 minutes)
+                                                                         Answers to the
+                                                                         questions are shown
+                                                                         below
+
+
+
+
+32
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+  Time                Activities                                                 Methods, resources,
+                                                                                 comments
+
+  10 mins             How to use the Plan C                                      Plan C
+                      - Display the enlargement of the Plan C
+                      - Explain that "Diarrhoea Treatment Plan C: Treat
+                        severe dehydration quickly" is designed so that
+                        participants learn how to do Plan C as they will do
+                        it at their own clinics
+                      - Point to the enlargement and read the flowchart
+                        with the participants
+
+  10 mins             Calculation of numbers of drops per minute using           Table 11
+                      burette
+                      - Ask participants if they have burettes in their
+                        hospitals
+                      - Explain concept of number of drops per ml for
+                        adult and paediatric burettes
+                      - Give samples calculations and ask participants for
+                        answers
+
+  15 mins             Drill on amounts of IV fluid to give a child on            Drill 5
+                      Plan C                                                     Plan C
+                      - Conduct this drill to provide additional practice        Pencil and paper to do
+                         determining the amount of IV fluid to give a child      calculations
+                         who has diarrhoea with severe dehydration
+                         (without shock or severe malnutrition)
+                      - Tell the participants they can refer to Plan C during
+                         the drill
+                      - Tell the participants that you will state the ages and
+                         weights of children with severe dehydration
+                      - Ask them how much IV fluid should be given and
+                         over how long
+
+  10 mins             How to give fluids for a child with severe                 Overhead or powerpoint
+                      dehydration and severe malnutrition                        presentation
+                      - Explain the difference in children with severe           Tables 10 and 11
+                        malnutrition                                             (participants manual)
+                      - Show tables 10 and 11 and the flow chart 1.              Flow chart 1
+                        Provide sample calculations of fluid volumes
+                      - Provide examples for children with severe
+                        malnutrition and ask participants
+
+  10 mins             Demonstration: Give rapid fluids                           Practical session box
+                      - Insert a cannula into the towel (limb) at a realistic    including:
+                        angle and tape it down                                   - IV cannulae
+                      - Attach the fluids to the cannula and make sure the       - Ringers Lactate or
+                        infusion is running well (drips dripping freely)            normal saline
+                      - Determine the amount of fluid needed, the rate of           solution
+                        administration and number of drops per minute            - IV tubing and
+                        using burettes (adult and paediatric)                       burettes
+
+
+
+
+                                                                                                          33
+                                                                              MODULE FIVE - DEHYDRATION
+
+
+
+
+ Time           Activities                                               Methods, resources,
+                                                                         comments
+
+ 60 mins        -   Mark on the bottle to show when the required         Simulated limb (e.g., a
+                    amount has been given                                towel rolled tightly;
+                -   Explain how to reassess the child for improvement    several will be needed)
+                    and select correct continuing treatment              Tape
+                                                                         Alcohol wipe or other
+                                                                         spirit to clean skin
+                                                                         ETAT wall charts 6,7,10
+                                                                         Plan C
+
+ 10 mins        Group work to practice skills                            Practical session box
+ Finish 12:45   Give rapid fluids                                        including:
+ 12:45-14: 00   - Work in groups                                         - IV cannulae
+                - Ask the participants to work in teams of 2, a doctor   - Ringers Lactate or
+                  and a nurse, and to simulate giving IV fluids             normal saline
+                - Present case scenarios of children brought to             solution
+                  outpatients with or without malnutrition and           - IV tubing and
+                  dehydration, and with and without shock                   burettes
+                                                                         Simulated limb (e.g., a
+                                                                         towel rolled tightly;
+                                                                         several will be needed)
+                                                                         Tape
+                                                                         Alcohol wipe or other
+                                                                         spirit to clean skin
+                                                                         ETAT wall charts 6,7,10
+                                                                         Plan C
+                                                                         Case scenarios table A
+
+                Wind-up                                                  Power-point or overhead
+                Summarise assessment and management of severe
+                dehydration
+
+                Lunch
+
+
+
+
+34
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+DRILL 4: ORAL DRILL ON FLOW OF TRIAGE ASSESSMENT
+
+  If you assess:           And you find (the signs below),           Correct response
+                           what should you do next?
+
+  Breathing,               Breathing is adequate                     Assess circulation
+
+  Circulation              Warm hand                                 Assess consciousness
+
+  Circulation              Cold hand                                 Assess capillary refill
+
+  Circulation              Capillary refill is quick                 Assess consciousness
+
+  Circulation              Weak and fast pulse                       Assess consciousness
+
+  Consciousness            Alert, not convulsing                     Ask for diarrhoea
+
+  Consciousness            Child is convulsing                       Check for head or neck trauma,
+                                                                     and then treat for convulsions, and
+                                                                     then quickly continue assessment
+
+  Consciousness            Lethargy (no other neurological signs     Assess for diarrhoea and severe
+                           present)                                  dehydration
+
+  Does child have          Mother says child does not have           Assess priority signs
+  diarrhoea?               diarrhoea
+
+  Does child have          Mother says child has diarrhoea           Assess signs of severe dehydration:
+  diarrhoea?                                                         - Lethargy
+                                                                     - Sunken eyes
+                                                                     - Very slow skin pinch
+
+  Priority signs           Child is age < 2 months, but no other     (Bring to front of queue for)
+                           signs present                             immediate assessment and
+                                                                     treatment
+
+  Priority signs           Child has none of the signs               Return the child to the queue to be
+                                                                     assessed and treated in turn
+
+  Airway and               Breathing is adequate, but the child is   Quickly also assess coma/
+  breathing, and           in shock                                  convulsing, and check for head or
+  then circulation                                                   neck trauma and severe
+                                                                     malnutrition, and then treat for
+                                                                     shock (and treat coma or
+                                                                     convulsing if needed)
+
+  Airway and               Child is in respiratory distress          Check if breathing is obstructed,
+  breathing                                                          check for head or neck trauma, and
+                                                                     then treat:
+                                                                     - Manage airway
+                                                                     - Give oxygen
+                                                                     Then quickly assess circulation
+
+
+
+
+                                                                                                         35
+                                                                               MODULE FIVE - DEHYDRATION
+
+
+
+
+ If you assess:        And you find (the signs below),        Correct response
+                       what should you do next?
+
+ A and B               Child is breathing adequately,         Check for head and neck trauma,
+ C and D               circulation OK, lethargy, diarrhoea,   severe malnutrition.
+                       sunken eyes
+
+ Malnutrition in a     No severe malnutrition                 Insert IV line and begin giving
+ child with                                                   fluids rapidly following Plan C
+ diarrhoea with
+ severe
+ dehydration
+
+ Malnutrition in a     Visible severe wasting                 Do not insert IV. Proceed
+ child with                                                   immediately to assessment and
+ diarrhoea with                                               treatment.
+ severe
+ dehydration
+
+ All clinical signs    Breathing is adequate, child is in     Stop any bleeding, give oxygen,
+                       shock, has lethargy but no             Insert IV and begin giving fluids
+                       convulsions, diarrhoea with sunken     rapidly following Plan C.
+                       eyes and very slow skin pinch, no
+                       severe malnutrition
+
+ Child is breathing    Sunken eyes                            Proceed immediately to further
+ OK, lethargy, no      Visible severe wasting                 assessment and treatment for
+ shock, and history                                           severely malnourished child
+ of diarrhoea. You
+ assess for signs of
+ dehydration and
+ for severe
+ malnutrition
+
+
+
+
+EXERCISE C: ANSWER TABLE TO VIDEO EXERCISE
+
+     Does the child have sunken eyes?                          Yes                       No
+
+     Child 1                                                     X
+
+     Child 2                                                                              X
+
+     Child 3                                                     X
+
+     Child 4                                                                              X
+
+     Child 5                                                     X
+
+     Child 6                                                                              X
+
+
+
+
+36
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+   Does the skin pinch go back              very slowly?             slowly?      immediately?
+
+   Child 1                                                              X
+
+   Child 2                                                                               X
+
+   Child 3                                           X
+
+   Child 4                                                              X
+
+   Child 5                                           X
+
+
+
+
+DRILL 5 FOR TREATMENT PLAN C
+
+  Child's age and                   First give:              Then give:        Total         Total
+  weight:                         Amount     For           Amount    For       Amount        Time
+
+  14 months, 9 kg                 270 ml    30 mins        630 ml    2½ hrs    900 ml        3 hrs
+
+  8 months, 7 kg                  210 ml    l hour         490 ml    5 hrs     700 ml        6 hrs
+
+  3 years, 13 kg                  390 ml    30 mins        910 ml    2½ hrs    1300 ml       3 hrs
+
+  3 months, 5 kg                  150 ml    1 hour         350 ml    5 hrs     500 ml        6 hrs
+
+  2 years, 12 kg                  360 ml    30 mins        840 ml    2½ hrs    1200 ml       3 hrs
+
+  15 months, 10 kg                300 ml    30 mins        700 ml    2½ hrs    1000 ml       3 hrs
+
+  4 years, 15 kg                  450 ml    30 mins        1050 ml   2½ hrs    1500 ml       3 hrs
+
+  23 months, 11.5 kg              345 ml    30 mins        805 ml    2½ hrs    1150 ml       3 hrs
+
+  6 months, 6 kg                  180 ml    1 hour         420 ml    5 hrs     600 ml        6 hrs
+
+  12 months, 8 kg                 240 ml    30 mins        560 ml    2½ hrs    800 ml        3 hrs
+
+  11½ months, 8 kg                240 ml    1 hour         560 ml    5 hrs     800 ml        6 hrs
+
+  5 months, 5 kg                  150 ml    1 hour         350 ml    5 hrs     500 ml        6 hrs
+
+  10 months, 7 kg                 210 ml    1 hour         490 ml    5 hrs     700 ml        6 hrs
+
+
+
+
+                                                                                                     37
+                                                                                               MODULE FIVE - DEHYDRATION
+
+
+
+
+                                     Assess for shock
+
+
+
+
+                 Shock absent                                       Shock present
+
+
+
+
+                   Plan C                                Check for severe malnutrition
+
+
+
+
+                                          Child non-malnourished                    Child malnourished
+
+
+
+                                          Chart 7                               Chart 8
+                                          If improvement Chart 11               Then inpatient guidelines
+
+
+
+
+     Flow Chart 1 Management of the child with severe dehydration
+
+
+
+
+38
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+CASE SCENARIOS TABLE A FOR GROUP WORK (children with shock or severe dehydration with or
+without severe malnutrition)
+
+  Child's age and           First action               Development        Second action
+  weight:
+
+  8 months, 7 kg,          IV Ringers Lactate 210 ml   better             490 ml over 5 hours
+  no shock                 (30ml/kg) over 1 hour
+
+  8 months, 7 kg,          IV Ringers Lactate 140 ml   better, pulse      490ml over 5 hours
+  shock                    (20ml/kg) as fast as        slower and
+                           possible                    capillary refill
+                                                       <2 secs
+
+  15 months, 10 kg,        IV Ringers Lactate 300 ml   better             700 ml over 2 ½ hours
+  no shock                 over 20 mins
+
+  15 months, 10 kg,        IV Ringers Lactate 200 ml   not better         Repeat 200 ml as fast as
+  shock                    (20 ml/kg) as fast as                          possible, if not improved,
+                           possible                                       repeat again, if improved,
+                                                                          switch to 700 ml over 2 ½
+                                                                          hours
+
+  10 months, 5 kg,         ReSoMal orally 25 ml        better             Continue 25-50 ml (5-10 ml/
+  visible severe           (5ml/kg) every 30 min for                      kg) hourly for next 4-10 hurs
+  wasting, no shock        2 hours
+
+  18 months, 8 kg,         If lethargic or comatose:   improved           Repeat 120ml over 1 hour,
+  oedema of both           give IV Ringers Lactate +                      then switch to Resomal by NG
+  feet, shock              5% glucose or NaCl 0.45%                       tube 10ml/kg over 10 hours
+                           + 5%glucose 120 ml
+                           (15ml/kg) over 1 hour
+
+                                                       not improved       Assume septic shock, Give
+                                                                          maintenance fluids 32 ml/
+                                                                          hour (4 ml/kg/hour), send for
+                                                                          blood, transfuse 10 ml/kg over
+                                                                          3 hours
+
+
+
+
+                                                                                                           39
+     MODULE FIVE - DEHYDRATION
+
+
+
+
+40
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+                                                                              Module Six
+
+                               Case management
+                                       scenarios
+
+
+          Participants practice case management scenarios using all skills        MODULE OVERVIEW
+           learned in the group clinical sessions
+
+
+   z       To manage the child presented in the case scenario by using skills            OBJECTIVES
+           learned in the group clinical sessions
+
+
+          Case scenarios table B or other scenarios that facilitators make up            MATERIALS
+           themselves
+          Copies of the ETAT charts and treatment boxes, displayed for easy
+           reference
+          Resuscitation doll
+          Practical session box including:
+           -   Equipment and supplies for giving oxygen: nasal catheter and/or
+               nasal prongs, oxygen source and appropriate equipment for
+               delivering oxygen
+           -   Equipment and supplies for giving IV fluids: IV needles, material
+               to clean the site, tape, bottles, tubing, Ringers lactate
+           -   Equipment and supplies for giving IV and NG glucose: D10
+               (10% dextrose solution), IV needles and tape, syringes and
+               needles, NG tubing
+           -   Equipment and supplies for doing dextrostix test
+           -   Equipment and supplies for intraosseous infusion:21g needles for
+               intraosseous insertion, materials to clean the site, 3 way taps
+          Diazepam, tuberculin syringe
+          Apparatus for stabilizing the head and neck
+
+
+
+
+                                                                                                 41
+                                                                     MODULEMODULE
+                                                                            SIX - CASE
+                                                                                    SEVEN
+                                                                                       MANAGEMENT
+                                                                                          - IMPLEMENTING
+                                                                                                   SCENARIOS
+                                                                                                         ETAT
+
+
+
+
+CONTENTS OF DAY 3: MODULE 6
+
+ Time          Activities                                                     Methods, resources,
+                                                                              comments
+
+ Start 14:00   Demonstration                                                  See materials
+ 45 mins       Role-play for poor practice:
+               - Arrange a typical role-play where such cases are
+                 mismanaged and let participants comment and learn
+                 from it.
+               - Repeat scenario with good management
+               Demonstrate good management
+               - Ask participants to watch as you assess and initiate
+                 treatments for a first case, checking their TRIAGE
+                 flowcharts and referring to the treatment boxes as you
+                 work. You may ask some participants to assist you in
+                 the demonstration. Tell them that they will then each
+                 assess and treat another case.
+               - Present some initial information about the case.
+               - Then assess airway and breathing and describe what is
+                 found. Explain what you do as you do it; give
+                 treatment for a breathing problem or, if that is not
+                 necessary, continue the assessment.
+               - Then assess the rest of the emergency signs, describing
+                 your procedures and what you find (for example, "I am
+                 checking for lethargy and sunken eyes, and I see she is
+                 alert and fussy, resisting us. Her eyes do not look
+                 sunken either.")
+               - When you identify a treatment that is needed, quickly
+                 gather whatever supplies you need to do the treatment
+                 and begin. For example, gather supplies for an IV
+                 infusion. Then do or pretend to do the steps of locating
+                 the site, cleaning it, inserting and taping the IV needle,
+                 calculating the amount needed, attaching the fluid,
+                 marking the bottle, checking the flow. The more
+                 actions you can take the better the demonstration will
+                 be, for example, inserting the needle into a towel "arm,"
+                 taping it in place, and starting the IV flowing will
+                 better simulate the real actions expected and their
+                 timing than only an oral description of doing these
+                 steps.
+               - After you have completed the assessment and initiated
+                 any treatments, let participants ask any questions
+                 about what you have done.
+               - Then describe a reassessment of the patient and what
+                 you find, for example, doing another dextrostix test, or
+                 assessing whether convulsions have stopped, or
+                 reassessing a child with shock after the first bolus of
+                 fluid has run in. Decide the appropriate subsequent
+                 treatment and initiate it.
+               - At a good point, conclude the demonstration. Review
+                 important points about what you did and why and
+                 answer any questions about the case.
+
+
+
+42
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+  Time                Activities                                                   Methods, resources,
+                                                                                   comments
+
+  14:45-15:00         Tea
+
+  Start 15:00         Group work to practice skills                                See materials
+  105 mins            Case management scenarios
+                      - Ensure that each member of the group does at least one
+                        clinical scenario
+                      - Tell the participant that he is in charge of the care of
+                        the child that you will describe to him (the doll on the
+                        table) and that he may ask for assistance from others
+                        in initiating treatment.
+                      - Describe the case and present the breathing signs. Then
+                        ask the participant what do you do next? Participant
+                        should indicate what to do first, second etc-including
+                        both what he will assess and what treatments to do.
+                      - The participant should proceed in the same way that
+                        you did in the demonstration, through assessment,
+                        deciding treatments, and giving (pretending to give)
+                        treatments, all the while describing aloud what he is
+                        doing.
+                      - As the participant describes what he is assessing, tell
+                        him the findings (for example, "The child is visibly
+                        wasted and has oedema in both feet.") Give the
+                        participant feedback as he proceeds and ask questions
+                        as needed to be sure he is covering all the steps.
+                        ("That's right. You did that well. What would you do
+                        next?")
+                      - The first time that a participant manages a case in this
+                        way, he will be slow, unsure of the ETAT process, and
+                        awkward, and this is to be expected. With practice,
+                        however, participants should become more comfortable
+                        with the ETAT process, more confident handling the
+                        equipment, and quicker.
+
+  Start 16:45         Summarise section on dehydration                             Power-point/overhead
+  15 mins             - Allow participants to discuss problems they encounter      See Annex 6
+                        during the scenarios and ways in which they were able
+                        to overcome the difficulties
+                      - Emphasize points that participants are forgetting or
+                        having difficulty understanding during the other skill
+                        stations and at this station.
+                      - Give out assignments for next day and ETAT course
+                        evaluation
+
+  30 mins             Facilitators meeting
+
+
+
+
+                                                                                                      43
+                                                                             MODULEMODULE   SEVEN
+                                                                                    SIX - CASE    - IMPLEMENTING
+                                                                                               MANAGEMENT        ETAT
+                                                                                                           SCENARIOS
+
+
+
+
+                            Case management scenarios Table B
+                            The clinical signs to describe are listed below. Provide this information about
+                            the signs only when the participant says that he is looking for that sign or signs.
+                            Write notes in the right column to help you give feedback to this or later
+                            participants. Also note follow-on questions that you want to ask, for example, a
+                            finding on reassessment of a sign.
+
+SCENARIO 1
+
+     A 3-year-old girl is carried in her mother's arms wrapped in a blanket, in the line.
+
+     Input of facilitator                              Correct response
+
+                                                       Assess Airway and Breathing
+
+     Breathing OK                                      Assess Circulation
+
+     Cool hand                                         Check cap refill
+
+     Normal capillary refill (1.5 seconds)             Assess Consciousness
+
+     Alert                                             Ask for Diarrhoea
+
+     Diarrhoea x 2 days-mom says 4 to 5 loose          Assess for Dehydration
+     watery stools
+
+     Skin pinch takes 3 seconds                        Continue assessment
+
+     Eyes appear sunken a bit                          Triage as emergency
+
+                                                       Check for severe malnutrition
+
+     If not checked for malnutrition:
+     Child goes into shock and cardiac arrest
+
+     Some oedema in both feet OR                       Refer for immediate assessment by senior health
+     Visible severe wasting.                           worker
+
+     (Blood Glucose = 5mmol/l)                         Child severely malnourished, should receive oral
+                                                       ReSoMal, 5ml/kg in 30 mins for 2 hours 45 mls
+                                                       in first ½ hour.
+
+
+
+
+44
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+SCENARIO 2
+
+   2 year old male. Mother rushes in- he convulsed 30 minutes ago and she is frightened.
+
+   Input of facilitator                               Correct response
+
+                                                      Assess Airway and Breathing
+
+   Breathing fast but no cyanosis, no distress,       Assess Circulation
+   no signs of obstructed breathing
+
+   Feels very hot. Capillary refill fast- less than   Assess Consciousness
+   a second. Fast but strong pulse
+
+   Lethargic but responds to voice by crying          Ask for Diarrhoea
+
+   Diarrhoea today                                    Assess for Priority signs
+   Skin pinch less than 2 seconds
+   Eyes not sunken. Crying big tears
+
+   No visible wasting or oedema                       Triage as Priority
+   No pallor                                          (hot and lethargy)
+
+
+SCENARIO 3
+
+   1-year-old infant seized at home then again outside the clinic. Child is unconscious; breathing
+   sounds very wet and noisy and there is drool coming from his mouth.
+   He is looking a little blue.
+
+   Input of facilitator                               Correct response
+
+   If participant goes to rest of the exam or         Triage as emergency, cyanosis
+   does not adequately manage the airway, say         Manage airway, position child, insert Guedel's
+   the child is now very blue and is seizing          airway. Give oxygen
+                                                      Assess breathing
+
+   After participant manages the airway, say          Continue assessment
+   your airway management has helped. Child           Assess Circulation
+   is breathing much better, not blue, and no
+   longer noisy. Tongue must have been in the
+   way
+
+   Warm hand                                          Assess Consciousness
+
+   Moves only to pain                                 Position child
+                                                      Continue assessment
+
+   AVPU = P                                           Check glucose
+
+   Blood glucose < 2 mmol/L                           IV Glucose give 25 mls of 10% glucose
+
+   If no oxygen                  Æ stops breathing
+   If no glucose check           Æ seizures
+
+
+
+                                                                                                       45
+                                                                            MODULEMODULE
+                                                                                   SIX - CASE
+                                                                                           SEVEN
+                                                                                              MANAGEMENT
+                                                                                                 - IMPLEMENTING
+                                                                                                          SCENARIOS
+                                                                                                                ETAT
+
+
+
+
+SCENARIO 4
+
+     4-year-old girl with cough and pain in her throat. Crying loudly.
+
+     Input of facilitator                             Correct response
+
+                                                      Assess circulation
+
+     Squirms away so you cannot touch her             Assess for priority signs
+     hand but foot feels warm                         Continuous irritable?
+     Mother says she has not had diarrhoea
+     Arm and legs are not thin
+
+     Yes, continuous irritable                        Triage as priority
+
+
+
+SCENARIO 5
+
+     4-year-old boy hit by bicycle. Carried in on blanket.
+
+     Input of facilitator                             Correct response
+
+     Unconscious- responds to deep pain               Triage as emergency
+     Breathing sounds obstructed                      Assess airway, stabilize neck, manage airway:
+                                                      inspect mouth. Remove foreign bodies, clear
+                                                      secretions, jaw thrust without head tilt, assess
+                                                      breathing, if normal continue assessment, if
+                                                      obstructed insert tube.
+
+     Cold hand with slow capillary refill             Treat for shock, check for bleeding, get help,
+
+     Bleeding from lower leg                          Apply pressure. No tourniquet.
+                                                      Set up IV drip,
+                                                      Give oxygen
+                                                      Continue assessment
+
+
+
+
+46
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+SCENARIO 6
+
+   14-month-old girl has been sleeping all day. Irritable when awoken, rouses to loud voice or shaking
+   her arm.
+
+   Input of facilitator                             Correct response
+
+                                                    Assess Airway and Breathing
+
+   Very deep breathing at normal rate, with         Triage as Emergency
+   some chest indrawing                             Give oxygen, assess breathing, if normal, assess
+                                                    Circulation
+
+   Warm hand                                        Assess Consciousness
+
+   AVPU?                                            AVPU = Voice
+                                                    Ask for Diarrhoea
+
+   No diarrhoea says mother when asked              Assess for Priority signs
+
+   Some pallor                                      Triage as priority, lethargy
+   No visible severe wasting or oedema
+
+
+SCENARIO 7
+
+   A 3-year-old boy is carried into outpatient department in his father's arms.
+   He is pale, floppy and having difficulty breathing.
+   His father says he has been unwell and coughing for 3 days. Weight 14kg.
+
+   Input of facilitator                             Correct response
+
+   Respiratory rate is fast with marked             Triage as Emergency
+   intercostal recession and a tracheal tug         Assess airway
+
+   Airway patency established                       Give oxygen, 1-2L/min by nasal prongs or nasal
+                                                    catheter
+
+   If no oxygen is given the child worsens to       (? Bag and mask); assess breathing, if not
+   respiratory arrest                               obstructed, assess circulation
+
+   His hands are cold. Cap. Refill = 6 sec.         Treat for shock IV or intraosseous access Normal
+                                                    saline or Ringer's
+                                                    20 mls/ kg = 280 mls stat
+                                                    Reassess (repeat x2)
+                                                    Blood samples for glucose/Hct/MPs
+
+   MPs 0 PCV                     = 26%              After treatment of shock continue assessment
+   Blood glucose                 = 4 mmols/L
+   Pneumonia and shock
+
+
+
+
+                                                                                                       47
+                                                                           MODULEMODULE   SEVEN
+                                                                                  SIX - CASE    - IMPLEMENTING
+                                                                                             MANAGEMENT        ETAT
+                                                                                                         SCENARIOS
+
+
+
+
+SCENARIO 8
+
+     A 4 months old baby is brought to hospital with fever, rapid breathing and refusing to breast-feed.
+     He has had 2 episodes of vomiting and diarrhoea. Weight 5 kg.
+
+     Input of facilitator                            Correct response
+
+     Airway patency established                      Assess Breathing
+
+     Respiratory rate is fast, no severe distress    Assess Circulation
+
+     Hands are cool Cap refill is 6 sec.             Check central pulses, femoral first
+     If attempted: Peripheral pulses not palpable
+
+     Femoral pulse palpable is fast and weak         Triage as emergency, treat for shock
+                                                     Obtain venous access or intraosseous, sample for
+                                                     glucose/MPs and Hct; start drip with
+                                                     20mls/kg Ringers Lactate = 100 mls IV stat
+                                                     Give oxygen,
+                                                     1L/min O2 via nasal catheter or nasal prongs
+
+     AVPU = P                                        While doing the above continue assessment
+
+     Blood glucose < 2 mmol/L                        Check glucose
+     (MPs. 0 PCV = 40%)                              IV Glucose give 25 mls of 10% glucose
+
+     If no oxygen              Æ stops breathing
+     If no glucose check       Æ seizures
+     If no shock treatment     Æ death
+
+
+
+
+48
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+SCENARIO 9
+
+   A 10 months old baby boy is bought in with history of 24 hours of vomiting and diarrhoea.
+   Weight 8 kg.
+
+   Input of facilitator                          Correct response
+
+                                                 Assess airway and breathing
+
+   Her breathing is normal with no distress      Assess circulation
+
+   Her hands feet are cold and look grey         Triage as Emergency (shock)
+   Cap refill - 4 sec.                           Establish IV/IO access,
+                                                 give 160 mls of Ringers Lactate x 2
+                                                 Give oxygen, 1-2L/min O2 by nasal catheter
+
+   AVPU = P                                      Check blood glucose
+
+   Blood glucose 1.5mmols/L                      Give glucose 40 mls of 10% IV.
+
+   If no shock management Æ dies
+   If no glucose Æ seizures, and if untreated
+                 Æ to coma and death
+
+   She continues to have D and V                 Plan C
+
+   No improvement until oral fluids,
+   she is thirsty!
+
+
+
+
+                                                                                               49
+                                                                            MODULEMODULE
+                                                                                   SIX - CASE
+                                                                                           SEVEN
+                                                                                              MANAGEMENT
+                                                                                                 - IMPLEMENTING
+                                                                                                          SCENARIOS
+                                                                                                                ETAT
+
+
+
+
+SCENARIO 10
+
+     A 2-year-old boy is carried in by his grandmother. Weight 12kg. He is hot and having a seizure.
+
+     Input of facilitator                            Correct response
+
+                                                     Triage as Emergency (convulsion).
+                                                     Position child, jaw thrust, suction
+                                                     Diazepam pr or Paraldehyde
+                                                     Assess airway and breathing
+
+     Airway patency established but noisy,           O2 by nasal cannula; 1 litre/min
+                                                     (+ Bag and mask)
+
+     If no airway established Æ apnoea and
+     finally death
+
+     Improves                                        Assess circulation
+
+     Hands are warm, colour pink                     Assess consciousness
+
+     AVPU = U                                        Check blood glucose
+
+     Blood glucose 2 mmol/L                          Give glucose 60 mls of 10% IV.
+
+     Continues to convulse MPs+++                    Diazepam pr or Paraldehyde
+
+     If no BM stick, continues to convulse           Paraldehyde pr or Diazepam
+     Æ seizures continue and then apnoea, and        Phenobarbitone IM/IV
+     finally death
+
+
+
+
+50
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+SCENARIO 11
+
+   An 18 month old boy has been unwell and feverish for 2 days. He complains of abdominal pain
+   and his mum has noticed that he has fast breathing. Weight 11 kg.
+
+   Input of facilitator                           Correct response
+
+                                                  Assess airway
+
+   Patency established                            Assess breathing
+
+   He is grunting and distressed with subcostal   Triage as Emergency
+   recessions with fast breathing                 (severe respiratory distress)
+                                                  O2 given by nasal cannula 1 litre/min
+                                                  (? Bag and mask).
+                                                  Assess circulation
+
+   His hands are hot                              Assess consciousness
+
+   He starts to convulse                          Position child, give Diazepam pr or Paraldehyde;
+                                                  check and give glucose
+
+   Blood glucose 1.5mmol/L                        1V glucose 55 mls of 10%.
+
+   If given glucose stops seizure                 Pneumonia
+   If given anticonvulsants without glucose
+   continues to seize
+
+
+SCENARIO 12
+
+   A 10-week-old baby is brought in. His mother says he will not suckle today. Yesterday he was
+   crying a lot. Weight 3.5 kg.
+
+   Input of facilitator                           Correct response
+
+                                                  Assess airway
+
+   Patency established                            Assess breathing
+
+   Breathing is normal                            Assess circulation
+
+   The hands are cool, the Cap. Refill = 3 sec.   Assess consciousness
+
+   AVPU = A but he is irritable                   Ask for diarrhoea
+   He is hot and jittery
+
+   No history of diarrhoea, but has vomited       Assess priority signs
+   twice                                          Triage as Priority (hot and irritable)
+
+   Blood glucose = 1mmol/L
+   Give glucose 10% 17.5 ml iv
+   Diagnosis meningitis with hypoglycaemia
+
+
+
+                                                                                                     51
+                                                                              MODULEMODULE
+                                                                                     SIX - CASE
+                                                                                             SEVEN
+                                                                                                MANAGEMENT
+                                                                                                   - IMPLEMENTING
+                                                                                                            SCENARIOS
+                                                                                                                  ETAT
+
+
+
+
+SCENARIO 13
+
+     1-year-old baby girl with a 2-day history of diarrhoea and vomiting. Weight 10 kg. She is listless.
+
+     Input of facilitator                             Correct response
+
+                                                      Assess airway and breathing
+
+     Airway and breathing OK                          Assess circulation
+
+     Warm hand                                        Assess consciousness
+
+     AVPU = voice. Will not drink                     Check for dehydration
+
+     Skin pinch lasts 3 seconds                       Triage as emergency, severe dehydration
+     Eyes sunken, mum agrees                          Check for severe malnutrition
+
+     No visible wasting or oedema                     Plan C. 300mls in the first ½ hour. 700 mls in
+                                                      the next 2.5 hours of IV Ringers Lactate
+
+
+
+SCENARIO 14
+
+     A 14-month-old girl who has been sleeping all day and her mother has been worried about her.
+     Weight 11 kg.
+
+     Input of facilitator                             Correct response
+
+                                                      Assess airway and breathing
+
+     Airway OK                                        Triage as Emergency (severe respiratory distress)
+     Breathing fast, recession ++ and harsh           Give oxygen via nasal prongs 1 litre/min.
+     inspiratory noise. No cyanosis                   Assess circulation
+
+     Warm hands                                       Assess consciousness
+
+     AVPU = Voice (Blood glucose = 4mmol/l)           Ask for diarrhoea
+
+     No diarrhoea                                     Assess priority signs
+
+     No other signs                                   Triage as emergency
+
+
+
+
+52
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+                                                                  Module Seven
+
+                                  Implementing ETAT
+
+
+
+          Preparation for ETAT implementation in the participant's hospital     MODULE OVERVIEW
+
+
+   z       1.   Understand and explain the role of ETAT within the overall             OBJECTIVES
+           management of the child with serious infection or severe
+           malnutrition
+   z       Describe why both knowledge/skills and system changes (process
+           improvement) are needed to successfully implement ETAT
+   z       Understand and explain the role of ETAT within the overall
+           management of the child with serious infection or severe
+           malnutrition
+   z       Make a plan to train key staff in ETAT (at one hospital or multiple
+           sites/regionally)
+   z       Develop action plans to initiate the system changes (improvement
+           process) needed to implement ETAT in his/her hospital
+   z       Decide how to know that ETAT is successfully implemented in your
+           hospital (or within a collaboration of hospitals implementing ETAT)
+   z       Describe the value of working collaboratively across hospitals to
+           improve the care of children with emergency conditions (and with
+           serious infections or severe malnutrition)
+   z       Describe and understand how ETAT training fits into wider context
+           of improvement initiatives in place in your country which address
+           the quality of care for children in hospital
+
+
+          Computer with LCD projector or video player and TV screen                    MATERIALS
+          Overhead projector
+          Prepared power-point or overhead presentations
+
+
+
+
+                                                                                               53
+                                                                             MODULE SEVEN - IMPLEMENTING ETAT
+
+
+
+
+CONTENTS OF DAY 4: MODULE 7
+
+ Time          Activities                                                      Methods, resources,
+                                                                               comments
+
+ Start 8:00    Review of self assessment "D"                                   Self assessment
+ 10 mins       Distribute model answers, invite questions and answer           question answers see
+                                                                               Annex 5 photocopied
+                                                                               for all participants
+
+ 20 mins       Implementing ETAT                                               ETAT standards on
+               Introduction: Present ETAT standards                            power-point or
+                                                                               overhead
+
+ 30 mins       Plenary discussion
+               Plan ETAT for your own work place
+               Start the exercise with a discussion on the reasons for not
+               implementing ETAT in peripheral health unit. Make sure
+               that the participants bring up the following aspects:
+               - Why?       Arguments to implement ETAT (advocacy)
+               - Who? Staff categories involved in ETAT
+               - Where? Flow of patients and space and or
+                            accommodation for emergency care
+               - When? Timing of care
+               - What? Equipment and supplies needed (material
+                  resources)
+
+ 60 mins       Group work                                                      Butcher paper and
+               Divide participants into small groups (hospital groups or       marker Marker pens
+               regional groups)                                                Tape
+               Ask participants to do the exercise in their groups,
+               start with a brainstorm on the questions why, who, where,
+               when and with what
+               Make sure that participants complete the checklist in the
+               Annex "Resources required to implement ETAT" page 61
+               in the participant's manual.
+               Facilitators to provide feedback on their list of priority
+               equipment, use ETAT standards to assess the
+               recommendations made by the participant
+               Prepare summary of findings in form of recommendations
+               to hospital administration
+               Develop individual plan of action for implementing ETAT
+               in each hospital group
+
+ 10:00-10:15   Tea
+
+ 60 mins       Feedback from group work in plenary session
+
+ 45 mins       Present main findings from evaluation, course certificate       Annex 6
+               and closing ceremony
+
+ 12:00         Finish
+
+
+
+
+54
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+ETAT STANDARDS
+
+          Children are assessed for severity/ priority need ( triage )                   LAYOUT AND
+           immediately on arrival ( at least during high patient-load periods )             STRUCTURE
+          Patients do not have to wait for registration, payment, their turn etc
+           before a first assessment is done and action taken
+          A wall chart or job aid for identifying children by severity of
+           condition is located in the emergency admissions area
+
+                                                                                             STAFFING
+          A qualified staff is designated to carry out triage
+          A health professional is available without delay to manage children
+           determined to have an emergency condition
+
+                                                                                    DRUG, SUPPLIES AND
+          Essential drugs for emergency conditions (anticonvulsants, glucose,
+                                                                                            EQUIPMENT
+           iv fluids) are always available and free
+          Essential lab tests (Hb or PCV, glucose) are available
+          Essential equipment (needles and syringes, nasogastric catheters,
+           oxygen equipment, nebulizer or spacers) is available
+
+
+          The staff doing triage is trained in the guidelines and can implement    CASE MANAGEMENT
+           them appropriately when the emergency room gets busy during peak
+           hours
+          Staff is skilled in the management of common emergency conditions
+           and starts treatment without delay: Management of convulsions,
+           lethargy, severe respiratory distress, shock and severe dehydration
+
+
+
+
+                                                                                                    55
+     MODULE SEVEN - IMPLEMENTING ETAT
+
+
+
+
+56
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+                                                                                Annex One
+
+          Generic agenda for a
+        3 ½ day training on ETAT
+
+Day 0                     Preparations, briefing of facilitators
+
+
+Day 1
+8:00-9:00                 Opening, introduction of course and participants, objectives of the course
+9:00-10:00                Module one: Triage and the ABCD concept
+                          Flow of the triage, objectives of triage process Emergency, Priority, Non-urgent
+10:00-10:15               Tea
+10:15-10:30               Triage assessment drill
+10:30-12.45               Module two: Airway and breathing
+                          Management of airway, management of the choking child, ventilation by bag and
+                          mask
+12:45-14:00               Lunch
+14:00-15:00               Video and explanation of signs of severe respiratory distress and when to give
+                          oxygenDemonstration of oxygen concentrator and delivery of oxygen
+15:00-15:15               Tea
+15:15-16:45               Group work to practice skills
+16:45-17:00               Wind-up
+17:00                     Facilitators meeting
+
+
+Day 2
+08:00-08:30               Revision of triage, airway and breathing, oral drill on triage
+08:30-10:00               Clinical practice session
+10:00-10:15               Tea
+10:15-11:05               Module three: Circulation
+                          Assessment of circulation, management of shock in the child with and without
+                          severe malnutrition, inserting IV lines, giving fluids rapidly for shock and inserting
+                          intraosseous lines
+
+
+                                                                                                             57
+                                                   ANNEX ONE - GENERIC AGENDA FOR A 3 ½ DAY TRAINING ON ETAT
+
+
+
+
+11:05-12:35   Group work to practice skills
+12:35-12:45   Wind-up
+12:45-14:00   Lunch
+              Clinical demonstration of severe signs if present
+14:00-14:10   Review assessment questions for circulation
+              Present objectives of module 4
+14:10-14:40   Module four: Coma and Convulsion
+              Summarise assessment of coma and convulsion
+              Video on AVPU Coma score
+14:30-15:10   Demonstration on management of coma and convulsion, giving diazepam rectally,
+              giving IV glucose and drawing up correct dose rapidly
+15:10-15:25   Tea
+15:15-16:45   Group work to practice skills
+16:45-17:00   Wind-up
+17:00         Facilitators meeting
+
+
+Day 3
+08:00-08:30   Review assessment questions for coma and convulsion
+              Oral drill on triage
+08:30-10:00   Clinical practice session
+10:00-10:15   Tea
+10:15-11:35   Module five: Dehydration
+              Assessment of dehydration, management of dehydration, video on the signs of
+              dehydration, how to use Treatment Plan C, fluid management in severe malnutrition,
+              shock and dehydration
+11:35-12:35   Group work to practice skills
+12:35-12:45   Wind-up
+12:45-14:00   Lunch
+14:00-14:45   Module six: Case management scenarios
+              Role play for poor practice, demonstration of good management
+14:45-15:00   Tea
+15:00-16:45   Group work to practice skills: Case management scenarios
+16:45-17:00   Wind-up, give out ETAT course evaluation
+17:00         Facilitators meeting
+
+
+
+
+58
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+Day 4
+08:00-08:10               Review assessment questions for dehydration
+08:10-08:30               Module seven: Implementing ETAT
+                          Standards of care for triage and assessment
+08:30-10:00               Planning ETAT for your own work place
+                          Plenary discussion
+                          Group work
+10:00-10:15               Tea
+10:15-11:15               Feedback from group work to plenary
+11:15-12:00               Feedback from evaluation, give out course certificates and closing ceremony
+12:00                     Finish
+
+
+
+
+                                                                                                        59
+     ANNEX ONE - GENERIC AGENDA FOR A 3 ½ DAY TRAINING ON ETAT
+
+
+
+
+60
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+                                                                         Annex Two
+
+          Checklist of supplies
+       needed for work in class
+
+Supplies needed for each person include:
+
+      name tag and holder                             felt tip pen
+      paper                                           highlighter
+      ball point pen                                  2 pencils
+      eraser                                          folder to collect answer sheets
+      ……………………………..                                   ……………………………..
+
+Supplies needed for each group include:
+
+      paper clips
+      pencil sharpener                                2 rolls transparent tape
+      stapler and staples                             rubber bands
+      extra pencils and erasers                       1 roll masking tape
+      flipchart pad and markers OR                    scissors
+       blackboard and chalk
+
+Instructional materials needed in each small group
+
+Item needed                                        Number needed
+
+      Facilitator guide                              1 for each facilitator
+      Participants manual                            1 for each facilitator and participant
+      IMCI photograph booklet, if any                1 for each facilitator and participant
+      Videotapes/DVD (oxygen, AVPU,                  The titles and sections are listed in facilitator’s
+       signs malnutrition and wasting,                 guidelines for the corresponding chapters
+       ETAT video)
+      Set of 10 ETAT wall charts (Large version       1 set for each small group
+       — to display on the wall)
+      video/DVD player                                1 per course
+      LCD and/or overhead projector                   1 per course
+
+
+
+
+                                                                                                       61
+                                                            ANNEX TWO - CHECKLIST OF SUPPLIES NEEDED FOR WORK IN CLASS
+
+
+
+
+Equipment for the training in practical session box
+
+Equipment                                                                 Number needed for each group
+Doll - child size                                                         1 (at least one of either doll)
+Doll - baby size                                                          1 (at least one of either doll)
+(Baby head with lungs for practicing bag and mask)                        1 if available
+Self-inflating bag (AMBU) - middle size,1500ml                            1
+Self-inflating bag (AMBU) - Adult size                                    1
+Mask for infant - round clear plastic                                     1
+Mask - middle size for toddler preferably clear                           1
+Mask - large size for older children preferably clear                     1
+Oropharyngeal (Guedel )airways
+Adult                                                                     1
+Child                                                                     1
+Infant                                                                    1
+O2 tubing nasal prongs                                                    5
+O2 tubing catheters 8 FG                                                  5
+Suction catheters size 15 FG                                              5
+IV infusion sets                                                          5
+Needles 21G ( for intraosseous insertion)                                 1 per participant and 10 extra
+Syringes
+5ml                                                                       1 per participant and 5 extra
+10ml or 20ml                                                              5
+Scalp vein needles 21-23G                                                 5
+Cannulae 22-24G                                                           5
+Sterile lancets                                                           1 per participant and 5 extra
+IV fluids for giving fluids and neck stabilisation                        2 X 1L bottles or bags
+Normal Saline                                                             2 X 1L bottles or bags
+Ringer’s Lactate                                                          1 X 1L bottles or bags
+10% Dextrose                                                              1 of each per group
+Tape (3 sizes)                                                            10
+Gauze swabs                                                               3
+Small cup to put some coloured water
+Cotton wool
+Cardboard to make splints
+Towels (for neck stabilisation)
+
+Equipment for the whole group
+
+Food colouring                                                            1 per course
+Chicken thighs if not available can use alternatives such
+as young pork or lamb ribs                                                1 per participant and facilitator
+1 ml syringe (Tuberculin) for per rectum drugs                            5
+Test strips (Dextrostix)                                                  10
+Scale for blood glucose (on dextrostix container)                         1
+DRUGS                                                                     Number for whole group
+Diazepam IV or paraldehyde                                                5
+50% Dextrose                                                              5
+ORS packets                                                               5
+ReSoMal commercially bought or prepared                                   5
+
+
+
+
+62
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+                                                                          Annex Three
+
+         Training participants in
+      triage only and ETAT and
+                           IMCI
+A: Training participants in triage assessment only
+Some health workers will have responsibility to do triage assessment of children
+but not administer treatment. For example, this would be the situation for a
+health worker who will only triage children in a long queue. If a child with
+emergency signs is found, the health worker would call for immediate assistance
+or safely take the child to an emergency treatment area where he will be given
+emergency care by other staff. Eligible for this type of training are watchmen,
+gate keepers, administrative staff and drivers. Training for this worker should be
+modified to match his responsibility. Training should cover:
+      Module 1 of the ETAT course
+      Recognition of all the emergency clinical signs
+      Flow of the assessment flowchart (Here the worker learns the
+       appropriate response when certain emergency signs are found, to either
+       to continue the assessment or stop assessment and immediately transfer
+       the child to emergency room)
+The training and clinical practice may be the same as that of other workers
+during Module 1. Thereafter, training should focus on identifying the emergency
+clinical signs and the flow of the ETAT chart 1: Triage of all sick children.
+assessment flowchart. The health worker should practice these skills in a situation
+similar to the actual work situation. For example, the participant(s) and a
+facilitator would go to the queue of children and practice doing triage assessment
+and transfer of children with emergency signs.
+
+
+
+B: ETAT and IMCI training courses
+Some participants in the ETAT course will have completed training on the
+Integrated Management of Childhood Illness for first-level health workers. In the
+IMCI course, participants learned and practised identifying many clinical signs.
+Some of those clinical signs are also used in the ETAT course. The ETAT training
+will teach both new clinical signs, and review the IMCI signs relevant to ETAT.
+Listed below are all the clinical signs in the ETAT flowchart. The signs that will
+already be known by participants who have had IMCI training are listed on the
+right.
+
+
+
+                                                                                      63
+                                                   ANNEX THREE - TRAINING PARTICIPANTS IN TRIAGE ONLY AND ETAT AND IMCI
+
+
+
+
+CLINICAL SIGNS AND CLASSIFICATIONS IN THE ETAT FLOWCHART
+
+ ETAT signs not taught in IMCI                 ETAT signs taught in the IMCI course
+
+
+ Not breathing                                 Coma ("unconscious" in IMCI training)
+ Central cyanosis                              Convulsing
+ Severe respiratory distress                   Diarrhoea
+ Obstructed breathing                          Lethargy
+ Cold hand with:                               Sunken eyes
+ Capillary refill longer than 3 seconds        Very slow skin pinch
+ Weak and fast pulse                           Visible severe wasting
+ Sick young infant less than 2 months of age   Oedema of both feet
+ Major burn                                    Severe pallor
+ Any respiratory distress                      Continually irritable and restless
+ Urgent referral note from another facility
+ Head or neck trauma
+
+
+                                               ETAT classifications taught in the IMCI course
+                                               (participants learn the combination of clinical signs for
+                                               these classifications):
+                                               Severe dehydration
+                                               Severe malnutrition
+
+
+
+
+64
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+                                                                                  Annex Four
+
+                Participant's checklists
+
+
+
+A: Clinical signs
+RECORD IN THE BOX BELOW EACH CLINICAL SIGN YOU OBSERVE IN A CHILD DURING
+DEMONSTRATION OR CLINICAL PRACTICE
+
+  Emergency Signs Observed
+
+  Not breathing                 Obstructed breathing      Central cyanosis         Severe respiratory distress
+
+
+  Cold hand                     Capillary refill longer   Weak and fast pulse
+                                than 3 seconds
+
+
+  Coma                                                                             Convulsion
+
+
+  Severe dehydration            Sunken eyes               Very slow skin pinch     Head/neck trauma
+
+
+
+
+  Priority Signs Observed
+
+  Any respiratory distress      Visible severe wasting    Oedema of both feet      Severe pallor
+
+
+  Sick young infant less        Continually irritable     Lethargy                 Hot child
+  than 2 months of age          and restless
+
+
+  Poisoning                     Major burn                Urgent referral note
+                                                          from another facility
+
+
+
+
+                                                                                                                 65
+                                                                 ANNEX FOUR - PARTICIPANT'S CHECKLISTS
+
+
+
+
+B: Practical skills completed
+
+ Practical sessions           Skills                                Instructor's Initials
+
+
+ 1. Manage the Airway         Back slaps/chest thrusts
+
+
+                              Stabilize the cervical spine
+
+
+ 2. Position the Child        Correct head position (infants)
+
+
+                              Correct head position (children)
+
+
+ 3. Give oxygen               Ventilate with bag and mask
+
+
+                              Correct attachment of O2 tubes
+
+
+ 4. Give diazepam rectally    Calculate correct dose
+
+
+                              Measure distance to rectum
+
+
+ 5. Peripheral IV placement   Identify charts for Rx of shock
+
+
+                              Identify all sites for IV
+
+
+ 6. Give rapid fluids         Calculate fluid dose
+
+
+                              Monitor fluid dose
+
+
+ 7. Give IV glucose           Calculate glucose dose
+
+
+                              Calculate volume
+
+
+ 8. Intraosseous infusion     Identify site for IO
+
+
+                              Demonstrate on chicken thigh
+
+
+ 9. Case Management           For each case scenario
+
+
+     ______ Case 1
+     ______ Case 2
+     ______ Case 3
+
+
+
+
+66
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+                                                                                     Annex Five
+
+                          Answers to ETAT
+                     assessment questions
+
+
+Assessment questions: Triage
+
+    1. Define “triage”.
+
+
+    The sentence should read: Triage is the sorting of patients into priority groups according to their needs
+    and the resources available. (See page 3)
+
+
+    2. When and where should triage take place?
+
+
+    This assessment will decide whether the patient needs to be seen immediately and receive any life-saving
+    treatment, or be seen soon as a priority, or can safely wait in the queue until his/her turn. (See page 3). It
+    can be done in the OPD, emergency room or in the wards.
+
+
+    3. Who should do triaging?
+
+
+    A person who is trained to assess the seriousness of sick children should see all of them on their arrival
+    in hospital.
+
+
+    4. What do the letters A, B, C and D in "ABCD" stand for?
+
+
+    The letters A, B, C and D (see page 4) stand for:
+    A      Airway
+    B      Breathing
+    C      Circulation, Coma and Convulsions
+    D      Diarrhoea and Dehydration
+
+
+
+
+                                                                                                                     67
+                                                                            ANNEX FIVE - ANSWERS TO ETAT ASSESSMENT QUESTIONS
+
+
+
+
+     5. List the priority signs:
+
+
+     The following are priority signs (see page 4):
+     -      Tiny baby (any sick child is under 2 months of age)
+     -      Temperature: child is very hot
+     -      Trauma
+     -      Pallor (severe)
+     -      Poisoning
+     -      Pain (severe)
+     -      Respiratory distress
+     -      Restless, continuously irritable or lethargic
+     -      Referral (urgent)
+     -      Malnutrition (visible severe wasting)
+     -      Oedema of both feet
+     -      Burns
+
+
+     6. Put the actions in the right chronological order: what will you do first, what next, what after that, and so on,
+        and what last?
+
+     Actions are given in the correct chronological order on the right:
+
+          2           Ask about head or neck trauma
+
+          4           Call a senior health worker to see any emergency
+
+          5           Have blood specimens taken for laboratory analysis
+
+          6           Look for any priority signs
+
+          1           Look for emergency signs
+
+          8           Move on to the next patient
+
+          7           Place priority patients at the front of the queue
+
+          3           Start treatment of any emergency signs you find
+
+
+
+     7. A three-year old girl is carried in her mother's arms wrapped in a blanket, in the queue. Her airway and
+        breathing are OK. She has cold hands. Her capillary refill is 1.5 seconds. She is alert. Asked if the child has
+        had diarrhoea, the mother answered "YES. Four loose stools per day". The skin pinch takes 3 seconds. How
+        do you triage this child?
+
+
+     Assessment is made following ABCD. The steps ABCD for emergency signs are normal. Now the child can
+     be assessed for “P” priority signs.
+
+
+     8. A four-year old male child was rushed in. He convulsed one hour ago. He is
+        breathing fast but there is no cyanosis and no respiratory distress. He feels very hot, but responds quickly to
+        questions. He has no diarrhoea or vomiting. How do you triage this child?
+
+
+     Again, following the ABCD steps, the child does not have “E” emergency signs so the next step is to look for
+     priority signs. On assessment of priority signs, the child is very hot, so the child is given priority for a full
+     assessment.
+
+
+
+
+68
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+    9. A one-year old had a seizure at home; then again outside the clinic. He became unconscious. His breathing
+       sounds very wet and noisy and there is drooling coming from his mouth. He is looking blue. How do you
+       triage this child?
+
+
+    The assessment follows the ABCD steps. First assess the airway, this child is drooling and may have
+    obstructed breathing and is cyanosed. He therefore has emergency signs in under “A” and should be sent
+    to the emergency room.
+
+
+    10. A two-year old male is rushed to your clinic acutely convulsing. How do you triage this child?
+
+
+    The assessment follows the ABCD steps. First assess the airway, breathing, and circulation, no positive
+    signs are provided here. The child is convulsing and has emergency signs in under “C” and should be sent
+    to the emergency room.
+
+
+    11. What signs of malnutrition do you check during triage?
+
+    You check for visible severe wasting and oedema of both feet.
+
+
+    12. Where do you look for signs of severe wasting?
+
+    Signs of severe wasting are best visible on the chest, arms, thighs and buttocks; the skin looks too large
+    for the body.
+
+
+    13. Below what age is a child always a priority?
+
+    A child below the age of two months is always a priority.
+
+
+    14. What should you do if the child has a priority sign?
+
+
+    When children are found to have a priority sign you will put them to the front of the queue so that they
+    will be seen as soon as possible.
+
+
+
+
+                                                                                                                 69
+                                                                        ANNEX FIVE - ANSWERS TO ETAT ASSESSMENT QUESTIONS
+
+
+
+
+Assessment questions: Airway and breathing
+
+     1. List the three things you do to check airway and breathing:
+
+     Look, listen and feel (see page 17).
+
+     2. List three signs of severe respiratory distress:
+
+     Any of:
+     -       Very fast breathing
+     -       Severe lower chest in drawing
+     -       Use of auxiliary muscles (head nod or head bob)
+     -       Laboured breathing
+     -       Inability to feed because of respiratory problems
+     -       Child exhausted
+     -       Noises including stridor or grunting
+
+
+     3. Does stridor occur in inspiration or expiration?
+
+     Inspiration, on breathing in (see page 18).
+
+
+     4. When opening the airway of an infant (<12 months) who has not been subjected to trauma, name the
+        part of the body that should point upwards.
+
+     An infant (<12 months) who has not been subjected to trauma should be positioned with the nose pointing
+     upwards (towards the roof) when opening the airway (see page 15-16).
+
+
+     5. What size of tubing should you use for a nasal catheter?
+
+     You should use size 6-8 F gauge for a nasal catheter (see page 21).
+
+
+     6. At what flow (volume/time) should oxygen be started?
+
+     Oxygen flow (volume/time) should be started at 0.5-1 litres per minute in infants and 1-2 litres per minute
+     in children (see page 20).
+
+
+     7. You have successfully removed a coin from the trachea (windpipe) of a three-year old boy by applying
+        Heimlich's manoeuvre. You checked his respiration and found that he was breathing normally. What do
+        you do next?
+
+     Airway and breathing are normal, so next assess the circulation.
+
+
+
+
+70
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+    8. A 4-year old boy hit by a bicycle was carried in on a blanket. The child was unconscious responding only
+       to pain. His breathing was noisy. What do you do?
+
+    This child is at risk of neck trauma so stabilize the neck (see chart 5).
+    Manage the airway (see chart 4).
+    Inspect the mouth and remove foreign body if present
+    Clear the secretions
+    Check the airway (look listen and feel)
+    Manage the airway (jaw thrust)
+    Insert oropharyngeal airway if the child will accept this
+    Give oxygen or if child not breathing well give bag and mask ventilation
+    Keep child warm
+    When airway and breathing stable, check circulation
+
+
+    9. A nine-month girl and her older brother have been playing in the emergency department with an old
+       bead necklace, suddenly the child is brought to you by one of the nurses, the child is choking. What do
+       you do?
+
+
+    The baby is choking, on assessment of airway you note her breathing is obstructed.
+    You need to manage the choking infant by:
+    -     laying the infant on your arm or thigh on her front in a head down position and giving 5 back blows
+          with the heel of your hand
+    -     If this is unsuccessful, turn the infant over and give 5 chest thrusts
+    -     check the mouth, if not successful for removable foreign body
+    -     repeat sequence if not successful
+
+
+    10. A three-year old boy is carried into the outpatient department in his father's arms. He is pale, floppy and
+        having difficulty breathing. His father says he has been unwell and coughing for 3 days. Weight 14kg.
+        He breathes fast with heavy severe chest indrawing. The airway is patent. He is alert. How do you triage
+        this child? What do you do?
+
+
+    Assess the child’s airway and breathing, check for cyanosis and obstruction. This child has severe
+    respiratory distress. He needs to go to the emergency area and the airway should be managed, ensure
+    there is no foreign body aspiration (on history), position the child to improve the airway, clear secretions, and
+    give oxygen (via nasal prongs or nasal catheter), make sure the child is warm.
+
+
+
+
+                                                                                                                        71
+                                                                             ANNEX FIVE - ANSWERS TO ETAT ASSESSMENT QUESTIONS
+
+
+
+
+Assessment questions: Circulation
+
+     1. Define a normal capillary refill time.
+
+The capillary refill time should be less than 3 seconds (see page 25).
+
+
+     2. If you cannot feel the radial pulse in an older child, which pulse should you look for next?
+
+
+     If you cannot feel the radial pulse in an older child, you should look for the carotid pulse (see page 25-26).
+
+
+     3. Name the two types of fluid you can give to treat shock initially.
+
+     The two types of fluid you can give to treat shock initially are Ringer’s lactate or normal saline.
+
+
+     4. Which fluid would you give to a child in shock with signs of severe malnutrition?
+
+
+     The fluids you would give to a child in shock with signs of severe malnutrition are: preferably Ringer’s lactate
+     or half-normal saline or half-strength Darrow’s solution with 5% glucose (dextrose) (see chart 7).
+
+
+     5. What volume of fluid would you give to a well nourished one-year old weighing 11 kg who is in shock?
+
+     The volume of fluid you would give to a well-nourished one-year-old weighing 11kg who is in shock is 11kg x
+     20 ml/kg, i.e. 220 ml.
+
+     6. How many times can you give this bolus of fluid in shock before calling a senior health worker?
+
+     You can give this bolus of fluid to the child in shock not more than three times before calling in a senior
+     health worker.
+
+
+     7. In triage of a two-year old girl you find her hands are warm, what do you do next?
+
+     If, during triage of a 2-year-old girl, her hands are found to be warm, you will next assess her consciousness.
+
+
+     8. In triage of an 18-month old, well-fed boy, you find his hands are cold. What do you do next?
+
+     If, during triage of a well-fed 18-month-old boy, his hands are found to be cold, you will next check the
+     capillary refill time.
+
+
+     9. In triage of a 10-year old boy who was rushed to emergency after falling from a coconut palm half an
+        hour earlier, you find his hands are cold and the capillary refill time is longer than three seconds. What do
+        you do next?
+
+     This child is in shock and should be taken immediately to the emergency room and treated. An IV should be
+     inserted then blood taken and he should be given 20ml/kg of IV fluids. He should next be assessed for
+     coma and convulsion.
+
+
+     10. What are two contra-indications for setting up an intraosseous infusion?
+
+
+     Two contra-indications for setting up an intraosseous infusion are: infection at the puncture site and
+     fracture of the bone (not absolute).
+
+
+
+
+72
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+    11. Can you give blood through an intraosseous infusion? And antibiotics, in case these are needed?
+
+
+    All fluids discussed in this course (including blood) can be given through an intraosseous infusion. All
+    drugs used in emergencies that can be given IV, including antibiotics, may also be given by this route.
+
+
+    12. A four-months old baby is brought to hospital with fever, rapid breathing and refusing to breastfeed. She
+        has had 2 episodes of vomiting and watery diarrhoea. Weight 5 kg. Her hands are cold. The capillary
+        refill is 6 seconds. The femoral pulse is palpable but fast and weak. There is no chest indrawing and
+        there are no abormal respiratory noises. How do you triage the baby? How do you manage the baby?
+
+
+    Based on the ABCD steps, the baby does not have severe respiratory distress, however she is in shock. She
+    should be treated with normal saline IV 20 ml/kg fast and reassessed.
+
+
+
+
+                                                                                                                    73
+                                                                           ANNEX FIVE - ANSWERS TO ETAT ASSESSMENT QUESTIONS
+
+
+
+
+Assessment questions: Coma and convulsions
+
+     1. What do the letters AVPU stand for?
+
+     A      When child is Alert
+     V      When child responds to Voice
+     P      When child responds to Pain
+     U      When child is unresponsive, thus Unconscious.
+
+
+     2. What is the cut-off level for low blood sugar?
+
+     2.5 mmol/litre
+
+     3. How much 10% glucose would you give to a six-month-old weighing 8 kg and having a low blood sugar?
+
+     You would give 40 ml (5ml/kg) of 10% glucose to a 6-month-old weighing 8kg who has a low blood sugar.
+
+
+     4. A child who is unconscious, with no history of trauma, but maintaining the airway should be put in which
+        position?
+
+     The recovery position
+
+
+     5. How much rectal diazepam (in ml of the 10mg/2ml solution) would you give to a four-yearold weighing 15
+        kg who is having a convulsion? How long should you wait before giving a second dose if the convulsion
+        does not stop?
+
+     You would give 1.5 ml (i.e. 7.5 mg) of rectal diazepam (10 mg/2ml) to a 4-year-old weighing 15 kg who was
+     having a convulsion. You should wait 10 minutes before giving a second dose if the convulsion does not stop.
+
+
+     6. A 15-month old girl has been sleeping all day. She does not answer to a call from her mother. But she
+        responds to a pinch on her chest. What stage of AVPU do you assign her? While on examination, she
+        started to move her limbs abnormally and her eyes rolled sideways and there were frothy secretions in her
+        mouth. What is the most appropriate measure to take?
+
+     The child responds to Pain, she is assigned P in the AVPU scoring
+     The child is having a convulsion and you should assess and manage her airway. You need to clear
+     secretion and give oxygen
+     If easily done, check blood sugar, if low (<2.5 in normally nourished child), insert IV and give glucose IV
+     (5ml/kg of 10% glucose)
+     Stop convulsion with anticonvulsant (rectal diazepam or paraldehyde)
+     Then position the child if unconscious
+
+
+     7. A two-year old boy is carried in by his grandmother. He weighs 12 kg. He is hot and having a seizure.
+        What are the next steps to stop the convulsion? And when the convulsion stops, what do you do?
+
+
+     To stop the convulsion the child can be given an anti-convulsant (rectal diazepam or paraldehyde). The child
+     may have low blood sugar so this should be checked and treated if low. It is important to manage the airway
+     and give oxygen. When the convulsion stops the child should be put in the recovery position.
+
+
+
+
+74
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+    8. A three-year old girl was brought in because she was abnormally sleepy and not responding at all. The
+       father said he took her to a nearby clinic for cough and vomiting and he was being given tablets. She did
+       not take any food. What is the next most appropriate step?
+
+    The child should be triaged using ABCD. She has emergency signs. The child should be assessed for
+    coma using the AVPU score. The child is unconscious U.
+    The next steps are to manage the airway as described in sections A and B. The blood glucose should be
+    checked and treated if low with IV glucose. The child should be put into the recovery position. The remainder
+    of the assessment should then be completed.
+
+
+    9. An 18-month old boy has been unwell and feverish for two days. He complains of abdominal pain and his
+       mother has noticed that he has fast breathing. He weighs 11 kg. His airway is fine, and he has no chest
+       indrawing. There is no history of diarrhoea. However, the boy started to convulse while being examined.
+       What are the most appropriate measures?
+
+    The child is having a convulsion and you should assess and manage his airway. You may need to clear
+    secretion and give oxygen
+    If easily done, check blood sugar, if low (<2.5 in normally nourished child), insert IV and give glucose IV
+    (5ml/kg of 10% glucose)
+    Stop convulsion with anticonvulsant (rectal diazepam or paraldehyde)
+    Then position the child if unconscious
+    Then complete the rest of the assessment
+
+
+    10. A 10-week old baby was brought in. His mother says he will not suckle today because he is crying a lot. He
+        feels very hot on touch. He weighs 3.5 kg. Airway, breathing and circulation are normal. There is no history
+        of diarrhoea and no dehydration. How do you triage the baby? What are the next steps?
+
+    The child has normal airway, breathing and circulation. He requires to be assessed for coma and
+    convulsions. He should be assessed for coma using the AVPU score .If the score is P or U he should be
+    managed for coma, a blood glucose checked and treated with IV glucose if low. If the score is A or V, he
+    should be assessed for priority signs.
+    The child at least has one priority sign (feels very hot and he may have pain) and should go to the head of
+    the queue and a health worker informed.
+
+
+    11. A 14-month old girl has been sleeping all day. She is irritable when awoken, but rouses to loud voice or
+       shaking her arm. Her hands are warm but look a bit pale. The mother says she has no diarrhoea or
+       vomiting. Her breathing is deep and her lower chest wall goes in when she breathes in. How do you
+       triage this child? What are the next steps?
+
+
+    The child should be triaged using ABCD. The child has normal airway, breathing and circulation. The child
+    should be assessed for coma using the AVPU score and her score is V. She is lethargic. She has no
+    diarrhoea. She is pale and has 2 priority signs and should be assessed quickly by a health worker though
+    she is not an emergency.
+
+
+
+
+                                                                                                                    75
+                                                                           ANNEX FIVE - ANSWERS TO ETAT ASSESSMENT QUESTIONS
+
+
+
+
+Assessment questions: Dehydration
+
+     1. An abnormal skin pinch takes longer than _____________ to go back.
+
+     A skin pinch is abnormal if it remains for longer than 2 seconds (see page 41).
+
+
+     2. An eight-month old weighing 6 kg is severely dehydrated. How much fluid would you give in the first
+        hour? For how long would you give the second lot of fluid in the same child?
+
+     You should give 180 ml of fluid in the first hour to an 8-month-old weighing 6 kg who is severely dehydrated.
+     The second lot of fluid is given over 5 hours.
+
+
+     3. A three-year old weighing 15 kg is severely dehydrated. He has received 450 ml of fluid in 30 minutes.
+        How much fluid are you going to give him next, and over what period of time?
+
+     To a 3-year-old weighing 15 kg who is severely dehydrated and has received 450 ml of fluid in 30 minutes,
+     you would give 70 ml/kg times 15, i.e. 1050 ml of IV fluid over 2½ hours.
+
+
+     4. If you cannot set up a drip, how much nasogastric fluid (ml/kg) should you give a child in an hour?
+
+     If you cannot set up a drip, you should give the child nasogastric fluid at the rate of 20 ml/kg per hour for 6
+     hours (see page 43).
+
+     5. Barec is three-years old and weighs 15 kg. His mother said that his diarrhoea started yesterday. The
+        health worker's assessment found that Barec was not in shock and that he was breathing adequately. He
+        was lethargic and not able to drink, had sunken eyes and a skin pinch went back very slowly. He was not
+        severely malnourished but had diarrhoea with severe dehydration. How should the health worker treat
+        Barec's dehydration?
+        What amount of fluid should Barec be given initially?
+
+     Barec's dehydration? Begin IV fluid immediately.
+     What amount of fluid should Barec be given initially? 450 ml (30 ml x 15 kg) of IV fluid in the first 30
+     minutes.
+
+     6. Amaru is two-year old and weighs 8 kg. He is breathing comfortably and not in shock, but has diarrhoea.
+        A health worker finds Amaru to be lethargic, but able to drink. His eyes are sunken, and a skin pinch
+        goes back very slowly. The health worker decides that Amaru has diarrhoea with severe dehydration,
+        then checks for severe malnutrition and sees visible severe wasting. What is the appropriate treatment
+        for Amaru's dehydration?
+
+
+     Because he is severely malnourished, he needs immediate assessment and treatment. Do not give IV fluids
+     but give ReSoMal 5ml/kg every 30 minutes for the first 2 hours, then 5-10ml/kg/hour for the next 4-6 hours.
+     Also check blood glucose and treat if <3mmol/l (see page 44).
+
+
+
+
+76
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+    7. Dano is eight months old and weighs 6 kg. He has had diarrhoea for a week and is very sick. He is
+       breathing adequately and is not in shock. The health worker sees that Dano's eyes are sunken. When
+       encouraged, Dano is able to take a sip of water, but drinks poorly. A skin pinch goes back very slowly. The
+       health worker finds Dano has diarrhoea with severe dehydration. He is not severely malnourished. How
+       much IV fluid should be given to Dano in the first hour?
+       Should the health worker give Dano ORS solution? If so, how much?
+
+    How much IV fluid should be given to Dano in the first hour? 180 ml (30 ml x 6 kg)
+    Should the health worker give ORS solution? Yes
+    If so, how much? The health worker should encourage Dano to sip ORS solution, while the drip is being set
+    up and while he is receiving IV fluid. The health worker should give about 30 ml (5 ml x 6 kg) of ORS
+    solution per hour.
+
+
+    8. Sharita is nine months old and weighs 7 kg. Her mother brings her to the clinic because she has had
+       diarrhoea for a week. The mother tells the health worker that Sharita is no longer breastfed, and is too tired
+       to drink from a cup. The health worker assesses Sharita. He finds that she is breathing adequately. Her
+       hands are cold and her pulse is weak and fast. He decides that she is in shock. She is lethargic, has
+       sunken eyes, and a skin pinch goes back very slowly. The health worker decides Sharita has severe
+       dehydration. She is not malnourished. What emergency treatment should the health worker give Sharita?
+
+    She should first be treated for shock, following the instructions in ETAT chart 6, an intravenous line should
+    be inserted and fluids given rapidly. She should initially be given 140 ml Ringer’s lactate or normal saline
+    solution as bolus.
+
+
+    9. Rogit, an 18-month-old boy weighing 8 kg, is brought to the small hospital very late at night. The health
+       worker assesses the boy and finds that he is alert and crying and not in shock. He can drink, but very
+       poorly, and a skin pinch goes back very slowly. The health worker decides the child has diarrhoea with
+       severe dehydration. He is not malnourished.
+       The child needs fluid for severe dehydration given according to Plan C, but the health worker is not trained
+       to give IV therapy. The last nurse has left for the night and no other nurses will come in for several hours.
+       The health worker is trained to give nasogastric therapy and has ORS available. How should Rogit be
+       rehydrated?
+       How much fluid should the health worker give initially?
+
+
+    How should Rogit be rehydrated? The health worker can insert a nasogastric tube and give Rogit ORS
+    solution.
+    How much fluid should the health worker give initially? He should have 160ml per hour for 6 hours (20ml/kg/
+    hour).
+
+
+    10. A one-year old girl has a two-day history of diarrhoea and vomiting. Her weight is 6.5 kg. She is restless
+       and irritable. Her airway and breathing are OK. Her hands are warm. AVPU=voice. Skin pinch lasts 4
+       seconds. Her eyes are sunken and the mother confirms this fact. She is skin and bones. How do you
+       manage her?
+
+    In this baby airway, breathing, circulation, coma are normal. There is no convulsion. The child has diarrhoea
+    and appears to be dehydrated. The child is not shocked. This child appears malnourished, therefore IV fluids
+    should be avoided. Give the child oral or naso-gastric ReSoMal 5ml/kg every 30 minutes for the first 2 hours.
+    Check the blood sugar, if it is <3mmol/L treat this with IV glucose. The child should then have 5-10ml/kg/hr
+    ReSoMal and be managed by appropriate inpatient guidelines.
+
+
+
+
+                                                                                                                       77
+     ANNEX FIVE - ANSWERS TO ETAT ASSESSMENT QUESTIONS
+
+
+
+
+78
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+                                                               Annex Six
+
+                                                            Evaluation
+
+
+
+A: ETAT course evaluation form for participants
+
+    1. What was most useful and can be put into practice?
+
+
+
+
+    2. What will you not be able to do in your setting?
+
+
+
+
+    3. What was most difficult to understand?
+
+
+
+
+    4. Was the training clear?
+
+
+
+
+    5. Was the time adequate?
+
+
+
+
+    6. For whom is ETAT suitable?
+
+
+
+
+                                                                       79
+                                                                                                ANNEX SIX - AEVALUATION
+
+
+
+
+     7. Which type of learning session did you find most helpful?
+
+
+
+
+     8. Did doing IMCI make ETAT easier?
+
+
+
+
+     9. Did you have enough time to practice the assessment?
+
+
+
+
+     10. Would ETAT be good for health workers without IMCI training?
+
+
+
+
+     11. Do you now feel prepared to teach ETAT (scale 1-5, where 1 - least confident and 5 - most confident)?
+
+
+
+
+     12. Were there any things the workshop could have included to better prepare you to start ETAT?
+
+
+
+
+     13. Were there any things that could have been done to prepare you better to be an ETAT facilitator?
+
+
+
+
+     14. What part of ETAT do you feel most confident about?
+
+
+
+
+     15. What part of the ETAT course do you feel least confident about?
+
+
+
+
+80
+EMERGENCY TRIAGE ASSESSMENT AND TREATMENT
+
+
+
+
+    16. Score the utility of the course for your work (scale 1-5)?
+
+
+
+
+    Suggestions/ comments
+
+
+
+
+B: Notes for facilitators
+The assessment of whether participants have had sufficient clinical experience
+is two-fold.
+Do participants perform emergency triage assessment and treatment on
+children in the clinic with sufficient skill and confidence, making no or
+very few errors, performing without unacceptable delays, working as a
+team?
+Only observing the work of participants in the clinical setting can assess this. If
+the answer is no, the participants need additional practice, with guidance, to
+develop the skill, speed and ease. Learning takes time, and learning to perform
+any difficult skill well takes more time and practice. If necessary, the facilitators
+should extend the training to allow more clinical practice sessions. Do this by
+either conducting additional clinical sessions in the same location (on additional
+days, at a time when many cases present) or conducting clinical sessions at
+another facility where severely ill children present.
+Have participants had experience recognizing the full range of emergency
+and priority signs, and performing the full range of emergency treatments?
+Assess this by checking what clinical signs participants have observed (check
+their checklists and/or discuss among all facilitators). For example, if signs of
+shock were not observed (or rarely observed), participants have not had sufficient
+experience recognizing these signs or giving emergency treatments for shock. In
+this case, and particularly if there are several signs not sufficiently seen or treated,
+participants are not prepared enough for their work. The facilitators/lead
+instructor should make arrangements for participants to gain that experience as
+described above.
+In addition, to ensure that participants perform the ETAT adequately in their
+work, it will be most effective if a facilitator can accompany them and give them
+guidance and support on the first few days using ETAT in the actual setting.
+The facilitator can help by answering questions as needed and giving clinical
+opinions and suggestions. The facilitator will also help by giving support and
+encouragement as the participants work under pressure and gain increasing
+experience.
+
+
+
+                                                                                           81
+     ANNEX SIX - AEVALUATION
+
+
+
+
+82
+
