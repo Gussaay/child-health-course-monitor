@@ -22,7 +22,7 @@ import { useCourseScreen } from './screen';
 import { Pill, LockedBadge } from './ui';
 import { groupName } from './enrolment';
 import { notify } from '../../dialogs';
-import { shareCourseLink } from '../../../utils/courseLink';
+import { shareCourseLink } from '../../../utils/courseShare';
 
 export function CoursePage() {
     const { t } = useTranslation();
@@ -94,9 +94,12 @@ export function CoursePage() {
                     </button>
                 )}
                 <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="secondary" onClick={shareCourse} data-testid="share-course">
-                        <Share2 size={16} /> {t('imnci_ui.courses.share.button', 'Share link')}
-                    </Button>
+                    {/* A draft is not shown to learners, so its link would open nothing. */}
+                    {openCourse.isPublished && (
+                        <Button variant="secondary" onClick={shareCourse} data-testid="share-course">
+                            <Share2 size={16} /> {t('imnci_ui.courses.share.button', 'Share link')}
+                        </Button>
+                    )}
                     {isAdmin && (
                         <Button variant="secondary" onClick={() => setItemModal({ kind: 'module' })}>
                             <Plus size={16} /> {t('imnci_ui.courses.item_modal.add_module', 'Add module')}

@@ -27,7 +27,8 @@ describe('shared course link', () => {
     });
 
     it('shares a live-site link, never the test address', async () => {
-        const m = await load('/');
-        expect(m.courseShareUrl('abc')).toBe('https://imnci-courses-monitor.web.app/learn/abc');
+        await load('/');
+        const { courseShareUrl } = await import('../src/utils/courseShare.js');
+        expect(courseShareUrl('abc')).toBe('https://imnci-courses-monitor.web.app/learn/abc');
     });
 });

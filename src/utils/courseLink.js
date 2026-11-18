@@ -13,21 +13,17 @@
 // course is remembered for this tab (sessionStorage), so sign-in, refresh
 // and the app's own address changes keep it. Leaving Online Courses (going
 // to the home page) ends it, and the full list is back the next time.
-import { IS_EMONC_SITE } from '../siteMode';
-import { publicBaseUrl, CH_LIVE_SITE } from './publicLink';
-
 export const COURSE_LINK_PATH = /^\/learn\/([A-Za-z0-9_-]{1,128})\/?$/;
 const STORAGE_KEY = 'chm_focus_course';
 
 function readLink() {
     if (typeof window === 'undefined') return;
-    try {
-        const match = COURSE_LINK_PATH.exec(window.location.pathname);
-        if (!match) return;
-        sessionStorage.setItem(STORAGE_KEY, match[1]);
-        const state = window.history.state || {};
-        window.history.replaceState(state, '', `/online-courses?oc=${encodeURIComponent(match[1])}`);
-    } catch { /* storage blocked: the course still opens, with the list */ }
+    const match = COURSE_LINK_PATH.exec(window.location.pathname);
+    if (!match) return;
+    // The address is changed even when storage is blocked: the app knows
+    // /online-courses, not /learn/, so the course still opens (with the list).
+    try { sessionStorage.setItem(STORAGE_KEY, match[1]); } catch { /* storage blocked */ }
+    window.history.replaceState(window.history.state || {}, '', `/online-courses?oc=${encodeURIComponent(match[1])}`);
 }
 readLink();
 
@@ -40,42 +36,3 @@ export function clearFocusedCourse() {
     try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* nothing kept */ }
 }
 
-/** The address to share for a course. */
-export function courseShareUrl(courseId) {
-    // The EmONC site does not show Online Courses, so its links use ch-sudan,
-    // the online-course site.
-    const base = IS_EMONC_SITE ? CH_LIVE_SITE : publicBaseUrl();
-    return `${base}/learn/${encodeURIComponent(courseId)}`;
-}
-
-/**
- * Shares a course's link through the phone's share sheet (WhatsApp, SMS…),
- * or copies it where nothing can share. Returns 'shared', 'copied',
- * 'cancelled' or 'failed'.
- */
-export async function shareCourseLink(course, { text = '' } = {}) {
-    const url = courseShareUrl(course.id);
-    const title = course.title || '';
-    const message = text || title;
-    const isCancel = (e) => e?.name === 'AbortError' || /cancel/i.test(e?.message || '');
-    try {
-        const { Capacitor } = await import('@capacitor/core');
-        if (Capacitor.isNativePlatform()) {
-            const { Share } = await import('@capacitor/share');
-            await Share.share({ title, text: message, url, dialogTitle: title });
-            return 'shared';
-        }
-        if (navigator.share) {
-            await navigator.share({ title, text: message, url });
-            return 'shared';
-        }
-    } catch (e) {
-        if (isCancel(e)) return 'cancelled';
-    }
-    try {
-        await navigator.clipboard.writeText(message ? `${message}\n${url}` : url);
-        return 'copied';
-    } catch {
-        return 'failed';
-    }
-}

@@ -64,9 +64,13 @@ jobs:
       # at 468 KB (English) and 490 KB (Arabic). The old 450 KB budget was
       # below what main itself shipped (about 590 KB), so this step had failed
       # on every pull request since it was added.
+      # 545 KB (PR #37, 2026-11-18): main itself measured 540.98 KB, so any
+      # change at all went over 540. The shared-course link (/learn/<id>) adds
+      # about 0.5 KB that has to load first; the share button itself loads
+      # with the course page.
       - name: Check first-load payload budget
         run: |
-          BUDGET_KB=540
+          BUDGET_KB=545
           TOTAL=0
           LOCALE_MAX=0
           for FILE in $(grep -oE '/assets/[^"]+' dist/index.html | sort -u); do
