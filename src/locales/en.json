@@ -1484,7 +1484,8 @@
       "downloads": "Files saved on this device",
       "admin": "Users, roles and settings",
       "about": "The programme team",
-      "survey": "Field surveys and mapping"
+      "survey": "Field surveys and mapping",
+      "online_courses_manage": "Courses, enrolment, groups and progress"
     },
     "welcome": "Welcome",
     "subtitle": "Select a module to get started",
@@ -1514,7 +1515,8 @@
       "final_report": "Final Report",
       "attendance": "Attendance",
       "monitoring": "Monitoring",
-      "survey": "Surveys"
+      "survey": "Surveys",
+      "online_courses_manage": "Manage Online Courses"
     }
   },
   "auth": {

@@ -30,6 +30,9 @@ export const ALL_PERMISSIONS = {
     canManageProtocols: false,
     canViewOnlineCourses: false,
     canManageOnlineCourses: false,
+    // Manage online courses page (enrolment, groups, learners' progress).
+    // Also given by applyDerivedPermissions to course authors and managers.
+    canManageOnlineLearners: false,
 };
 
 export const ALL_PERMISSION_KEYS = Object.keys(ALL_PERMISSIONS);
@@ -62,6 +65,11 @@ export const applyDerivedPermissions = (permissions) => {
     if (basePermissions.canManageOnlineCourses) {
         basePermissions.canViewOnlineCourses = true;
     }
+    // The Manage online courses page: course authors, and the managers who
+    // approve enrolment, put learners in groups and follow their progress
+    // (the onlineEnrolment function checks the same roles and their scope).
+    basePermissions.canManageOnlineLearners = !!basePermissions.canManageOnlineCourses
+        || ['federal', 'state', 'locality'].includes(basePermissions.manageScope);
     if (basePermissions.canUseFederalManagerAdvancedFeatures) {
         basePermissions.canApproveSubmissions = true;
     }

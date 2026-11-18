@@ -44,6 +44,9 @@ import { CoursePage } from './onlineCourses/CoursePage';
 import { CourseList } from './onlineCourses/CourseList';
 import { BuilderPane } from './onlineCourses/BuilderPane';
 import { canSeeCourse, followsAnyLesson, isFacilitatorRole } from './onlineCourses/audience';
+import { useMyEnrolments, courseAccess, canStudy } from './onlineCourses/enrolment';
+import { EnrolGate } from './onlineCourses/EnrolGate';
+import { ManageHome } from './onlineCourses/ManageHome';
 
 // Kept importable from here, where they used to live.
 export { ASSET_ROOT, assetPath } from './onlineCourses/assets';
@@ -57,7 +60,10 @@ export { LEGACY_DB, mapLegacyCourse, mapLegacyModule, buildMigration } from './o
 // checks the same in functions/onlineProgressReport.js).
 const MANAGER_ROLES = ['super_user', 'federal_manager', 'states_manager', 'locality_manager'];
 
-export default function OnlineCoursesView({ permissions = {}, userRoles = [] }) {
+// `area`: "learn" is the Online Courses page every learner sees; "manage" is
+// the separate Manage online courses page (authoring, enrolment, groups and
+// the learners' progress), so a learner never meets the managers' tools.
+export default function OnlineCoursesView({ permissions = {}, userRoles = [], area = 'learn', openOtherArea = null }) {
     const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
     const tabName = (x) => (isArabic && x.labelAr ? x.labelAr : x.label);
@@ -65,8 +71,10 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [] }) 
     // people. A learner should never see an edit pencil or a delete button
     // beside the material they are trying to read, so authoring lives behind a
     // mode that only the federal roles can switch into, and it starts off.
+    const inManageArea = area === 'manage';
     const canManage = !!permissions.canManageOnlineCourses;
-    const [mode, setMode] = useState('learn');
+    const mode = inManageArea && canManage ? 'manage' : 'learn';
+    const setMode = () => {};
     const isAdmin = canManage && mode === 'manage';
     const canSeeProgress = (userRoles || []).some((r) => MANAGER_ROLES.includes(String(r).toLowerCase()));
     const isFacilitator = isFacilitatorRole(userRoles);
@@ -84,6 +92,8 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [] }) 
     }, []);
     const { user } = useAuth();
     const { refreshExercises } = useImnci();
+    // Which courses this learner is enrolled in (managers approve them).
+    const enrolments = useMyEnrolments(inManageArea ? null : user?.uid);
 
     const {
         onlineCourses, fetchOnlineCourses,
@@ -125,7 +135,8 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [] }) 
     const [aiBooks, setAiBooks] = useState([]);
     const [bookForm, setBookForm] = useState(null); // { book?, courseId? }
     const loadBooks = useCallback(() => { listBooks().then(setAiBooks).catch(() => setAiBooks([])); }, []);
-    useEffect(() => { loadBooks(); }, [loadBooks]);
+    // The books belong to the Manage page; a learner's page loads them only to open one by its link.
+    useEffect(() => { if (inManageArea || openBookId) loadBooks(); }, [loadBooks, inManageArea, openBookId]);
 
     useEffect(() => {
         if (!onlineCourses) fetchOnlineCourses(false);
@@ -170,12 +181,12 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [] }) 
     const courses = useMemo(() => (onlineCourses || [])
         .filter((c) => c.isDeleted !== true)
         // An unpublished course is a draft; only the people who can publish it see it.
-        .filter((c) => canManage || c.isPublished)
+        .filter((c) => (inManageArea && canManage) || c.isPublished)
         // A course for facilitators (the facilitator guide, with answer keys
         // and the examination) is not shown to learners.
         .filter((c) => canSeeCourse(c, { canManage, canSeeProgress, isFacilitator }))
         .sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.title).localeCompare(String(b.title))),
-    [onlineCourses, canManage, canSeeProgress, isFacilitator]);
+    [onlineCourses, canManage, canSeeProgress, isFacilitator, inManageArea]);
 
     const items = useMemo(() => (onlineCourseItems || []).filter((i) => i.isDeleted !== true), [onlineCourseItems]);
 
@@ -190,6 +201,18 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [] }) 
         [allCourses, allItems]);
 
     const openCourse = courses.find((c) => c.id === openCourseId) || null;
+
+    // Whether the learner may study a course: open, enrolled, or started
+    // before enrolment existed. In the manage area everything is open.
+    const sectionCourse = useMemo(() => Object.fromEntries(items.filter((i) => i.kind === 'section').map((i) => [i.id, i.courseId])), [items]);
+    const startedCourses = useMemo(() => {
+        const out = new Set();
+        Object.keys(progress.completed || {}).forEach((id) => { if (sectionCourse[id]) out.add(sectionCourse[id]); });
+        return out;
+    }, [progress, sectionCourse]);
+    const accessOf = useCallback((c) => (inManageArea ? 'enrolled'
+        : courseAccess(c, enrolments.byCourse[c?.id], { canManage: false, started: startedCourses.has(c?.id) })),
+    [inManageArea, enrolments.byCourse, startedCourses]);
 
     const modules = useMemo(() => items
         .filter((i) => i.kind === 'module' && i.courseId === openCourseId)
@@ -373,8 +396,11 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [] }) 
         setConvertOpen, setCourseModal, setEditing, setEditingTab, setFontScale, setImportOpen,
         setItemModal, setMode, setProgress, setQuery, setScale, setSectionTab, setSyncing, setTopTab,
         syncing, tabName, toggleComplete, topTab, user,
+        accessOf, area, enrolments, inManageArea, openOtherArea, userRoles,
     };
-    const Screen = openSection ? SectionPage : openModule ? ModulePage : openCourse ? CoursePage : CourseList;
+    const Home = inManageArea ? ManageHome : CourseList;
+    const gated = openCourse && !inManageArea && !canStudy(accessOf(openCourse));
+    const Screen = gated ? EnrolGate : openSection ? SectionPage : openModule ? ModulePage : openCourse ? CoursePage : Home;
     return (
         <CourseScreen.Provider value={screen}>
             <Screen />

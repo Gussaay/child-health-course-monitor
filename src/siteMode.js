@@ -90,7 +90,7 @@ export const SITE_MODULES = [
     { id: 'childHealthServices', label: 'Child Health Services', views: ['childHealthServices'] },
     { id: 'skillsMentorship', label: 'Skills Mentorship', views: ['skillsMentorship'] },
     { id: 'imciForm', label: 'IMNCI Protocol', views: ['imciForm'] },
-    { id: 'onlineCourses', label: 'Online Courses (online training)', views: ['onlineCourses'] },
+    { id: 'onlineCourses', label: 'Online Courses (online training)', views: ['onlineCourses', 'onlineCoursesManage'] },
     { id: 'supervision', label: 'Supervision', views: ['supervision'] },
     { id: 'survey', label: 'Surveys', views: ['survey'] },
     { id: 'supplyManagement', label: 'Supply Management', views: ['supplyManagement'] },

@@ -7,7 +7,7 @@
 import React, { Suspense, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Pencil, ArrowLeft, ArrowRight, Columns2, CheckCircle2, ZoomIn, ZoomOut, Clock, Trophy,
+    Pencil, ArrowLeft, ArrowRight, Columns2, CheckCircle2, ZoomIn, ZoomOut, Trophy,
     ListChecks, ChevronDown, Circle,
 } from 'lucide-react';
 import { learnerContent } from '../book';
@@ -17,6 +17,12 @@ import { SectionTabEditor } from './SectionTabEditor';
 import { SectionAiPanel } from './lazyParts';
 import { useCourseScreen } from './screen';
 import { LockedBanner } from './ui';
+import { Capacitor } from '@capacitor/core';
+import { useFormTitle } from '../../../utils/pageChrome';
+
+// The Android app has its own top bar with a back arrow, where the lesson
+// names itself; on the web the lesson's one slim line does the same.
+const HAS_APP_BAR = Capacitor.isNativePlatform();
 
 // Which activities of a section this learner has done, kept on the device: it
 // is the learner's own running tally, not a record anyone else reads. It is
@@ -129,7 +135,7 @@ export function SectionPage() {
     const { t } = useTranslation();
     const {
         back, compare, duration, editingTab, fontScale, go, inOrder, isAdmin,
-        minutesById, moduleLocked, modules, nextUp, openModule, openSection, progress, reload, sectionLocked, sectionsByModule,
+        minutesById, moduleLocked, modules, nextUp, openSection, progress, reload, sectionLocked, sectionsByModule,
         saveActivities, setCompare, setEditingTab, setScale, toggleComplete, user,
     } = useCourseScreen();
 
@@ -174,16 +180,28 @@ export function SectionPage() {
     const mins = minutesById[openSection.id];
     // A lesson opened by its link before the ones before it are done.
     const locked = !isAdmin && ((moduleIndex >= 0 && !!moduleLocked?.(moduleIndex)) || (here >= 0 && !!sectionLocked?.(siblings, here)));
-    const iconBtn = 'inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:text-sky-700 disabled:opacity-40';
+    const iconBtn = 'inline-flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:text-sky-700 disabled:opacity-40';
+    // The lesson names itself in the app's top bar, next to its one back
+    // arrow, with where it sits under it. The page itself carries no second
+    // back link and no large title, so the lesson starts near the top.
+    const where = [
+        moduleIndex >= 0 && here >= 0 ? t('imnci_ui.courses.look.module_lesson_of', 'Module {{m}} · Lesson {{n}} of {{total}}', { m: moduleIndex + 1, n: here + 1, total: siblings.length }) : '',
+        mins > 0 ? duration(mins) : '',
+    ].filter(Boolean).join(' · ');
+    useFormTitle(openSection.title, where);
 
     if (locked) {
         return (
             <div className="max-w-3xl mx-auto space-y-4">
-                <button onClick={back}
-                    className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-sky-700">
-                    <ArrowLeft size={15} className="rtl:rotate-180" /> {openModule?.title || t('imnci_ui.courses.main.back', 'Back')}
-                </button>
-                <h1 className="text-2xl font-extrabold tracking-tight text-slate-400 leading-tight">{openSection.title}</h1>
+                {!HAS_APP_BAR && (
+                    <div className="flex items-center gap-1 min-w-0">
+                        <button onClick={back} aria-label={t('imnci_ui.courses.main.back', 'Back')}
+                            className="p-1.5 -ms-1.5 rounded-full text-slate-600 hover:bg-slate-100 shrink-0">
+                            <ArrowLeft size={20} className="rtl:rotate-180" />
+                        </button>
+                        <h1 className="text-base font-bold text-slate-500 truncate">{openSection.title}</h1>
+                    </div>
+                )}
                 <LockedBanner
                     title={t('imnci_ui.courses.look.lesson_locked', 'This lesson is locked')}
                     reason={t('imnci_ui.courses.look.finish_earlier', 'Finish the lessons before it first. Lessons open in order.')}
@@ -199,50 +217,49 @@ export function SectionPage() {
 
     return (
         <div className="max-w-3xl mx-auto">
-            <div className="space-y-4 pb-4">
-                <button onClick={back}
-                    className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-sky-700">
-                    <ArrowLeft size={15} className="rtl:rotate-180" /> {openModule?.title || t('imnci_ui.courses.main.back', 'Back')}
-                </button>
-
-                {/* Where this lesson sits, its name and the reading tools, in two lines. */}
-                <header className="space-y-2">
-                    <div className="flex items-center gap-2">
-                        <span className="min-w-0 flex-1 text-xs font-semibold text-slate-500 truncate">
-                            {moduleIndex >= 0 && here >= 0 && t('imnci_ui.courses.look.module_section_of', 'Module {{m}} · Section {{n}} of {{total}}', { m: moduleIndex + 1, n: here + 1, total: siblings.length })}
-                            {mins > 0 && <> · <Clock size={12} className="inline -mt-0.5" /> {duration(mins)}</>}
-                        </span>
-                        {!editingTab && (
-                            <span className="flex items-center gap-1 shrink-0">
-                                {isAdmin && (
-                                    <button className={iconBtn} onClick={() => setEditingTab('all')} title={t('imnci_ui.courses.main.edit_section', 'Edit section')}>
-                                        <Pencil size={15} />
-                                    </button>
-                                )}
-                                {canCompare && (
-                                    <button className={`${iconBtn} ${compare ? '!bg-sky-700 !text-white !border-sky-700' : ''}`} onClick={() => setCompare(!compare)}
-                                        title={t('imnci_ui.courses.main.compare_title', 'Show the book page beside the converted text')}>
-                                        <Columns2 size={15} />
-                                    </button>
-                                )}
-                                <button className={iconBtn} onClick={() => setScale(fontScale - 0.1)} disabled={fontScale <= 0.8}
-                                    title={t('imnci_ui.courses.main.smaller_text', 'Smaller text')}><ZoomOut size={15} /></button>
-                                <button className={iconBtn} onClick={() => setScale(fontScale + 0.1)} disabled={fontScale >= 2}
-                                    title={t('imnci_ui.courses.main.larger_text', 'Larger text')}><ZoomIn size={15} /></button>
-                            </span>
-                        )}
-                    </div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight flex items-start gap-2">
-                        <span className="min-w-0 flex-1">{openSection.title}</span>
-                        {isDone && <CheckCircle2 size={24} className="text-emerald-600 shrink-0 mt-1" aria-label={t('imnci_ui.courses.main.completed', 'Completed')} />}
-                    </h1>
-                    {siblings.length > 1 && here >= 0 && (
-                        <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
-                            <div className="h-full bg-sky-600 rounded-full transition-all"
-                                style={{ width: `${((here + (isDone ? 1 : 0.5)) / siblings.length) * 100}%` }} />
+            <div className="space-y-3 pb-4">
+                {/* One slim line: the lesson's name beside the one back arrow (the
+                    app's own top bar does this on Android), and the reading tools. */}
+                <div className="flex items-center gap-2">
+                    {HAS_APP_BAR ? <span className="flex-1" /> : (
+                        <div className="flex-1 min-w-0 flex items-center gap-1">
+                            <button onClick={back} aria-label={t('imnci_ui.courses.main.back', 'Back')} title={t('imnci_ui.courses.main.back', 'Back')}
+                                className="p-1.5 -ms-1.5 rounded-full text-slate-600 hover:bg-slate-100 shrink-0">
+                                <ArrowLeft size={20} className="rtl:rotate-180" />
+                            </button>
+                            <div className="min-w-0">
+                                <h1 className="text-base font-bold text-slate-900 leading-tight truncate">{openSection.title}</h1>
+                                {where && <div className="text-xs text-slate-500 truncate">{where}</div>}
+                            </div>
                         </div>
                     )}
-                </header>
+                    {isDone && <CheckCircle2 size={18} className="text-emerald-600 shrink-0" aria-label={t('imnci_ui.courses.main.completed', 'Completed')} />}
+                    {!editingTab && (
+                        <span className="flex items-center gap-1 shrink-0">
+                            {isAdmin && (
+                                <button className={iconBtn} onClick={() => setEditingTab('all')} title={t('imnci_ui.courses.main.edit_section', 'Edit section')}>
+                                    <Pencil size={14} />
+                                </button>
+                            )}
+                            {canCompare && (
+                                <button className={`${iconBtn} ${compare ? '!bg-sky-700 !text-white !border-sky-700' : ''}`} onClick={() => setCompare(!compare)}
+                                    title={t('imnci_ui.courses.main.compare_title', 'Show the book page beside the converted text')}>
+                                    <Columns2 size={14} />
+                                </button>
+                            )}
+                            <button className={iconBtn} onClick={() => setScale(fontScale - 0.1)} disabled={fontScale <= 0.8}
+                                title={t('imnci_ui.courses.main.smaller_text', 'Smaller text')}><ZoomOut size={14} /></button>
+                            <button className={iconBtn} onClick={() => setScale(fontScale + 0.1)} disabled={fontScale >= 2}
+                                title={t('imnci_ui.courses.main.larger_text', 'Larger text')}><ZoomIn size={14} /></button>
+                        </span>
+                    )}
+                </div>
+                {siblings.length > 1 && here >= 0 && (
+                    <div className="h-1 bg-slate-200 rounded-full overflow-hidden" title={where}>
+                        <div className={`h-full rounded-full transition-all ${isDone ? 'bg-emerald-500' : 'bg-sky-600'}`}
+                            style={{ width: `${((here + (isDone ? 1 : 0.5)) / siblings.length) * 100}%` }} />
+                    </div>
+                )}
 
                 {!editingTab && !isDone && activitiesDone > 0 && firstLeft && resumeShown !== openSection.id && (
                     // Back in a lesson started earlier: offer to go straight to

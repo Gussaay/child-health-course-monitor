@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages, Sun, Moon, Monitor, MapPin
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages, Sun, Moon, Monitor, MapPin, Settings2
 } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
@@ -410,7 +410,7 @@ function pageTitles(t) {
     projects: t('landing.modules.projects', 'Project Tracker'), meetings: t('landing.modules.meetings', 'Meeting Tracker'),
     planning: t('landing.modules.planning', 'Master Plan'), localityPlan: t('landing.modules.locality_plan', 'Bottom-up Planning'),
     supplyManagement: t('landing.modules.supply', 'Supply Management'), supervision: t('landing.modules.supervision', 'Supervision'), survey: t('landing.modules.survey', 'Surveys'),
-    onlineCourses: t('landing.modules.online_courses', 'Online Courses'), downloads: t('landing.modules.downloads', 'App Files & Downloads'),
+    onlineCourses: t('landing.modules.online_courses', 'Online Courses'), onlineCoursesManage: t('landing.modules.online_courses_manage', 'Manage Online Courses'), downloads: t('landing.modules.downloads', 'App Files & Downloads'),
     admin: t('landing.modules.admin', 'Admin'), about: t('landing.modules.about', 'About Team'),
     courseReport: t('landing.modules.course_report', 'Course Report'), participantReport: t('landing.modules.participant_report', 'Participant Report'),
     facilitatorReport: t('landing.modules.facilitator_report', 'Facilitator Report'), facilitatorForm: t('landing.modules.facilitator_form', 'Facilitator'),
@@ -435,6 +435,7 @@ function allModules(t, permissions) {
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), tagline: tile('mentorship', 'Mentorship visits and skills'), view: 'skillsMentorship', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
         { label: t('landing.modules.imci', 'IMNCI Protocol'), tagline: tile('imci', 'Assess and classify a sick child'), view: 'imciForm', group: 'training', icon: Activity, permission: permissions.canViewCourse },
         { label: t('landing.modules.online_courses', 'Online Courses'), tagline: tile('online_courses', 'Learn and practise online'), view: 'onlineCourses', group: 'training', icon: BookOpen, permission: permissions.canViewOnlineCourses },
+        { label: t('landing.modules.online_courses_manage', 'Manage Online Courses'), tagline: tile('online_courses_manage', 'Courses, enrolment, groups and progress'), view: 'onlineCoursesManage', group: 'training', icon: Settings2, permission: permissions.canManageOnlineLearners },
         { label: t('landing.modules.supervision', 'Supervision'), tagline: tile('supervision', 'Supervision checklists'), view: 'supervision', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSupervision },
         { label: t('landing.modules.survey', 'Surveys'), tagline: tile('survey', 'Field surveys and mapping'), view: 'survey', group: 'services', icon: MapPin, permission: permissions.canViewSupervision },
         { label: t('landing.modules.supply', 'Supply Management'), tagline: tile('supply', 'Stock and distribution'), view: 'supplyManagement', group: 'services', icon: Package, permission: permissions.canViewSupplyChain },
@@ -1567,7 +1568,7 @@ export default function App() {
         // everything they save goes to the course's sandbox. The few areas
         // that only manage real reference data or accounts stay hidden.
         if (isTrainingMode()) {
-            const TRAINING_OFF = ['canViewAdmin', 'canManageProtocols', 'canManageOnlineCourses', 'canManagePopulation', 'canEditLocalityPlan'];
+            const TRAINING_OFF = ['canViewAdmin', 'canManageProtocols', 'canManageOnlineCourses', 'canManageOnlineLearners', 'canManagePopulation', 'canEditLocalityPlan'];
             const all = ALL_PERMISSION_KEYS.reduce((acc, key) => {
                 acc[key] = !TRAINING_OFF.includes(key);
                 return acc;
@@ -2194,6 +2195,7 @@ export default function App() {
             'supervision': permissions.canViewSupervision,
             'survey': permissions.canViewSupervision,
             'onlineCourses': permissions.canViewOnlineCourses,
+            'onlineCoursesManage': permissions.canManageOnlineLearners,
             'downloads': Capacitor.isNativePlatform(), 'about': true, 
         };
 
@@ -2222,9 +2224,9 @@ export default function App() {
         if (state.openParticipantReport) { setSelectedParticipantId(state.openParticipantReport); setSelectedCourseId(state.openCourseReport); }
         if (state.caseToEdit) setEditingCaseFromReport(state.caseToEdit);
 
-        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey', 'onlineCourses', 'downloads', 'about'].includes(newView)) {
+        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey', 'onlineCourses', 'onlineCoursesManage', 'downloads', 'about'].includes(newView)) {
             setSelectedCourseId(null); setSelectedParticipantId(null); setFinalReportCourse(null);
-            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey', 'onlineCourses', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
+            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey', 'onlineCourses', 'onlineCoursesManage', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
         }
         if ((view === 'observe' || view === 'participantReport') && !['observe', 'participantReport'].includes(newView)) setSelectedParticipantId(null);
         return true;
@@ -2712,7 +2714,10 @@ export default function App() {
     return permissions.canViewSupervision ? ( <Suspense fallback={<PageSkeleton />}><SurveyView permissions={permissions} /></Suspense> ) : null;
 
            case 'onlineCourses':
-    return permissions.canViewOnlineCourses ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><OnlineCoursesView permissions={permissions} userRoles={userRoles} /></ImnciProvider></Suspense> ) : null;
+    return permissions.canViewOnlineCourses ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><OnlineCoursesView permissions={permissions} userRoles={userRoles} area="learn" openOtherArea={permissions.canManageOnlineLearners ? () => navigate('onlineCoursesManage') : null} /></ImnciProvider></Suspense> ) : null;
+           case 'onlineCoursesManage':
+    // Keyed so the two pages never share one set of screen state.
+    return permissions.canManageOnlineLearners ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><OnlineCoursesView key="manage" permissions={permissions} userRoles={userRoles} area="manage" openOtherArea={() => navigate('onlineCourses')} /></ImnciProvider></Suspense> ) : null;
 
 
            case 'projects':

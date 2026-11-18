@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Modal, Input, Select, Textarea } from '../../CommonComponents';
 import { notify } from '../../dialogs';
 import { upsertOnlineCourse, upsertOnlineCourseItem } from '../../../data';
+import { COURSE_CATEGORIES, categoryOf, subcategoriesFor } from './categories';
 
 // =============================================================================
 // Authoring
@@ -11,15 +12,20 @@ import { upsertOnlineCourse, upsertOnlineCourseItem } from '../../../data';
 
 export function CourseModal({ isOpen, onClose, course, onSaved }) {
     const { t } = useTranslation();
-    const [form, setForm] = useState(course || { title: '', description: '', isPublished: false });
+    // New courses need a manager's approval to join unless the author opens them.
+    const blank = { title: '', description: '', isPublished: false, enrolment: 'approval', category: '', subcategory: '' };
+    const withCategory = (c) => (c ? { ...c, category: categoryOf(c), subcategory: c.subcategory || '', enrolment: c.enrolment || 'approval' } : blank);
+    const [form, setForm] = useState(() => withCategory(course));
     const [saving, setSaving] = useState(false);
-    useEffect(() => { if (isOpen) setForm(course || { title: '', description: '', isPublished: false }); }, [isOpen, course]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => { if (isOpen) setForm(withCategory(course)); }, [isOpen, course]);
+    const subOptions = subcategoriesFor(form.category);
 
     const save = async () => {
         if (!form.title?.trim()) { notify(t('imnci_ui.courses.course_modal.enter_title', 'Enter a course title.'), 'error'); return; }
         setSaving(true);
         try {
-            await upsertOnlineCourse({ ...form, title: form.title.trim() });
+            await upsertOnlineCourse({ ...form, title: form.title.trim(), category: String(form.category || '').trim(), subcategory: String(form.subcategory || '').trim() });
             notify(t('imnci_ui.courses.course_modal.saved', 'Course saved.'), 'success');
             onSaved(); onClose();
         } catch (e) {
@@ -32,6 +38,25 @@ export function CourseModal({ isOpen, onClose, course, onSaved }) {
             <div className="space-y-4">
                 <Input label={t('imnci_ui.courses.common.title', 'Title')} value={form.title || ''} onChange={(e) => setForm({ ...form, title: e.target.value })} />
                 <Textarea label={t('imnci_ui.courses.common.description', 'Description')} rows={3} value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                {/* Grouped like the face-to-face courses: a package, then a kind of course inside it. */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Select label={t('imnci_ui.courses.course_modal.category', 'Category')} value={form.category || ''}
+                        onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                        <option value="">{t('imnci_ui.courses.course_modal.choose', 'Choose…')}</option>
+                        {[...new Set([...COURSE_CATEGORIES, form.category].filter(Boolean))].map((c) => <option key={c} value={c}>{c}</option>)}
+                    </Select>
+                    <div className="flex flex-col">
+                        <Input label={t('imnci_ui.courses.course_modal.subcategory', 'Subcategory')} list="oc-subcategories" value={form.subcategory || ''}
+                            placeholder={t('imnci_ui.courses.course_modal.subcategory_hint', 'Pick or type, e.g. ETAT Plus')}
+                            onChange={(e) => setForm({ ...form, subcategory: e.target.value })} />
+                        <datalist id="oc-subcategories">{subOptions.map((s) => <option key={s} value={s} />)}</datalist>
+                    </div>
+                </div>
+                <Select label={t('imnci_ui.courses.course_modal.enrolment', 'Who can join')} value={form.enrolment || 'approval'}
+                    onChange={(e) => setForm({ ...form, enrolment: e.target.value })}>
+                    <option value="approval">{t('imnci_ui.courses.course_modal.enrolment_approval', 'A manager approves or enrols each learner')}</option>
+                    <option value="open">{t('imnci_ui.courses.course_modal.enrolment_open', 'Open: anyone can start, no enrolment needed')}</option>
+                </Select>
                 <label className="flex items-center gap-2 text-sm">
                     <input type="checkbox" checked={!!form.isPublished} onChange={(e) => setForm({ ...form, isPublished: e.target.checked })} />
                     {t('imnci_ui.courses.course_modal.published', 'Published (visible to learners)')}

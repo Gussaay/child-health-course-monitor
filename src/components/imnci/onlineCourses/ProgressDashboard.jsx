@@ -71,6 +71,9 @@ export function ProgressDashboard() {
     const [loading, setLoading] = useState(false);
     const [courseId, setCourseId] = useState('');
     const [state, setState] = useState('');
+    // A group (e.g. "Registrar batch 53"): the learners enrolled in it, in the
+    // chosen course or in any course.
+    const [group, setGroup] = useState('');
     const [status, setStatus] = useState('');
     const [query, setQuery] = useState('');
     const [openUid, setOpenUid] = useState(null);
@@ -96,6 +99,7 @@ export function ProgressDashboard() {
         const total = courses.reduce((n, c) => n + c.sections, 0);
         const people = report.learners
             .filter((l) => !state || l.state === state)
+            .filter((l) => !group || (courseId ? (l.groups || {})[courseId] === group : Object.values(l.groups || {}).includes(group)))
             .map((l) => {
                 const done = courses.reduce((n, c) => n + Math.min(l.perCourse[c.id] || 0, c.sections), 0);
                 // Finished: the chosen course, or at least one course when all are shown.
@@ -132,7 +136,7 @@ export function ProgressDashboard() {
             }, [0, 0]),
             byState: [...byState.values()].sort((a, b) => b.people - a.people),
         };
-    }, [report, courseId, state, status, query, now]);
+    }, [report, courseId, state, group, status, query, now]);
 
     // One course chosen: its modules and its lessons, for the people shown.
     const detail = useMemo(() => {
@@ -214,6 +218,15 @@ export function ProgressDashboard() {
                         <select value={state} onChange={(e) => setState(e.target.value)} className="rounded-md border border-slate-300 p-2">
                             <option value="">{t('imnci_ui.progress.all_states', 'All states')}</option>
                             {states.map((s) => <option key={s} value={s}>{stateLabel(s)}</option>)}
+                        </select>
+                    </label>
+                )}
+                {(report.groups || []).length > 0 && (
+                    <label className="flex flex-col text-sm">
+                        <span className="mb-1 text-slate-600">{t('imnci_ui.groups.group', 'Group')}</span>
+                        <select value={group} onChange={(e) => setGroup(e.target.value)} className="rounded-md border border-slate-300 p-2">
+                            <option value="">{t('imnci_ui.groups.all', 'All groups')}</option>
+                            {report.groups.map((g) => <option key={g.id} value={g.id}>{(i18n.language === 'ar' && g.nameAr) || g.name}</option>)}
                         </select>
                     </label>
                 )}

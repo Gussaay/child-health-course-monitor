@@ -6,6 +6,7 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { getFirestore } = require("firebase-admin/firestore");
 const { buildReport } = require("./onlineProgressReport");
+const { mergeGroups, DEFAULT_GROUP_ID } = require("./onlineEnrolment");
 const { tally, queryReads, flushUsage } = require("./usageTally");
 
 const docs = (snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -24,8 +25,26 @@ async function loadProgressReport(db, uid) {
   tally("onlineProgress", "onlineCourses", queryReads(courses));
   tally("onlineProgress", "onlineCourseItems", queryReads(items));
   tally("onlineProgress", "onlineProgress", queryReads(progress));
+  const report = buildReport({ caller: me.data(), courses: docs(courses), items: docs(items), progress: docs(progress), users: docs(users) });
+  if (report) {
+    // Each learner's group in each course they are enrolled in, so the
+    // dashboard can be read one group (a batch) at a time.
+    try {
+      const [enrols, groups] = await Promise.all([db.collection("onlineEnrolments").select("uid", "courseId", "groupId", "status").get(), db.collection("onlineGroups").get()]);
+      tally("onlineProgress", "onlineEnrolments", queryReads(enrols));
+      const byUid = {};
+      docs(enrols).forEach((e) => {
+        if (e.status !== "approved") return;
+        (byUid[e.uid] = byUid[e.uid] || {})[e.courseId] = e.groupId || DEFAULT_GROUP_ID;
+      });
+      report.learners.forEach((l) => { l.groups = byUid[l.uid] || {}; });
+      report.groups = mergeGroups(docs(groups)).map((g) => ({ id: g.id, name: g.name, nameAr: g.nameAr, facilitator: g.facilitator?.name || "" }));
+    } catch (e) {
+      console.warn("onlineProgress: groups not added", e.message);
+    }
+  }
   await flushUsage(db);
-  return buildReport({ caller: me.data(), courses: docs(courses), items: docs(items), progress: docs(progress), users: docs(users) });
+  return report;
 }
 
 exports.onlineProgressReport = onCall({ timeoutSeconds: 60, memory: "512MiB" }, async (request) => {

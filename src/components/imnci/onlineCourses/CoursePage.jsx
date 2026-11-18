@@ -20,6 +20,7 @@ import { CourseBooks } from './lazyParts';
 import { savedModules } from './offline';
 import { useCourseScreen } from './screen';
 import { Pill, LockedBadge } from './ui';
+import { groupName } from './enrolment';
 
 export function CoursePage() {
     const { t } = useTranslation();
@@ -27,8 +28,11 @@ export function CoursePage() {
         aiBooks, back, bookDialog, courseSections, doneCount, duration, go,
         inOrder, isAdmin, itemModal, minutesLeft, moduleLocked, modules, nextUp, openCourse,
         openCourseId, progress, query, reload, sectionLocked, sectionsByModule, setBookForm,
-        setItemModal, setQuery,
+        setItemModal, setQuery, enrolments, isArabic, inManageArea,
     } = useCourseScreen();
+    // The learner's group in this course, and its facilitator if it has one.
+    const mine = !inManageArea ? enrolments?.byCourse?.[openCourse.id] : null;
+    const myGroup = mine?.status === 'approved' ? enrolments.groupById[mine.groupId] : null;
     // Modules saved for offline on this device, marked on their cards.
     const saved = savedModules();
     const isDone = (s) => !!progress.completed?.[s.id];
@@ -99,6 +103,15 @@ export function CoursePage() {
                         : t('imnci_ui.courses.time.about', 'about {{time}}', { time: duration(timeLeft) })}</span></>)}
                     {!inOrder && (<><span>·</span><span>{t('imnci_ui.courses.main.any_order', 'Open in any order')}</span></>)}
                 </div>
+                {myGroup && (
+                    <div className="mt-2 text-xs sm:text-sm text-slate-600" data-testid="my-group">
+                        {t('imnci_ui.groups.your_group', 'Your group')}: <b>{groupName(myGroup, isArabic)}</b>
+                        {myGroup.facilitator?.name && (
+                            <> · {t('imnci_ui.groups.facilitator', 'Facilitator')}: {myGroup.facilitator.name}
+                                {myGroup.facilitator.phone && <> (<a className="underline" href={`tel:${myGroup.facilitator.phone}`}>{myGroup.facilitator.phone}</a>)</>}</>
+                        )}
+                    </div>
+                )}
                 {courseSections.length > 0 && (
                     // The course as a ring, and a badge for each module: one is
                     // earned when every lesson of that module is done.
@@ -200,10 +213,13 @@ export function CoursePage() {
                 </ol>
             )}
 
-            <Suspense fallback={null}>
-                <CourseBooks courseId={openCourse.id} books={aiBooks} canManage={isAdmin}
-                    onOpen={(id) => go({ book: id, module: null, section: null })} onAdd={() => setBookForm({ courseId: openCourse.id })} />
-            </Suspense>
+            {/* The course books are managed on the Manage online courses page only. */}
+            {isAdmin && (
+                <Suspense fallback={null}>
+                    <CourseBooks courseId={openCourse.id} books={aiBooks} canManage={isAdmin}
+                        onOpen={(id) => go({ book: id, module: null, section: null })} onAdd={() => setBookForm({ courseId: openCourse.id })} />
+                </Suspense>
+            )}
             {bookDialog}
 
             {orphans.length > 0 && isAdmin && (
