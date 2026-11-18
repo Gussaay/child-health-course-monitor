@@ -60,7 +60,13 @@ export function AnswerOptions(props) {
     return !isMulti(q) && allowRetry ? <SingleChoice {...props} /> : <AnswerAtOnce {...props} />;
 }
 
-function SingleChoice({ q, onAnswered, compact = false }) {
+// The result of the latest try, for the card around the question to show:
+// 'right', 'wrong' or null before any try.
+function useReportResult(result, onResult) {
+    React.useEffect(() => { onResult?.(result); }, [result]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+function SingleChoice({ q, onAnswered, onResult, compact = false }) {
     const { t } = useTranslation();
     // With two options, one wrong pick already gives the answer away.
     const maxTries = Math.min(triesAllowed(q), Math.max(1, (q.options || []).length - 1));
@@ -69,6 +75,7 @@ function SingleChoice({ q, onAnswered, compact = false }) {
     React.useEffect(() => {
         if (choice.shown && !told.current) { told.current = true; onAnswered?.(choice.firstTime, choice); }
     }, [choice.shown]); // eslint-disable-line react-hooks/exhaustive-deps
+    useReportResult(choice.right ? 'right' : choice.wrong.length ? 'wrong' : null, onResult);
     return (
         <>
             <ChoiceOptions small={compact} options={q.options || []} answer={q.answer ?? 0} feedback={q.feedback || []}
@@ -83,7 +90,7 @@ function SingleChoice({ q, onAnswered, compact = false }) {
     );
 }
 
-function AnswerAtOnce({ q, onAnswered, allowRetry = true, compact = false }) {
+function AnswerAtOnce({ q, onAnswered, onResult, allowRetry = true, compact = false }) {
     const { t } = useTranslation();
     const multi = isMulti(q);
     const right = rightOptions(q);
@@ -95,6 +102,7 @@ function AnswerAtOnce({ q, onAnswered, allowRetry = true, compact = false }) {
     const ok = answered && pickedRight(q, answered);
     const pad = compact ? 'min-h-[40px] px-3 py-2 text-sm' : 'min-h-[44px] px-3 py-2.5 text-sm sm:text-base';
     const said = (answered || []).map((i) => feedback[i]).filter((f) => f && String(f).trim());
+    useReportResult(answered ? (ok ? 'right' : 'wrong') : null, onResult);
     return (
         <div>
             {multi && !answered && (
@@ -105,7 +113,7 @@ function AnswerAtOnce({ q, onAnswered, allowRetry = true, compact = false }) {
                     const isRight = right.includes(i);
                     const chosen = answered ? answered.includes(i) : ticked.includes(i);
                     const tone = answered
-                        ? (isRight ? 'border-sky-500 bg-sky-50 text-slate-900' : chosen ? 'border-rose-400 bg-rose-50 text-rose-900' : 'border-slate-200 bg-slate-50 text-slate-500')
+                        ? (isRight ? 'border-emerald-500 bg-emerald-50 text-slate-900' : chosen ? 'border-rose-400 bg-rose-50 text-rose-900' : 'border-slate-200 bg-slate-50 text-slate-500')
                         : chosen ? 'border-sky-500 bg-sky-50' : 'border-slate-200 bg-slate-50 hover:border-sky-400 hover:bg-white';
                     const onClick = () => {
                         if (answered) return;
@@ -119,7 +127,7 @@ function AnswerAtOnce({ q, onAnswered, allowRetry = true, compact = false }) {
                                 {multi && chosen && !answered ? '✓' : String.fromCharCode(65 + i)}
                             </span>
                             <span className="flex-1"><Html html={opt} /></span>
-                            {answered && isRight && <CheckCircle2 size={18} className="text-sky-700 shrink-0" />}
+                            {answered && isRight && <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />}
                             {answered && !isRight && <XCircle size={18} className={`shrink-0 ${chosen ? 'text-rose-600' : 'text-slate-300'}`} />}
                         </button>
                     );
@@ -132,8 +140,8 @@ function AnswerAtOnce({ q, onAnswered, allowRetry = true, compact = false }) {
                 </button>
             )}
             {answered && (
-                <div className={`mt-3 rounded-xl border p-3 sm:p-4 text-sm ${ok ? 'bg-sky-50 border-sky-200' : 'bg-rose-50 border-rose-200'}`}>
-                    <div className={`font-bold ${ok ? 'text-sky-900' : 'text-rose-900'}`}>
+                <div className={`mt-3 rounded-xl border p-3 sm:p-4 text-sm bg-white ${ok ? 'border-emerald-300' : 'border-rose-300'}`}>
+                    <div className={`font-bold ${ok ? 'text-emerald-800' : 'text-rose-800'}`}>
                         {ok ? t('imnci_ui.courses.question.correct', 'Correct.') : t('imnci_ui.courses.question.not_quite', 'Not quite.')}
                     </div>
                     {said.map((f, k) => <p key={k} className="text-slate-800 mt-1"><Html html={f} /></p>)}
@@ -267,6 +275,7 @@ export function ScenarioBlock({ block, activityKey }) {
     const [at, setAt] = useState(0);
     const [answered, setAnswered] = useState(() => new Set());
     const [show, setShow] = useState(null); // 'chart' | 'form'
+    const [result, setResult] = useState(null);
     const [done, markDone] = useActivity(activityKey);
     const firstTry = useFirstTry(activityKey);
     const c = cases[at];
@@ -280,7 +289,7 @@ export function ScenarioBlock({ block, activityKey }) {
     const hasForm = (c.record || []).length > 0;
     const who = c.child?.name || c.name;
     return (
-        <Frame icon={Users} tone="indigo" done={done} label={block.label || t('imnci_ui.courses.practice.cases', 'Test your skill')} title={block.title}>
+        <Frame icon={Users} tone="indigo" done={done} result={result} label={block.label || t('imnci_ui.courses.practice.cases', 'Test your skill')} title={block.title}>
             {block.text && at === 0 && <div className="text-sm sm:text-base text-slate-700 mb-3"><Html html={block.text} /></div>}
             <div className="flex items-center gap-2 mb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-indigo-800">
@@ -308,7 +317,7 @@ export function ScenarioBlock({ block, activityKey }) {
             {c.question && (
                 <div className="mt-4">
                     <div className="font-semibold text-slate-900 mb-2"><Html html={c.question} /></div>
-                    <AnswerOptions key={at} q={c} onAnswered={onAnswered} />
+                    <AnswerOptions key={at} q={c} onResult={setResult} onAnswered={onAnswered} />
                 </div>
             )}
             {answered.has(at) && at < cases.length - 1 && (
@@ -408,8 +417,9 @@ export function DrillBlock({ block, activityKey }) {
         setCounted(ok ? 'ok' : 'off');
     };
     const canAsk = !needCount || counted !== null;
+    const [result, setResult] = useState(null);
     return (
-        <Frame icon={Timer} tone="emerald" done={done} label={block.label || t('imnci_ui.courses.practice.drill', 'Skill drill')} title={block.title}>
+        <Frame icon={Timer} tone="emerald" done={done} result={result} label={block.label || t('imnci_ui.courses.practice.drill', 'Skill drill')} title={block.title}>
             {block.text && <div className="text-sm sm:text-base text-slate-700 mb-2"><Html html={block.text} /></div>}
             <VideoBlock block={{ url: block.url, title: block.videoTitle || block.title, script: block.script }} activityKey={null} />
             {!block.url && block.given && (
@@ -442,7 +452,7 @@ export function DrillBlock({ block, activityKey }) {
             {canAsk && block.question && (
                 <div className="mt-4">
                     <div className="font-semibold text-slate-900 mb-2"><Html html={block.question} /></div>
-                    <AnswerOptions q={block} onAnswered={(ok) => { firstTry(ok); markDone(); }} />
+                    <AnswerOptions q={block} onResult={setResult} onAnswered={(ok) => { firstTry(ok); markDone(); }} />
                 </div>
             )}
         </Frame>

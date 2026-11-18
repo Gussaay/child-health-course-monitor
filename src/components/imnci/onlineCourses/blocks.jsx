@@ -2,11 +2,11 @@
 //
 // How a section's content is shown to the learner: text, figures, captured
 // book pages, videos, questions and links to practice cases.
-import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, useContext, Suspense, lazy } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     BookOpenText, MonitorPlay, Stethoscope, CheckCircle2, GraduationCap, X, Lightbulb, ClipboardCheck,
-    Play, Pencil, Film, BookOpen, Syringe, Printer,
+    Play, Pencil, Film, BookOpen, Syringe, Printer, ChevronDown, Lock, RotateCcw,
 } from 'lucide-react';
 import { severityById } from '../../constants';
 import { videoSource, blockHtml } from '../book';
@@ -20,7 +20,7 @@ import { BookletProtocolView } from '../bookletView';
 import { RecordingFormView } from '../recordingFormView';
 import { useCourseScreen } from './screen';
 import CourseLinkBlock from './CourseLinkBlock';
-import { useActivity, useFirstTry, RevealBlock, FlipBlock, SortBlock, StepsBlock, StoryBlock, CalcBlock } from './interactive';
+import { ActivityContext, useActivity, useFirstTry, RevealBlock, FlipBlock, SortBlock, StepsBlock, StoryBlock, CalcBlock } from './interactive';
 import { AnswerOptions, ScenarioBlock, SpotBlock, DrillBlock, ClassCardsBlock, ReflectBlock } from './practice';
 
 // The exercise players are heavy (the whole recording form), so they load
@@ -135,10 +135,14 @@ export function QuestionBlock({ block, number, total, activityKey }) {
     const { t } = useTranslation();
     const [, markDone] = useActivity(activityKey);
     const firstTry = useFirstTry(activityKey);
+    // After each try the whole card says how it went: green when right, red
+    // when wrong, so the result is seen at a glance and not only on one option.
+    const [result, setResult] = useState(null);
     return (
-        <div className="not-prose rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm my-4">
+        <div data-result={result || undefined}
+            className={`not-prose rounded-xl border-2 p-4 sm:p-5 shadow-sm my-4 transition-colors duration-300 ${RESULT_CARD[result] || RESULT_CARD.none}`}>
             <div className="flex items-center gap-2 mb-3">
-                <span className="px-2 py-0.5 rounded bg-sky-700 text-white text-[11px] font-bold uppercase tracking-wider">
+                <span className={`px-2 py-0.5 rounded text-white text-[11px] font-bold uppercase tracking-wider ${result === 'right' ? 'bg-emerald-600' : result === 'wrong' ? 'bg-rose-600' : 'bg-sky-700'}`}>
                     {block.label || t('imnci_ui.courses.look.checkpoint', 'Checkpoint')}
                 </span>
                 {total > 1 && (
@@ -151,10 +155,17 @@ export function QuestionBlock({ block, number, total, activityKey }) {
             <div className="font-semibold text-slate-900 text-base sm:text-lg leading-snug mb-3">{block.text}</div>
             {/* Every option is marked right or wrong once answered, with the
                 feedback written for the one picked; the first try is recorded. */}
-            <AnswerOptions q={block} onAnswered={(right) => { firstTry(right); markDone(); }} />
+            <AnswerOptions q={block} onResult={setResult} onAnswered={(right) => { firstTry(right); markDone(); }} />
         </div>
     );
 }
+
+/** The card around a question, by the result of the last try. */
+export const RESULT_CARD = {
+    none: 'border-slate-200 bg-white',
+    right: 'border-emerald-500 bg-emerald-50',
+    wrong: 'border-rose-500 bg-rose-50',
+};
 
 // Video is embedded where the address is a YouTube or Vimeo link and played
 // directly otherwise, so a file in Storage and a link to a WHO recording both
@@ -166,6 +177,91 @@ export function QuestionBlock({ block, number, total, activityKey }) {
 // moment; stops pause a video file at a moment and ask a question before it
 // goes on.
 const clock = (sec) => `${Math.floor((Number(sec) || 0) / 60)}:${String(Math.floor((Number(sec) || 0) % 60)).padStart(2, '0')}`;
+
+// A YouTube video plays from the privacy-enhanced address with the player's
+// extras turned off: no related videos from other channels (rel=0), no notes
+// over the picture, the smallest branding YouTube allows. YouTube does not let
+// a page remove its logo, so before the first play the lesson shows its own
+// cover, and when the video is paused or ends the lesson covers the player, so
+// YouTube's "more videos" panel and end screen never show.
+export const youtubeId = (src) => (String(src || '').match(/youtube(?:-nocookie)?\.com\/embed\/([\w-]{6,})/) || [])[1] || null;
+export function youtubeEmbed(id, { start = null, autoplay = false } = {}) {
+    const params = new URLSearchParams({
+        rel: '0', modestbranding: '1', iv_load_policy: '3', playsinline: '1', enablejsapi: '1', fs: '1', color: 'white',
+    });
+    if (typeof window !== 'undefined' && window.location?.origin?.startsWith('http')) params.set('origin', window.location.origin);
+    if (start != null) params.set('start', String(start));
+    if (autoplay) params.set('autoplay', '1');
+    return `https://www.youtube-nocookie.com/embed/${id}?${params}`;
+}
+
+function YouTubePlayer({ id, title, startAt, onEnded }) {
+    const { t } = useTranslation();
+    const frame = useRef(null);
+    // 'cover' before the first play, then 'playing', 'paused' or 'ended'.
+    const [state, setState] = useState('cover');
+    const ended = useRef(onEnded);
+    ended.current = onEnded;
+    useEffect(() => { if (startAt != null) setState('playing'); }, [startAt]);
+    useEffect(() => {
+        const onMessage = (e) => {
+            if (!frame.current || e.source !== frame.current.contentWindow) return;
+            let data = e.data;
+            try { if (typeof data === 'string') data = JSON.parse(data); } catch { return; }
+            const ps = data?.info?.playerState ?? (data?.event === 'onStateChange' ? data.info : undefined);
+            if (ps === 1) setState('playing');
+            else if (ps === 2) setState('paused');
+            else if (ps === 0) { setState('ended'); ended.current?.(); }
+        };
+        window.addEventListener('message', onMessage);
+        return () => window.removeEventListener('message', onMessage);
+    }, []);
+    const send = (func, args = []) => frame.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
+    // Ask the player to report its state (the IFrame API's handshake).
+    const listen = () => {
+        const w = frame.current?.contentWindow;
+        if (!w) return;
+        w.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*');
+        w.postMessage(JSON.stringify({ event: 'command', func: 'addEventListener', args: ['onStateChange'], id: 1, channel: 'widget' }), '*');
+    };
+    const src = youtubeEmbed(id, { start: startAt, autoplay: state !== 'cover' });
+    if (state === 'cover') {
+        return (
+            <button type="button" onClick={() => setState('playing')} aria-label={t('imnci_ui.courses.video.play', 'Play the video')}
+                className="absolute inset-0 w-full h-full group">
+                <img src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+                <span className="absolute inset-0 bg-black/40" />
+                <span className="absolute inset-0 grid place-items-center">
+                    <span className="w-16 h-16 rounded-full bg-white/95 text-sky-800 grid place-items-center shadow-lg">
+                        <Play size={30} className="ms-1" fill="currentColor" />
+                    </span>
+                </span>
+                {title && <span className="absolute bottom-0 inset-x-0 p-3 text-start text-white text-sm font-semibold bg-black/50">{title}</span>}
+            </button>
+        );
+    }
+    return (
+        <>
+            <iframe ref={frame} key={src} src={src} title={title || t('imnci_ui.courses.video.video', 'Video')} allowFullScreen onLoad={listen}
+                className="absolute inset-0 w-full h-full"
+                allow="accelerometer; autoplay; encrypted-media; picture-in-picture; fullscreen" />
+            {(state === 'paused' || state === 'ended') && (
+                <button type="button" data-testid="video-cover"
+                    onClick={() => { if (state === 'ended') send('seekTo', [0, true]); send('playVideo'); setState('playing'); }}
+                    className="absolute inset-0 w-full h-full bg-slate-900/90 text-white grid place-items-center">
+                    <span className="flex flex-col items-center gap-2">
+                        <span className="w-14 h-14 rounded-full bg-white text-sky-800 grid place-items-center shadow-lg">
+                            {state === 'ended' ? <RotateCcw size={26} /> : <Play size={28} className="ms-1" fill="currentColor" />}
+                        </span>
+                        <span className="text-sm font-semibold">
+                            {state === 'ended' ? t('imnci_ui.courses.video.again', 'Watch again') : t('imnci_ui.courses.video.resume', 'Continue watching')}
+                        </span>
+                    </span>
+                </button>
+            )}
+        </>
+    );
+}
 
 export function VideoBlock({ block, activityKey }) {
     const { t } = useTranslation();
@@ -222,6 +318,7 @@ export function VideoBlock({ block, activityKey }) {
         videoRef.current?.play?.().catch(() => {});
     };
     const q = stop !== null ? stops[stop] : null;
+    const ytId = src.kind === 'embed' ? youtubeId(src.src) : null;
 
     return (
         <figure className="my-4 not-prose">
@@ -233,7 +330,9 @@ export function VideoBlock({ block, activityKey }) {
             )}
             <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 bg-black shadow-sm"
                 style={{ aspectRatio: '16 / 9' }}>
-                {src.kind === 'embed' ? (
+                {ytId ? (
+                    <YouTubePlayer id={ytId} title={title} startAt={startAt} onEnded={markDone} />
+                ) : src.kind === 'embed' ? (
                     <iframe key={embedSrc} src={embedSrc} title={title || t('imnci_ui.courses.video.video', 'Video')} allowFullScreen
                         className="absolute inset-0 w-full h-full"
                         allow="accelerometer; autoplay; encrypted-media; picture-in-picture" />
@@ -280,14 +379,23 @@ export function VideoBlock({ block, activityKey }) {
                     ))}
                 </div>
             )}
-            <div className="flex flex-wrap items-center justify-between gap-2 mt-1">
-                {block.caption && block.caption !== title ? <figcaption className="text-xs text-slate-500">{block.caption}</figcaption> : <span />}
-                {activityKey != null && !done && src.kind === 'embed' && (
-                    <button onClick={markDone} className="text-xs text-sky-700 font-semibold hover:underline">
-                        {t('imnci_ui.courses.video.watched', 'I have watched it')}
-                    </button>
-                )}
-            </div>
+            {block.caption && block.caption !== title && <figcaption className="text-xs text-slate-500 text-center mt-1">{block.caption}</figcaption>}
+            {/* Played to the end, the video ticks itself. The button is there
+                for a player that cannot say so (another site's player). */}
+            {activityKey != null && src.kind === 'embed' && (
+                <div className="flex justify-center mt-3">
+                    {done ? (
+                        <span className="inline-flex items-center gap-1.5 min-h-[44px] px-4 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold">
+                            <CheckCircle2 size={18} /> {t('imnci_ui.courses.video.watched_done', 'Watched')}
+                        </span>
+                    ) : (
+                        <button type="button" onClick={markDone} data-testid="video-watched"
+                            className="inline-flex items-center gap-2 min-h-[44px] px-5 rounded-full bg-sky-700 text-white text-sm font-semibold shadow-sm hover:bg-sky-800">
+                            <CheckCircle2 size={18} /> {t('imnci_ui.courses.video.watched_button', 'I watched the video')}
+                        </button>
+                    )}
+                </div>
+            )}
         </figure>
     );
 }
@@ -505,8 +613,85 @@ const MARKUP = /<\/?(b|strong|i|em|u|br|ul|ol|li|p|span)\b/i;
 // bullets and numbers put back here.
 export const RICH_LISTS = '[&_ul]:list-disc [&_ol]:list-decimal [&_ul]:ps-6 [&_ol]:ps-6 [&_li]:my-1 [&_p]:my-2 [&_blockquote]:border-s-4 [&_blockquote]:border-slate-300 [&_blockquote]:ps-3 [&_blockquote]:text-slate-700';
 
-export function ContentBlocks({ blocks, scale = 1, activities = false }) {
+// A paragraph of more than a few sentences is hard to read on a phone. It is
+// shown as several shorter paragraphs, cut only between sentences, so not a
+// word of it is lost or changed.
+const SENTENCE_END = /(?<=[.!?:;])\s+(?=[A-Z0-9“"‘'(\u0600-\u06FF])/;
+export function splitLongText(text, max = 480) {
+    const str = String(text || '');
+    if (str.length <= max * 1.4) return [str];
+    const sentences = str.split(SENTENCE_END);
+    const parts = [];
+    let cur = '';
+    sentences.forEach((sen) => {
+        if (cur && cur.length + sen.length + 1 > max) { parts.push(cur); cur = sen; } else cur = cur ? `${cur} ${sen}` : sen;
+    });
+    if (cur) parts.push(cur);
+    // A short tail is joined back to the part before it rather than left alone.
+    if (parts.length > 1 && parts[parts.length - 1].length < max / 3) parts.splice(-2, 2, `${parts[parts.length - 2]} ${parts[parts.length - 1]}`);
+    return parts;
+}
+
+const plainLength = (b) => {
+    if (!b) return 0;
+    if (b.type === 'list') return (b.items || []).join(' ').length;
+    if (b.type === 'table') return JSON.stringify(b.rows || []).length / 2;
+    return String(b.text || '').replace(/<[^>]*>/g, ' ').length;
+};
+// Blocks that are read rather than done. A long run of them is shown a part
+// at a time.
+const READ_TYPES = ['paragraph', 'heading', 'list', 'rich', 'note', 'table', 'image', 'page'];
+// About a phone screen of reading before the learner is asked to go on.
+export const PART_LENGTH = 1100;
+
+/**
+ * Where a lesson read part by part stops: the blocks shown, in order, with
+ * the reason the next part is held back. A part ends at an activity not done
+ * yet (it opens when the activity is done) or, in a long run of reading, at a
+ * "Continue" the learner presses (`breaks` holds the ones pressed).
+ */
+export function lessonParts(blocks = [], keys = [], isDone = () => false, breaks = new Set()) {
+    let run = 0;
+    for (let i = 0; i < blocks.length; i += 1) {
+        const b = blocks[i];
+        if (READ_TYPES.includes(b.type)) {
+            const len = plainLength(b);
+            // Break before a heading, or before any reading once the run is long.
+            const due = run > 0 && (run + len > PART_LENGTH * 1.3 || (b.type === 'heading' && run > PART_LENGTH * 0.6));
+            if (due) {
+                const id = `p${i}`;
+                if (!breaks.has(id)) return { shown: i, wait: 'continue', id };
+                run = 0;
+            }
+            run += len;
+        } else run = 0;
+        if (keys[i] && !isDone(keys[i])) return { shown: i + 1, wait: i + 1 < blocks.length ? 'activity' : null };
+    }
+    return { shown: blocks.length, wait: null };
+}
+
+const breaksKey = (id) => `oc-parts-${id}`;
+function readBreaks(id) {
+    try { return new Set(JSON.parse(localStorage.getItem(breaksKey(id)) || '[]')); } catch { return new Set(); }
+}
+
+// A part of a lesson that opens slides gently into place. Done in script
+// rather than in the stylesheet, which every page of the app loads first.
+function PartIn({ children, ...rest }) {
+    const ref = useRef(null);
+    useEffect(() => {
+        const el = ref.current;
+        if (!el?.animate || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+        el.animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 450, easing: 'ease-out' });
+    }, []);
+    return <div ref={ref} {...rest}>{children}</div>;
+}
+
+export function ContentBlocks({ blocks, scale = 1, activities = false, gated = false, partsId = null }) {
     const { t } = useTranslation();
+    const ctx = useContext(ActivityContext);
+    const [breaks, setBreaks] = useState(() => ({ id: partsId, set: readBreaks(partsId) }));
+    const breakSet = breaks.id === partsId ? breaks.set : readBreaks(partsId);
     if (!blocks?.length) return null;
     // Activities are keyed by their place in the section, so the section can
     // count which have been done.
@@ -515,16 +700,42 @@ export function ContentBlocks({ blocks, scale = 1, activities = false }) {
     // Questions are numbered among themselves, "Question 2 of 3".
     const questionTotal = blocks.filter((b) => b.type === 'question').length;
     let questionNo = 0;
+    // Read part by part: what comes after an activity opens when it is done,
+    // and a long stretch of reading opens a screen at a time.
+    const parts = gated && activities && ctx
+        ? lessonParts(blocks, keys, ctx.isDone, breakSet)
+        : { shown: blocks.length, wait: null };
+    const goOn = (id) => {
+        const next = new Set(breakSet).add(id);
+        try { localStorage.setItem(breaksKey(partsId), JSON.stringify([...next])); } catch { /* private mode */ }
+        setBreaks({ id: partsId, set: next });
+    };
+    const rendered = blocks.slice(0, parts.shown).map((b, i) => {
+        const el = block(b, i);
+        // An activity carries an anchor, so the lesson's checklist can take the learner to it.
+        return key(i) ? <PartIn key={i} id={activityAnchor(key(i))} className="scroll-mt-24">{el}</PartIn> : <PartIn key={i}>{el}</PartIn>;
+    });
     return (
         <div
             className="prose prose-slate max-w-none text-slate-800 leading-relaxed space-y-3"
             style={{ fontSize: `${scale}rem` }}
         >
-            {blocks.map((b, i) => {
-                const el = block(b, i);
-                // An activity carries an anchor, so the lesson's checklist can take the learner to it.
-                return key(i) ? <div key={i} id={activityAnchor(key(i))} className="scroll-mt-24">{el}</div> : el;
-            })}
+            {rendered}
+            {parts.wait === 'continue' && (
+                <div className="not-prose flex flex-col items-center gap-1 pt-2" data-testid="part-continue">
+                    <button type="button" onClick={() => goOn(parts.id)}
+                        className="inline-flex items-center gap-2 min-h-[44px] px-5 rounded-full bg-sky-700 text-white text-sm font-semibold shadow-sm hover:bg-sky-800">
+                        {t('imnci_ui.courses.parts.continue', 'Continue')} <ChevronDown size={18} />
+                    </button>
+                    <span className="text-xs text-slate-500">{t('imnci_ui.courses.parts.continue_hint', 'The lesson goes on below')}</span>
+                </div>
+            )}
+            {parts.wait === 'activity' && (
+                <div className="not-prose flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600" data-testid="part-waiting">
+                    <Lock size={16} className="text-slate-400 shrink-0" />
+                    {t('imnci_ui.courses.parts.do_activity', 'Do the activity above to see the next part of the lesson.')}
+                </div>
+            )}
         </div>
     );
 
@@ -616,6 +827,10 @@ export function ContentBlocks({ blocks, scale = 1, activities = false }) {
                             </div>
                         </div>
                     );
+                }
+                if (b.type === 'paragraph') {
+                    const pieces = splitLongText(b.text);
+                    if (pieces.length > 1) return <div key={i} className="space-y-3">{pieces.map((p, k) => <p key={k} className="my-0">{p}</p>)}</div>;
                 }
                 return <RichText key={i} html={blockHtml(b)} />;
         }

@@ -1,10 +1,9 @@
 // src/components/imnci/onlineCourses/SectionPage.jsx
 //
 // One section, on one page: its text, charts, videos and activities in the
-// order they were written, the AI study helper, and Previous / Next within the
-// module. There are no tabs to step through: a learner reads, watches and
+// order they were written, and Previous / Next within the module. There are no tabs to step through: a learner reads, watches and
 // practises in one pass and then moves on to the next section.
-import React, { Suspense, useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Pencil, ArrowLeft, ArrowRight, Columns2, CheckCircle2, ZoomIn, ZoomOut, Trophy,
@@ -14,7 +13,6 @@ import { learnerContent } from '../book';
 import { ContentBlocks, activityOutline, activityAnchor } from './blocks';
 import { ActivityContext } from './interactive';
 import { SectionTabEditor } from './SectionTabEditor';
-import { SectionAiPanel } from './lazyParts';
 import { useCourseScreen } from './screen';
 import { LockedBanner } from './ui';
 import { useFocusPage } from '../../../utils/pageChrome';
@@ -147,6 +145,10 @@ export function SectionPage() {
     // read in order, it can be completed once every activity in it is done.
     // Someone managing the course is not held to that.
     const canComplete = isAdmin || !inOrder || !firstLeft;
+    // A learner meets the lesson a part at a time: what follows an activity
+    // opens once it is done. A finished lesson, and someone managing the
+    // course, see it whole.
+    const readInParts = !isAdmin && inOrder && !isDone;
     // Revising the converted text means holding it against the page it came
     // from. The captured pages make that possible without leaving the app.
     const pages = content.filter((b) => b.type === 'page');
@@ -214,7 +216,7 @@ export function SectionPage() {
 
     return (
         <div className="max-w-3xl mx-auto">
-            <div className="space-y-3 pb-4">
+            <div className={`space-y-3 ${editingTab ? 'pb-4' : 'pb-32'}`}>
                 {/* One slim line: the lesson's name beside the one back arrow (the
                     app's own top bar does this on Android), and the reading tools. */}
                 <div className="flex items-center gap-2">
@@ -302,7 +304,8 @@ export function SectionPage() {
                         </div>
                     ) : content.length > 0 ? (
                         <ActivityContext.Provider value={activityValue}>
-                            <ContentBlocks key={openSection.id} blocks={content} scale={fontScale} activities />
+                            <ContentBlocks key={openSection.id} blocks={content} scale={fontScale} activities
+                                gated={readInParts} partsId={`${user?.uid || 'guest'}-${openSection.id}`} />
                         </ActivityContext.Provider>
                     ) : (
                         <div className="text-sm text-slate-500 py-12 text-center border border-dashed rounded-lg">
@@ -342,17 +345,14 @@ export function SectionPage() {
                     )}
                 </div>
 
-                {!editingTab && (
-                    <Suspense fallback={null}>
-                        <SectionAiPanel section={openSection} canRefresh={isAdmin} />
-                    </Suspense>
-                )}
             </div>
 
-            {/* Back and on, pinned above the phone's bottom bar so finishing a
-                section never means scrolling to find the button. */}
+            {/* Back and on, fixed to the bottom of the screen so finishing a
+                section never means scrolling to find the button, and it stays
+                put at the end of the page too. */}
             {!editingTab && (
-                <div className="sticky bottom-0 z-50 -mx-3 sm:mx-0 sm:mb-3 sm:rounded-xl sm:border border-t border-slate-200 shadow-[0_-4px_12px_rgba(15,23,42,0.06)] bg-white/95 backdrop-blur px-3 sm:px-4 py-3">
+                <div data-testid="lesson-bar" className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 shadow-[0_-4px_12px_rgba(15,23,42,0.08)] bg-white/95 backdrop-blur pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
+                <div className="max-w-3xl mx-auto px-3 sm:px-4 pt-3">
                     {!isDone && !canComplete ? (
                         <div className="text-xs text-amber-700 text-center mb-2">
                             {t('imnci_ui.courses.activity.left_to_do', 'Activities still to do before this lesson is complete: {{n}}', { n: keys.length - activitiesDone })}
@@ -377,7 +377,8 @@ export function SectionPage() {
                             </span>
                             <span className="sm:hidden">{prev ? number(here - 1) : ''}</span>
                         </button>
-                        <span className="flex-1" />
+                        <LessonProgress done={isDone ? keys.length : activitiesDone} total={keys.length} finished={isDone}
+                            onClick={firstLeft && !isDone ? () => goToActivity(firstLeft.key) : undefined} />
                         {isDone ? (
                             next ? (
                                 <button onClick={() => goTo(next)}
@@ -413,7 +414,28 @@ export function SectionPage() {
                         </>)}
                     </div>
                 </div>
+                </div>
             )}
         </div>
+    );
+}
+
+// How far the learner is in this lesson, beside Next: a bar and "3/5".
+function LessonProgress({ done, total, finished, onClick }) {
+    const { t } = useTranslation();
+    const pct = total ? Math.round((done / total) * 100) : finished ? 100 : 0;
+    const label = total
+        ? t('imnci_ui.courses.activity.bar_progress', '{{n}} of {{total}} activities done', { n: done, total })
+        : finished ? t('imnci_ui.courses.main.completed', 'Completed') : '';
+    return (
+        <button type="button" onClick={onClick} disabled={!onClick} title={label} aria-label={label} data-testid="lesson-progress"
+            className="flex-1 min-w-0 flex items-center gap-2 px-1 disabled:cursor-default">
+            <span className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                <span className={`block h-full rounded-full transition-all duration-500 ${pct >= 100 ? 'bg-emerald-500' : 'bg-sky-600'}`} style={{ width: `${pct}%` }} />
+            </span>
+            <span className={`text-xs font-bold tabular-nums shrink-0 ${pct >= 100 ? 'text-emerald-700' : 'text-slate-600'}`}>
+                {total ? `${done}/${total}` : `${pct}%`}
+            </span>
+        </button>
     );
 }

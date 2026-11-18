@@ -59,13 +59,13 @@ export const Html = ({ html, className = '' }) => (
         : <span className={`whitespace-pre-line ${className}`}>{html}</span>
 );
 
-export function Frame({ icon: Icon, label, tone = 'sky', done, children, title }) {
+export function Frame({ icon: Icon, label, tone = 'sky', done, children, title, result = null }) {
     const { t } = useTranslation();
     const tones = {
         sky: 'bg-sky-700', violet: 'bg-violet-700', emerald: 'bg-emerald-700', amber: 'bg-amber-600', indigo: 'bg-indigo-700',
     };
     return (
-        <div className="not-prose rounded-xl border border-slate-200 bg-white shadow-sm my-4 overflow-hidden">
+        <div data-result={result || undefined} className={`not-prose rounded-xl shadow-sm my-4 overflow-hidden transition-colors duration-300 ${result === 'right' ? 'border-2 border-emerald-500 bg-emerald-50' : result === 'wrong' ? 'border-2 border-rose-500 bg-rose-50' : 'border border-slate-200 bg-white'}`}>
             <div className="flex items-center gap-2 px-4 pt-4">
                 <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-white text-[11px] font-bold uppercase tracking-wider ${tones[tone] || tones.sky}`}>
                     <Icon size={12} /> {label}
@@ -323,7 +323,7 @@ export function ChoiceOptions({ options = [], answer = 0, feedback = [], explana
                 {options.map((o, oi) => {
                     const isAns = oi === answer;
                     const struck = wrong.includes(oi);
-                    const tone = shown && isAns ? 'border-sky-500 bg-sky-50 text-slate-900'
+                    const tone = shown && isAns ? 'border-emerald-500 bg-emerald-50 text-slate-900'
                         : struck ? 'border-rose-300 bg-rose-50 text-rose-900 line-through decoration-rose-400'
                             : shown ? 'border-slate-200 bg-slate-50 text-slate-500'
                                 : 'border-slate-200 bg-slate-50 hover:border-sky-400 hover:bg-white';
@@ -334,7 +334,7 @@ export function ChoiceOptions({ options = [], answer = 0, feedback = [], explana
                                 {String.fromCharCode(65 + oi)}
                             </span>
                             <span className="flex-1"><Html html={o} /></span>
-                            {shown && isAns && <CheckCircle2 size={16} className="text-sky-700 shrink-0" />}
+                            {shown && isAns && <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />}
                             {struck && <XCircle size={16} className="text-rose-600 shrink-0" />}
                         </button>
                     );
@@ -353,8 +353,8 @@ export function ChoiceOptions({ options = [], answer = 0, feedback = [], explana
                 </div>
             )}
             {shown && (
-                <div className={`mt-2 rounded-lg border p-3 text-sm ${right ? 'bg-sky-50 border-sky-200' : 'bg-rose-50 border-rose-200'}`} data-testid="choice-result">
-                    <span className={`font-semibold ${right ? 'text-sky-900' : 'text-rose-900'}`}>
+                <div className={`mt-2 rounded-lg border p-3 text-sm bg-white ${right ? 'border-emerald-300' : 'border-rose-300'}`} data-testid="choice-result">
+                    <span className={`font-semibold ${right ? 'text-emerald-800' : 'text-rose-800'}`}>
                         {right
                             ? (wrong.length ? t('imnci_ui.courses.question.correct_now', 'Correct, this time.') : t('imnci_ui.courses.question.correct', 'Correct.'))
                             : t('imnci_ui.courses.question.the_answer', 'The answer is {{letter}}.', { letter: String.fromCharCode(65 + answer) })}
@@ -551,7 +551,7 @@ export function CalcBlock({ block, activityKey }) {
                 </div>
             )}
             {shown && (
-                <div className={`mt-2 rounded-lg border p-3 text-sm ${right ? 'bg-sky-50 border-sky-200' : 'bg-rose-50 border-rose-200'}`} data-testid="calc-result">
+                <div className={`mt-2 rounded-lg border p-3 text-sm ${right ? 'bg-emerald-50 border-emerald-300' : 'bg-rose-50 border-rose-200'}`} data-testid="calc-result">
                     <span className={`font-semibold ${right ? 'text-sky-900' : 'text-rose-900'}`}>
                         {right ? t('imnci_ui.courses.question.correct', 'Correct.')
                             : t('imnci_ui.courses.activity.calc_answer', 'The answer is {{a}} {{unit}}.', { a: answers.join(' or '), unit })}

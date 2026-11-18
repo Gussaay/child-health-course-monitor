@@ -133,7 +133,7 @@ describe('treatment and counselling tables', () => {
 
 describe('drug tables', () => {
     it('are tables on a phone too, with age and weight in separate columns, then dose', () => {
-        document.body.innerHTML = renderToStaticMarkup(<BookletDoseView protocol={P.dosages_child} />);
+        document.body.innerHTML = renderToStaticMarkup(<BookletDoseView protocol={P.dosages_child} expanded />);
         const phone = document.querySelector('table.md\\:hidden');
         expect(phone).toBeTruthy();
         expect([...phone.querySelectorAll('thead th')].map((th) => th.textContent)).toEqual(['Age', 'Weight', 'Dose']);
@@ -143,8 +143,26 @@ describe('drug tables', () => {
     it('show only the doses asked for, keeping their place in the document', () => {
         const i = P.dosages_child.drugs.findIndex((d) => d.id === 'zinc');
         document.body.innerHTML = renderToStaticMarkup(<BookletDoseView protocol={P.dosages_child} only={[i]} />);
-        expect(document.querySelectorAll('h3')).toHaveLength(1);
-        expect(document.querySelector('h3').textContent).toContain('Zinc');
+        const names = document.querySelectorAll('[data-testid="dose-drug"]');
+        expect(names).toHaveLength(1);
+        expect(names[0].textContent).toContain('Zinc');
+        // A single drug is shown open.
+        expect(document.querySelector('table')).toBeTruthy();
+    });
+    it('list the drugs by name, and a tap on a name opens its table', async () => {
+        const host = document.createElement('div');
+        document.body.innerHTML = '';
+        document.body.appendChild(host);
+        await act(async () => { createRoot(host).render(<BookletDoseView protocol={P.dosages_child} />); });
+        const names = [...host.querySelectorAll('[data-testid="dose-drug"]')];
+        expect(names).toHaveLength(P.dosages_child.drugs.length);
+        expect(host.querySelector('table')).toBeNull();
+        await act(async () => { names[0].click(); });
+        expect(names[0].getAttribute('aria-expanded')).toBe('true');
+        expect(host.querySelectorAll('table.md\\:hidden')).toHaveLength(1);
+        expect(host.querySelector('table.md\\:hidden tbody').children.length).toBe(P.dosages_child.drugs[0].rules.length);
+        await act(async () => { names[0].click(); });
+        expect(host.querySelector('table')).toBeNull();
     });
 });
 
@@ -222,7 +240,7 @@ describe('Protocol management layout', () => {
         expect(steps).toEqual(['Classify', 'Drug doses', 'Treatment', 'Counsel the mother', 'Follow-up']);
         const section = (key) => host.querySelector(`h3[data-step=${key}]`).parentElement;
         expect(section('classify').textContent).toContain('Chest indrawing');
-        expect(section('drugs').querySelector('h3:not([data-step])').textContent).toContain('Amoxicillin (oral)');
+        expect(section('drugs').querySelector('[data-testid="dose-drug"]').textContent).toContain('Amoxicillin (oral)');
         expect(section('treat').textContent).toContain('Give inhaled salbutamol');
         expect(section('counsel').textContent).toContain('Increase fluid during illness');
         expect(section('followup').textContent).toContain('PNEUMONIA, after 3 days');

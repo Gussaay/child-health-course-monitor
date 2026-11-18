@@ -9,7 +9,8 @@
 // each treatment line's dose from the part's drugs, and the page title,
 // question, ASK / LOOK column, note and side labels are typed in.
 // ============================================================================
-import React, { useState } from 'react';
+import React, { createContext, useContext, useState } from 'react';
+import { ChevronDown, Syringe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { BOOKLET_PAGES, ruleSigns } from './bookletLayout';
 import { toArabic } from './nationalProtocolAr';
@@ -66,23 +67,46 @@ const rowColor = (cls) => ROW_COLORS[cls] || { background: '#e2e8f0', border: '#
 
 const DOSE_TAG = /{{dose:(.*?)}}/;
 
-/** One treatment line: the words, then the dose it points to as a small tag. */
+// The part's drugs by id, so a dose named in a treatment line can open its table.
+const DoseContext = createContext(null);
+
+/**
+ * One treatment line: the words, then the dose it points to as a small tag.
+ * Tapping the tag opens that drug's dose table under the line.
+ */
 const TreatmentLine = ({ line, drugLabels }) => {
+    const { t, i18n } = useTranslation();
+    const doses = useContext(DoseContext);
+    const [open, setOpen] = useState(false);
     const text = String(line);
     const m = text.match(DOSE_TAG);
     const words = m ? text.replace(DOSE_TAG, '').replace(/[\s:—-]+$/, '') : text;
     const drugId = m ? m[1].trim() : null;
+    const drug = drugId && doses ? doses.byId[drugId] : null;
+    const tagCls = 'ms-1 inline-block align-middle text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/80 border border-slate-500 text-slate-800 whitespace-nowrap';
     return (
-        <li className="flex gap-1.5 leading-snug">
-            <span aria-hidden="true" className="shrink-0">►</span>
-            <span>
-                {words}
-                {drugId && (
-                    <span className="ms-1 inline-block align-middle text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/80 border border-slate-500 text-slate-800 whitespace-nowrap">
-                        {drugLabels[drugId] || drugId}
-                    </span>
-                )}
+        <li className="leading-snug">
+            <span className="flex gap-1.5">
+                <span aria-hidden="true" className="shrink-0">►</span>
+                <span>
+                    {words}
+                    {drugId && (drug ? (
+                        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} data-testid="dose-tag"
+                            title={t('clinical_ui.protocol.booklet.show_dose', 'Show the dose table')}
+                            className={`${tagCls} underline underline-offset-2 hover:bg-sky-50 hover:border-sky-400`}>
+                            {drugLabels[drugId] || drugId} {open ? '▴' : '▾'}
+                        </button>
+                    ) : (
+                        <span className={tagCls}>{drugLabels[drugId] || drugId}</span>
+                    ))}
+                </span>
             </span>
+            {open && drug && (
+                <div className="mt-1.5 mb-2 rounded border-2 border-slate-800 overflow-hidden text-start">
+                    <div className="bg-sky-100 px-2 py-1 text-xs font-extrabold text-slate-900">{drugLabels[drugId] || drugId}</div>
+                    <DoseTable drug={drug} i={-1} edit={null} t={t} ar={i18n.language === 'ar'} months={t('clinical_ui.protocol.booklet.months', 'months')} hideName />
+                </div>
+            )}
         </li>
     );
 };
@@ -483,7 +507,9 @@ export const BookletProtocolView = ({ formType, protocol, doses = [], edit = nul
         return <div className="p-6 text-center text-slate-500 bg-white border border-dashed border-slate-300 rounded">{t('clinical_ui.protocol.booklet.empty', 'This protocol has no classification tables yet.')}</div>;
     }
 
+    const doseCtx = { byId: Object.fromEntries((doses || []).map((d) => [d.id, d])) };
     return (
+        <DoseContext.Provider value={doseCtx}>
         <div className="space-y-6" dir={ar ? 'rtl' : 'ltr'}>
             {edit && (
                 <datalist id={listId}>
@@ -518,6 +544,7 @@ export const BookletProtocolView = ({ formType, protocol, doses = [], edit = nul
                 );
             })}
         </div>
+        </DoseContext.Provider>
     );
 };
 
@@ -608,20 +635,11 @@ const DoseBand = ({ r, edit, drugIndex, k, months, t, layout, ar }) => {
 
 // `only` is the list of drug indexes to show (one disease tab). Indexes stay
 // those of protocol.drugs, since every edit handler works by that index.
-export const BookletDoseView = ({ protocol, edit = null, only = null }) => {
-    const { t, i18n } = useTranslation();
-    const ar = i18n.language === 'ar';
-    const all = protocol?.drugs || [];
-    const drugs = (only || all.map((_, i) => i)).map((i) => ({ drug: all[i], i })).filter(({ drug }) => drug);
-    if (!drugs.length) {
-        return <div className="p-6 text-center text-slate-500 bg-white border border-dashed border-slate-300 rounded">{t('clinical_ui.protocol.booklet.no_drugs', 'No doses saved yet.')}</div>;
-    }
-    const months = t('clinical_ui.protocol.booklet.months', 'months');
-    return (
-        <div className="grid gap-4 xl:grid-cols-2 items-start" dir={ar ? 'rtl' : 'ltr'}>
-            {drugs.map(({ drug, i }) => (
-                <section key={drug.id || i} className="border-2 border-slate-800 bg-white rounded-sm overflow-hidden">
-                    <div className="bg-sky-100 border-b-2 border-slate-800 px-3 py-1.5 text-slate-900">
+// One drug's dose table: its name over it, then its bands (Age, Weight, Dose
+// on a phone; with How often and For how long on a wider screen).
+const DoseTable = ({ drug, i, edit, t, ar, months, hideName = false }) => (
+                <section className={`bg-white overflow-hidden ${hideName ? 'border-t-2 border-slate-800' : 'border-2 border-slate-800 rounded-sm'}`}>
+                    {!hideName && <div className="bg-sky-100 border-b-2 border-slate-800 px-3 py-1.5 text-slate-900">
                         {edit ? (
                             <div className="space-y-1.5">
                                 <input type="text" value={drugText(drug, 'label', ar) || ''} onChange={(e) => edit.onDrug(i, ar ? 'labelAr' : 'label', e.target.value)} aria-label={t('clinical_ui.protocol.drug.label', 'Display label')} className={`${inputCls} font-extrabold`} dir="auto" />
@@ -638,7 +656,7 @@ export const BookletDoseView = ({ protocol, edit = null, only = null }) => {
                                 {drug.ageAndWeight && <span className="ms-2 text-[10px] font-bold uppercase text-sky-800">{t('clinical_ui.protocol.booklet.age_weight_badge', 'Age and weight')}</span>}
                             </h3>
                         )}
-                    </div>
+                    </div>}
                     {/* Phone: Age, Weight, Dose — nothing is cut off or scrolls sideways. */}
                     <table className="md:hidden w-full border-collapse table-fixed text-[13px] text-slate-900">
                         <thead>
@@ -675,7 +693,53 @@ export const BookletDoseView = ({ protocol, edit = null, only = null }) => {
                         </button>
                     )}
                 </section>
-            ))}
+);
+
+// `only` is the list of drug indexes to show (one disease tab). Indexes stay
+// those of protocol.drugs, since every edit handler works by that index.
+// Read (not edited), the drugs are listed by name and a tap on a name opens
+// its table, so a page of many drugs stays short and the one wanted is found
+// at once. `expanded` shows every table open, as before.
+export const BookletDoseView = ({ protocol, edit = null, only = null, expanded = false }) => {
+    const { t, i18n } = useTranslation();
+    const ar = i18n.language === 'ar';
+    const all = protocol?.drugs || [];
+    const drugs = (only || all.map((_, i) => i)).map((i) => ({ drug: all[i], i })).filter(({ drug }) => drug);
+    const [open, setOpen] = useState(() => new Set(drugs.length === 1 ? [drugs[0].i] : []));
+    if (!drugs.length) {
+        return <div className="p-6 text-center text-slate-500 bg-white border border-dashed border-slate-300 rounded">{t('clinical_ui.protocol.booklet.no_drugs', 'No doses saved yet.')}</div>;
+    }
+    const months = t('clinical_ui.protocol.booklet.months', 'months');
+    if (edit || expanded) {
+        return (
+            <div className="grid gap-4 xl:grid-cols-2 items-start" dir={ar ? 'rtl' : 'ltr'}>
+                {drugs.map(({ drug, i }) => <DoseTable key={drug.id || i} drug={drug} i={i} edit={edit} t={t} ar={ar} months={months} />)}
+            </div>
+        );
+    }
+    const toggle = (i) => setOpen((prev) => { const next = new Set(prev); if (next.has(i)) next.delete(i); else next.add(i); return next; });
+    return (
+        <div className="space-y-2" dir={ar ? 'rtl' : 'ltr'} data-testid="dose-list">
+            {drugs.length > 1 && (
+                <div className="text-xs text-slate-500">{t('clinical_ui.protocol.booklet.tap_drug', 'Tap a drug to see its dose table.')}</div>
+            )}
+            {drugs.map(({ drug, i }) => {
+                const isOpen = open.has(i);
+                return (
+                    <div key={drug.id || i} className={`rounded-lg border-2 overflow-hidden ${isOpen ? 'border-slate-800' : 'border-slate-300'}`}>
+                        <button type="button" onClick={() => toggle(i)} aria-expanded={isOpen} data-testid="dose-drug"
+                            className={`w-full flex items-center gap-2 px-3 py-2.5 min-h-[44px] text-start font-extrabold text-sm text-slate-900 ${isOpen ? 'bg-sky-100' : 'bg-white hover:bg-sky-50'}`}>
+                            <Syringe size={16} className="text-sky-800 shrink-0" />
+                            <span className="flex-1">
+                                {drugText(drug, 'label', ar) || drug.id}
+                                {drug.ageAndWeight && <span className="ms-2 text-[10px] font-bold uppercase text-sky-800">{t('clinical_ui.protocol.booklet.age_weight_badge', 'Age and weight')}</span>}
+                            </span>
+                            <ChevronDown size={18} className={`text-slate-500 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {isOpen && <DoseTable drug={drug} i={i} edit={null} t={t} ar={ar} months={months} hideName />}
+                    </div>
+                );
+            })}
         </div>
     );
 };
