@@ -1,0 +1,30 @@
+{
+ "note": "Paste each video's YouTube link next to its code, then rebuild (python3 build.py <repo>). An empty link shows the 'being recorded' placeholder.",
+ "videos": {
+  "IN.1": "",
+  "IN.2": "",
+  "AC.1": "",
+  "AC.2": "",
+  "AC.3": "",
+  "AC.4": "",
+  "AC.5": "",
+  "AC.6": "",
+  "AC.7": "",
+  "AC.8": "",
+  "AC.9": "",
+  "AC.10": "",
+  "AC.11": "",
+  "IT.1": "",
+  "TR.1": "",
+  "TR.2": "",
+  "TR.3": "",
+  "CM.1": "",
+  "CM.2": "",
+  "YI.1": "",
+  "YI.2": "",
+  "YI.3": "",
+  "YI.4": "",
+  "YI.5": "",
+  "YI.6": ""
+ }
+}

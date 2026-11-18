@@ -1,0 +1,1046 @@
+           National Child Health Program
+Integrated Management of Childhood Illnesses (IMCI)
+
+         IDENTIFY TREATMENT
+
+                       2023
+
+                         0
+  Integrated Management of Childhood Illness was prepared by the World Health
+Organization's Division of Diarrhoeal and Acute Respiratory Disease Control (CDR),
+now the Division of Child Health and Development (CHD), and UNICEF through a
+              contract with ACT International, Atlanta, Georgia, USA.
+
+                                        1
+                                                            CONTENTS
+
+1.Introduction .......................................................................................................................... 3
+2.Learning objectives .............................................................................................................. 3
+3.Determine if urgent referral is needed .................................................................................. 6
+       3.1 Referral for severe classifications ............................................................................. 6
+       3.2 Referral for general danger signs .............................................................................. 8
+4.Identify treatments for patients who do not need urgent referral ....................................... 10
+       4.1 Identify treatment .................................................................................................... 10
+       4.2 When to return immediately: ................................................................................... 15
+5.Identify treatment if urgent referral is needed .................................................................... 17
+       5.1 identify urgent pre-referral treatment needed .......................................................... 17
+       5.2 Give urgent pre-referral treatment ........................................................................... 22
+       5.3 Refer the child ....................................................................................................... 22
+
+                                                                      2
+   1. Introduction
+In the previous module you learned to assess the sick child age 2 months up to 5years and to
+classify the child's illness or illnesses. The next step is to identify the necessary treatments.
+In some instances, the very sick child will need referral to a hospital for additional care. If
+so, you will begin urgent treatments before the child's departure.
+
+   2. Learning objectives
+This module will describe and allow you to practice the following skills:
+
+   * determining if urgent referral is needed
+
+   *   identifying treatments needed
+
+   *   For patients who need urgent referral:
+       -   identifying the urgent pre-referral treatments
+       -   explaining the need for referral to the mother
+       -   writing the referral note
+
+This module will focus on identifying which treatments are needed. The next module,
+Treat Child, will teach how to give the treatments.
+
+                                                3
+ The steps involved in identifying treatment shown on the following flowchart. The first
+ questions you need to ask after assessing a sick child are:
+
+        Is there an urgent need to refer the child?
+        What pre-referral treatment is needed?
+
+Assess All sick children and sick young infant, classify their illness according to
+appropriate classification table and then DETERMINE IF URGENT REFERRAL
+IS NEEDED
+
+                 If Yes                                            If No
+
+             Identify urgent pre-referral          Identify treatment for patient who do
+                 treatment                                       not need urgent referral
+
+    Give urgent pre-referral treatment              Teach the child caregiver on how to
+                needed                                    give treatment at home
+
+              Refer urgently                                Counsel the caregiver about
+                                                       feeding, fluid and when to return
+
+   GIVE FOLLOW UP CARE WHEN THE INFANT OR CHILD RETURN TO THE
+        CLINICS AND IF NECESSERY REASSESS FOR NEW PROBLEM
+
+  In this module you will use the "identify Treatment" column of the ASSESS& CLASSIFY
+ chart. If a child has only one classification, it is easy to see what to do for the child.
+ However, many children have more than one classification
+
+ When a child has more than one classification, you must look at more than one place on the
+ ASSESS and CLASSIFY chart to see the treatments listed.
+ The coloured rows help you to quickly identify treatment.
+
+ A classification in a pink row means that the child needs urgent referral or admission for
+ inpatient care. This is a severe classification
+
+ A classification in a yellow row means that the child needs an appropriate oral drug or other
+ treatment. The treatment includes teaching the mother how to give oral drugs or to treat
+
+                                               4
+local infections at home. You also must advise her about caring for the child at home and
+when she should return
+
+A classification in a green row means that the child does not need specific medical
+treatment such as antibiotics. Teach the child's caretaker how to care for the child at home.
+For example, you might advise her on feeding her sick child or giving fluid for diarrhoea.
+Then teach her signs indicating when the child should return immediately to the health
+facility
+
+For some classifications, the treatment column says: "Refer urgently to hospital." Hospital
+means a health facility with inpatient beds, supplies and expertise to treat a very sick child.
+If your health facility has inpatient beds, referral may mean admission to the inpatient
+department of that facility. If an infant or child must be referred urgently, you must decide
+which treatments to do before referral. Some treatments (such as wicking an ear) are not
+necessary before referral. This section will help you to identify urgent pre-referral
+treatments
+
+If there is no hospital in the area, you may make some decisions differently than
+as described in this unit. If referral is not possible, or if the parents refuse to take the child
+to the hospital, you should help the family care for the child. The child may stay near the
+clinic to be seen several times a day. Or a health worker may visit the home to help give
+drugs on schedule and to help give fluids and food
+
+ NOTE: There is an annex in the module Treat the Child, which explains what to do when
+referral is needed but not possible.
+
+                                                 5
+         3. Determine if urgent referral is needed
+
+     3.1 Referral for severe classifications
+     Look at the severe classifications on the ASSESS & CLASSIFY chart.
+     These are coloured in pink and include:
+
+                 o    SEVERE PNEUMONIA OR VERY SEVERE DISEASE
+                 o    SEVERE DEHYDRATION
+                 o    SEVERE PERSISTENT DIARRHOEA
+                 o    VERY SEVERE FEBRILE DISEASE
+                 o    SEVERE COMPLICATED MEASLES
+                 o    MASTOIDITIS
+                 o    CMOPLICATED SVERE ACUTE MALNUTRTION
+                 o    SEVERE ANAEMIA
+
+     Notice the instruction “Refer URGENTLY to hospital” in the lists of treatments for these
+     classifications. This instruction means to refer the child immediately after giving any
+     necessary pre- referral treatments. Do not give treatments that would unnecessarily delay
+     referral.
+
+     Exception:
+     For SEVERE PERSISTENT DIARRHOEA, the instruction is simply “Refer to hospital.”
+     This means that referral is needed, but not as urgently. There is time to identify treatments
+     as described in section 2.0 of this module and give all of the treatments before referral.
+     You may keep and treat a child whose only severe classification is SEVERE
+     DEHYDRATION if your clinic has the ability to treat the child. If the child is classified as
+     SEVERE DEHYDRATION and has another severe classification he needs to be “referred
+     URGENTLY to hospital”
+
+     The child with diarrhoea with severe dehydration
+
+   Two of the following signs:                                ►If child has no other severe classification:
+                                                             - Give fluid for severe dehydration (Plan C).
+   Lethargic or unconscious                                                                  - Give Zinc.
+                Sunken eyes                                           ► If child also has another severe
+Not able to drink or drinking       SEVERE                                                 classification:
+                       poorly    DEHYDRATION            - Refer URGENTLY to hospital with
+ Skin pinch goes back very                             mother giving frequent sips of ORS on the
+         slowly.                                                                               way.
+                                                              - Advise the mother to continue
+                                                                                     breastfeeding.
+                                                       ►If child is 2 years or older and there is cholera
+                                                                in your area, give antibiotic for cholera.
+
+                       Your facilitator will explain the following chart.
+
+                                                   6
+   Decisions involved in plan c:
+
+   Treat severe dehydration quickly
+
+   START HERE
+        Can you give
+    intravenous (IV)      YES
+                                             Give IV fluid at your facility
+ fluid immediately?
+        NO
+
+      Is IV treatment
+                            YES                  Refer URGENTLY to hospital
+    available nearby
+(within 30 minutes)?
+
+        NO
+
+  Are you trained to
+  use a naso-gastric
+      (NG) tube for
+       rehydration?
+      NO
+                                YES              Give ORS by NG tube or by mouth
+Can the child drink?
+
+      NO
+
+Refer URGENTLY to
+hospital for IV or NG
+            treatment
+
+   You will learn Plan C in the next module. Plan C includes reassessment for dehydration
+   after fluid treatment. If you can successfully rehydrate the child, referral will not be
+   necessary.
+
+                                                7
+3.2 Referral for general danger signs
+
+Most children who have a general danger sign also have a severe classification.
+They will be referred for their severe classification (or possibly treated if they have
+SEVERE DEHYDRATION only).
+
+In rare instances, children may have general danger signs without a severe classification.
+These children should be referred urgently. There is a box at the bottom of the ASSESS&
+CLASSIFY chart to remind you:
+
+ MAKE SURE A CHILD WITH ANY GENERAL DANGER SIGN IS
+ REFERRED after first dose of an appropriate antibiotic and other urgent
+ pre-referral treatments.
+ Exception: Rehydration of the child according to Plan C may resolve danger signs
+ so that referral is no longer needed.
+
+REFERRAL FOR OTHER SEVERE PROBLEMS
+
+The ASSESS and CLASSIFY chart does not include all problems that children may have.
+You must ask yourself:
+
+Does the child have any other severe problem that cannot be treated in this clinic?
+
+For example, the child may have a severe problem that is not covered on the chart, such as
+severe abdominal pain. If you cannot treat a severe problem, you will need to refer the child.
+
+ Remember: Most children will have none of the general danger signs, severe
+ classification, or other severe problems. If the child has none of these, the child
+ dose not need urgent referral to a hospital. You will identify treatments needed
+ as described in section 4.0 of this module.
+
+                                                8
+                                        EXERCISE A
+
+ In this exercise you will decide whether or not urgent referral is needed.
+ Tick the appropriate answer.
+ 1.       Neema is a 6-month-old girl. She has no general danger signs. She has:
+             o COUGH OR COLD
+             o DIARRHEA with NO DEHYDRATION
+             o PERSISTENT DIARRHOEA
+             o NO ACUTE SEVER MALNUTRTION
+             o NO ANAEMIA
+       Does Neema need an urgent referral? Yes ____ No____
+
+ 2.       Daoud is a 7- month-old boy. He has no general danger signs. He has:
+             o   MASTOIDITIS
+             o   MALARIA
+             o   NO ACUTE MALNUTRTION
+             o   NO ANAEMIA
+      Does Daoud need urgent referral? Yes ____ No ____
+
+ 3. Maher is a 2- years -old boy. He had convulsions this morning and is not eating well. He
+    has:
+             o   NO ACUTE MALNUTRTION
+             o NO ANAEMIA
+      Does Maher need urgent referral? Yes ____ No ____
+
+ 4. Habib is a 9-months -old boy. He is lethargic. He has:
+           o Diarrhoea with SEVERE DEHYDRATION
+             o NO ACUTE MALNUTRTION
+             o NO ANAEMIA.
+      The clinic can provide IV therapy
+      Does Habib need urgent referral? Yes _____ No____
+
+ 5. Ibrahim is a 15-month-old child. Ibrahim is not able to drink. He has:
+            o Diarrhoea with SEVERE DEHYDRATION,
+             o   NO ACUTE MALNUTRTION,
+             o   NO ANEMIA
+       The clinic cannot provide IV therapy nor NG therapy.
+       Does Ibrahim need urgent referral? Yes _____ No ____
+
+When you have finished this exercise, discuss your answers with a facilitator
+
+                                               9
+   4. Identify treatments for patients who do not need urgent referral
+
+  Your facilitator will present the example in this section and will show you how to
+  use the back of the Sick Child Recording Form. The facilitator will show you how
+                                                                                 to:
+   Fold the "classify" column of the Sick Child Recording Form so that you can
+                                  see it while looking at the back of the form.
+
+4.1 Identify treatment
+Look at the ASSESS& CLASSIFY chart to find the treatments needed for each of
+the child's classifications.
+List each treatment needed on the back of the Sick Child Recording Form
+
+For each classification listed on the front of the Sick Child’s Recording Form, you will write
+the treatments needed on the back of the form. The treatments that may be needed are in the
+"Identify Treatment" column of the ASSESS& CLASSIFY chart. You will list only the
+treatments that apply to the specific child being treated.
+
+Be sure to include items that begin with the words "Follow-up." These mean to tell the
+mother to return in a certain number of days. The follow-up visit is very important to see if
+the treatment is working or not, and give another treatment if needed. You may abbreviate
+follow-up as "F/up."
+
+If several different times are specified for follow-up, you will look for the earliest definite
+time. (A definite time is one that is not followed by the word "if").
+For example: "Follow-up in 3 days" gives a definite time for follow-up.
+      "Follow-up in 3 days if fever persists" is not definite. The child only needs to come
+      back if fever persists.
+
+                                               10
+Record the earliest definite time for follow-up in the appropriate space on the back of the
+Sick Child Recording Form. This is the follow-up visit to tell the mother about. (Also tell
+her about any earlier follow-up that may be needed if a condition such as fever persists.)
+Later, when the mother returns for follow-up, you can tell her about any additional visits
+needed.
+
+Also be sure to list non-urgent referrals for further assessment. For example, for cough
+which has lasted more than 14 days, or for fever, which has lasted 7 days or more, you
+would record, "Refer for assessment." Although the mother should take the child for
+assessment promptly, these causes of referral are not so urgent. Any other necessary
+treatments may be done before referral.
+You must teach the mother when to return immediately according to the appropriate
+classification and list them on the recording form. You will need to teach each mother the
+signs that mean she should return immediately for more care for her child. You will learn
+these signs later in this module.
+Note: you will learn to complete the feeding sections of the Sick Child Recording Form in
+the module COUNSEL THE MOTHER. When feeding assessment is needed, it may be
+done at any convenient time during the visit, after the child's immediate needs are taken care
+of.
+Some treatments are listed for more than one problem. If a patient has two problems that
+needed the same drug, you need only to the write the drug once on your Sick Child
+Recording Form.
+ However, if an antibiotic is needed for more than one problem, you should list it each time.
+When the same antibiotic is appropriate for two different problems, you can give that single
+antibiotic, but two problems may require different antibiotics. You will learn about choosing
+antibiotics in the Treat the Child.
+
+Most instructions in the "Identify Treatment" column of the ASSESS& CLASSIFY chart
+are easily understood. However, there are some instructions that require special explanation:
+* ANAEMIA
+A child with palmer pallor should begin iron treatment for ANAEMIA (make sure that the
+child has no sickle cell anemia and not receive RUTF). Give mebendazole if child is 1 year
+or older.
+Example
+Study the opposite Sick Child Recording Form for Intisar. The health worker referred to the
+"Identify Treatment" column of the ASSESS& CLASSIFY chart and listed the treatments
+needed on the back of the form.
+Intisar does not need referral as she has no general danger signs and no severe
+classifications. She will be treated in the clinic. Measles immunization is available in the
+clinic today.
+Notice that the earliest definite follow-up visit was put in the appropriate space on the form.
+
+                                              11
+                                                  MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+DATE______ Child's Name:_______Intesar_________ Age:__18__(Months) Weight: __11____kg                                          Height/ L:_90____cm. Temperature: 38.5_°C
+ASK: What are the child's problems? ______________cogh____________________________                                           Initial visit ___ Follow-up visit ___
+ASSESS (Circle all signs present)                                                                                                                        CLASSIFY
+
+           CHECK FOR GENERAL DANGER SIGNS:                                                                                                             General danger sign
+           ASK: and check                                                      Look                                                                    present? Yes _ No √_
+           Not able to drink or breastfeed                                     Lethargic or unconscious                                                Remember to use danger
+           Vomits every thing                                                  Convulsing now                                                          sign when selecting
+                                                                                                                                                         classifications
+           Convulsions in current illness
+
+           DOES THE CHILD HAVE COUGH OR DIFFICULT BREATHING? Yes __√____ No______
+           For how long? __6__Days                          Count the breaths in one minute._46 breaths per minute. Fast breathing?                             pneumonia
+                                                             Look for chest indrawing.
+                                                             Look and listen for stridor.
+                                                             Look and listen for wheezing (if wheezing with fast breathing or chest in
+                                                              drawing, give trial of rapid acting bronchodilator)
+
+           DOES THE CHILD HAVE DIARRHOEA?                                       Yes ______ No__√____
+           For how long? ____Days                                              Look at the child's general condition. Is the child:
+           Is there blood in the stool?                                         Lethargic or unconscious?
+                                                                                 Restless and irritable?
+                                                                                Look for sunken eyes.
+                                                                                Offer the child fluid. Is the child:
+                                                                                Not able to drink or drinking poorly?
+                                                                                Drinking eagerly, thirsty?
+                                                                                Pinch the skin of the abdomen. Does it go back:
+                                                                                Very slowly (longer than 2 seconds)?
+                                                                                Slowly (less than 2 second)?
+           DOES THE CHILD HAVE FEVER? (by history/feels hot/temperature 37.5°C or above) Yes __√____ No_________
+           For how long? ____Days                                        Look or feel for stiff neck.                                                           MALARIA
+           If fever persists for more than 7 days, has it been present   Look for Generalized rash of measles.
+            every day?                                                    Do malaria test if NO GENERAL DANGER SIGN in all fever cases
+           Has child had measles within the last 3 months?                      o      Positive Falciparum           Positive Vivax
+                                                                                        Negative
+           If the child has measles now or within the last 3 months:     Look for mouth ulcers, If yes, are they deep and extensive?
+                                                                          Look for pus draining from the eye.
+                                                                          Look for clouding of the cornea.
+
+           DOES THE CHILD HAVE AN EAR PROBLEM?                            Yes ______ No__√_______
+           Is there ear pain?                                                  Look for pus draining from the ear.
+           Is there ear discharge? For how long? _____Days                     Feel for tender swelling behind the ear.
+                                                                                Look for oedema of both feet.
+           THEN CHECK FOR MALNUTRITION                                         Determine WFH/L Z-score:
+                                                                                Less than -3Z         between -3 and -2 Z         -2 Z or more
+                                                                               For children 6 months and older: measure MUAC 13_cm                           NO ACUTE
+                                                                                Less than 11.5 cm      between 11.5-12.5cm       12.5cm or more             MALNUTRITION
+                                                                                If MUAC <11.5 cm or WFH/L less than -3z scores?
+                                                                                Check for medical complication:
+                                                                                        o     General danger sign
+                                                                                        o     Any severe classification
+                                                                                        o     Pneumonia with chest in drawing
+                                                                                offer RUTF to eat if child 6 months or older
+                                                                                        o     Not able to finish           Able to finish
+           THEN CHECK FOR ANAEMIA
+                                                                                Look for palmar pallor.                                                          NO ANEMIA
+                                                                                Severe palmar pallor
+                                                                                Some palmar pallor
+                                                                                No palmar pallor
+CHECK THE CHILD'S IMMUNIZATION AND VITAMIN A SUPPLEMENTATION STATUS Circle immunizations needed today.                                                   Return for next
+                                                                                                                                                         immunization on:
+BCG √_        PENTA-1 __√___          PENTA-2 ___√__           PENTA-3     __√___         yellow fever_____     vitamin A ___√__                         ___________________
+OPV 0 √       OPV 1+IPV1 __√_        OPV 2    ___√__          OPV 3 /IPV2 ___√__          Measles 1 _____
+               PCV-1 __√___            PCV-2   __√___          PCV3         ___√__         Men(A) _____                                                  (Date)
+               Rota-1 __√___          Rota -2 __√___                                       Measles boaster _____
+                                                                                                                                                                   Feeding problems:
+           ASSESS CHILD'S FEEDING if child less than 2 year, or has MODERATE ACUTE MALNUTRITION or ANAEMIA.
+           Do you breastfeed your child? Yes___ No___
+           If yes, how many times in 24 hours? _____times..
+            Do you breastfeed during the night? Yes___ No___
+           Does the child take any other foods or fluids? Yes___ No___
+           If yes, what foods or fluids?________________________________________
+           How many times per day? _____times.
+           What do you use to feed the child?________________________________
+           During this illness, has the child's feeding changed? Yes___ No___f Yes, how?________________________________
+           If MODERATE ACUTE MALNUTRITION:
+           Does the child receive his own serving? Yes___ No___
+           How large are servings?__________________________________________________
+           Who feeds the child and how? _____________________________________________
+ASSESS OTHER PROBLEMS: ASSESS MOTHER OWN HEALTH
+                                                                                       12
+                                                                 TREAT
+                            Remember to refer any child who has a danger sign and no other severe classification.
+
+       Antibiotic for pneumonia ,5 days
+       Soothe throat, relieve cough with Safe remedy
+       F/up:3 days
+
+       Oral antimalarial,3 days
+       One dose Paracetamol in clinic
+       F/up:3 days if fever persists
+
+       Assess feeding, counsel mother on feeding
+       If feeding problem, F/up: 5 days
+
+                                                                                 Return for follow-up in: ………3
+   days……….………………………………………………………………...……………
+
+                                                                                 Advice mother when to return
+   immediately.
+   ………………………………… Becomes sicke ………………Not able to drink or breast feed…………………………………
+   …………………………………………………………………………………………………………………………………………….
+    ●    Immunizations needed: …………measles + MEN A + yellow fever……………………………………………….
+- Give ……………………………………………… measles + MEN A + yellow fever …………………………………………………
+- Arrange later……………………………………………………………………………………………………………………………
+- Guide to service-……………………………………………………………………………………………………………………
+   ●      Vitamin A supplementation needed today:…………………………………………………….…………………
+   ●      Feeding advice:
+   ………………………………………………………………………………………………………………………………………………………
+   ……………………………………………………………………………………………………………………………………
+
+                                                               13
+                                         EXERCISE B
+
+In this exercise you will identify treatments for children who do not need urgent referral.
+ Mai is 16-month-old, she has:
+          No general danger signs
+          FEVER- NO MALARIA (fever 38.5 °C; In clinic, ICT for malaria negative,
+             fever present for 4 days),
+          MEASLES WITH EYE COMPLICAIONS (pus draining from eye),
+          NO ACUTE MALNUTRTION
+          NO ANAEMIA.
+          May has received BCG and 3 doses of (Penta ¸PCV and OPV) and 2 Rota doses.
+
+     A. What treatments are needed for FEVER- NO MALARIA?
+       .                                                                               .
+       .                                                                               .
+
+     B. What treatments are needed for MEASLES WITH EYE COMPLICATIONS?
+                                                                    .
+       .                                                              .
+
+     C. Look in the "Identify Treatment" column for NO ANAEMIA
+       .                                                                               .
+        .                                                                              .
+
+     D. Does May need a feeding assessment?
+                                                                                       .
+          .                                                                            .
+
+     E. What immunization does May need?
+                                                                                   .
+                                                                                   .
+
+     F.       Should she be given vitamin (A) supplementation today?
+                                                                                   .
+          .                                                                            .
+
+     G. What is earliest definite time for May to return for follow-up?
+
+                                                                                   .
+
+                                               14
+4.2 When to return immediately:
+
+For all children going home, you will advise mother when to return immediately.
+This means to teach the mother certain signs that mean to return immediately for further care if
+the sick child develops one of them or more. These signs are listed on the COUNSEL THE
+MOTHER chart in the section WHEN TO RETURN. Use local terms that the mother will
+understand.
+
+Tell every mother to return immediately if her child:
+
+            Is Not able to drink or breastfeed,
+            Becomes sicker, or
+            Develops fever.
+
+Exception: If a child already has fever, you do not need to tell the mother to return immediately
+for fever.
+
+Tell the mother of a child with simple cough or cold to watch for the following signs that
+mean the child may have developed pneumonia:
+
+            Fast breathing.
+            Difficult breathing.
+
+Carefully explain these signs of possible pneumonia. If mothers do not understand the
+importance of these signs, they may not return when the child develops pneumonia, and the
+child may die.
+
+ Advise mothers of children with diarrhoea to watch for:
+
+            Blood in the stool
+            Poor drinking
+
+Exception: If the child already has blood in the stool, you do not need to the mother to return
+immediately for blood, just for drinking poorly.
+
+                                               15
+                                        EXERCISE C
+
+In this exercise you will describe when to return immediately for different cases. You will list
+the signs that you will teach the mother to watch for.
+
+1. A child has:
+     ●      No general danger signs
+     ●      ACUTE EAR INFECTION
+     ●      NO ACUTE MALNUTRTION
+    ●      NO ANAEMIA
+What are the signs to return immediately?
+.                                                                              .
+                                                                                .
+.                                                                               .
+
+2. A child has:
+           No general danger signs
+           Diarrhoea with NO DEHYDRATION
+           PERSISTENT DIARRHOEA
+           NO ACUTE MALNUTRTION
+           NO ANAEMIA
+What are the signs to return immediately?
+.                                                                              .
+                                                                                .
+.                                                                               .
+
+3. A child has:
+           No general danger signs
+           COUGH OR COLD
+           NO ACUTE MALNUTRTION
+           NO ANAEMIA
+What are the signs to return immediately?
+.                                                                              .
+                                                                                .
+.                                                                               .
+
+         When you have completed this exercise, discuss your answers with a facilitator
+                                              .
+
+                                               16
+   5. Identify treatment if urgent referral is needed
+
+5.1 identify urgent pre-referral treatment needed
+
+When a child needs urgent referral, you must quickly identify and begin the most urgent
+treatments for that child. The following are urgent treatments. They are in bold print on the
+ASSESS & CLASSIFY chart, you will give just the first dose of the drugs before referral:
+
+          Give diazepam to a child who is convulsing now.
+          Give quinine for VERY SEVERE FEBRILE DISEASE.
+          Give an appropriate antibiotic.
+          Give vitamin A for treatment of measles.
+          Treat the child to prevent low blood sugar (This involves giving breast milk, milk,
+           or sugary water as described on the TREAT chart.)
+          Give rapid bronchodilator to treat wheeze.
+          Give paracetamol for high fever (38.5°C or above) or pain from mastoiditis.
+          Apply tetracycline eye ointment (if clouding of the cornea or pus draining from eye)
+          Provide ORS solution so that the mother can give frequent sips on the way to the
+           hospital.
+
+The first six treatments above are urgent because they can prevent serious consequences such
+as progression of bacterial meningitis or cerebral malaria, corneal rupture due to lack of
+vitamin A, or brain damage from low blood sugar or low oxygen level. The other listed
+treatments are also important to prevent worsening of the illness.
+
+Do not delay referral to give non-urgent treatments such as wicking the ear or oral iron
+treatment. If immunizations or vitamin A supplementation are needed, do not give it before
+referral. Let hospital personnel to determine when to give immunizations and vitamin A
+supplement for prevention. This will avoid delaying referral. Give vitamin A when it is
+needed for treatment of a child with MEASLES.
+
+EXAMPLE:
+
+Nagla is a 15-month-old girl. She has COUGH OR COLD. She has fever of 38.2°C and stiff
+neck, so she is classified as having VERY SEVERE FEBRILE DISEASE, NO ACUTE
+MALNUTRTION AND NO ANEMIA and has no other classifications.
+
+Nagla needs urgent referral. Before going to the hospital, she should be given:
+           Quinine (first dose).
+           Appropriate antibiotic (first dose).
+           Treatment to prevent low blood sugar.
+
+The health worker should NOT take time to teach how to soothe the throat and relieve the
+cough with a safe remedy since that is not an urgent treatment. The health worker should NOT
+take time to assess feeding and counsel the mother on feeding.
+
+                                               17
+                                        EXERCISE D
+
+In this exercise you will practice identifying urgent pre-referral treatments; Remember that
+these are in bold print on the ASSESS& CLASSIFY chart.
+
+   1. Nora is a 15-month-old girl. She has no general danger signs. She has: COUGH OR
+      COLD, MASTOIDITS, NO ACUTE MALNUTRTION and NO ANAEMIA, and no
+      other classifications.
+
+       Nora needs urgent referral for MASTOIDITIS. Following is a list of treatments for all
+       Nora’s classifications. Tick the urgent, pre-referral treatment(s):
+
+       a. _______ soothe the throat and relieve cough with a safe remedy.
+       b. _______ Advise the mother when to return immediately.
+       c. _______ Follow-up in 5days if not better.
+       d. _______ Give first dose of an appropriate antibiotic.
+       e. _______ Give first dose of paracetamol for pain.
+       f. __√_______ Refer URGENTLY to hospital.
+       g. _______ Assess the child’s feeding and counsel the mother on feeding. If feeding
+                  problem, follow-up in 5 days.
+
+   2. Hanan is an 18-month-old girl. She has no general danger signs. She has NO SIGNS
+      OF DEHYDRATION OR PERSISTENT DIARRHIEA, COMPLICATED SEVERE
+      ACUTE MALNUTRTION, NO ANAEMIA, and no other classifications.
+
+       Hanan needs urgent referral for COMPLICATED SEVERE ACUTE
+       MALNUTRTION Following is a list of treatments for all Hanan’s classifications. Tick
+       the urgent, pre- referral treatment(s):
+
+        a) _____ Give fluid and food to prevent dehydration (plan A).
+        b)       Advise the mother when to return immediately.
+        c) _____ Advise the mother on feeding a child who has persistent diarrhoea.
+        d) _____ Follow-up in 5days.
+        e) _____ Give vitamin A.
+        f) _____ Refer URGENTLY to hospital.
+        g) _____ Treat to prevent low blood sugar.
+
+    3. Omer is a 2-year-old boy. He is lethargic. has a fever of 39°C. The health worker
+       classifies Omer as having VERY SEVERE FEBRILE DISEASE and CHRONIC EAR
+       INFECTION. He has some palmar pallor so is classified as having ANAEMIA,
+       although he is also classified as NO ACUTE MALNUTRTION
+
+       Omer needs urgent referral for VERY SEVERE FEBRILE DISEASE. Following is a
+       list of treatments for all Omer’s classifications. Tick the urgent, pre- referral
+       treatment(s):
+
+            a) _____   Give quinine for very severe febrile disease (first dose).
+                                               18
+      b) _____ Give first dose of an appropriate antibiotic.
+      c) _____ Treat the child to prevent low blood sugar.
+      d) _____ Give one dose of paracetamol in clinic for high fever (38.5°C or
+                  above).
+      e) _√____ Refer URGENTLY to hospital.
+      f) _____ Dry the ear by wicking
+      g)        _Follow-up in 5days.
+      h)           _____ Assess the child’s feeding and counsel the mother on feeding.
+                  If feeding problem, follow-up in 5 days.
+      i) _____ Give iron.
+      j) _____ Give oral antimalarial.
+      k) _____ Advise mother when to return immediately.
+      l) _____ Follow-up in 14 days (for pallor).
+
+4- Study the following Sick Recording From for Abbas On the back of the recording form,
+write only the urgent pre-referral treatments. These are in bold print on the ASSESS &
+CLASSIFY chart.
+
+                                        19
+                                         MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+    Date_____ Child's Name:________Abbas______________ Age:___15___(Months) Weight: ___9____kg                  Height/ L:___75___cm. Temperature: _39_°C
+ASK: What are the child's problems? ______________very ill and had rash_________________________________________              Initial visit ___ Follow-up visit ___
+
+ASSESS (Circle all signs present)                                                                                                        CLASSIFY
+
+CHECK FOR GENERAL DANGER SIGNS:                                                                                                          General danger sign
+   ASK: and check                                                 Look                                                                   present? Yes _ No √_
+ Not able to drink or breastfeed                               Lethargic or unconscious                                                   Remember to use
+ Vomits every thing                                            Convulsing now                                                             danger sign when
+ Convulsions in current illness                                                                                                         selecting classifications
+DOES THE CHILD HAVE COUGH OR DIFFICULT BREATHING? Yes __√____ No______
+ For how long? _6___Days                    Count the breaths in one minute.38_breaths per minute. Fast breathing?                       COUGH OR COLD
+                                             Look for chest indrawing.
+                                             Look and listen for stridor.
+                                             Look and listen for wheezing (if wheezing and fast breathing or chest in
+                                               drawing, give trial of rapid acting bronchodilator)
+DOES THE CHILD HAVE DIARRHOEA?                                       Yes ______ No___√___
+ For how long? ____Days                                        Look at the child's general condition. Is the child:
+ Is there blood in the stool?                                    o     Lethargic or unconscious?
+                                                                  o     Restless and irritable?
+                                                                Look for sunken eyes.
+                                                                Offer the child fluid. Is the child:
+                                                                  o     Not able to drink or drinking poorly?
+                                                                  o     Drinking eagerly, thirsty?
+                                                                Pinch the skin of the abdomen. Does it go back:
+                                                                  o     Very slowly (longer than 2 seconds)?
+                                                                  o     Slowly (less than 2 second)?
+DOES THE CHILD HAVE FEVER? (by history/feels hot/temperature 37.5°C or above) Yes __√____ No_________
+ For how long? ____Days                                       Look or feel for stiff neck.                                                    MALARIA
+ If fever persists for more than 7 days, has it been present  Look for Generalized rash of measles.
+   every day?                                                  Do malaria test if NO GENERAL DANGER sign OR neck stiffness
+ Has child had measles within the last 3 months?                 Positive Falciparum           Positive vivax Negative
+
+If the child has measles now or within the last 3 months:            Look for mouth ulcers, if yes, are they deep and extensive?           MEASLES WITH
+                                                                     Look for pus draining from the eye.                                      SEVER
+                                                                     Look for clouding of the cornea.                                     COMPLICATIONS
+
+DOES THE CHILD HAVE AN EAR PROBLEM?                             Yes ______ No___√______
+ Is there ear pain?                                            Look for pus draining from the ear.
+ Is there ear discharge? For how long? _____Days               Feel for tender swelling behind the ear.
+                                                               Look for oedema of both feet.
+THEN CHECK FOR MALNUTRITION
+                                                               Determine WFH/L Z-score:
+                                                               Less than -3Z         between -3 and -2 Z       -2 Z or more
+                                                               For children 6 months and older: measure MUAC__cm                             NO ACUTE
+                                                                 Less than 11.5 cm      between 11.5-12.5cm      12.5 cm or more            MALNUTRITION
+                                                            If MUAC <11.5 cm or WFH/L less than -3z scores?
+                                                             Check for medical complication:
+                                                                 o General danger sign
+                                                                 o Any severe classification
+                                                                 o Pneumonia with chest in drawing
+                                                             Offer RUTF if 6 months or older and has no medical complications
+                                                                 o Not able to finish            Able to finish
+Check for anemia                                            Look for palmar pallor.                                                            NO ANEMIA
+                                                             Severe palmar pallor
+                                                             Some palmar pallor
+                                                             No palmar pallor
+CHECK THE CHILD'S IMMUNIZATION AND VITAMIN A SUPPLEMENTATION STATUS Circle immunizations needed today.
+BCG _√__   PENTA-1 __√___   PENTA-2 __√___    PENTA-3     __√___ Yellow fever __√__ vitamin A __√___                                         Return for next
+OPV 0 _√__ OPV 1+IPV1 _√__  OPV 2   ___√__    OPV 3 /IPV2 ___√__ Measles 1 __√___                                                           immunization on:
+           PCV-1 __√___     PCV-2 ___√__       PCV3       ___√__ Men(A) __√___                                                             _________________
+           Rota-1 __√___    Rota -2 ___√__                        Measles boaster _____                                                          (Date)
+
+ASSESS CHILD'S FEEDING if child less than 2 year, or has MODERATE ACUTE MALNUTRITION or ANAEMIA.                                            Feeding problems:
+ Do you breastfeed your child? Yes___ No___
+  If yes, how many times in 24 hours? _____times..
+  Do you breastfeed during the night? Yes___ No___
+ Does the child take any other foods or fluids? Yes___ No___
+  If yes, what foods or fluids?________________________________________
+  How many times per day? _____times.
+  What do you use to feed the child?________________________________
+ During this illness, has the child's feeding changed? Yes___ No___f Yes, how?________________________________
+   If MODERATE ACUTE MALNUTRITION:
+  Does the child receive his own serving? Yes___ No___
+  How large are servings?__________________________________________________
+  Who feeds the child and how? _____________________________________________
+ASSESS OTHER PROBLEMS: ASSESS MOTHER OWN HEALTH
+
+                                                                                 20
+             Remember to refer any child who has a danger sign and no other severe classification
+
+    Return for follow-up in: ……………………………………………………………………………………………...……………
+    Advice mother when to return immediately.
+    ……………………………………………………………………………………………………………………………………………………
+    …………………………………………………………………………………………………………………………………………………….
+   Immunizations needed: …………………………………………………………………………………………………………
+       -   Give ………………………………………………………………………………………………………………………………
+       -   Arrange
+           later………………………………………………………………………………………………………………………
+       -   Guide to service-
+          …………………………………………………………………………………………………………………
+   vitamin A supplementation needed today: ……………………………………………………………….……………
+   Feeding advice:
+    ……………………………………………………………………………………………………………………………………………………
+    ……………………………………………………………………………………………………………………………………….
+
+5.2 Give urgent pre-referral treatment
+
+                                                 21
+The next module will describe how to do treatments presented on the TREAT chart. All urgent,
+Pre-referral treatments are included on that chart.
+When referring a child, do the treatments quickly. Do not take time to teach the mother as you
+would in a non-urgent situation.
+
+Many severe cases need the first dose of an antibiotic before referral.
+However, if a child cannot drink, is vomiting everything, is having convulsions, or cannot be
+wakened, the child will not be able to take an oral antibiotic, other oral drugs, or drinks such as
+ORS or breast milk. The child with these danger signs will need to be given an intramuscular
+injection antibiotic instead of an oral antibiotic. Dosages will be known in the next module.
+ORS or oral drugs such as paracetamol will need to be given in the hospital when the child is
+able to take them. If the child needs treatment to prevent low blood sugar, and you are able to
+insert an NG tube, give sugar water or breast milk substitute by NG tube before referral.
+
+5.3 Refer the child
+
+Do four steps to refer a child to the hospital:
+
+1. Explain to the mother the need for referral, and get her agreement to take the child. If
+you suspect that she does not want to take the child, find out why? Possible reasons are:
+    She thinks that hospitals are places where people often die, and she fears that her child
+       will die there too.
+    She does not think that the hospital will help the child.
+
+      She cannot leave home to take care of her sick child during a hospital stay because:
+
+            - there is no one to take care of her other children, or
+            - she is needed for farming, or
+            - she may lose a job.
+
+      She does not have money to pay for transportation, hospital bills, medicines, or food
+       during the hospital stay.
+
+2. Calm the mother’s fears and help her to resolve any problem. For example:
+
+      If the mother fears that her child will die in the hospital, reassure her that the hospital
+       has Specialists, and equipment that can help cure her child
+      Explain what will happen in the hospital and how that will help her child.
+      If the mother needs help at home while she is in the hospital, ask questions and make
+       suggestions about who could help. For example, ask whether her husband, sister or
+       mother could help with the other children or with meals while she is away.
+      Discuss with mother how she can travel to the hospital. Help arranging
+       transportation if necessary.
+
+You may not be able to help the mother solving her problems and be sure that she will go to the
+hospital. However, it is important to do everything you can to help.
+If referral is not possible, there are some things you can do for the child from your clinic. These
+are described in an annex of the module Treat the Child.
+
+   3. Write a referral note for the mother to take with her to the hospital to give the
+      health worker there.
+
+                                                  22
+   Write in referral note:
+    The date and time of referral
+    Name and age of the child
+    Name of Hospital that you will refer to.
+    Description of the child’s problem,
+    Reason for referral (symptoms and signs leading to severe classification)
+    Treatment that you have given
+    Any other information that the health worker in the hospital needs to know in order to
+     care for the child, such as previous treatment of the illness or immunizations needed
+    Your name and the name of your clinic.
+
+4. Give the mother any supplies and instructions needed to care for her child on the way
+    to the hospital:
+
+      If the hospital is too far, give the mother additional doses of antibiotic and tell her when
+       to give them during the trip (according to dosage schedule on TREAT chart).
+      If you think that the mother will not actually go to the hospital, give her the full course
+       of antibiotics, and teach her how to give them.
+      Tell the mother how to keep the young child warm during the trip.
+      Advise the mother to continue breastfeeding.
+      If the child has some or severe dehydration and can drink, give the mother some ORS
+       solution for the child to sip frequently on the way.
+
+                                                23
+   EXAMPLE OF REFERRAL NOTE
+
+30-9-2018
+04:00.00 pm
+Urgent Referral to Omdurman Paediatric Hospital
+
+Ahmed Hassan, age 18 months
+
+Referred for: SEVR PNEMOUNIA OR VERV SEVERE DISAESE
+              SEVERE DEHYDRATION
+              COMPLICATED ACUTE MALNUTRITION
+
+Treatment given in Health center:
+      Oral Amoxicillin Syrup 10 ml.
+      Sugary water to prevent low blood sugar.
+      ORS: to give sips on way to hospital
+
+Needs: measles immunization- not given.
+
+Mohamed Ali
+El Nuba Health Center
+
+                                                  24
+                                         EXERCISE E
+
+In this exercise you will review the steps related to referral through a case study. You will use
+the same case study in a role-play.
+
+First, study the Sick Child Recording Form for Sulieman on the next page.
+Sulieman is 4 months old and is exclusively breastfed.
+
+    1. Should Sulieman be referred urgently? Why or why not?
+……………………………………………………………………………………………………
+……………………………………………………………………………………………………
+……………………………………………………………………………………………………
+2. What urgent, pre-referral treatments are needed? Record these on the back of the Sick Child
+   Recording Form.
+
+                                                25
+                                          MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+  Date_____ Child's Name:________Suliman______________ Age:___4___(Months) Weight: ___7____kg Height/ L:___65___cm. Temperature: _38_°C
+     ASK: What are the child's problems? ______________cough_________________________________________  Initial visit __√_ Follow-up visit ___
+                                                                                                                           CLASSIFY
+ASSESS (Circle all signs present)
+                                                                                                                           General danger sign
+CHECK FOR GENERAL DANGER SIGNS:                         Look                                                               present? Yes _ No √_
+ASK: and check                                                 Lethargic or unconscious                                       Remember to use
+      Not able to drink or breastfeed                         Convulsing now                                                 danger sign when
+      Vomits every thing                                                                                                   selecting classifications
+      Convulsions in current illness
+
+DOES THE CHILD HAVE COUGH OR DIFFICULT BREATHING? Yes __√____ No______
+     For how long? _6___Days                    Count the breaths in one minute.54_breaths per minute. Fast                                 PNEUMONIA
+                                                  breathing?
+                                                 Look for chest indrawing.
+                                                 Look and listen for stridor.
+                                                 Look and listen for wheezing (if wheezing and fast breathing or
+                                                  chest in drawing, give trial of rapid acting bronchodilator)
+
+DOES THE CHILD HAVE DIARRHOEA?                                            Yes ______ No___√___
+     For how long? ____Days                                         Look at the child's general condition. Is the child:                  NO DEHYDRTAION
+     Is there blood in the stool?                                     o     Lethargic or unconscious?
+                                                                       o     Restless and irritable?
+                                                                     Look for sunken eyes.
+                                                                     Offer the child fluid. Is the child:
+                                                                       o     Not able to drink or drinking poorly?
+                                                                       o     Drinking eagerly, thirsty?
+                                                                     Pinch the skin of the abdomen. Does it go back:
+                                                                       o     Very slowly (longer than 2 seconds)?
+                                                                       o     Slowly (less than 2 second)?
+DOES THE CHILD HAVE FEVER? (by history/feels hot/temperature 37.5°C or above) Yes __√____ No_________
+         For how long? ____Days                               Look or feel for stiff neck.                                                    MALARIA
+         If fever persists for more than 7 days, has it been  Look for Generalized rash of measles.
+          present every day?                                   Do malaria test if NO GENERAL DANGER sign OR neck
+         Has child had measles within the last 3 months?       stiffness
+                                                               Positive Falciparum          Positive Vivax        Negative
+                                                               Look for mouth ulcers, if yes, are they deep and extensive?
+If the child has measles now or within the last 3 months:
+                                                               Look for pus draining from the eye.
+                                                               Look for clouding of the cornea.
+
+DOES THE CHILD HAVE AN EAR PROBLEM?                                  Yes ______ No___√______
+     Is there ear pain?                                                  Look for pus draining from the ear.
+     Is there ear discharge? For how long? _____Days                     Feel for tender swelling behind the ear.
+                                                                         Look for oedema of both feet.
+THEN CHECK FOR MALNUTRITION
+                                                                         Determine WFH/L Z-score:
+                                                                         Less than -3Z         between -3 and -2 Z        -2 Z or more
+                                                                         For children 6 months and older: measure MUAC__cm                   NO ACUTE
+                                                                       Less than 11.5 cm      between 11.5-12.5cm      12.5 cm or more      MALNUTRITION
+                                                                 If MUAC <11.5 cm or WFH/L less than -3z scores?
+                                                                         Check for medical complication:
+                                                                       o General danger sign
+                                                                       o Any severe classification
+                                                                       o Pneumonia with chest in drawing
+                                                                         Offer RUTF if6 months or older and has no medical complications
+                                                                       o Not able to finish           Able to finish
+THEN CHECK FOR ANAEMIA                                           Look for palmar pallor.                                                       NO ANEMIA
+                                                                         Severe palmar pallor
+                                                                         Some palmar pallor
+                                                                         No palmar pallor
+CHECK THE CHILD'S IMMUNIZATION AND VITAMIN A SUPPLEMENTATION STATUS Circle immunizations needed today.
+BCG _√__   PENTA-1 __√___   PENTA-2 _____      PENTA-3      _____ Yellow fever ____ vitamin A __√___                                          Return for next
+OPV 0 _√__ OPV 1+IPV1 _√__  OPV 2   _____     OPV 3 /IPV2 _____   Measles 1 _____                                                            immunization on:
+           PCV-1 __√___     PCV-2 _____       PCV3        _____   Men(A) _____                                                              _________________
+           Rota-1 __√___    Rota -2 _____                         Measles boaster _____                                                           (Date)
+                                                                                                                                             Feeding problems:
+ASSESS CHILD'S FEEDING if child less than 2 year, or has MODERATE ACUTE MALNUTRITION or ANAEMIA.
+         Do you breastfeed your child? Yes___ No___
+   If yes, how many times in 24 hours? _____times..
+   Do you breastfeed during the night? Yes___ No___
+         Does the child take any other foods or fluids? Yes___ No___
+   If yes, what foods or fluids?________________________________________
+   How many times per day? _____times.
+   What do you use to feed the child?________________________________
+         During this illness, has the child's feeding changed? Yes___ No___f Yes, how?________________________________
+    If MODERATE ACUTE MALNUTRITION:
+   Does the child receive his own serving? Yes___ No___
+   How large are servings?__________________________________________________ Who feeds the child and how? ____________
+
+ASSESS OTHER PROBLEMS: ASSESS MOTHER OWN HEALTH
+
+                                                                                      26
+                        Remember to refer any child who has a danger sign and no other severe classification
+
+Return for follow-up in: ……………………………………………………………………………………………...……………
+Advice mother when to return immediately.
+………………………………………………………………………………………………………………………………………………………………………………
+………………………………………………………………………………………………………………………….
+●      Immunizations needed: …………………………………………………………………………………………………………
+     - Give ………………………………………………………………………………………………………………………………
+    - Arrange later………………………………………………………………………………………………………………………
+    - Guide to service-…………………………………………………………………………………………………………………
+●     vitamin A supplementation needed today: ……………………………………………………………….……………
+●     Feeding advice:
+………………………………………………………………………………………………………………………………………………………………………………
+…………………………………………………………………………………………………………….
+
+                                                                 27
+3.    Write a referral note for Sulieman to a hospital. Use today’s date and the current time.
+Use your own name as that of the health worker.
+
+REFERRAL NOTE FOR SULIEMAN
+
+     When you have finished this part of the exercise, tell the facilitator that you are
+                    ready for the group discussion and role play.
+
+                                               28
+Role play Instructions
+
+HEALTH WORKER: Explain the need for referral to Sulieman’s mother and give her
+instructions. Discuss any problems she may have about going to the hospital. Assume that the
+hospital is about an hour away and that transportation is similar to what is available in your
+own area. If you have a telephone in your own clinic, assume that one is available in the role
+play.
+
+MOTHER: You will be given a card that describes your attitude and situation. Try to act as a
+        real mother might act if her child needed referral.
+
+OBSERVERS: Watch the role play. Be ready to comment on what was done well and what
+           could be improved, then answer the questions:
+
+1.    Is this mother likely to go to the hospital? Why or why not?
+      ……………………………………………………………………………………………
+      ……………………………………………………………………………………………
+      ……………………………………………………………………………………………
+      ……………………………………………………………………………………………
+
+2.    Has she been given all the necessary instructions? If not What information, was missed?
+      ……………………………………………………………………………………………
+      ……………………………………………………………………………………………
+      ……………………………………………………………………………………………
+      ……………………………………………………………………………………………
+
+                                              29
+

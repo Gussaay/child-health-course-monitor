@@ -1,0 +1,3079 @@
+          National Child Health Program
+Integrated Management of Newborn and Childhood
+                 Illnesses (IMCI)
+
+        ASSESS AND CLASSIFY
+THE SICK CHILD (2 month up to 5 years)
+
+                     2023
+                                                 0
+Integrated Management of Childhood Illness was prepared by the World Health
+Organization's Division of Diarrheal and Acute Respiratory Disease Control (CDR),
+now the Division of Child Health and Development (CHD), and UNICEF through a
+contract with ACT International, Atlanta, Georgia, USA.
+
+                                                                                1
+Contents
+INTRODUCTION ............................................................................................................................. 3
+LEARNING OBJECTIVES: ............................................................................................................. 4
+1.0 ASK THE MOTHER WHAT THE CHILD‟S PROBLEMS ARE ............................................. 5
+2.0 ASK AND CHECK FOR GENERAL DANGER SIGNS ........................................................... 7
+3.0 ASSESS and classify COUGH OR DIFFICULT BREATHING .............................................. 12
+   3.1 ASSESS COUGH OR DIFFICULT BREATHING ............................................................... 12
+   3.2 CLASSIFY COUGH OR DIFFICULT BREATHING .......................................................... 16
+   4.0 ASSESS AND CLASSIFY DIARRHOEA ............................................................................ 24
+   4.1 ASSESS DIARRHOEA ......................................................................................................... 25
+   4.2 CLASSIFY DIARRHOEA ..................................................................................................... 29
+      4.2.1 Classify Dehydration ........................................................................................................ 29
+      4.2.2 Classify Persistent Diarrhea ............................................................................................. 35
+      4.2.3 Classify Dysentery ........................................................................................................... 35
+5.0 ASSESS AND CLASSIFY FEVER .......................................................................................... 41
+   5.1 ASSESS FEVER: ................................................................................................................... 44
+   5.2 CLASSIFICATION OF FEVER ............................................................................................ 53
+      5.2.1 CLASSSIFY MEASLES.................................................................................................. 54
+6.0 ASSESS AND CLASSIFY EAR PROBLEM ........................................................................... 67
+   6.1 ASSESS EAR PROBLEM ..................................................................................................... 67
+   6.2 CLASSIFY EAR PROBLEM ................................................................................................ 69
+7.0 CHECK FOR MALNUTRITION.............................................................................................. 71
+   7.1 ASSESS FOR ACUTE MALNUTRITION ........................................................................... 72
+   7.2 CLASSIFICATION OF NUTRITIONAL STATUS ............................................................. 77
+8.0 ASSESS AND CLASSIFY ANEMIA ....................................................................................... 79
+   8.1 ASSESS FOR ANEMIA ........................................................................................................ 79
+   8.2 CLASSIFICATION OF ANAEMIA ...................................................................................... 80
+9.0 CHECK THE CHILD'S IMMUNIZATION AND VITAMIN A SUPPLEMENTATION
+STATUS .......................................................................................................................................... 84
+   9.1 CHECK THE CHILD‟S IMMUNIZATION STATUS.......................................................... 84
+   8.2 CHECK THE CHILD‟S VITAMIN A SUPPLEMENTATION STATUS ........................... 87
+10.0 ASSESS OTHER PROBLEMS ............................................................................................... 90
+
+                                                                                                                                                  2
+INTRODUCTION
+    A mother brings her sick child to the clinic for a particular problem or symptom. If you only
+assess the child for that particular problem or symptom, you might overlook other signs of disease.
+The child might have pneumonia, diarrhea, malaria, measles, or malnutrition. These diseases can
+cause death or disability in young children if they are not treated.
+    The chart ASSESS AND CLASSIFY THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+describes how to assess and classify sick children so that signs of disease are not overlooked.
+According to the chart, you should ask the mother about the child's problem and check the child
+for general danger signs. Then ask about the four main symptoms: cough or difficult breathing,
+diarrhea, fever and ear problem. A child who has one or more of the main symptoms could have a
+serious illness. When a main symptom is present, ask additional questions to help classify the
+illness. Check the child for malnutrition and Anemia. Also, check the child's immunization and
+vitamin A supplementation status and assess other problems the mother has mentioned.
+
+                                                                                                 3
+LEARNING OBJECTIVES:
+   This module will describe and allow you to practice the following skills:
+
+ Asking the mother about child's problem.
+ Checking for general danger signs.
+ Asking the mother about the four main symptoms:
+  o Cough or difficult breathing
+  o Diarrhea
+  o Fever
+  o Ear problem.
+ When a main symptom is present:
+  o Assessing the child further for signs related to the main symptom
+  o Classifying the illness according to the signs, which are present, or absent.
+ Checking for signs of malnutrition and anemia and classifying the child's nutritional status and
+ANWMIA.
+ Checking the child's immunization and vitamin A supplementation status and deciding if the
+  child needs any immunizations or vitamin A supplementation.
+ Assessing any other problems.
+ Assessing mother‟s health needs
+
+            Your facilitator will tell you more about the ASSESS & CLASSIFY chart.
+
+                                                                                                4
+1.0 ASK THE MOTHER WHAT THE CHILD’S PROBLEMS ARE
+    A mother (or other family member such as the father, grandmother, sister or brother) usually
+brings a child to the clinic because the child is sick. But mothers also bring children for well-child
+visits, immunization sessions and for treatment of injuries. The steps on the ASSESS &
+CLASSIFY chart describe what you should do when a mother brings her child to the clinic
+because he is sick. The chart should not be used for a well-child brought for immunization or for a
+child with an injury or burn.
+
+    When patients arrive at most clinics, the clinic staffs identify the reason for the child's visit.
+Clinic staffs obtain the child's weight height ,or length and temperature and record them on a
+patient chart, another written record, or on a small piece of paper. Then the mother and child see a
+health worker.
+
+When you see the mother and her sick child:
+
+• Greet the mother appropriately and ask her to sit with her child.
+
+• You need to know the child's age so you can choose the right case management chart; Look at
+the child's record to find the child's age.
+
+• If the child age is 2 months up to 5 years, assess and classify the child according to the steps on
+the ASSESS & CLASSIFY chart.
+
+• If the child from birth up to 2 months, assess and classify the young infant according to the
+steps on the YOUNG INFANT chart. (You will learn more about managing sick young infants
+later in the course.)
+
+• Look to see if the child's weight, length or height, mid- upper arm circumference (MUAC) and
+temperature have been measured and recorded. If not, weigh the child and measure his length or
+height, (MUAC) and temperature later when you assess and classify the child's main symptoms.
+Do not undress or disturb the child now.
+
+• Ask the mother about the child's problems.
+
+Record what the mother tells you about the child's problems; An important reason for asking this
+question is to open good communication with the mother. Using of good communication helps to
+reassure the mother that her child will receive good care. When you treat the child's illness later in
+the visit, you will need to teach and advise the mother about caring for her sick child at home. So,
+it is important to have good communication with the mother from the beginning of the visit.
+
+                                                                                                         5
+ Use Good Communication skills:
+   o Listen carefully to what the mother tells you. This will show her that you are taking her
+      concerns seriously.
+   o Use words the mother understands. If she does not understand the questions you asked
+      her, she cannot give the information you need to assess and classify the child correctly.
+   o Give the mother time to answer the questions. For example, she may need time to decide
+      if the sign you asked about is present.
+   o Ask additional questions when the mother is not sure about her answer. When you ask
+      about a main symptom or related sign, the mother may not be sure if it is present. Ask her
+      additional questions to help her give clear answers.
+
+• Determine if this is an initial or follow-up visit for this problem.
+   o          If this is the child's first visit for this episode of an illness or problem, then this is an
+   initial visit.
+   o          If the child was seen a few days ago for the same illness, this is a follow- up visit.
+
+    A follow-up visit has a different purpose than an initial visit. During a follow-up visit, the
+    health worker finds out if the treatment he gave during the initial visit has helped the child. If
+    the child is not improving or is getting worse after a few days, the health worker refers the
+    child to a hospital or changes the child's treatment.
+
+    How you find out if this is an initial or follow-up visit depends on how your clinic registers
+    patients and identifies the reason for their visit. Some clinics give mothers follow-up slips that
+    tell them when to return. In other clinics, the health worker writes a follow-up note on the
+    multi-visit card or chart. Or, when the patient registers, clinic staffs ask the mother questions to
+    find out why she has come.
+
+    You will learn how to carry out a follow-up visit later in the course. The examples and
+    exercises in this module describe children who have come for an initial visit.
+
+                                                                                                         6
+2.0 ASK AND CHECK FOR GENERAL DANGER SIGNS
+
+Check ALL sick children for general danger signs.
+
+    A general danger sign is present if:
+    •        The child is not able to drink or breastfeed
+    •        The child vomits everything
+    •        The child has had convulsions
+    •        The child is lethargic or unconscious.
+    •        The child is convulsing now
+
+A child with a general danger sign has a serious problem. Most children with a general danger sign need
+URGENT referral to hospital. They may need lifesaving treatment with injectable antibiotics, oxygen
+or other treatments, which may not be available in your clinic. Complete the rest of the assessment
+immediately. How to provide urgent treatment is described in the module Identify Treatment.
+
+Here is the first box in the "Assess" column. It tells you how to check for general danger signs.
+ASK THE MOTHER WHAT THE CHILD‟S PROBLEMS ARE
+   • Determine if this is an initial or follow-up visit for this problem.
+      o If follow-up visit, use the follow-up instructions on TREAT THE CHILD chart.
+      o If initial visit, assess the child as follows:
+
+        ASK AND CHECK FOR GENERAL DANGER SIGNS
+
+        ASK AND CHECK:                                              LOOK:
+        Is the child not able to drink or breastfeed?            If the child is lethargic or unconscious.
+        Does the child vomit everything?                          If the child is convulsing now.
+        Has the child had convulsions?
+
+             A child with any general danger sign needs URGENT attention; complete the Assessment and
+ give any pre-referral treatment immediately so referral is not delayed.
+             If the child is convulsing now, manage the airway and treat the child with DIAZEPAM. Then
+ rapidly assess, classify and provide other treatment before referring to hospital.
+
+When you check for general danger signs:
+ASK: Is the child able to drink or breastfeed?
+A child has the sign "not able to drink or breastfeed" if the child is too weak to drink and is not
+able to suck or swallow when offered a drink or breast milk.
+
+When you ask the mother if the child is able to drink, make sure that she understands the question.
+If she says that the child is not able to drink or breastfeed, ask her to offer the child a drink of clean
+water or breast milk. Look to see if the child is swallowing the water or breast milk.
+
+A child who is breastfed may have difficulty sucking when his nose is blocked. If the child's nose
+is blocked, clear it. If the child can breastfeed after his nose is cleared, the child does not have the
+danger sign, "not able to drink or breastfeed."
+
+                                                                                                             7
+ASK: Does the child vomit everything?
+A child who is not able to hold anything in stomach at all has the sign "vomits everything." What
+goes down comes back up, a child who vomits several times but can hold down some fluids does
+not have this general danger sign.
+When you ask the question, use words the mother understands. Give her time to answer.
+
+If the mother is not sure if the child is vomiting everything, help her to make her answer clear. For
+example, ask the mother how often the child vomits. Also, ask if each time the child swallows‟
+food or fluids, does the child vomit? If you are not sure of the mother's answers, ask her to offer
+the child a drink. See if the child vomits.
+
+ASK: Has the child had convulsions?
+During a convulsion, the child's arms and legs stiffen because the muscles are contracting. The
+child may lose consciousness or not be able to respond to spoken directions.
+
+Convulsions may be the result of fever. In this instance, they do little harm beyond frightening the
+mother. But convulsions may be associated with meningitis, cerebral malaria or other life-
+threatening conditions.
+
+Ask the mother if the child has had convulsions during this current illness. Use words the mother
+understands. For example, the mother may know convulsions as "fits" or "spasms."
+
+LOOK: See if the child is lethargic or unconscious.
+A lethargic child is not awake and alert when he should be. He is drowsy and does not show
+interest in what is happening around him. Often the lethargic child does not look at his mother or
+watch your face when you talk. The child may stare blankly and appear not to notice what is going
+on around him.
+
+An unconscious child cannot be wakened. He does not respond when he is touched, shaken or
+spoken to.
+
+Ask the mother if the child seems unusually sleepy or if she cannot wake the child. Look to see if
+the child wakens when the mother talks or shakes the child or when you clap your hands. If the
+child wakens, it means the child was asleep. This is not abnormal.
+
+Note: If the child is sleeping and has cough or difficult breathing, count the number of breaths first
+before you try to wake the child.
+
+ LOOK: See if the child is convulsing now:
+During a convulsion, the child‟s arms and legs stiffen because the muscles are contracting. The
+child loses consciousness or is not able to respond to spoken directions.
+
+                                                                                                     8
+If the child is convulsing in the clinic now, treat the child by managing the airway and giving
+diazepam. How to manage the airway and how to give diazepam are described in the module treat
+the child.
+
+If the child has a general danger sign refer UREGENTY to hospital, complete the rest of
+assessment immediately. this child has a severe problem. there must be no delay in his
+prerefral treatment.
+
+You will learn to record information about the sick child on a special form. This form is called a
+Recording Form. The front of the Recording Form is similar to the ASSESS & CLASSIFY chart.
+It lists questions to ask the mother and the signs, for which you should look, listen and feel.
+In most of the exercises in this module, you will only use part of the Recording Form. As you learn
+each step in the chart, you will use more of it.
+
+             Your facilitator will show you a Recording Form and tell you how to use
+
+                                                                                                  9
+                                                EXERCISE A
+   Note: This picture means you will do a written exercise. You will read case studies describing signs and
+   symptoms in sick children. You will use the Recording Form to record the child's signs and how you
+   classified the illness. When you finish the exercise, a facilitator will discuss your work with you. The
+   facilitator can also answer your questions about information in the module or on the chart.
+   Read the following case studies and answer the questions about each one.
+   Case 1: Laila:
+   Laila is 15 months old. She weighs 8.5 kg, length 80 cm. Her temperature is 38.5 C.
+   The health worker asked, "What are the child's problems?" The mother said, "Laila has been coughing
+   for 4 days, and she is not eating well." This is Laila's initial visit for this problem.
+   The health worker checked Laila for general danger signs. He asked, "Is Laila able to drink or
+   breastfeed?" The mother said, "No. Laila does not want to breastfeed." The health worker gave Laila
+   some water. She was too weak to lift her head. She was not able to drink from a cup.
+   Next, he asked the mother, "Is she vomiting?" The mother said, "No." Then he asked, "Has she had
+   convulsions?" The mother said, "No."
+   The health worker looked to see if Laila was lethargic or unconscious. When the health worker and the
+   mother were talking, Laila watched them and looked around the room. She was not lethargic or
+   unconscious. She was not convulsing.
+
+      Write the date, Laila's name, age, weight, length and temperature in the spaces provided on
+       the top line of the form.
+    Write Laila's problem on the line after the question "Ask: What are the child's problems?"
+    Tick () whether this is the initial or follow-up visit for this problem.
+    Does Laila have a general danger sign? If yes, circle her general Danger sign in the box
+   In the top row of the "Classify" column, tick ( ) either "Yes" or "No" after the words, "General danger
+   sign present?"
+               MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+
+Date___ Name: ___________Age:___ m Weight: ___ kg Length /Height: ______cm Temperature: ____°C
+ASK: What are the child‟s problems? _______________________ Initial visit? ___ Follow-up Visit? ___
+Assess                                                                               Classify
+ASK AND CHECK FOR GENERAL DANGER SIGNS                                                  Yes___ No___
+ASK AND CHECK:                                         LOOK:                            Remember to use
+Is the child not able to drink or breastfeed? If the child is lethargic or unconscious. danger sign when
+Does the child vomit everything?               If the child is convulsing now.          selecting
+Has the child had convulsions?                                                          classifications
+
+                                                                                                        10
+     Case 2: Abdullah
+     Abdullah is 4 years old. He weighs 10 kg, height 92 cm.His temperature is 38 C.
+
+     The health worker asked about the child's problems. Abdallah‟s parents said, "He is coughing and
+     has ear pain." This is his initial visit for this problem. The health worker asked, "Is your child able
+     to drink or breastfeed?" The parents answered, "Yes." "Does Abdallah vomit everything?" he
+     asked. The parents said, "No." The health worker asked, "Has he had convulsions?" They said,
+     "No." The health worker looked at Abdallah. The child was not lethargic or unconscious. He was
+     not convulsing.
+      Write the date, Abdallah‟s name, age, weigh height and temperature in the spaces provided on
+        the top line of the form.
+      Write Abdallah‟s problem on the line after the question, "Ask: What are the child's problems?"
+      Tick () whether this is the initial or follow-up visit.
+      Does Abdallah have a general danger sign? If yes, circle the sign on the Recording Form then
+     tick ( ) "Yes" or "No" after the words, "General danger sign present?"
+
+                MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+
+Date___ Name: ___________Age:___ m Weight: ___ kg Length /Height: ______cm Temperature: ____°C
+ASK: What are the child‟s problems? _______________________ Initial visit? ___ Follow-up Visit? ___
+Assess                                                                                  Classify
+ASK AND CHECK FOR GENERAL DANGER SIGNS                                                     Yes___ No___
+                                                                                           Remember to use
+ASK AND CHECK:                                            LOOK:                            danger sign when
+Is the child not able to drink or breastfeed?    If the child is lethargic or unconscious. selecting
+Does the child vomit everything?                  If the child is convulsing now.          classifications
+Has the child had convulsions?
+
+                         Tell the facilitator when you have completed this exercise.
+
+                                                                                                               11
+ 3.0 ASSESS and classify COUGH OR DIFFICULT BREATHING
+
+ 3.1 ASSESS COUGH OR DIFFICULT BREATHING
+     A child with cough or difficult breathing is assessed for:
+      How long the child has had cough or difficult breathing?
+      Fast breathing
+      Chest indrawing
+      Stridor in a calm child
+      Wheezing
+ Here is the box in the "Assess" column that lists the steps for assessing a child for cough or difficult
+ breathing:
+
+THEN ASK ABOUT MAIN SYMPTOMS
+Does the child have cough or difficult breathing?
+    IF YES, ASK:                                LOOK, LISTEN,
+     For how long?                         - Count the breaths in one-minute        CHILD MUST
+                                            - Look for chest indrawing.              BE CALM
+                                            - Look and listen for stridor.
+                                            - Look and listen for wheeze
+
+ For ALL sick children, ask about cough or difficult breathing.
+
+ ASK: Does the child have cough or difficult breathing?
+
+ "Difficult breathing" is any unusual pattern of breathing. Mothers describe this in different ways.
+ They may say that their child's breathing is "fast", "noisy", or "interrupted."
+
+ If the mother answers NO, look to see if you think the child has cough or difficult breathing. If the
+ child does not have cough or difficult breathing, ask about the next main symptom, diarrhea. Do
+ not assess the child further for signs related to cough or difficult breathing.
+
+ If the mother answers YES, or you think the child has cough or difficult breathing, and then ask
+ the next question.
+
+ ASK: For how long?
+
+ A child who has a cough or difficulty breathing for more than 2 weeks has a chronic cough. This
+ may be a sign of tuberculosis, asthma, whooping cough or another problem
+
+ COUNT the breaths in one minute:
+                                                                                                            12
+   You must count the breaths the child takes in one minute to decide if the child has fast
+    breathing. The child must be quiet and calm when you look and listen to his breathing. If the
+    child is frightened, crying or angry, you will not be able to obtain an accurate count of the
+    child's breaths.
+   Tell the mother you are going to count her child's breathing. Remind her to keep her child
+    calm. If the child is sleeping, do not wake the child.
+   To count the number of breaths in one minute, there are a number of methods you can use:
+
+1. Use a watch with a second hand or a digital watch
+     i. Sounding timer that sounds offer one minute (60 seconds). Count the child‟s breaths for
+        one minute.
+    ii. Use a watch with a second hand or a digital watch, or ask another health worker to watch
+        the second hand and tell you when 60 seconds have passed. You look at the child's chest
+        and count the number of breaths.
+   iii. If you cannot find another health worker to help you, put the watch where you can see the
+        second hand. Glance at the second and as you count the breaths, the child takes in one
+        minute.
+
+2. Look for breathing movement anywhere on the child's chest or abdomen usually you can see
+   breathing movements even on a child who is dressed. If you cannot see this movement easily,
+   ask the mother to lift the child's shirt. If the child starts to cry, ask the mother to calm the child
+   before you start counting.
+
+If you are not sure about the number of breaths you counted (for example, if the child was actively
+moving and it was difficult to watch the chest, or if the child was upset or crying), repeat the count.
+
+The cut-off for fast breathing depends on the child's age. Normal breathing rates are higher in
+children age 2 months up to 12 months than in children age 12 months up to 5 years.
+
+If the child is:                                   The child has fast breathing if you count:
+
+2 months up to 12 months                           50 breaths per minute or more
+
+12 months up to 5 years                            40breaths per minute or more
+
+Note: The child who is exactly 12 months old has fast breathing if you count 40 breaths
+per minute or more. Before you look for the next three signs -- chest indrawing, stridor, and
+wheeze --watch the child to determine when the child is breathing IN and when the child is
+breathing OUT.
+
+                                                                                                      13
+LOOK for chest indrawing.
+
+   If you did not lift the child's shirt when you counted the child's breaths, ask the mother to lift it now.
+   Look for chest indrawing when the child breathes IN. Look at the lower chest wall (lower ribs). The
+    child has chest indrawing if the lower chest wall goes IN when the child breathes IN. Chest
+    indrawing occurs when the effort the child needs to breathe in is much greater than normal. In
+    normal breathing, the whole chest wall (upper and lower) and the abdomen move OUT when the
+    child breathes IN. When chest indrawing is present, the lower chest wall goes IN when the child
+    breathes IN.
+   If you are not sure that chest indrawing is present, look again. If the child's body is bent at the waist,
+    it is hard to see the lower chest wall move. Ask the mother to change the child's position so he is
+    lying flat in her lap. If you still do not see the lower chest wall go IN when the child breathes IN, the
+    child does not have chest indrawing.
+   For chest indrawing to be present, it must be clearly visible and present all the time. If you only see
+    chest indrawing when the child is crying or feeding, the child does not have chest indrawing.
+   If only the soft tissue between the ribs goes in when the child breathes in (also called intercostal
+    indrawing or intercostal retractions), the child does not have chest indrawing. In this assessment,
+    chest indrawing is lower chest wall indrawing.11 It does not include "intercostal indrawing." This is
+    the same as "subcostal indrawing" or "subcostal retractions."
+
+                                                                                                           14
+LOOK and LISTEN for Stridor:
+
+   Stridor is a harsh noise made when the child breathes IN. Stridor happens when there is a
+    swelling of the larynx, trachea or epiglottis. This swelling interferes with air entering the lungs.
+    It can be life threatening when the swelling causes the child's airway to be blocked. A child
+    who has stridor when calm has a dangerous condition.
+   Look to see when the child breathes IN. Then listen for stridor. Put your ear near the child's
+    mouth because stridor can be difficult to hear.
+   Sometimes you will hear a wet noise if the nose is blocked. Clear the nose, and listen again. A
+    child who is not very ill may have stridor only when he is crying or upset. Be sure to look and
+    listen for stridor when the child is calm.
+
+LOOK and LISTEN for Wheeze:
+
+   A child with wheezing makes a soft musical noise or shows signs that breathing OUT is
+    difficult.
+   Look to see when the child is breathing OUT. Listen for the wheeze noise by holding your ear
+    near the child‟s mouth, since the noise may be difficult to hear.
+   Wheezing is caused by a narrowing of the air passages in the lungs when the child breathes
+    out. The breathing out takes longer than normal and requires effort.
+   Sometimes so little air moves that there is no noise. Look to see if the breathing out phase
+    requires great effort, and is longer than normal
+   If the child is wheezing, ask the mother if her child has had a previous episode of wheezing
+    within the last year. A child with “recurrent wheeze” has had more than one episode of wheeze
+    in a 12-month period.
+
+                                                                                                     15
+3.2 CLASSIFY COUGH OR DIFFICULT BREATHING
+CLASSIFICATION TABLES:
+
+Signs of illness and their classifications are listed on the ASSESS & CLASSIFY chart in
+classification tables. Most classification tables have three rows. If the chart is in color, each row is
+colored pink, yellow, or green. The color of the rows tells you quickly if the child has a serious
+illness. You can also quickly choose the appropriate treatment.
+
+   A classification in the pink row needs urgent attention and referral or admission for inpatient
+    care. This is a severe classification.
+   A classification in a yellow row means that the child needs an appropriate antibiotic, an oral
+    antimalarial or other treatment. The treatment includes teaching the mother how to give the
+    oral drugs or to treat local infections at home. The health worker advises her about caring for
+    the child at home and when she should return.
+   A classification in a green row means the child does not need treatment with antibiotics. The
+    health worker teaches the mother how to care for her child at home. For example, you might
+    advise her on feeding her sick child or giving fluid for diarrhea.
+
+Depending on the combination of the child's signs and symptoms, the child is classified in the
+pink, yellow, or the green row. That is, the child is classified only once in each classification
+table.
+There are three possible classifications for a child with cough or difficult breathing. They are:
+    o SEVERE PNEUMONIA OR VERY SEVERE DISEASE or
+    o PNEUMONIA or
+    o COUGH OR COLD
+
+SEVERE PNEUMONIA OR VERY SEVERE DISEASE
+A child with any general danger sign or stridor when calm is classified as having SEVERE
+PNEUMONIA OR VERY SEVERE DISEASE
+PNEUMONIA
+A child with a cough or difficulty breathing who has chest indrawing or fast breathing and
+NOgeneral danger signs and NO stridor when calm is classified as having PNEUMONIA
+If the child is wheezing and does NOT a general danger sign or stridor, test the child for
+pneumonia by giving rapid acting bronchodilator. Watch the relevant video in the SEE part of this
+Training unit for how to give a rapid acting bronchodilator. Wait for 20 minutes and reassess the
+child. If there is, still chest indrawing or fast breathing, repeat the test twice before classifying the
+child‟s illness as pneumonia.
+COUGH OR COLD
+A child with cough or difficult breathing who has no general danger signs, no stridor when calm,
+no chest indrawing, and no fast breathing is classified as having COUGH OR COLD.
+
+                                                                                                      16
+Example:
+
+Fatima is 18 months old. She weighs 11.5 kg, her length is 84 cm. Her temperature is 37.5°C. The
+health worker asked, "What are the child's problems?" The mother said, "Fatima has been coughing
+for 6 days, and she is having trouble breathing." This is the initial visit for this illness.
+
+The health worker checked Fatima for general danger signs. The mother said that Fatima is able to
+drink. She has not been vomiting. She has not had convulsions during this illness. The health worker
+asked, "Does Fatima seem unusually sleepy?" The mother said, "Yes." The health worker clapped
+his hands. He asked the mother to shake the child. Fatima opened her eyes, but did not look around.
+The health worker talked to Fatima but she did not watch his face. She stared blankly and appeared
+not to notice what was going on around her.
+
+The health worker asked the mother to lift Fatima's shirt. He then counted the number of breaths the
+child took in a minute. He counted 41 breaths per minute. The health worker did not see any chest
+indrawing. He did not hear stridor and he did not hear wheezing.
+
+                                                                                                17
+                                                 EXERCISE B
+     In this exercise, you will practice recording signs related to cough or difficult breathing. You will
+     also classify the child's illness. Read the following case studies. Record the child's signs on the
+     Recording Form and classify the illness. To do this exercise, look at a classification table for cough
+     or difficult breathing. Use the one in your chart booklet or look at the wall chart.
+
+      Note: Be sure to tick  initial visit" on the top part of the Recording Form each time you
+                                    do a case study in this module.
+
+     Case 1: Hamza
+
+     Hamza is 6 months old. He weighs 5.5 kg, length 60cm, His temperature is 38 C. His mother said
+     he has had cough for 2 days. The health worker checked for general danger signs. The mother said
+     that Hamza is able to breastfeed. He has not vomited during this illness. He has not had
+     convulsions and is not convulsing now. Hamza is not lethargic or unconscious.
+
+     The health worker said to the mother, "I want to check Hamza's cough. You said he has had cough
+     for 2 days now. I am going to count his breaths. He will need to remain calm while I do this." The
+     health worker counted 58 breaths per minute. He did not see chest indrawing. He did not hear
+     stridor. He did not hear wheeze.
+
+     Record Hamza's signs on the Recording Form below.
+
+     To classify Hamza's illness, look at the classification table for cough or difficult breathing in your
+     chart booklet. Look at the pink (or top)
+
+                MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+
+Date___ Name: ___________Age:___ m Weight: ___ kg Length /Height: ______cm Temperature: ____°C
+ASK: What are the child‟s problems? _______________________ Initial visit? ___ Follow-up Visit? ___
+Assess                                                                                    Classify
+ASK AND CHECK FOR GENERAL DANGER SIGNS                                                          Yes___ No___
+                                                                                                Remember to use
+ASK AND CHECK:                                              LOOK:                               danger sign when
+Is the child not able to drink or breastfeed?      If the child is lethargic or unconscious.    selecting
+Does the child vomit everything?                    If the child is convulsing now.             classifications
+Has the child had convulsions?
+Does the child had cough or shortness of breath   Yes ___ No___
+ASK:                                  LOOK, LISTEN,
+For how long?___days        - Count the breaths in one-minute___breaths per minute. Fast breathing
+                            - Look for chest indrawing
+                            - Look and listen for stridor.
+                            - Look and listen for wheeze
+
+                                                                                                        18
+     Case 2: Salwa
+
+     Salwa is 8 months old. She weighs 6 kg, Length 60cm. Her temperature is 39 C.
+
+     Her father told the health worker, "Salwa has had cough for 3 days. She is having trouble
+     breathing. She is very weak." The health worker said, "You have done the right thing to bring your
+     child today. I will examine her now."
+
+     The health worker checked for general danger signs. The mother said, "Salwa will not breastfeed.
+     She will not take any other drinks I offer her." Salwa does not vomit everything and has not had
+     convulsions. She is not convulsing now. Salwa is lethargic. She did not look at the health worker
+     or her parents when they talked.
+
+     The health worker counted 55 breaths per minute. He saw chest indrawing. He decided Salwa had
+     stridor because he heard a harsh noise when she breathed in, but Salwa had no wheeze.
+
+     Record Salwa's signs on the Recording Form below.
+
+     Now look at the classification table for cough or difficult breathing on the chart. Classify this
+     child's illness and write your answer in the Classify column. Be prepared to explain to your
+     facilitator how you selected the child's classification.
+
+                MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+
+Date___ Name: ___________Age:___ m Weight: ___ kg Length /Height: ______cm Temperature: ____°C
+ASK: What are the child‟s problems? _______________________ Initial visit? ___ Follow-up Visit? ___
+Assess                                                                                    Classify
+ASK AND CHECK FOR GENERAL DANGER SIGNS                                                         Yes___ No___
+                                                                                               Remember to use
+ASK AND CHECK:                                              LOOK:                              danger sign when
+Is the child not able to drink or breastfeed?      If the child is lethargic or unconscious.   selecting
+Does the child vomit everything?                    If the child is convulsing now.            classifications
+Has the child had convulsions?
+Does the child had cough or shortness of breath   Yes ___ No___
+ASK:                                  LOOK, LISTEN,
+For how long?___days        - Count the breaths in one-minute___breaths per minute. Fast breathing
+                            - Look for chest indrawing
+                            - Look and listen for stridor.
+                            - Look and listen for wheeze
+
+                                                                                                       19
+     Case 3: Mustafa
+
+     Mustafa is 18 months old. He weighs 9 kg, Length 60cm, and his temperature is 37 C. His mother
+     says he has had a cough for 3 days.
+
+     The health worker checked for general danger signs. Mustafa's mother said that he is able to drink
+     and has not vomited anything. He has not had convulsions and is not convulsing now. Mustafa was
+     not lethargic or unconscious.
+
+     The health worker counted the child's breaths. He counted 38 breaths per minute. The mother lifted
+     the child's shirt. The health worker did not see chest indrawing. He did not hear stridor or wheeze
+     when he listened to the child's breathing.
+
+     Record Mustafa's signs on the Recording Form below.Look at the classification table for cough or
+     difficult breathing on the chart. Classify this child's illness and write your answer in the Classify
+     column.
+                 MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+
+Date___ Name: ___________Age:___ m Weight: ___ kg Length /Height: ______cm Temperature: ____°C
+ASK: What are the child‟s problems? _______________________ Initial visit? ___ Follow-up Visit? ___
+Assess                                                                                    Classify
+ASK AND CHECK FOR GENERAL DANGER SIGNS                                                         Yes___ No___
+                                                                                               Remember to use
+ASK AND CHECK:                                              LOOK:                              danger sign when
+Is the child not able to drink or breastfeed?      If the child is lethargic or unconscious.   selecting
+Does the child vomit everything?                    If the child is convulsing now.            classifications
+Has the child had convulsions?
+Does the child had cough or shortness of breath   Yes ___ No___
+ASK:                                  LOOK, LISTEN,
+For how long?___days        - Count the breaths in one-minute___breaths per minute. Fast breathing
+                            - Look for chest indrawing
+                            - Look and listen for stridor.
+                            - Look and listen for wheeze
+
+                                                                                                       20
+     Case 4: Nuha
+
+     Nuha is two years old. She weighs about 11 kg, Height 75cm. Nuha has a temperature of 39.5 C.
+     Her mother tells you that yesterday Nuha became sick very suddenly. She had a cough and runny
+     nose for two days, but her mother did not think she needed any treatment. Yesterday Nuha
+     stopped playing, and her mother saw that she was breathing faster than normal.
+
+     In response to your assessment questions, you find out from her mother that Nuha has been able to
+     drink water and eat a little bit. Her mother does not think that Nuha has had a fever, and there is no
+     malaria in the area.
+
+     When you count Nuha‟s breathing, you find that she is breathing 36 times per minute. When her
+     mother undresses her, you see that Nuha does not have chest indrawing. She is wheezing, and her
+     mother says this is the first time she has heard Nuha make this noise. She does not appear to be
+     abnormally sleepy.
+
+     Record Nuha‟s signs on the recording form below.
+
+     Look at the classification table for cough or difficult breathing on the chart. Classify the illness and
+     write your answers in the Classify column.
+
+                MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+
+Date___ Name: ___________Age:___ m Weight: ___ kg Length /Height: ______cm Temperature: ____°C
+ASK: What are the child‟s problems? _______________________ Initial visit? ___ Follow-up Visit? ___
+Assess                                                                                    Classify
+ASK AND CHECK FOR GENERAL DANGER SIGNS                                                         Yes___ No___
+                                                                                               Remember to use
+ASK AND CHECK:                                              LOOK:                              danger sign when
+Is the child not able to drink or breastfeed?      If the child is lethargic or unconscious.   selecting
+Does the child vomit everything?                    If the child is convulsing now.            classifications
+Has the child had convulsions?
+Does the child had cough or shortness of breath   Yes ___ No___
+ASK:                                  LOOK, LISTEN,
+For how long?___days        - Count the breaths in one-minute___breaths per minute. Fast breathing
+                            - Look for chest indrawing
+                            - Look and listen for stridor.
+                            - Look and listen for wheeze
+
+                         Tell the facilitator when you are ready to discuss this exercise
+
+                                                                                                          21
+                                              EXERCISE C
+Note: A picture like this one means you will do a video exercise. In a video exercise, you see
+examples of signs and practice identifying them. You also see demonstrations showing how to assess
+children for particular main symptoms. Sometimes you will see an actual case study. You will
+practice assessing and classifying the child's illness.
+In this exercise, you will practice identifying general danger signs. You will also practice assessing
+cough or difficult breathing.
+
+       For each of the children shown, answer the question:
+                                                 Is the child lethargic or unconscious?
+               Child #
+                                                  YES                           NO
+                Child 1
+                Child 2
+                Child 3
+                Child 4
+
+For each of the children shown, answer the question:
+                                                             Does the child have Fast breathing?
+       Child              Age      Breaths per minute
+                                                                   Yes                    No
+
+       Mano
+
+      Wumbi
+
+       For each of the children shown, answer the question:
+                                                 Does the child have chest indrawing?
+                Child
+                                                        No                          Yes
+                 Mary
+                 Jenna
+                  Ho
+                 Anna
+                  Lo
+
+                                                                                                    22
+For each of the children shown, answer the question:
+                                             Does the child have stridor or wheeze?
+
+                                              Wheeze                      Stridor
+
+                Petty
+
+                Helen
+
+                Simbu
+
+               Hassan
+
+                                                                                      23
+4.0 ASSESS AND CLASSIFY DIARRHOEA
+Diarrhea: is the passage of unusually loose or watery stools, usually at least three times in a 24
+hours‟ period. It is common in children, especially those between 6 months and 2 years of age. It is
+more common in babies under 6 months who are drinking cow's milk or infant feeding formulas.
+Frequent passing of normal stools is not diarrhea. The number of stools normally passed in a day
+varies with the diet and age of the child. In many regions diarrhea is defined as three or more loose
+or watery stools in a 24-hour period.
+
+Mothers usually know when their children have diarrhea. They may say that the child's stools are
+loose or watery. Mothers may use a local word for diarrhea.
+
+Babies who are exclusively breastfed often have stools that are soft; this is not diarrhea. The mother
+of a breastfed baby can recognize diarrhea because the consistency or frequency of the stools is
+different from normal.
+
+What are the Types of Diarrhea?
+
+Most diarrheas which were causes dehydration are loose or watery. Cholera is one example of loose
+or watery diarrhea. Only a small proportion of all loose or watery diarrheas is due to cholera.
+
+If an episode of diarrhea lasts less than 14 days, it is acute diarrhea. Acute watery diarrhea causes
+dehydration and contributes to malnutrition. The death of a child with acute diarrhea is usually due
+to dehydration.
+
+If diarrhea lasts 14 days or more, it is diarrhea become persistent. Persistent contributes to deaths in
+children.
+
+Up to 20% of episodes of diarrhea often causes nutritional problems and Diarrhea with blood in the
+stool, with or without mucus, is called dysentery. The most common cause of dysentery is Shigella
+bacteria. Amoebic dysentery is not common in young children. A child may have both watery
+diarrhea and dysentery.
+
+                                                                                                     24
+ 4.1 ASSESS DIARRHOEA
+
+ A child with diarrhea is assessed for:
+     How long the child has had diarrhea?
+     blood in the stool to determine if the child has dysentery, and
+     Signs of dehydrtion.
+ Does the child have diarrhea?
+ ASK:                                              LOOK AND FEEL:
+    - For how long?                          . Look at the child‟s general condition Is the child:
+    - Blood in the stool?                       - Lethargic or unconscious?
+                                                - Restless and irritable?
+                                              . Look for sunken eyes.
+                                              . Offer the child fluid. Is the child:
+                                                - Not able to drink or drinking poorly?
+                                                - Drinking eagerly, thirsty?
+                                            . Pinch the skin of the abdomen. Does it go back
+                                                - Very slowly (longer than 2 seconds)?
+                                                - Slowly? (less than 2 seconds)
+
+ Ask for diarrhea in ALL children:
+  ASK: Does the child have diarrhea?
+   Use words for diarrhea the mother understands.
+   If the mother answers NO, ask about the next main symptom, fever. You do not need to assess the
+   child further for signs related to diarrhea then assess fever.
+   If the mother answers YES, or if the mother said earlier that diarrhea was the reason for coming to
+   the clinic, record her answer. Then assess the child for signs of dehydration, persistent diarrhea and
+   dysentery.
+ ASK: For how long?
+    Diarrhea, which lasts 14 days or more, is persistent diarrhea.
+   Give the mother time to answer the question. She may need time to recall the exact number of
+   days.
+ ASK: Is there blood in the stool?
+    Ask the mother if she has seen blood in the stools at any time during this episode of diarrhea.
+
+   Check for signs of dehydration.
+   When a child becomes dehydrated, he is at first thirsty restless and irritable. If dehydration
+   continues, the child becomes lethargic or unconscious.
+
+   As the child's body loses fluids, the eyes may look sunken. When pinched, the skin will go back
+   slowly or very slowly.
+
+                                                                                                      25
+    LOOK & FEEL for the following signs:
+  LOOK & FEEL for Child's general condition: Is the child lethargic or unconscious? Or
+   Restless and irritable?
+ Check to see if the child was lethargic or unconscious. If the child is lethargic or unconscious, he
+ has a general danger sign.
+ Remember to use this general danger sign when you classify the child's diarrhea.
+ A child has the sign restless and irritable if the child is restless and irritable all the time or every
+ time he is touched and handled. If an infant or child is calm when breastfeeding but again restless
+ and irritable when he stops breastfeeding, he has the sign "restless and irritable". Many children
+ are upset just because they are in the clinic. If these children can be consoled and calmed, they do
+ not have the sign "restless and irritable".
+ LOOK for Sunken eyes:
+ The eyes of a child who is dehydrated may look sunken.
+ Decide if you think the eyes are sunken.
+ Then ask the mother if she thinks her child's eyes look unusual. Her opinion helps you confirm
+ that the child's eyes are sunken.
+ Note: In a severely malnourished child who is visibly wasted (that is, who has marasmus), the eyes
+ may always look sunken, even if the child is not dehydrated. Even though sunken eyes are less
+ reliable in a visibly wasted child, still use the sign to the child's dehydration.
+ OFFER the child fluid. Is the child not able to drink or drinking poorly? Drinking eagerly,
+   thirsty?
+ Ask the mother to offer the child some water in a cup or spoon. Watch the child drink. A child is not
+ able to drink if he is not able to suck or swallow when offered a drink. A child may not be able to
+ drink because he is lethargic or unconscious.
+ A child is drinking poorly if the child is weak and cannot drink without help. He may be able to
+ swallow only if fluid is put in his mouth.
+ A child has the sign drinking eagerly, thirsty if it is clear that the child wants to drink. Look to see if
+ the child reaches out for the cup or spoon when you offer him water. When the water is taken away,
+ see if the child is unhappy because he wants to drink more.
+ If the child takes a drink only with encouragement and does not want to drink more, he does not
+ have the sign "drinking eagerly, thirsty."
+ PINCH the skin of the abdomen. Does it go back: slowly (less than 2seconds) or very slowly
+   (longer than 2 seconds)?
+ Ask the mother to place the child on the examining table so that the child is flat on his back with his
+ arms at his sides (not over his head) and his legs straight. Or, ask the mother to hold the child so he
+ is lying flat in her lap.
+ Locate the area on the child‟s abdomen halfway between the umbilicus and the side of the abdomen.
+ To do the skin pinch, use your thumb and first finger. Do not use your fingertips because this will
+ cause pain.
+ Place your hand so that when you pinch the skin, the fold of skin will be in a line up and down the
+ child's body and not across the child's body. Firmly pick up all of the layers of skin and the tissue
+
+                                                                                                         26
+under them. Pinch the skin for one second and then release it. When you release the skin, look to see
+if the skin pinch goes back:
+       Very slowly (longer than 2 seconds)
+       Slowly (less than 2 seconds)
+       Immediately
+Note:
+In a child with severe acute malnutrition, the skin may go back slowly even if the child is not
+dehydrated. In an overweight child, or a child with edema, the skin may go back immediately even
+if the child is dehydrated. Even though skin pinch is less reliable in these children, still use it to
+classify the child's dehydration.
+
+                                                                                                    27
+                                          EXERCISE D
+
+In this exercise, you will look at photographs of children with diarrhea and identify signs of
+dehydration.
+
+Part 1: Look at photographs 1 and 2 in the photograph booklet. Read the explanation for each
+photograph:
+
+Photograph 1                                        The child‟s eye are sunken
+Photograph 2                            The skin pinch for this child goes back very slowly
+
+Part 2: Study photographs 3 through 7. Then write your answers to these questions
+
+                               Question                                     Yes          No
+
+ Photograph 3Look at the child‟s eyes. Are they sunken?
+
+ Photograph 4 Look at the child‟s eyes. Are they sunken?
+
+ Photograph 5 Look at the child‟s eyes. Are they sunken?
+
+ Photograph 6 Look at the child eyes. Are they sunken?
+
+ Photo of a skin pinch. Does the skin goes back very slowly?
+
+            When you have identified the signs of dehydration in these photographs,
+                         Discuss your answers with the facilitator.
+
+                                                                                              28
+4.2 CLASSIFY DIARRHOEA
+Diarrhea: is the passage of on usually loose or watery stools, usually at least three times in a 24
+hours‟ period.
+
+There are three classification tables for classifying diarrhea.
+
+All children with diarrhea are classified for:
+       Dehydration.
+       Persistent diarrhea if diarrhea for 14 days or more.
+       Dysentery If blood in the stool.
+
+4.2.1 Classify Dehydration
+There are three possible classifications of dehydration in a child with diarrhea:
+
+   Severe dehydration usual fluid loss more than10% of body weight.
+
+   Some dehydration including moderate dehydration5-10%of body loss and mid dehydration 3-
+    5%of body loss both has the same signs of dehydration vary in severity but the health worker
+    cannot differentiate.
+
+   No dehydration there is fluid loss but clinically not detectable less than 3% of body weight
+
+Two of the following signs:
+ Lethargic or unconscious
+ Sunken eyes                                                     SEVERE DEHYDRATION
+ Not able to drink or drinking poorly
+ Skin pinch goes back very slowly.
+Two of the following signs:
+ Restless, irritable
+ Sunken eyes                                                     SOME DEHYDRATION
+ Drinks eagerly, thirsty
+ Skin pinch goes back slowly.
+Not enough signs to classify as some or severe
+dehydration
+                                                                   NO DEHYDRATION
+
+                                                                                                29
+   To classify the child's dehydration, look at the table begin with pink row:
+   o If two or more of the signs in the pink row are present, classify the child as having SEVERE
+      DEHYDRATION.
+   o If two or more of the signs are not present, look at the yellow (or middle) row classify the child
+      as having SOME DEHYDRATION.
+   o If two or more of the signs from the yellow row are NOT present, classify the child as having
+      NO DEHYDRATION. This child does not have enough signs to be classified as having
+      SEVERE OR SOME DEHYDRATION. Some of these children may have one sign of
+      dehydration or have lost fluids without showing signs.
+   EXAMPLE:
+
+   A 4-month-old child called Mona was brought to the clinic because she had diarrhea for 5 days.
+   She did not have danger signs and she was not coughing. The health worker assessed the child's
+   diarrhea.
+   Here is her recording form
+
+DOES THE CHILD HAVE DIARRHOEA?                        YES           NO ---------
+ASK:                                                             LOOK & FEEL
+For how long? 5 Days                   Look at the child‟s general condition. Is the child
+Is there blood in the stools?               Lethargic or unconscious?
+                                              Restless or irritable?
+Look for sunken eyes.
+ Offer the child fluid. Is the child:
+Not able to drink or drinking poorly?
+                                              Drinking eagerly, thirsty?
+Pinch the skin of the abdomen. Does it go back:
+Very slowly (longer than 2 seconds)?
+ Slowly?(less than 2second)
+
+       The child does not have two signs in the pink row. The child does not have SEVERE
+        DEHYDRATION.
+       The child had two signs from the yellow row. The health worker classified the child's
+        dehydration               as                 SOME                  DEHYDRATION
+
+   Two of the following signs:
+    Lethargic or unconscious
+                                                                                     SEVERE
+    Sunken eyes
+                                                                                  DEHYDRATION
+    Not able to drink or drinking poorly
+    Skin pinch goes back very slowly.
+   Two of the following signs:
+    Restless, irritable                                                             SOME
+    Sunken eyes                                                                  DEHYDRATION
+    Drinks eagerly, thirsty
+    Skin pinch goes back slowly
+   Not enough signs to classify as some or severe
+                                                                                      NO
+   dehydration.
+                                                                                  DEHYDRATION
+
+                                                                                                    30
+               The health worker recorded Mona‟s classification on the Recording Form.
+DOES THE CHILD HAVE DIARRHOEA?                YES                NO
+ASK:                                                       LOOK & FEEL
+For how long? 5 Days          Look at the child‟s general condition. Is the child
+Is there blood in the stools?      Lethargic or unconscious?
+                                      Restless or irritable?
+                                Look for sunken eyes.                                    SOME
+                                Offer the child fluid. Is the child:                  DEHYDRATION
+                                      Not able to drink or drinking poorly?
+                                      Drinking eagerly, thirsty?
+                               Pinch the skin of the abdomen. Does it go back
+                                      Very slowly (longer than 2 seconds)?
+                                      Slowly? (less than 2second)
+
+                                                 * * *
+Here is a description of each classification for dehydration:
+
+SEVERE DEHYDRATION
+
+  If the child has two of the following signs -- lethargic or unconscious, sunken eyes, not able to
+  drink or drinking poorly, skin pinch goes back very slowly. Classify the dehydration as SEVERE
+  DEHYDRATION.
+
+SOME DEHYDRATION
+
+If the child has two or more of the following signs: restless, irritable, sunken eyes, drinks eagerly,
+thirsty, skin pinch goes back slowly; classify the child's dehydration as SOME DEHYDRATION.
+
+NO DEHYDRATION
+
+A child who does not have two or more signs in either the pink or yellow row is classified as having
+NO DEHYDRATION.
+
+                                                                                                   31
+                                           EXERCISE E
+
+In this exercise, you will practice assessing and classifying dehydration in children with diarrhea.
+Read the following case studies of children with diarrhea. Use the dehydration classification table in
+the chart.
+
+Case 1: Hashim
+
+Hashim has had diarrhea for five days. He has no blood in the stool. He is irritable. His eyes are
+sunken. His father and mother also think that Hashim's eyes are sunken. The health worker offers
+Hashim some water, and the child drinks eagerly. When the health worker pinches the skin on the
+child's abdomen, it goes back slowly.
+
+Record the child's signs and classification for dehydration on the Recording Form.
+
+Does the child have diarrhea?             Yes ___ No___
+ASK:                                  LOOK AND FEEL:
+-   For how long? ____days          . Look at the child‟s general condition Is the child:
+-   Blood in the stool?                    - Lethargic or unconscious?
+                                          - Restless and irritable?
+                                     - Look for sunken eyes.
+                                     . Offer the child fluid. Is the child:
+                                            - Not able to drink or drinking poorly?
+                                            - Drinking eagerly, thirsty?
+                                     . Pinch the skin of the abdomen. Does it go back
+                                             - Very slowly (longer than 2 seconds)?
+                                             - Slowly? (less than 2 seconds)
+
+                                                                                                     32
+Case 2: Fatima
+
+Fatima has had diarrhea for 3 days. There was no blood in the stool. The child was not lethargic or
+unconscious. She was not irritable or restless. Her eyes were sunken. She was able to drink, but she
+was not thirsty. The skin pinch went back immediately.
+
+Record the signs of dehydration and classify them on the Recording Form:
+
+Does the child have diarrhea?             Yes ___ No___
+ASK:                                  LOOK AND FEEL:
+-   For how long? _____days         . Look at the child‟s general condition Is the child:
+-   Blood in the stool?                   - Lethargic or unconscious?
+                                         - Restless and irritable?
+                                    - Look for sunken eyes.
+                                    . Offer the child fluid. Is the child:
+                                           - Not able to drink or drinking poorly?
+                                           - Drinking eagerly, thirsty?
+                                    . Pinch the skin of the abdomen. Does it go back
+                                            - Very slowly (longer than 2 seconds)?
+                                            - Slowly? (less than 2 seconds)
+
+                                                                                                   33
+    Case 3: Huda
+    Huda has had diarrhea for 2 days. She does not have blood in the stool. She is restless and
+    irritable. Her eyes are sunken. She is not able to drink. A skin pinch goes back very slowly.
+    Record the signs of dehydration and classify them on the Recording Form:
+
+Does the child have diarrhea?               Yes …. No …..
+ASK:                                      LOOK AND FEEL:
+-     For how long? _____days           . Look at the child‟s general condition Is the child:
+- Blood in the stool?                    - Lethargic or unconscious?
+                                            - Restless and irritable?
+                                       . Look for sunken eyes.
+                                       . Offer the child fluid. Is the child:
+                                            - Not able to drink or drinking poorly?
+                                            - Drinking eagerly, thirsty?
+                                       . Pinch the skin of the abdomen. Does it go back
+                                              - Very slowly (longer than 2 seconds)?
+                                              - Slowly? (less than 2 seconds)
+
+                        Tell your facilitator when you have completed this exercise.
+
+                                                                                                    34
+  4.2.2 Classify Persistent Diarrhea
+
+  After you classify the child's dehydration, classify the child for persistent diarrhea if the child has
+  had diarrhea for 14 days or more. There are two classifications for persistent diarrhea:
+   SEVERE PERSISTENT DIARRHOEA
+   PERSISTENT DIARRHOEA
+
+                                                                            Severe
+                Dehydration present
+                                                                           Persistent
+                                                                           Diarrhea
+
+                                                                           Persistent
+                   No dehydration
+                                                                           Diarrhea
+
+  SEVERE PERSISTENT DIARRHOEA
+  If a child has had diarrhea for 14 days or more, and also had some or severe dehydration then
+  classify the child as SEVERE PERSISTENT DIARRHOEA.
+  PERSISTENT DIARRHOEA
+  A child who has had diarrhea for 14 days or more and who has no signs of dehydration is
+  classified as having PERSISTENT DIARRHOEA.
+
+  4.2.3 Classify Dysentery
+  There is only one classification for dysentery:
+
+                     Blood in the stool                                      DYSENTERY
+
+  DYSENTERY
+  Classify a child with diarrhea and blood in the stool as having DYSENTERY.
+      Note: A child with diarrhea may have one or more classifications for diarrhea. Record any
+  diarrhea classifications the child has in the Classify column on the Recording Form.
+  For example, this child was classified as having NO DEHYDRATION and DYSENTERY. Here
+  is how the health worker recorded his classifications
+
+Does the child have diarrhea? Yes           No .
+ ASK:                                       LOOK AND FEEL:
+- For how long? 2days             . Look at the child‟s general condition Is the child:       NO
+- Blood in the stool?                 - Lethargic or unconscious?                         DEHYDRATION
+                                              - Restless and irritable?
+                                    . Look for sunken eyes.
+                                    . Offer the child fluid. Is the child:                     +
+                                          - Not able to drink or drinking poorly?
+                                          - Drinking eagerly, thirsty?
+                                    . Pinch the skin of the abdomen. Does it go back
+                                                - Very slowly (longer than 2 seconds)?
+                                                                                           DYSENTERY
+                                                - Slowly? (less than 2 seconds)
+
+                                                                                                       35
+                                                     EXERCISE F
+       In this exercise, you will practice classifying several children with diarrhea. Read these case studies.
+       Record the child's signs and classify them on the Recording Form. Refer to your chart.
+       Case 1: Samira
+       Samira is at the clinic today because she has had diarrhea for 4 days. She is 25 months old. She
+       weighs 9 kg, Height 75cm. Her temperature is 37.0 C.Samira has no general danger signs. She does
+       not have cough or difficult breathing.The health worker said to the mother, "When Samira has
+       diarrhea, is there any blood in the stool?" The mother said, "No." The health worker checked for
+       signs of dehydration. Samira is not lethargic or unconscious. She is not restless or irritable. Her eyes
+       are not sunken. Samira drinks eagerly when offered some water. Her skin pinch goes back
+       immediately.
+       Record Samira's signs on the Recording Form and classify them
+
+                  MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+
+Date___ Name: ___________Age:___ m Weight: ___ kg Length /Height: ______cm Temperature: ____°C
+ASK: What are the child‟s problems? _______________________ Initial visit? ___ Follow-up Visit? ___
+Assess                                                                                           Classify
+ASK AND CHECK FOR GENERAL DANGER SIGNS                                                                       Yes___ No___
+                                                                                                            Remember to use
+ASK AND CHECK:                                               LOOK:                                          danger sign when
+Is the child not able to drink or breastfeed?       If the child is lethargic or unconscious.                    selecting
+Does the child vomit everything?                     If the child is convulsing now.                          classifications
+Has the child had convulsions?
+Does the child had cough or shortness of breath   Yes ___ No___
+ASK:                                  LOOK, LISTEN,
+For how long?__days     - Count the breaths in one-minute___breaths per minute. Fast breathing
+                        - Look for chest indrawing
+                        - Look and listen for stridor.
+                       - Look and listen for wheeze
+Does the child have diarrhea?                Yes ___ No___
+ASK:                                    LOOK AND FEEL:
+-   For how long? ___daya            . Look at the child‟s general condition Is the child:
+-   Blood in the stool?                       - Lethargic or unconscious?
+                                              - Restless and irritable?
+                                       - Look for sunken eyes.
+                                       . Offer the child fluid. Is the child:
+                                               - Not able to drink or drinking poorly?
+                                               - Drinking eagerly, thirsty?
+                                        . Pinch the skin of the abdomen. Does it go back
+                                                - Very slowly (longer than 2 seconds)?
+                                                - Slowly? (less than 2 seconds)
+
+                                                                                                                    36
+     Case 2: Fathyah
+
+     Fathya is 14 months old. She weighs12 kg, Length 75cm. Her temperature is 37.5 C. Fathyah's
+     mother said the child has had diarrhea for 3 weeks.Fathyah does not have any general danger signs.
+     She does not have cough or difficult breathing.
+
+     The health worker assessed her diarrhea. He noted she has had diarrhea for 21 days. He asked if
+     there has been blood in the child's stool. The mother said, "No." The health worker checked Fathyah
+     for signs of dehydration. The child is irritable throughout the visit. Her eyes are not sunken. She
+     drinks eagerly. The skin pinch goes back immediately.
+
+     Record Fathyah's signs and classify them on the Recording Form.
+                MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+
+Date___ Name: ___________Age:___ m Weight: ___ kg Length /Height: ______cm Temperature: ____°C
+ASK: What are the child‟s problems? _______________________ Initial visit? ___ Follow-up Visit? ___
+Assess                                                                                       Classify
+ASK AND CHECK FOR GENERAL DANGER SIGNS                                                                   Yes___ No___
+                                                                                                        Remember to use
+ASK AND CHECK:                                              LOOK:                                       danger sign when
+Is the child not able to drink or breastfeed?      If the child is lethargic or unconscious.                selecting
+Does the child vomit everything?                    If the child is convulsing now.                      classifications
+Has the child had convulsions?
+Does the child had cough or shortness of breath   Yes ___ No___
+ASK:                                  LOOK, LISTEN,
+For how long?____days     - Count the breaths in one-minute___breaths per minute. Fast breathing
+                          - Look for chest indrawing
+                          - Look and listen for stridor.
+                          - Look and listen for wheeze
+Does the child have diarrhea?               Yes ___ No___
+ASK:                                   LOOK AND FEEL:
+-   For how long?____days           . Look at the child‟s general condition Is the child:
+-   Blood in the stool?                     - Lethargic or unconscious?
+                                            - Restless and irritable?
+                                     - Look for sunken eyes.
+                                     . Offer the child fluid. Is the child:
+                                             - Not able to drink or drinking poorly?
+                                             - Drinking eagerly, thirsty?
+                                      . Pinch the skin of the abdomen. Does it go back
+                                              - Very slowly (longer than 2 seconds)?
+                                              - Slowly? (less than 2 seconds)
+
+                                                                                                                 37
+       Case 3: Amani
+
+       Amani is 3 year old. She weighs 10 kg, Height 80cm. Her temperature is 37 C. Her mother came
+       today because Amani has a diarrhea.
+
+       She does not have any general danger signs. She had no cough.
+
+       When the health worker asked mother about duration of diarrhea, she answered: Amani has had
+       diarrhea for 2 days, there is no blood in the stool. Amani is not irritable during the visit, her eyes are
+       sunken. she is drinking eagerly. Her skin pinch goes back immediately.
+
+                  MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+
+Date___ Name: ___________Age:___ m Weight: ___ kg Length /Height: ______cm Temperature: ____°C
+ASK: What are the child‟s problems? _______________________ Initial visit? ___ Follow-up Visit? ___
+Assess                                                                                       Classify
+ASK AND CHECK FOR GENERAL DANGER SIGNS                                                                   Yes___ No___
+                                                                                                        Remember to use
+ASK AND CHECK:                                              LOOK:                                       danger sign when
+Is the child not able to drink or breastfeed?      If the child is lethargic or unconscious.                selecting
+Does the child vomit everything?                    If the child is convulsing now.                      classifications
+Has the child had convulsions?
+Does the child had cough or shortness of breath   Yes ___ No___
+ASK:                                  LOOK, LISTEN,
+For how long? ___days     - Count the breaths in one-minute___breaths per minute. Fast breathing
+                          - Look for chest indrawing
+                          - Look and listen for stridor.
+                          - Look and listen for wheeze
+Does the child have diarrhea?               Yes ___ No___
+ASK:                                    LOOK AND FEEL:
+-   For how long? ____days           . Look at the child‟s general condition Is the child:
+-   Blood in the stool?                     - Lethargic or unconscious?
+                                            - Restless and irritable?
+                                     - Look for sunken eyes.
+                                     . Offer the child fluid. Is the child:
+                                             - Not able to drink or drinking poorly?
+                                             - Drinking eagerly, thirsty?
+                                      . Pinch the skin of the abdomen. Does it go back
+                                              - Very slowly (longer than 2 seconds)?
+                                              - Slowly? (less than 2 seconds)
+
+                                                                                                              38
+                                           EXERCISE G
+
+In this video exercise, you will see demonstration of how to assess and classify a child with diarrhea.
+You will see example of signs and practice identifying them. Then you will see a case study and
+practice assessing and classifying the child‟s illness.
+
+For each of the children shown, answer the question:
+
+                                      Does the child have sunken eyes?
+                                      Yes                        No
+ Child 1
+ Child 2
+ Child 3
+ Child 4
+ Child 5
+ Child 6
+
+For each of the children shown, answer the question:
+
+                                                 Does the skin pinch go back?
+                                  Very slowly?              Slowly?             Immediately?
+ Child 1
+ Child 2
+ Child 3
+ Child 4
+ Child 5
+
+                                                                                                    39
+                MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+
+Date___ Name: ___________Age:___ m Weight: ___ kg Length /Height: ______cm Temperature: ____°C
+ASK: What are the child‟s problems? _______________________ Initial visit? ___ Follow-up Visit? ___
+Assess                                                                                    Classify
+ASK AND CHECK FOR GENERAL DANGER SIGNS                                                          Yes___ No___
+                                                                                                Remember to use
+ASK AND CHECK:                                              LOOK:                               danger sign when
+Is the child not able to drink or breastfeed?      If the child is lethargic or unconscious.    selecting
+Does the child vomit everything?                    If the child is convulsing now.             classifications
+Has the child had convulsions?
+Does the child had cough or shortness of breath   Yes ___ No___
+ASK:                                  LOOK, LISTEN,
+For how long?____days       - Count the breaths in one-minute___breaths per minute. Fast breathing
+                            - Look for chest indrawing
+                             - Look and listen for stridor.
+                             - Look and listen for wheeze
+Does the child have diarrhea?               Yes ___ No___
+ASK:                                   LOOK AND FEEL:
+-   For how long? ____days           . Look at the child‟s general condition Is the child:
+-   Blood in the stool?                     - Lethargic or unconscious?
+                                            - Restless and irritable?
+                                     - Look for sunken eyes.
+                                     . Offer the child fluid. Is the child:
+                                             - Not able to drink or drinking poorly?
+                                             - Drinking eagerly, thirsty?
+                                      . Pinch the skin of the abdomen. Does it go back
+                                              - Very slowly (longer than 2 seconds)?
+                                              - Slowly? (less than 2 seconds)
+
+                                                                                                         40
+5.0 ASSESS AND CLASSIFY FEVER
+A child with fever may have malaria, meningitis or measles or another severe diseases . A child
+with fever may have a bacterial infection such as pneumonia, acute ear infection, streptococcal sore
+throat, dysentery, local bacterial infection, typhoid, or urinary tract infection. Or, a child with fever
+may have a simple cough or cold or other viral infection.
+
+For a health worker it is very important to identify key symptoms and signs of the diseases that may
+cause the child's death very quickly. Signs of a very severe disease may be general and non-
+specific, therefore all sick children with those signs should be referred to the hospital for further
+assessment and treatment.
+
+All health workers should know how to assess a child for common childhood causes of fever,
+malaria or measles - two major killers of children under five in the world. In malaria risk areas,
+malaria is still a major cause of fever and death in children although measles has been on the
+decline due to successful measles immunization.
+
+MALARIA:
+
+Malaria is caused by parasites in the blood called “plasmodia.” They are transmitted through the bite
+of anopheles mosquitoes. Four species of plasmodia can cause malaria, but the only dangerous one
+is plasmodium falciparum. Other species that commonly causes malaria is Plasmodium vivax, which
+rarely causes very severe form but contributes to malaria morbidity in some countries. Malaria may
+occur throughout the year or during the rainy season in some countries. It is important to know when
+malaria occurs and which species cause it in your country or area of work.
+
+Fever is the main symptom of malaria. It can be present all the time or go away and return at
+regular intervals. Other signs of malaria are shivering, sweating and vomiting.
+
+Signs of malaria can overlap with signs of other illness. For example, a child may have malaria and
+cough with fast breathing, a sign of pneumonia. This child needs treatment for both falciparum
+malaria and pneumonia. Children with malaria may also have diarrhea. They need an antimalarial
+and treatment for the diarrhea.
+
+In areas with very high malaria transmission, malaria is a major cause of death in children. A case of
+uncomplicated malaria can develop into severe malaria as soon as 24 hours after the fever first
+appears.
+
+Severe malaria is malaria with complications such as cerebral malaria or severe anemia. The child
+can die if he does not receive urgent treatment.
+
+                                                                                                        41
+MEASLES:
+Fever and a generalized rash are the main signs of measles. Measles is highly infectious. Maternal
+antibody protects young infants against measles for about 6 months. Then the protection gradually
+disappears. Measles cases occur in children between 6 months and 2 Years of age. Over-crowding
+and poor housing increase the risk of measles occurring early.
+
+Measles is caused by a virus. It infects the skin and the layer of cells that line the lung, gut, eye,
+mouth and throat. The measles virus damages the immune system for many weeks or months after
+the onset of measles. This leaves the child at risk of other infections.
+
+Complications of measles occur in about 30% of all cases. The most important are:
+  Encephalitis
+  Diarrhea (including dysentery and persistent diarrhea).
+  Pneumonia
+  Mouth ulcers
+  Ear infection
+  Severe eye infection (which may lead to corneal ulceration and blindness).
+
+Note: Encephalitis (a brain infection) occurs in about one in thousand cases. A child with
+encephalitis may have a general danger sign such as convulsions or be lethargic or unconscious.
+
+Measles contributes to malnutrition because it causes diarrhea, high fever and mouth ulcers. These
+problems interfere with feeding. Malnourished children are more likely to have severe complications
+due to measles. This is especially true for children who are deficient in vitamin A. One in ten
+severely malnourished children with measles may die. For this reason, it is very important to help the
+mother to continue feeding her child during measles.
+
+OTHER CAUSES OF FEVER
+
+   In a child with fever due to malaria, there should be malaria parasites or antigens when the
+    blood is tested to confirm a malaria infection. If the child with fever has no malaria parasites or
+    antigens, then it is unlikely that the fever is due to malaria.
+
+   There are three major categories of fever:
+    -    Fever with localizing signs.
+    -    Fever with non-localizing signs.
+    -    Fever with a rash.
+
+Fever with localizing signs: A child might have an apparent cause of fever such as pneumonia,
+dysentery, meningitis, acute ear infection, sore throat or local bacterial infection, which have
+localizing signs that explain the infection that is causing fever.
+
+Fever with non-localizing signs. A child might also have fever due to infection with no localizing
+signs to help you determine what is causing fever, like septicemia, typhoid fever, urinary tract
+infection, HIV infection or miliary tuberculosis. These infections are difficult to diagnose without
+
+                                                                                                     42
+laboratory tests and therefore children suspected of having these conditions should be referred to a
+hospital for assessment.
+
+Fever with a rash. One of the common causes of fever with a rash is measles but it can also be
+another simple viral infection such as chicken pox or severe or infections like meningococcal
+meningitis and dengue hemorrhagic fever.
+
+   It is important to ask for all the main symptoms when assessing any sick child so that you can
+    pick up the common and serious causes of fever.
+
+   It is also important to attempt to distinguish cases of possible bacterial causes of fever, which
+    may require an antibiotic treatment, from cases of non-complicated viral infection. Signs of a
+    bacterial infection may be a local tenderness, refusal to use a limb, hot tender swelling, red
+    tender skin or boils, lower abdominal pain or pain on passing urine in older children.
+
+                                                                                                        43
+5.1 ASSESS FEVER:
+
+A child has the main symptom fever if:
+    The child has a history of fever or
+    The child feels hot or
+    The child has an axillary temperature of 37.5o C or above.
+
+Assess for fever, Ask and look:
+  ASK: How long the child has had fever
+  ASK for History of measles in the last 3 months
+  LOOK for Stiff neck
+  LOOK for Runny nose
+  LOOK for signs suggesting measles, which are, generalized rash.
+
+If the child has measles now or within the last 3 months, assess for signs of measles
+complications.
+   LOOK for Mouth ulcers,(deep and extensive or superficial ?)
+   LOOK for Pus draining from the eye and
+   LOOK for Clouding of the cornea.
+
+The box lists the steps for assessing a child for fever.
+There are two parts to the box. The top half of the box (above the broken line) describes how to
+assess the child for signs of malaria, measles, meningitis, and other causes of fever. The bottom half
+of the box describes how to assess the child for sings of measles complications IF the child has
+measles now or within the last three months.
+
+ Does the child have fever?(By history, feels hot, or temperature 37.5oC or above),
+ Ask                                                                              Look and feel
+  For how long                                                   look for neck stiffness
+ If more than 7 days Has the fever present every day?             Look for Generalized rash of measles
+  Has the child had measles within the last three month?
+
+  Do malaria test if no general danger sign or neck stiffness in all fever cases
+      Positive falciparum           positive Vivax
+      Negative
+ ………………………………………………………………………………………………………………
+  If the child a measles now within or last three months
+ * Look for mouth ulcers; are they deep or extensive?
+ * Look for pus draining from the eye
+ * Look for clouding of the cornea
+
+                                                                                                         44
+ASK: Does the child have fever?
+ Ask and check if the child has a history of fever, feels hot or has a temperature of 37.5oC or
+above.
+ The child has a history of fever, if the child has had any fever with this illness.
+ Use words for „fever‟ that the mother understands. Make sure the mother understands what
+    fever is. For example, ask the mother if the child‟s body has felt hot.
+ Feel the child‟s abdomen or axilla determine if the child feels hot.
+ Look to see if the child‟s temperature was measured today and recorded on the child‟s chart.
+    If the child has a temperature of 37.5C or above, the child has fever.
+ If the child‟s temperature has not been measured, and you have a thermometer, measure the
+    child‟s temperature.
+ If the child does not have fever (by history, feels hot or temperature 37.5oC or above), tick ()
+    NO on the Recording form. Ask about the next main symptom, ear problem. Do not assess the
+    child for the signs related to fever.
+ Assess the child‟s fever even if the child does not have a temperature of 37.5oC or above or does
+    not feel hot now, history of fever is enough to assess the child for fever.
+ASK: For how long? If fever more than 7 days; does it present every day?
+Ask the mother how long the child has had fever. If the fever has been present for more than 7
+days, ask if the fever has been present every day.
+Most fevers due to viral illnesses subside within a few days. A fever that has been present every day
+for more than 7 days can mean that the child has a more severe disease such as typhoid fever. Refer
+this child for further assessment.
+ASK: Has the child had measles within the last 3 months?
+Measles damages the child immune system and leaves the child at risk of other diseases for many
+weeks.
+A child with fever and a history of measles within the last 3 months may have an infection due to
+complications of measles such as an eye infection.
+LOOK AND FEEL: For the stiff neck.
+A child with fever and stiff neck may have meningitis. A child with meningitis needs urgent
+treatment with injectable antibiotics and referral to a hospital.
+While you talk with the mother during the assessment, look to see if the child moves and bends his
+neck easily as he looks around. If the child is moving and bending his neck, he is not having a stiff
+neck.
+If you do not see any movement, or if you are not sure, draw the child‟s attention to his umbilicus
+or toes. For example, you can shine a flashlight on his toes or umbilicus or tickle his toes to
+encourage the child to look down. Look to see if the child can bend his neck when he looks down
+at his umbilicus or toes.
+If you still have not seen the child bend his neck by himself, ask the mother to help you lay the
+child on his back. Lean over the child, gently support his back and shoulder with one hand. With
+
+                                                                                                  45
+the other hand, hold his head. Then carefully bend the head forward towards his chest. Another
+method can be used, when the child lies on his back with one hand hold his head, put the other
+hand on his chest and then carefully try to bend the head towards his chest. If the neck bends
+easily, the child does not have stiff neck. If the neck feels stiff and there is resistance to bending,
+the child has a stiff neck. Often a child with a stiff neck will cry when you try to bend the neck.
+
+LOOK for signs suggesting MEASLES
+ Generalized rash
+In measles, a red rash begins behind the ears and on the neck. It spreads to the face. During the
+next day, the rash spreads to the rest of the body, arms and legs. After 4 to 5 days, the rash starts to
+fade and the skin may peel. Some children with severe infection may have more rash spread over
+more of the body. The rash becomes more discolored (dark brown or blackish), and there is more
+peeling of the skin.
+A measles rash does not have vesicles (blisters) or pustules. The rash does not itch. Do not confuse
+measles with other common childhood rashes such as chicken box, scabies or heat rash. (The
+chicken box rash is a generalized rash with vesicles. scabies occurs on the hand, feet, ankles,
+elbows, buttocks and axilla. It also itches. Heat rash can be a generalized rash with small bumps
+and vesicles, which itch. (A child with heat rash is not sick.) You can recognize measles more
+easily during times when other cases of measles are occurring in your community.
+LOOK: for any other cause of fever
+Assess the child for signs of any other infection that can cause fever .
+A runny nose in a child with fever may mean that the child has a common cold.
+Remember that an obvious cause of fever also includes a cough or difficulty breathing, classification
+DYSENTERY - a main symptom, which would have been already assessed- or an ear problem – the
+next main symptom that will be assessed-.
+Also, look for signs of possible bacterial infection: local tenderness, refusal to use a limb, hot tender
+swelling, red tender skin or boils. If the child is older, check if the child has lower abdominal pain or
+pain on passing urine.
+DO malaria test?
+It is not possible to clinically distinguish fever caused by malaria from other causes of fever because
+there are many causes of fever. To be sure that a child with a fever or history of fever has a malaria
+infection, you need to do a malaria test. Testing for malaria will also help in distinguishing malaria
+caused by P. falciparum from that caused by P. vivax. P. falciparum is the most dangerous.
+ There are two ways of doing a malaria test:
+     o Examining a blood slide for malaria parasites using a microscope.
+     o Checking blood using a Rapid Diagnostic Test (RDT) for malaria antigens.
+When to do a malaria diagnostic test
+A malaria test should be done in all children with a fever or history of fever with No general
+danger signs or stiff neck. Do not do a malaria test if a child has a danger sign or a stiff neck to
+
+                                                                                                      46
+avoid delay in referral but give pre-referral antimalarial and antibiotic treatment, and refer the child
+urgently
+ Record the malaria test result to indicate:
+o POSITIVE - if there are malaria parasites or if the malaria test is positive. You should also note
+if it is
+      positive P. falciparum
+      Positive P. vivax
+o NEGATIVE - if you do not see parasites by microscopy or if the the malaria test is negative.
+Always check the quality of your blood slides if using microscopy or RDTs to ensure that the test
+results are reliable.
+
+                                                                                                     47
+                                          EXERCISE H
+
+Part 1: Study the photographs number 8 through 11. They show examples of common childhood
+rashes.
+Read the explanation for each of these photographs.
+
+   Photograph 8       This child has the generalized rash of measles and red eyes.
+                      This example shows a child with heat rash. It is not the Generalized rash of
+   Photograph 9
+                      measles.
+  Photograph 10       This is an example of scabies. It is not the generalized rash of Measles.
+
+  Photograph 11       This is an example of a rash due to chicken pox. It is not a Measles rash.
+
+Part 2: Study photographs number12 through 21 showing children with rashes. For each photograph
+tick whether the child has the generalized rash of measles. Use the answer sheet below.
+
+                                       Is the generalized rash of measles present?
+                                        Yes                                  No
+ Photograph 12
+ Photograph 13
+ Photograph 14
+ Photograph 15
+ Photograph 16
+ Photograph 17
+ Photograph 18
+ Photograph 19
+ Photograph 20
+ Photograph 21
+
+           Tell your facilitator when you are ready to discuss youranswers to this exercise
+
+                                                                                                     48
+If the child has MEASLES now or within the last 3 months:
+
+LOOK for measles complications
+
+   Measles complications may be mouth, eye, pneumonia, diarrhea, ear infection or malnutrition
+   Look to see if the child has mouth or eye complications. Other complications of measles such as
+    stridor in a calm child, pneumonia, and diarrhea are assessed earlier; malnutrition and ear
+    infection will be assessed later.
+   Look for mouth ulcers. Are they deep and extensive? Look inside the child‟s mouth for
+    mouth ulcer. Ulcers are painful open sores on the inside of the mouth and lips or the tongue.
+    They may be red or have white coating on them. In severe cases, they are deep and extensive.
+    When present, mouth ulcers make it difficult for the child with measles to drink or eat.
+   Mouth ulcers are different from the small spots called Koplik spots, Koplik spots occur in the
+    mouth inside the cheek during early stages of the measles infection. Koplik spots are small,
+    irregular, bright red spots with a white spot in the center. They do not interfere with drinking or
+    eating. They do not need treatment.
+
+                                                                                                     49
+                                            EXERCISE I
+In this exercise, you will look at photographs of children with measles. You will practice
+identifying mouth ulcers.
+
+Part 1: Study photographs 22 through 24, and read the explanation for each one.
+
+                                This is an example of a normal mouth. The child does not have
+        Photograph 22
+                                mouth ulcers
+                                This child has Koplik spots. These spots occur in the mouth
+        Photograph 23           inside the cheek early in a measles infection. They are not mouth
+                                ulcers.
+
+        Photograph 24           This child has a mouth ulcer.
+
+Part 2: Study photographs 25 through 27 showing children with measles. Look at each Photograph
+and tick if the child has mouth ulcers.
+
+                                              Does the child have mouth ulcer?
+     Child photograph
+                                              Yes                              No
+
+        Photograph 25
+
+        Photograph 26
+
+        Photograph 27
+
+          Tell your facilitator when you are ready to discuss your answers to this exercise
+
+                                                                                                    50
+The eye
+
+The normal eye consists of:
+ The conjunctiva lines the eyelids and covers the white part of the eye. The iris is the colored
+part of the eye. The normal cornea (the clear window of the eye) is bright and transparent. Through
+it, you can see the iris and the round pupil at is middle. A normal cornea is clear. You can see the
+color of the iris clearly. The pupil is black.
+ In assessing the eye for measles complication LOOK:
+o For pus draining from the eye. Pus draining from the eye is a sign of conjunctivitis.
+     Conjunctivitis is an infection of the conjunctiva, the inside surface of the eyelid and the white
+     part of the eye.
+     - If you do not see pus draining from the eye, look for pus on the conjunctiva or on the eyelids.
+     - Often the pus forms a crust when the child is sleeping and seals the eye shut. It can be gently
+         opened with clean hands. Wash your hands after examining the eye of any child with pus
+         draining from the eye.
+o For clouding of the cornea.
+     - The cornea is usually clear. When clouding of the cornea is present, there is a hazy area in
+         the cornea.
+     - Look carefully at the cornea for clouding. The cornea may appear clouded or hazy, such as
+         how a glass of water looks when you add a small amount of milk. The clouding may occur in
+         one or both eyes.
+     - Corneal clouding is a dangerous condition. The corneal clouding may be due to vitamin A
+         deficiency, which has been made worse by measles. If the corneal clouding is not treated, the
+         cornea can ulcerate and cause blindness. A child with clouding of the cornea needs urgent
+         treatment with vitamin A.
+     - A child with corneal clouding may keep his eye tightly shut when exposed to light. The light
+         may cause irritation and pain to the child‟s eyes. To check the child‟s eye, wait for the child
+         to open his eye. Or, gently pull down the lower eyelid to look for clouding.
+     - If there is clouding of the cornea, ask the mother how long the clouding has been present. If
+         the mother is certain that clouding has been there for some time, ask if the clouding has
+         already been assessed and treated at the hospital. If it has, you do not need to refer this child
+         again for corneal clouding.
+
+                                                                                                       51
+                                            EXERCISE J
+In this photograph exercise, you will practice identifying eye complications of measles.
+
+Part 1: Study photographs 28 through 30.
+
+                      This is a normal eye showing the iris, pupil, conjunctiva and cornea. The
+   Photograph 28
+                      child has been crying. no pus draining from the eye
+
+   Photograph 29      This child has pus draining from the eye.
+
+   Photograph 30      This child has clouding of the cornea.
+
+Part 2: Now look at photographs 31 through 37. For each Photograph, answer each question by
+writing “yes” or “no” in each column. If you cannot decide if pus is draining from the eye or if
+clouding of cornea is present, write “not able to decide.” Use the answer sheet on the next page.
+
+                                                      Does the child have
+         Photograph
+                                   Pus draining from the eye        Clouding of the cornea?
+        Photograph 31
+        Photograph 32
+        Photograph 33
+        Photograph 34
+        Photograph 35
+        Photograph 36
+        Photograph 37
+
+        Tell your facilitator when you are ready to discuss your answers to this exercise.
+
+                                                                                                  52
+5.2 CLASSIFICATION OF FEVER
+o Based on the clinical signs found during the clinical assessment and the malaria test result,
+   the child's condition can be classified as:
+o    Very severe febrile disease
+o    Malaria
+o    Fever no malaria
+o    Severe complicated measles
+o    Measles with eye or mouth complications
+o    Measles.
+The clinical signs leading to each of these classifications are as follows:
+VERY SEVERE FEBRILE DISEASE
+  A child with fever and any general danger sign or stiff neck is classified as having
+  VERY SEVERE FEBRILE DISEASE.
+   Any general danger sign or
+   Stiff Neck                                             VERY SEVERE FEBRILE DISEASE.
+
+Note: These temperatures are based on axillary temperature. Rectal temperature readings are
+approximately 0.5 C higher.
+MALARIA:
+o a child with fever (or a history of fever), NO any general danger sign or stiff neck, and a positive
+   malaria test is classified as having MALARIA.
+
+    Malaria test POSITIVE                                           MALARIA
+
+FEVER: NO MALARIA:
+ a child with fever (or a history of fever) and a negative malaria test is classified as having
+  FEVER NO MALARIA.
+
+                                                             FEVER NO MALARIA
+       Malaria test Negative
+
+    o Any general danger sign, or
+                                                    VERY SEVERE FEBRILE DISEASE
+    o Stiff neck
+
+         POSATIVE Malaria test
+                                                                   MALARIA
+        NEGATIVE Malaria test
+        Other cause offever PRESENT                          FEVER NO MARIA
+
+                                                                                                   53
+5.2.1 CLASSSIFY MEASLES
+
+o A child who has the main symptom “fever” and measles now (or with in the last 3 months) is
+   classified both for fever and for measles. First, you must classify the child‟s fever. Next, you
+   classify measles.
+o If the child has no signs suggesting measles, or has not bad measles within the last three
+   months, do not classify measles. Ask about the next main symptom, ear problem.
+o There are three possible classifications of measles:
+   - SEVERE COMPLICATED MEASLES
+   - MEASLES WITH EYE OR MOUTH COMPLICATION
+   - MEASLES
+The table for classifying measles if present now or within the last 3 months
+
+   Any General danger signs
+   Clouding of the cornea                       SEVER COMPLICATED MEASLES
+   Deep or extensive mouth ulcer
+   Pus draining from the eye
+                                       MEASLES WITH EYE OR MOUTH COMPLICATIONS
+   Mouth ulcer
+  Measles now, or
+                                                               MEASLE
+  Within last three months
+
+SEVERERE COMPLICATED MEASLES
+ If the child has any general danger sign, clouding of cornea or deep or extensive mouth
+    ulcers, classify the Child as having SEVERE COMPLICATED MEASEALES. This child
+    needs urgent treatment and referral to hospital.
+MEASLES WITH EYE OR MOUTH COMPLICATION
+ If the child has pus draining from the eye or mouth ulcers, which are not deep extensive,
+    classify the child as having MEASLES with EYE OR MOUTH COMPLICATION. A child
+    with this classification does not need referral.
+MEASLES
+ A child with measles now or within the last 3 months and with none of the complications listed
+in the pink or yellow rows is classified as having MEASLES. Give the child vitamin A to help
+prevent measles complications.
+All children with measles should receive a treatment dose of vitamin A.
+
+                                                                                                  54
+                                           EXERCISE K
+
+In this exercise, you will classify illness in children with signs of fever and, if present, signs
+suggesting measles. First, you will study an example. Then you will begin the exercise.
+
+Read the example case study that begins on this page. Also, study how the health worker classified
+this child‟s illness. When all the participants are ready, there will be a group discussion about this
+example.
+
+EXAMPLE 1: Tariq
+Tariq is 10 months old. He weighs 8.2kg, Length 60cm. His temperature is 37.5o C. His mother says
+he has a rash and cough.
+The health worker checked Tariq for general danger signs. Tariq was able to drink, was vomiting,
+did not have convulsions and was not lethargic or unconscious.
+The health worker next asked about Tariq‟s cough. The mother said Tariq had been coughing for 5
+days. He counted 43 breaths per minute. He did not see chest-indrawing .He did not hear stridor or
+wheezing when Tariq was calm.
+Tariq did not have diarrhea.
+Next the health worker asked about Tariq „s fever. When the health worker checked the result of
+Tariq‟s malaria test, he found it positive.
+The mother said Tariq has felt hot for 2 days. Tariq did not have stiff neck. His mother said. Tariq
+has a rash covering his whole body. The health worker checked the child for complications of
+measles. There were no mouth ulcers. There was no pus draining from the eye and no clouding of
+the cornea
+Here is the health worker recorded Tariq‟s information and signs of illness
+
+                                                                                                   55
+                  MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+
+Date___ Name: ___________Age:___ m Weight: ___ kg Length /Height: ______cm Temperature: ____°C
+ASK: What are the child‟s problems? _______________________ Initial visit? ___ Follow-up Visit? ___
+Assess                                                                                            Classify
+ASK AND CHECK FOR GENERAL DANGER SIGNS                                                                        Yes___ No___
+                                                                                                             Remember to use
+ASK AND CHECK:                                                LOOK:                                          danger sign when
+Is the child not able to drink or breastfeed?        If the child is lethargic or unconscious.                   selecting
+Does the child vomit everything?                      If the child is convulsing now.                         classifications
+Has the child had convulsions?
+Does the child had cough or shortness of breath   Yes ___ No___
+ASK:                                  LOOK, LISTEN,
+For how long? ____days       - Count the breaths in one-minute___breaths per minute. Fast breathing
+                              - Look for chest indrawing
+                              - Look and listen for stridor.
+                              - Look and listen for wheeze
+Does the child have diarrhea?                 Yes ___ No___
+ASK:                                      LOOK AND FEEL:
+-    For how long? ____days            . Look at the child‟s general condition Is the child:
+-    Blood in the stool?                       - Lethargic or unconscious?
+                                               - Restless and irritable?
+                                        - Look for sunken eyes.
+                                        . Offer the child fluid. Is the child:
+                                                - Not able to drink or drinking poorly?
+                                                - Drinking eagerly, thirsty?
+                                         . Pinch the skin of the abdomen. Does it go back
+                                                 - Very slowly (longer than 2 seconds)?
+                                                 - Slowly? (less than 2 seconds)
+Does the child have fever?(By history, feels hot, or temperature 37.5oC or above) Yes ___ No___
+ Ask                                                                        Look and feel
+  For how long? ___ days                                               for neck stiffness
+  If more than 7 days Has the fever present every day? for Generalized rash of measles
+  Has the child had measles within the last three month?
+
+     Do malaria test if no general danger sign or neck stiffness in all fever cases
+       Positive falciparum            positive Vivax          Negative
+    ………………………………………………………………………………………………
+    *If the child a measles now within or last three months
+    * Look for mouth ulcers; are they deep or extensive?
+    * Look for pus draining from the eye
+    * Look for clouding of the cornea
+
+                                                                                                                    56
+The health worker classifies Tariq fever
+   The health worker checked Tariq for the signs in the pink row. He thought, “Does Tariq have
+    general danger signs? No, he does not. Does the Tariq have stiff neck? No, he does not. Tariq
+    does not have any signs of VERYSEVER FEBRRILE DISEASES.”
+   Next, the health worker looked at the yellow row. He thought, “Tariq has a fever. His
+    temperature measures 37.5o C. He also has a history of fever because his mother says Tariq felt
+    hot for 2 days. Malaria test was positive, so the health worker classified Tariq‟s as having
+    MALARIA.”
+
+   Because Tariq had a generalized rash, Tariq has signs suggesting measles. To classify Tariq‟s
+    measles, the health worker looked at the classification table for classifying measles.
+
+   He checked to see if Tariq had any of the signs in the pink row.He thought, “Tariq does not have
+    any general danger signs. The child does not have clouding of the cornea. There are no deep or
+    extensive mouth ulcers. Tariq does not have SEVERE COMPLICATED MEASLES.”
+
+   Next, the health worker looked at the yellow row; He thought, “Does Tariq have any signs in the
+    yellow row? He does not have pus draining from the eye. There are no mouth ulcers. Tariq does
+    not have MEASLESWITH EYE OR MOUTH COMPLICATIONS.”
+
+   Finally, the health worker looked at the green row. Tariq has measles, but he has no signs in the
+    pink or yellow row. The health worker classified Tariq as having MEASLES.
+
+     Any general danger sign or                                      SEVERE
+     Clouding of the cornea or                                     COMPLICATED
+     Deep or extensive mouth ulcers.                                 MEASLES
+
+                                                                   MEASLES WITH
+     Pus draining from the eye or                                EYE OR MOUTH
+     Mouth ulcers.                                              COMPLICATIONS***
+
+       Measles now or within the Last 3 months.
+                                                                       MEASLES
+
+Now read the following case studies. Record each child‟s signs and their classifications on the
+recording form. Remember to look at the chart to classify the signs.
+
+                                                                                                  57
+o Case 1: Kareem
+
+Kareem is 5 months old. He weighs 5.2 kg Length 69 cm. His axillary temperature is 37.5 C. His
+mother said he is not eating well. She said he feels hot, and she want a health worker to help him.
+Kareem is able to drink, has no vomiting, does not have convulsions, and is not lethargic or
+unconscious. Kareem has no cough or diarrhea. Because Kareem's temperature is 37.5o C and he
+feels hot, the health worker assessed Kareem further for signs related to fever. The mother said:
+Kareem‟s fever began 2 days ago. He has not had measles within the last 3 months. He does not
+have stiff neck. When the health worker checked the result of Kareem's malaria test, he found it
+positive. And there are no genelized rash of measles.
+
+                                                                                                58
+                   MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+
+Date___ Name: ___________Age:___ m Weight: ___ kg Length /Height: ______cm Temperature: ____°C
+ASK: What are the child‟s problems? _______________________ Initial visit? ___ Follow-up Visit? ___
+Assess                                                                                            Classify
+ASK AND CHECK FOR GENERAL DANGER SIGNS                                                                        Yes___ No___
+                                                                                                             Remember to use
+ASK AND CHECK:                                                LOOK:                                          danger sign when
+Is the child not able to drink or breastfeed?        If the child is lethargic or unconscious.                   selecting
+Does the child vomit everything?                      If the child is convulsing now.                         classifications
+Has the child had convulsions?
+Does the child had cough or shortness of breath   Yes ___ No___
+ASK:                                  LOOK, LISTEN,
+For how long? ____days        - Count the breaths in one-minute___breaths per minute. Fast breathing
+                              - Look for chest indrawing
+                              - Look and listen for stridor.
+                               - Look and listen for wheeze
+Does the child have diarrhea?                 Yes ___ No___
+ASK:                                      LOOK AND FEEL:
+-    For how long?____days             . Look at the child‟s general condition Is the child:
+-    Blood in the stool?                       - Lethargic or unconscious?
+                                               - Restless and irritable?
+                                        - Look for sunken eyes.
+                                        . Offer the child fluid. Is the child:
+                                                - Not able to drink or drinking poorly?
+                                                - Drinking eagerly, thirsty?
+                                         . Pinch the skin of the abdomen. Does it go back
+                                                 - Very slowly (longer than 2 seconds)?
+                                                 - Slowly? (less than 2 seconds)
+Does the child have fever?(By history, feels hot, or temperature 37.5oC or above) Yes ___ No___
+ Ask                                                                        Look and feel
+  For how long? ___ days                                               for neck stiffness
+  If more than 7 days Has the fever present every day? for Generalized rash of measles
+  Has the child had measles within the last three month?
+  Do malaria test if no general danger sign or neck stiffness in all fever cases
+      Positive falciparum               positive Vivax                             Negative
+ ………………………………………………………………………………………………
+    *If the child a measles now within or last three months
+    * Look for mouth ulcers; are they deep or extensive?
+    * Look for pus draining from the eye
+    * Look for clouding of the cornea
+
+                                                                                                                    59
+o Case 2: Rania
+
+Rania is 13-month-old. She weighs 9.4 kg Length 66.5 cm, Her temperature is 37o C. Her family
+brought her to the clinic because she feels hot and has had cough for 3 days. She is able to drink. She
+has not vomited or had convulsion, and is not lethargy unconscious.The health worker said, “I am
+going to check her cough now.” Said the health worker counted 51 breaths per minute. There was no
+chest indrawing, no stridor and no wheeze when Rania was calm. Rania did not have diarrhea.“Now,
+I will check her fever,” said the health worker. Her mother said, “Rania has felt hot off and on for 2
+days.” She has not had measles within the last 3 months. She does not have stiff neck. When the
+health worker checked the result of Rania‟s malaria test, he found it positive. Rania has no
+generalized rash.. Her eyes are red. She has mouth ulcers. They are not deep and extensive. She does
+not have pus draining from the eye. She does not have clouding of the cornea.
+
+Recorded the child‟s signs and classify them on the Recording Form.
+
+                                                                                                     60
+                   MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+
+Date___ Name: ___________Age:___ m Weight: ___ kg Length /Height: ______cm Temperature: ____°C
+ASK: What are the child‟s problems? _______________________ Initial visit? ___ Follow-up Visit? ___
+Assess                                                                                            Classify
+ASK AND CHECK FOR GENERAL DANGER SIGNS                                                                        Yes___ No___
+                                                                                                             Remember to use
+ASK AND CHECK:                                                LOOK:                                          danger sign when
+Is the child not able to drink or breastfeed?        If the child is lethargic or unconscious.                   selecting
+Does the child vomit everything?                      If the child is convulsing now.                         classifications
+Has the child had convulsions?
+Does the child had cough or shortness of breath   Yes ___ No___
+ASK:                                  LOOK, LISTEN,
+For how long? _____days         - Count the breaths in one-minute___breaths per minute. Fast breathing
+                                - Look for chest indrawing
+                               - Look and listen for stridor.
+                              - Look and listen for wheeze
+Does the child have diarrhea?                 Yes ___ No___
+ASK:                                      LOOK AND FEEL:
+-    For how long? _____days           . Look at the child‟s general condition Is the child:
+-    Blood in the stool?                      - Lethargic or unconscious?
+                                              - Restless and irritable?
+                                       - Look for sunken eyes.
+                                       . Offer the child fluid. Is the child:
+                                               - Not able to drink or drinking poorly?
+                                               - Drinking eagerly, thirsty?
+                                        . Pinch the skin of the abdomen. Does it go back
+                                                - Very slowly (longer than 2 seconds)?
+                                                - Slowly? (less than 2 seconds)
+Does the child have fever?(By history, feels hot, or temperature 37.5oC or above) Yes ___ No___
+ Ask                                                                        Look and feel
+  For how long? ___ days                                               for neck stiffness
+  If more than 7 days Has the fever present every day? for Generalized rash of measles
+  Has the child had measles within the last three month?
+  Do malaria test if no general danger sign or neck stiffness in all fever cases
+      Positive falciparum               positive Vivax                             Negative
+ ………………………………………………………………………………………………
+    *If the child a measles now within or last three months
+    * Look for mouth ulcers; are they deep or extensive?
+    * Look for pus draining from the eye
+    * Look for clouding of the cornea
+
+                                                                                                                    61
+Case 3: Manal:
+
+Manal is 12-month-old. She is weight 7.2 kg Length 52cm. Her axillary temperature is 36.5 o C. Her
+mother brought Manal to the health center today because she feels hot. Manal has no general danger
+signs. She does not have cough or difficult breathing. When asked about Diarrhea, the mother said,
+“Yes Manal has had diarrhea for 2 to 3 days.” She has not seen any blood in the stool. Manal has not
+been lethargic or unconscious. Her eyes are not sunken. She drinks normally. Her skin pinch returns
+immediately. The health worker said, “You brought Manal today because she feels hot. I will check
+her for fever. Her mother said that Manal has felt hot for 2 days. She had no measles within the last
+three months. There is no stiff neck. When the health worker checked the result of Manal‟s malaria
+test, he found it negative. In addition, no generalized rash, she has no other cause of fever.
+
+                                                                                                  62
+                   MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+
+Date___ Name: ___________Age:___ m Weight: ___ kg Length /Height: ______cm Temperature: ____°C
+ASK: What are the child‟s problems? _______________________ Initial visit? ___ Follow-up Visit? ___
+Assess                                                                                            Classify
+ASK AND CHECK FOR GENERAL DANGER SIGNS                                                                        Yes___ No___
+                                                                                                             Remember to use
+ASK AND CHECK:                                                LOOK:                                          danger sign when
+Is the child not able to drink or breastfeed?        If the child is lethargic or unconscious.                   selecting
+Does the child vomit everything?                      If the child is convulsing now.                         classifications
+Has the child had convulsions?
+Does the child had cough or shortness of breath   Yes ___ No___
+ASK:                                  LOOK, LISTEN,
+For how long? _____days         - Count the breaths in one-minute___breaths per minute. Fast breathing
+                                - Look for chest indrawing
+                               - Look and listen for stridor.
+                              - Look and listen for wheeze
+Does the child have diarrhea?                 Yes ___ No___
+ASK:                                      LOOK AND FEEL:
+-    For how long? _____days           . Look at the child‟s general condition Is the child:
+-    Blood in the stool?                       - Lethargic or unconscious?
+                                               - Restless and irritable?
+                                        - Look for sunken eyes.
+                                        . Offer the child fluid. Is the child:
+                                                - Not able to drink or drinking poorly?
+                                                - Drinking eagerly, thirsty?
+                                         . Pinch the skin of the abdomen. Does it go back
+                                                 - Very slowly (longer than 2 seconds)?
+                                                 - Slowly? (less than 2 seconds)
+Does the child have fever?(By history, feels hot, or temperature 37.5oC or above) Yes ___ No___
+ Ask                                                                        Look and feel
+  For how long? ___ days                                               for neck stiffness
+  If more than 7 days Has the fever present every day? for Generalized rash of measles
+  Has the child had measles within the last three month?
+  Do malaria test if no general danger sign or neck stiffness in all fever cases
+      Positive falciparum               positive Vivax                       Negative
+ ………………………………………………………………………………………………
+    *If the child a measles now within or last three months
+    * Look for mouth ulcers; are they deep or extensive?
+    * Look for pus draining from the eye
+    * Look for clouding of the cornea
+
+                                                                                                                    63
+Case 4: Duria
+
+Duria is 3 years old. She weighs 10 kg. Height 73 cm, her axillary temperature is 38 o C. Her mother
+brought her to the health center because she has a cough. She also has a rash.
+
+The health worker checked Duria for general danger signs. She was able to drink, she had not been
+vomiting everything, and she did not have convulsions. She was not lethargic or unconscious. The
+health worker assessed Duria‟s cough. The mother told the health worker, Duria had been coughing
+for 2 days. The health worker counted 42 breaths per minute. The health worker did not see chest
+indrawing. He did not hear stridor or wheeze when Duria was calm. When the health worker asked if
+Duria had diarrhea, the mother said, “No.”Next, the health worker assessed Duria‟s fever. She has
+felt hot for 2 days, the mother said. She does not have stiff neck. She When the health worker
+checked the result of Duria‟s malaria test, he found it positive. Duria has a generalized rash. She
+does not have mouth ulcers. Pus is not draining from the eye. There is no clouding of cornea.
+
+                                                                                                 64
+                  MANAGEMENT OF THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS
+
+Date___ Name: ___________Age:___ m Weight: ___ kg Length /Height: ______cm Temperature: ____°C
+ASK: What are the child‟s problems? _______________________ Initial visit? ___ Follow-up Visit? ___
+Assess                                                                                            Classify
+ASK AND CHECK FOR GENERAL DANGER SIGNS                                                                    Yes___ No___
+                                                                                                         Remember to use
+ASK AND CHECK:                                                LOOK:                                      danger sign when
+Is the child not able to drink or breastfeed?        If the child is lethargic or unconscious.               selecting
+Does the child vomit everything?                      If the child is convulsing now.                     classifications
+Has the child had convulsions?
+Does the child had cough or shortness of breath   Yes ___ No___
+ASK:                                  LOOK, LISTEN,
+For how long? _____days        - Count the breaths in one-minute___breaths per minute. Fast
+breathing
+                                - Look for chest indrawing
+                               - Look and listen for stridor.
+                              - Look and listen for wheeze
+Does the child have diarrhea?                 Yes ___ No___
+ASK:                                      LOOK AND FEEL:
+-    For how long? _____days             . Look at the child‟s general condition Is the child:
+-    Blood in the stool?                       - Lethargic or unconscious?
+                                               - Restless and irritable?
+                                        - Look for sunken eyes.
+                                        . Offer the child fluid. Is the child:
+                                                 - Not able to drink or drinking poorly?
+                                                 - Drinking eagerly, thirsty?
+                                         . Pinch the skin of the abdomen. Does it go back
+                                                 - Very slowly (longer than 2 seconds)?
+                                                 - Slowly? (less than 2 seconds)
+Does the child have fever?(By history, feels hot, or temperature 37.5oC or above) Yes ___ No___
+ Ask                                                                        Look and feel
+  For how long? ___ days                                               for neck stiffness
+  If more than 7 days Has the fever present every day? for Generalized rash of measles
+  Has the child had measles within the last three month?
+  Do malaria test if no general danger sign or neck stiffness in all fever cases
+      Positive falciparum               positive Vivax                        Negative
+ ………………………………………………………………………………………………
+    *If the child a measles now within or last three months
+    * Look for mouth ulcers; are they deep or extensive?
+    * Look for pus draining from the eye
+    * Look for clouding of the cornea
+
+                                                                                                                  65
+                                           EXERCISE L
+
+In this exercise, you will watch a demonstration of how to assess and classify a child with fever. You
+will see examples of signs related to fever and measles. You will practice identifying stiff neck.
+Then you will watch a case study.
+
+For each of the children shown, answer the question:
+
+                                               Does the child have a stiff neck?
+                                                  Yes                         No
+                    Child 1
+                    Child 2
+                    Child 3
+                    Child 4
+
+                                                                                                   66
+6.0 ASSESS AND CLASSIFY EAR PROBLEM
+A child with an ear problem may have an ear infection. When a child has an ear infection, pus
+collects behind the eardrum and causes pain and often fever. If the infection is not treated, the
+eardrum may burst. The pus discharges, and the child feels less pain. The fever and other symptoms
+may stop, but the child suffers from poor hearing because the eardrum has a hole in it. Usually the
+eardrum heals by itself. At other times the discharge continues, the eardrum does not heal, and the
+child becomes deaf in that ear.
+
+Sometimes the infection can spread from the ear to the bone behind the ear (the mastoid) causing
+mastoiditis. Infection can also spread from the ear to the brain causing meningitis. These are severe
+diseases. They need urgent attention and referral.
+
+Ear infections rarely cause death. However, they cause many days of illness in children. Ear
+infections are the main cause of deafness in developing countries, and deafness causes learning
+problems in school. The ASSESS & CLASSIFY chart helps you identify ear problems due to ear
+infection.
+
+6.1 ASSESS EAR PROBLEM
+A child with ear problem is assessed for:
+  Ear pain
+  Ear discharge, If discharge is present, how long the child has had discharge?
+  Tender swelling behind the ear, a sign of mastoiditis.
+
+The box below shows how to assess a child with ear problem
+
+Does the child have an ear problem?                              Yes No
+ASK:                                               LOOK AND FEEL
+• Is there ear pain?                               Look for pus draining from the ear
+• Is there ear discharge?                          Feel for tender swelling behind the ear
+If yes, for how long      days
+
+Ask for ear problem in ALL sick children.
+ASK: Does the child have an ear problem?
+If the mother answers NO, record her answer. Do not assess the child for ear problem. Go to the next
+question and check for malnutrition and anemia.
+ If the mother answers YES, ask the next question:
+ASK: Does the child have ear pain?
+Ear pain can mean that the child has an ear infection. If the mother is not sure that the child has ear
+pain, ask if the child has been irritable and rubbing his ear.
+ASK: Is there ear discharge? If yes, for how long?
+Ear discharge is also a sign of infection. When asking about ear discharge, use words the mother
+understands. If the child has had ear discharge, ask for how long. Give her time to answer the
+question. She may need to remember when the discharge started.
+
+                                                                                                    67
+ You will classify and treat the ear problem depending on how long the ear discharge has been
+   present:
+ o An ear discharge that has been present for 2 weeks or more is treated as a chronic ear infection.
+ o An ear discharge that has been present for less than 2 weeks is treated as an acute ear
+    infection.
+ You do not need more accurate information about how long the discharge has been present.
+LOOK for pus draining from the ear.
+ o Pus draining from the ear is a sign of infection, even if the child no longer has any pain.
+ o Look inside the child's ear to see if pus is draining from the ear.
+FEEL for tender swelling behind the ear.
+ o Feel behind both ears.
+ o Compare them and decide if there is tender swelling of the mastoid bone. In infants, the
+    swelling may be above the ear.
+ Both tenderness and swelling must be present to classify mastoiditis, a deep infection in the
+  mastoid bone. Do not confuse this swelling of the bone with swollen lymph nodes.
+
+                                                                                                 68
+   6.2 CLASSIFY EAR PROBLEM
+   o There are four classifications for ear problem:
+
+      MASTOIDITIS
+      ACUTE EAR INFECTION
+      CHRONIC EAR INFECTION
+      NO EAR INFECTION
+   o Here is the classification table for ear problem from the ASSESS & CLASSIFY chart.
+
+Tender swellingbehind theear                                   MASTOIDITIS
+ Pus draining from the ear anddischarge is
+   reported for less than 14 days, or                   ACUTE EAR INFECTION
+ Ear pain
+ Pus is seen draining from the ear and
+                                                       CHRONIC EAR INFECTION
+   discharge is reported for 14 days or more.
+ No ear pain and
+                                                           NO EAR INFECTION
+ No pus seen draining from the ear
+
+   MASTOIDITIS
+   If a child has tender swelling behind the ear, classify the child as having MASTOIDITIS.
+   ACUTE EAR INFECTION
+   If you see pus draining from the ear and discharge has been present for less than two weeks, or if
+   there is ear pain, classify the child's illness as ACUTE EAR INFECTION.
+   CHRONIC EAR INFECTION
+   If you see pus, draining from the ear and discharge has been present for two weeks or more
+   classify the child's illness as CHRONIC EAR INFECTION.
+   NO EAR INFECTION
+   If there is no ear pain and no pus draining from the ear, the child's illness is classified as NO EAR
+   INFECTION. The child needs to be treated according to the cause of the ear problem
+
+                                                                                                    69
+                                           EXERCISE M
+
+These two case studies describe children who have ear problems. Record each child's signs and their
+classifications on the part of the Recording Form for ear problem. Look at the wall chart or in your
+chart booklet for help classifying signs.
+
+ Case 1: Hala
+Hala is 3 year old. She weighs 13 kg, her height is 70cm her temperature is 37.5 C. Her mother came
+to the clinic today because Hala has felt hot for the last 2 days. She was crying last night and
+complained that her ear is hurting.The health worker checked and found no general danger
+signs.Hala does not have cough or difficult breathing. She does not have diarrhea. Her fever was
+classified as MALARIA.
+Next, the health worker asked about Hala's ear problem. The mother said she is sure Hala has ear
+pain. The child cried most of the night because her ear hurt. There has been discharge coming from
+Hala's ear on and off for about a year, said the mother. The health worker did not see any pus
+draining from the child's ear. He felt behind the child's ears and felt tender swelling behind one ear.
+
+Record Hala's signs of ear problem and classify them on the Recording Form.
+Does the child have an ear problem?   Yes___ No___
+ASK:                                               LOOK AND FEEL
+• Is there ear pain?                               Look for pus draining from the ear
+• Is there ear discharge?                          Feel for tender swelling behind the ear
+If yes, for how long ___ days
+
+ Case 2: Mona
+Mona is 18 months old. She weighs 9 kg. her length is 57cm her temperature is 37 C. Her mother
+said that Mona had discharge coming from her ear for the last 3 days.Mona does not have any
+general danger signs. She does not have cough or difficult breathing. She does not have diarrhea and
+she does not have fever.
+The health worker asked about Mona's ear problem. The mother said that Mona does not have ear
+pain, but the discharge has been coming from the ear for 3 or 4 days. The health worker saw pus
+draining from the child's right ear. He did not feel any tender swelling behind either ear.
+
+Record 's signs Mona of ear problem and classify them on the Recording
+Does the child have an ear problem?  Yes___ No___
+ASK:                                               LOOK AND FEEL
+• Is there ear pain?                               Look for pus draining from the ear
+• Is there ear discharge?                          Feel for tender swelling behind the ear
+If yes, for how long ___ days
+
+                 Tell your facilitator when you are ready to discuss your answers
+
+                                                                                                    70
+7.0 CHECK FOR MALNUTRITION
+Malnutrition is associated with many childhood illnesses and deaths. There are several types of
+malnutrition.
+
+One type of malnutrition is acute malnutrition. Acutely malnourished children lack growth nutrients
+that are required to build new tissues. These nutrients also aid weight gain after illness, repair
+damaged tissues and help replace the rapid turnover of cells (intestine and immune cells). Correct
+replenishment of nutrients is essential for recovery from malnutrition. A child who has had frequent
+illnesses can also develop acute malnutrition. The child's appetite decreases, and the food that the
+child eats is not used efficiently.
+
+Severe acute malnutrition (SAM) is a life-threatening condition requiring urgent treatment. Until
+recently, the recommendation was to refer children suffering from SAM to hospital to receive
+therapeutic diets along with medical care. Treating severely malnourished children in hospitals
+however, is not always desirable or practical especially in rural settings. The situation has changed
+with the advent of ready to use therapeutic foods (RUTF) which allows the management of a large
+numbers of children who are severely malnourished above the age of 6 months and without medical
+complications at home and they account 80% of cases of SAM .
+
+RUTF is made according to a standard, energy-rich composition defined by the World Health
+Organization. Typically, RUTF is made from full-fat milk powder, sugar, peanut butter, vegetable
+oil, and vitamins and minerals. The benefits of RUTF include low moisture content, a long shelf life
+without needing refrigeration and that it requires no preparation.
+
+A child whose diet lacks recommended amounts of essential vitamins and minerals can also
+develop malnutrition.
+
+Not eating foods rich in iron can lead to iron deficiency and anemia. Anemia is a reduced number of
+red cells or a reduced amount of hemoglobin in each red cell.
+
+A child can also develop anemia because of infection: parasites such as hookworm (Ancylostoma
+and Necator) or whipworm (Trichuris), which can cause blood loss from the gut. Malaria can
+destroy red cells rapidly.
+
+Children can develop anemia if they have had repeated episodes of malaria or if the malaria was
+inadequately treated. The anemia may develop slowly. Often, anemia in these children is a result of
+both malnutrition and malaria.
+
+                                                                                                  71
+7.1 ASSESS FOR ACUTE MALNUTRITION
+After assessing the child for general danger signs and the four main symptoms (cough or difficulty
+breathing, diarrhea, fever and ear problem) then assess all children for Acute Malnutrition
+
+   Assess all children for Signs of acute malnutrition
+     Edema of both feet
+     WFH/L - weight for height (more than 2 years of age) or weight for length (up to 2 years of
+       age)
+     Mid-upper arm circumference (MUAC) in children aged 6 months or more
+
+   In the presence of signs of severe acute malnutrition (SAM) check for any medical
+    complications and assess appetite or breastfeeding when indicated.
+
+LOOK and FEEL for edema of both feet:
+
+A child with edema of both feet may have kwashiorkor, another form of severeacute malnutrition.
+Edema is when an unusually large amount of fluid gathers in the child's tissues. The tissues become
+filled with the fluid and look swollen or puffed up.
+
+Look and feel to determine whether the child has edema of both fetes?. Use your thumb to press
+gently for a few seconds on the top side of each foot. The child has edema if a dent remains in the
+child's foot when you lift your thumb.
+ classification of edema:
+    o     +on dorsum of food
+    o     ++up thigh
+    o     +++ generalized
+
+ASSESS weight for height or length (WFH/L):
+Assess the child's body weight in proportion to attained growth in heightor length.Look now at the
+example: WHO weight-for-length graph below.
+The line labeled zero is the median, which is generally speaking, the average. Most healthy children
+are near the median curve, a little either above or below it.
+The other lines, called z -score or standard deviations (SD) lines, indicate distance from the
+average.
+You will identify children whose weight for length or height is below -3 z-scores curve of the
+graph; it is the bottom curve of the graph. These children suffer from severe acute malnutrition.
+You will also identify children whose weight-for-height or length is between -2 and -3 z-scores.
+These children have moderate acute malnutrition.
+ To determine weight-for-height or length:
+   o Calculate the child's age in months.
+   o Weigh the child (unless the child has already been weighed today). The child should wear
+       light clothing when being weighed.
+   o Measure length or height:
+                                                                                                      72
+        -    If a child is less than 2 years old, measure lying down (recumbent) length.
+        -    If the child is aged 2 years or older and able to stand, measure standing height.
+ NOTE: In general, standing height is about 0.7 cm less than lying down length. Therefore, if a
+child less than 2 years old will not lie down for measurement of length, measure standing height
+and add 0.7 cm to convert it to length; if a child aged 2 years or older cannot stand, measure lying
+down length and subtract 0.7 cm to convert it to Height.
+
+                                                                                                       73
+MEASURE mid-upper arm circumference (MUAC)
+A quick way of identifying acute malnutrition in children aged 6 months and more is measuring
+the mid-upper arm circumference (MUAC).
+
+To measure the mid upper arm circumference:
+- Use a special tape for measuring MUAC or, if not available, a string
+- Place the tape or string placed around the upper arm, midway between the tip of shoulder and the
+   tip of bent elbow
+- Do not to pull the tape or string too tightly
+To obtain the mid upper arm circumference:
+- Read the measurement if you used a tape
+- Measure the string with a ruler if you used a string
+MUAC interpretation
+- If MUAC is less than 115 mm - severe acute malnutrition and threat of death
+- If MUAC is 115 up to 125 mm - moderate acute malnutrition
+- If MUAC is 125 mm or more – no malnutrition
+
+CHECK for medical complications
+Severely malnourished children who have also medical complications have a high risk of death and
+need to be treated in a hospital and usually less than 20%of cases of SAM.
+Check a child that has edema of both feet or MUAC less than 115 mm or WHF/L less than -3 z-
+scores for medical complications necessitating referral.
+Medical complications necessitating referral are:
+- Any general danger sign
+- Any severe classification
+- Pneumonia with chest indrawing
+Note:
+These complications include main symptoms, which would have been already assessed ASSESS
+appetite
+ An important criterion to decide if a child suffering from severe acute malnutrition can be treated
+    at home or needs to be referred to a hospital is the appetite test.
+ Malnutrition changes the way infections and other diseases express themselves.
+ Children severely affected by infections or and other diseases, who are malnourished, frequently
+show no signs of these diseases. Major complications lead to a loss of appetite. A poor appetite
+means that the child has a significant infection or a major metabolic abnormality such as liver
+dysfunction, electrolyte imbalance, cell membrane damage, or damaged biochemical pathways. Such
+child is at immediate risk of death.
+
+                                                                                                  74
+Conducting an appetite test means offering the child Ready-to-Use Therapeutic Food (RUTF) and
+assessing whether the child ate at least the amount described below. The appetite test is conducted at
+the initial visit and each follow-up visit to the health facility. The test usually takes a short time but
+may take up to 30 minutes.
+
+Conduct an appetite test for a child aged 6 months or more who:
+ Has MUAC less than 115 mm OR
+ Has WFH/L less than -3 z- score OR
+ Has edema of both feet AND
+ Does NOT have medical complications.
+To conduct an appetite test
+ Arrange a quiet corner where the child and mother can take their time to get accustomed to
+   eating the RUTF.
+ The child may not eat the RUTF because he or she is frightened, distressed or fearful of the
+   environment or staff. This is particularly likely if there is a crowd, a lot of noise, other distressed
+   children or intimidating health professionals (white coats, awe-inspiring tone). The appetite test
+   should therefore be conducted a separate quiet area. If a quiet area is not possible then the
+   appetite can be tested outside the clinic.
+ Determine RUFT portion needed to perform the test (1/3 RUTF scatch 92 gram)
+ Explain to the mother:
+   o Your child is malnourished and needs to eat the Ready-to-Use Therapeutic Food (RUTF)
+       until he or she will grow well again. RUTF is a food and medicine for malnourished
+       children and show her photos of transformation before and after illness.
+   o I need to see if your child has a good appetite and will eat the RUTF in sufficient
+       amounts at home. Therefore, I will give you some RUTF and you will feed it to your
+       child now.
+ Advise the mother to:
+   o Wash hands before giving the RUTF
+   o Sit with the child on her lap and gently offer the child RUTF to eat.
+   o Encourage the child to eat the RUTF. If the child refuses, continue to quietly encourage the
+       child and take your time. Do not force the child to eat the RUTF
+   o Offer plenty of clean water to drink from a cup when the child is taking the RUTF.
+ After 30 minutes asses the results of appetite test:
+o A child that eat 1/3 amount of RUFT scatch , Pass the appetite test.
+o Now explain to the mother that the child can be treated at home. You will learn how to explain
+   to her how to feed the child at home and when to return for the follow-up visit later in this
+   training.
+o A child that does NOT eat 1/3 amount of RUFT scatch, fails the appetite test.
+o Explain now to the mother that her child needs to eat the RUTF to treat his orher malnutrition
+   but because of poor appetite the child would not take sufficient amounts of the RUTF at home,
+
+                                                                                                       75
+     would continue to get worse, and could even die. For this reason, the child needs to be urgently
+     treated in a hospital.
+Even if you or the mother think that the child did not take the RUTF because he or she does not like
+the taste or is frightened, the child still needs to be referred to in-patient care for least a short time. If
+it is later found that the child actually takes sufficient RUTF to pass the test then he or she can be
+immediately transferred to the outpatient treatment.
+
+                                                                                                           76
+7.2 CLASSIFICATION OF NUTRITIONAL STATUS
+Based on the presence or absence of edema of both feet, WFH/L, and/or MUAC (in a child 6 months
+or older), the child‟s condition can be classified as:
+ Complicated Severe acute malnutrition(SAM),
+ Un-complicated sever acute malnutrition
+ Moderate acute malnutrition(MAM), or
+ No acute malnutrition.
+
+A child classified as severe acute malnutrition based on WFH/L, and/or MUAC is classified further
+as complicated severe acute malnutrition or uncomplicated severe acute malnutrition based on the
+presence or absence of medical complications and, depending on the age, the results of appetite test
+or breastfeeding assessment
+
+ COMPLICATED SEVERE ACUTE MALNUTRITION (SAM)
+ A child with edema of both feet is classified as having COMPLICATED SEVERE ACUTE
+ MALNUTRITION. A child with WFH/L less than -3 z-scores or MUAC less than 115 mm with a
+ medical complication or not able to finish RUTF if aged 6 months or more or having a breastfeeding
+ problem if aged less than 6 months, is classified as having COMPLICATED SEVERE ACUTE
+ MALNUTRITION.
+ edema of both feet
+OR
+ WFH/L less than -3 z-scores, or
+                                                                     COMPLICATED SEVERE
+ MUAC less than 115 mm,
+                                                                     ACUTE MALNUTRITION
+                            AND
+  o Medical complication present or
+  o Not ableto finish RUTF
+
+UNCOMPLICATED SEVERE ACUTE MALNUTRITION (SAM)
+
+A child with WFH/L less than -3 z-scores or MUAC less than 115 mm and able to finish RUTF is
+classified as having UNCOMPLICATED SEVERE ACUTE MALNUTRITION.
+
+   WFH/L less than -3 z-scores OR
+                                                                     UNCOMPLICATED
+   MUAC less than 115 mm                                             SEVERE ACUTE
+   AND Able to finish RUTF had no medical complications              MALNUTRITION
+
+                                                                                                 77
+       MODERATE ACUTE MALNUTRITION(MAM)
+       A child with WFH/L between -3 z and -2 z-scores or MUAC 115 up to 124 mm is classified as
+       having MODERATE ACUTE MALNUTRITION.
+
+                     WFH/L between -3 and -2 z-scores, or
+                                                                  MODERATE ACUTE
+                     MUAC 115 up to 125 mm                        MALNUTRITION
+
+       NO ACUTE MALNUTRITION
+       A child with WFH/L -2 z-scores or more or MUAC 125 mm or more is classified as having NO
+       ACUTE MALNUTRITION.
+
+          WFH/L -2 z-scores or more
+                                                             NO ACUTE MALNUTRITION
+          OR MUAC 125 mm or more
+
+       Classification table for nutritional status:
+
+   Oedema of both feet,
+                              or
+                                                                    COMPLICATED
+    WFH/L less than -3 Z scores., or
+                                                                    SEVERE ACUTE
+    MUAC lessthan 115 mm                                           MALNUTRITION
+                             AND                                        (SAM)
+    - Medicalcomplication present and or
+    - Not able tofinish RUTF.
+    WFH/L less than -3 Z-Scores                                    UNCOMPLICATED
+    MUAC less than 115mm AND                                        SEVERE ACUTE
+    Able to finish RUTF and had no medical complications            MALNUTRITION
+                                                                         (SAM)
+          WFH/L between -3 and -2 Z-scores or                         MODERATE
+   MUAC 115 up to 125 mm                                               ACUTE
+                                                                     MALNUTRITION
+                                                                        (MAM)
+             WFH/L - 2 z-scores ormore, or                            NO ACUTE
+             MUAC 125 mm or more.                                   MALNUTRITION
+
+                                                                                             78
+8.0 ASSESS AND CLASSIFY ANEMIA
+Pallor is unusual paleness of the skin. It is a sign of anemia. Although this clinical sign is less
+reliable than many other clinical signs, it allows health-care providers to identify sick children with
+severe anemia, often caused by malaria infection. Where feasible, the specificity of anemia
+diagnosis may be greatly increased by using a simple laboratory test (e.g. Hb test).
+
+8.1 ASSESS FOR ANEMIA
+LOOK for palmar pallor:
+
+        To see if the child has palmar pallor, look at the skin of the child's palm. Hold the
+       child's palm open by grasping it gently from the side. Do not stretch the fingers backwards,
+       because this may cause pallor by blocking the blood supply.
+
+        Compare the color of the child's palm with your own palm and with the palms of
+       other children. If the skin of the child's palm is pale, the child has some palmar pallor. If
+       the skin of the palm is so pale that it looks white, the child has severe palmar pallor.
+
+                                                                                                       79
+ 8.2 CLASSIFICATION OF ANAEMIA
+
+ SEVERE ANAEMIA
+ If the child has severe palmar pallor, classify the child as having SEVERE ANAEMIA.
+
+Severe palmar pallor                                        SEVEREANAEMIA
+
+ ANAEMIA
+ If the child has some palmar pallor, classify the child as having ANAEMIA.
+
+Some pallor                                                      ANAEMIA
+
+ NO ANAEMIA
+
+ If the child does not have palmar pallor, classify the child as having NO ANAEMIA
+
+ No palmar pallor                                              NO ANAEMIA
+
+ Classification table for Anemia
+
+Severe palmar pallor                                          SEVERE
+                                                             ANAEMIA
+
+Some pallor
+                                                             ANAEMIA
+
+No palmar pallor
+                                                          NO ANAEMIA
+
+                                                                                       80
+                                          EXERCISE N
+In this exercise, you will look at photographs in the photograph booklet and practice identifying
+children with palmar pallor.
+Part 1: Study the photographs numbered 38 through 40b. Read the explanation for each photograph.
+
+Photograph 38                This child's skin is normal. There is no palmar pallor.
+
+                             The hands in this photograph are from two different children. The
+Photograph 39a
+                             child on the left has some palmar pallor.
+
+Photograph 39b               The child on the right has no palmar pallor.
+
+                             The hands in this photograph are from two different children.
+Photograph 40a
+                             The child on the left has no palmar pallor.
+
+Photograph 40b               The child on the right has severe palmar pallor.
+
+Part 2: Now look at photographs numbered 41 through 46. For each photograph, tick (        ) whether
+the child has severe, some or no palmar pallor. Use the answer sheet on the next page.
+Part 2 (continued):
+                                 Does the child have:
+                                Severe pallor?            Some pallor?        No pallor?
+Photograph 41
+Photograph 42
+Photograph 43a
+Photograph 43b
+Photograph 44
+Photograph 45
+Photograph 46
+
+                                                  Does the child have edema of the feet
+                                            yes                               No
+ Photograph 48
+
+      Tell your facilitator when you are ready to discuss your answers to this exercise
+
+                                                                                                  81
+Dr
+
+                                          EXERCISE O
+
+Read the following 4 cases studies. Record the child's signs and their classifications on the
+Recording Form.Refer to the classification tables on the chart. Facilitator will give you 4 Recording
+form.
+Case 1: Nadia
+Nadia is 18 months old. She weighs 8 kg length 96 cm. Her temperature is 38.5 C. Her mother
+brought her today because the child has felt hot and has a rash. The health worker saw that Nadia
+looks like skin and bones.
+The health worker checked for general danger signs. Nadia is able to drink, has not vomited, has not
+had convulsions, is not convulsing now and is not lethargic orunconscious.
+She does not have cough or difficult breathing. She does not have diarrhea.
+Because Nadia's mother said the child felt hot, and because her temperature is 38.5 C, the health
+worker assessed her for fever. Nadia lives where there is high malaria risk. She has had fever for 5
+days. Her rash is generalized rash, and she has red eyes. She has measles. She does not have a stiff
+neck.
+The health worker assessed her for signs of measles complications. Nadia does not have mouth
+ulcers. There is no pus draining from the eye and no clouding of the cornea.
+Nadia does not have an ear problem.
+The health worker next checked her for malnutrition or anemia. She does not have edema of both
+feet. The health worker determined her weight for length. (Look at the weight for length chart in
+your chart booklet.) , health worker check MUAC and found it 11 cm. Since Nadia did not have
+medical complications then the health worker offer her an appetite test, after 30 minute the health
+worker found that Nadia finished more than the amount offer for her, and decide that Nadia passed
+the appetite test. Then checked for anemia and found no palmar pallor.
+
+Case 2: Idris
+Idris is 11 months old. He weighs 8 kg. Length= 08 cm, His temperature is 37 C. His mother says
+he has had a dry cough for the last 3 weeks.Idris does not have any general danger sign. The health
+worker assessed his cough. It has been present for 21 days. He counted 41 breaths per minute. The
+health worker does not see chest indrawing. There is no stridor when the child is calm and there is
+no wheeze.
+   Idris does not have diarrhea. He has not had a fever during this illness. He does not have an ear
+problem.
+The health worker checked Idris for malnutrition. There is no oedema of both feet. MUAC 11 cm
+Since Idris did not have medical complications then the health worker offer her an appetite test, he
+give the mother 92 g of ready to use therapeutic food and asked the mother to feed Idris, after 30
+minute the health worker found that Idris could not finished even third than the amount offer for
+him, and decide that Idris did not passed the appetite test. Then checked for anemia found His
+palms are very pale and appear almost white.
+
+                                                                                                 82
+Case 3: Gaafar
+
+Gaafar is 9 months old. He weighs 0 kg. Length 67 cm His temperature is 36.8 C.. He is at the
+clinic today because his mother and father are concerned about his diarrhea.
+He does not have any general danger signs. He does not have cough or difficult breathing.
+He has had diarrhea for 5 days, the father said. They have not seen any blood in the stool. Gaafar is
+not restless or irritable. He is not lethargic or unconscious. His eyes are not sunken. He is thirsty
+and eager to drink water offered to him. His skin pinch goes back slowly.
+He does not have fever. He does not have an ear problem.
+Next, the health worker checked for signs of malnutrition and anemia. He does not have oedema of
+both feet. MUAC is 13 cm Gafar did not have medical complications then the health worker offer
+him an appetite test he give the mother 92 g of ready to use therapeutic food and asked the mother
+to feed Gafar, after 30 minute the health worker found that Gafar finished more than third of the
+amount offer for him, and decide that Gafar passed the appetite test. There is no palmar pallor.
+
+Case 4: Omran
+
+Omran is 37 months old. He weighs 9.5 kg length 90cm His temperature is 37.5 C. His mother says
+he feels hot. He has been crying and rubbing his ear.
+The health worker checks Omran for general danger signs. He is able to drink, does not vomit
+everything he drinks, has not had convulsions and is not lethargic or unconscious. He does not
+have cough or diarrhea.
+Because his mother has reported a history of fever and because his temperature is 37.5 C, the health
+worker assesses Omran for fever. The risk of malaria is high. He has had fever for 3 days, says his
+mother. He has not had measles in the last 3 months. His neck moves easily. There are no signs
+suggesting measles.
+The health worker asks if Omran has an ear problem. The mother says he has had ear pain. She also
+says she has seen ear discharge for about 5 days. The health worker sees pus draining from the ear.
+He does not feel any tender swelling behind either ear.
+He then checks the child for malnutrition and anemia. Omran looks thin;. He does not have oedema
+of both feet. MUAC 9.5 cm.
+Omran did not have medical complications then the health worker offer him an appetite test he give
+the mother 92 g of ready to use therapeutic food (RUFT) and asked the mother to feed Omran, after
+30 minute the health worker found that Omran finished more than third of the amount offer for him,
+and decide that Omran passed the appetite test.
+He does not have palmar pallor.
+
+                                                                                                  83
+9.0 CHECK THE CHILD'S                          IMMUNIZATION                AND       VITAMIN          A
+SUPPLEMENTATION STATUS
+
+9.1 CHECK THE CHILD’S IMMUNIZATION STATUS
+Check the immunization status for ALL sick children. Have they received all the immunizations
+recommended for their age? Do they in need of any immunizations?
+use a recommended immunization schedule
+Use National recommended immunization schedule when you check the child's immunization status.
+Look at the ASSESS & CLASSIFY chart and locate the recommended immunization schedule.
+Refer to it as you read how to check a child's immunization status.
+Most of the health facilities do not provide vaccines on daily basis. Vaccines in these health facilities
+are provided on scheduled days. Some other health facilities do not have vaccination service at all.
+Vaccination is provided within nearby health facility or by an out reaches service. The health worker
+should check the child‟s immunization status and according to the situation within the health facility
+he will
+o Either give the immunization in the same day, or
+o Advise and direct the mother to where immunization is provided, or.
+o Direct the team to children who need immunization.
+
+    Check for vaccination and vitamin A supplementation (check on given vaccine and
+    circle missed vaccine)
+    At birth       OPV 0        BCG
+    6 weeks        OPV 1        Rota 1         PCV 1       Penta 1        IPV 1
+    10 weeks       OPV 2        Rota 2         PCV 2       Penta 2
+    14 weeks       OPV3         Rota 3         PCV 3       Penta 3        IPV 2
+    9 months       Measles      Yellow fever   Men A
+    18 months Measles boaster
+
+Record the recommended vaccine when the child age is appropriate for each dose.
+If the child receives an immunization when the child is too young, the child's body will not be able
+to fight the disease very well. In addition, if the child does not receive an immunization as soon as he
+is old enough, his risk of getting the disease increases.
+All children should receive all the recommended immunizations before their first birthday. If the
+child does not come for an immunization at the recommended age, give the necessary immunizations
+any time after the child reaches that age. Give the remaining doses at least 4 weeks apart. You do not
+need to repeat the whole schedule.
+
+                                                                                                      84
+OBSERVE CONTRAINDICATIONS TO IMMUNIZATION
+
+In the past, some health workers thought minor illness was a contraindication to immunization (a
+reason to not immunize the child). They sent sick children away and told the mothers to bring them
+back when the children are well. This is a bad practice because it delays immunization. The mother
+may have traveled a long distance to bring her sick child to the clinic and cannot easily bring the
+child back for immunization at another time. The child is left at risk of getting measles, hepatitis B,
+Meningitis, polio, diphtheria, pertussis, tetanus or tuberculosis.
+
+It is very important to immunize sick and malnourished children against these diseases.
+
+There are only three situations at present, which are contraindications to immunization:
+
+1- Do not give BCG to a child known to have AIDS.
+2- Do not give Penta 2 or Penta 3 to a child who has had convulsions or shock within 3 days of
+   the most recent dose.
+3- Do not give Penta to a child with recurrent convulsions or another active neurological
+   disease of the central nervous system.
+
+Note: If DT and HB vaccine are available, given to children in the situation 2 and 3, because most
+              complications of Penta vaccine are associated with pertussis vaccine.
+
+    In all other situations, here is a good rule to follow:
+
+    o There are no contraindications to immunization of a sick child if the Child is well enough to
+      go home.
+    o If a child is going to be referred, do not immunize the child before referral. The hospital staff
+      at the referral site should make the decision about immunizing the child when the child is
+      admitted. This will avoid delaying referral.
+    o Children with diarrhea who are due for OPV should receive a dose of OPV (oral polio
+      vaccine) during this visit. However, do not count the dose. The child should return in 4
+      weeks for an extra dose of OPV.
+    o Advise the mother to be sure the other children in the family are immunized. Give the mother
+      tetanus toxoid, if required.
+    o To decide if the child needs an immunization:
+
+    LOOK at the child's age on the clinical record.
+    If you do not already know the child's age, ask about the child's age.
+    ASK the mother if the young infant has an immunization card.
+    o If the mother answers YES:
+     Ask her if she has brought the card to the clinic today.
+     If she has brought the card with her, ask to see the card.
+
+                                                                                                    85
+     Compare the young infant immunization record with the recommended immunization
+      schedule. Decide whether the young infant has had all the immunizations recommended for
+      the child's age.
+     On the Recording Form, check all immunizations the young infant has already received.
+     Write the date of the immunization the child received most recently. Circle any
+      immunization the child needs.
+     If the child is not being referred, explain to the mother that the child needs to receive an
+      immunization (or immunizations).
+
+ o If the mother says that she does NOT have an immunization card with her:
+  Ask the mother to tell you what immunizations the child has received.
+  Use your judgment to decide if the mother has given a reliable report. If you have any
+     doubt, immunize the child.
+  Give an immunization card to the mother and ask her to please bring it with her
+
+IMMUNIZATIONS (Record Date Given)
+
+     Check for vaccination and vitamin A supplementation (check on given vaccine and
+     circle missed vaccine)
+     At birth       OPV 0        BCG
+     6 weeks        OPV 1        Rota 1         PCV 1       Penta 1        IPV 1
+     10 weeks       OPV 2        Rota 2         PCV 2       Penta 2
+     14 weeks       OPV3         Rota 3         PCV 3       Penta 3        IPV 2
+     9 months       Measles      Yellow fever   Men A
+     18 months Measles boaster
+
+Return for next immunization on:
+
+                                                                                                 86
+8.2 CHECK THE CHILD’S VITAMIN A SUPPLEMENTATION STATUS
+Vitamin A is given both to treat and to prevent disease.
+     It is given as treatment to children with measles, or severe malnutrition.
+     It is given as supplementation to prevent vitamin A deficiency
+
+Many children in Sudan have some degree of vitamin A deficiency, which does not show.
+Therefore, giving vitamin A to all children age 6 months or older will prevent vitamin A
+deficiency. This will of course include children with persistent diarrhea, malnutrition, pneumonia
+and other illness. In several studies, this approach has been shown to reduce mortality in areas with
+vitamin A deficiency. Another important way to prevent deficiency is to make sure that infants are
+breastfed and, that after 6 months of age; they are fed complementary foods, which are rich in
+vitamin A.
+
+When giving vitamin A as a supplement to prevent deficiency, make sure that it is not given more
+often than every 6 months.
+
+Record the date on which the vitamin A dose was given on the child‟s card.
+
+When supplies of vitamin A are adequate, all children age 6 months up to 5 years should receive
+vitamin A every 6 months. Visits to clinic for illness are an opportunity to check when the child
+most recently received vitamin A. If the child is age 6 months or older and has not received
+vitamin A in the previous 6 months, give a single dose of vitamin A in the clinic.
+
+Giving vitamin A for treatment of measles or severe malnutrition is the most important use. If
+vitamin A supplies are limited, use what vitamin A you have to treat children with these illnesses.
+
+VITAMIN A SUPPLEMENTATION STATUS:
+Is child age 6 months or older?
+Has child received a dose of vitamin A in the previous 6 months?
+
+To check the child‟s vitamin A supplementation status:
+
+o Look at the child‟s age. You will only give vitamin A supplementation if the child is 6 months
+  or older.
+o Look at the child‟s card:
+   See if there is a record of previous vitamin A doses.
+   If no vitamin A has been given in the last 6 months, the child should receive a dose.
+   Circle the Vitamin A Supplementation box on the Recording Form.
+
+                                                                                                   87
+                                              EXERCISE Q
+
+Part 1: Review the information in section 8.1 about contraindications to immunizations. Then
+decide if a contraindication is present for each of the following children:
+                                                  Immunize this child today        Do not
+                   If the child:
+                                                   if due for immunization    immunize today
+Will be treated at home with antibiotics
+Has a local skin infection
+
+Had convulsion immediately after Penta 1
+and needs Penta 2 and OPV 2 today
+Has a chronic heart problem
+is being referred for severe classification
+is exclusively breastfed
+Older brother had convulsion last year
+Was jaundiced at birth
+Is MODRATE ACUTE MANUTRITION
+
+Is known to have AIDS and has not received
+any immunizations at all
+
+Has NO PNEUMONIA: COUGH OR COLD
+
+Part 2: Read about the following children. For each one, decide if the child needs any
+immunizations or vitamin A supplementation today.
+1. Salim, 6 months old. No general danger signs. Classified as NO PNEUMONIA: COUGH OR
+COLD and NO ANAEMIA AND NO ACUTE MALNUTRITION.
+o Immunization history: BCG, OPV 0, OPV 1, OPV 2, Penta 1 and Penta 2, PCV1 and PCV2
+    Rota1 and Rota 2 given 6 weeks ago.
+o Is Salim up-to-date with his immunizations?
+…………………………………………………………………………………………………………
+…………………………………………………………………………………………………………
+  o What immunizations, if any, does Salim need?
+  ………………………………………………………………………………………………………
+  ………………………………………………………………………………………………………
+  o When should he return for his next immunization?
+  ………………………………………………………………………………………………………
+  ……………………………………………………………………………………………………
+  o Should he be given vitamin A today?
+  …………………………………………………………………………………………………
+  …………………………………………………………………………………………………
+                                                                                               88
+2. Samia, 3 months old. No general danger signs. Classified as diarrhea with NO
+    DEHYDRATION and also ANAEMIA.
+o Immunization history: BCG, OPV 0, OPV 1, Penta 1, PCV1 and Rota 1 were given 5 weeks ago.
+o Is Samia up-to-date with her immunizations?
+…………………………………………………………………………………………………………
+…………………………………………………………………………………………………………
+o What immunizations, if any, does Samia need?
+…………………………………………………………………………………………………………
+…………………………………………………………………………………………………………
+o Samia has diarrhea. What immunizations will she receive at her next visit?
+…………………………………………………………………………………………………………
+…………………………………………………………………………………………………………
+o What advice should you give Samia‟s mother according to immunization schedule you have in
+   your clinic?
+…………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+o When should she return for her next immunization?
+…………………………………………………………………………………………………………
+…………………………………………………………………………………………………………
+o Should she be given Vitamin A today?
+…………………………………………………………………………………………………………
+…………………………………………………………………………………………………………
+3. Ali, 9 months old. No general danger signs. Classified as PNEUMONIA, MALARIA, NO
+ANAEMIA AND NO ACUTE MALNUTRITION.
+o Immunization history: BCG, OPV 0, OPV1 PCV1 ROTA 1 and Penta 1.When Ali was 7
+    months old, he received OPV2, PCV2 ROTA2 Penta 2, and vitamin A supplement.
+o Is Ali up-to-date with his immunizations?
+…………………………………………………………………………………………………………
+…………………………………………………………………………………………………………
+o What immunizations, if any, does Ali need?
+…………………………………………………………………………………………………………
+…………………………………………………………………………………………………………
+o When should he return for his next immunizations?
+…………………………………………………………………………………………………………
+…………………………………………………………………………………………………………
+o What advice should you give Ali‟s mother according to Immunization schedule you have in
+    your clinic?
+…………………………………………………………………………………………………………
+…………………………………………………………………………………………………………
+o Should he be given vitamin A today?
+…………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+
+                                                                                         89
+10.0 ASSESS OTHER PROBLEMS
+
+   The last box on the ASSESS side of the chart reminds you to assess any other problems that the
+     child may have.
+
+   Since the ASSESS & CLASSIFY chart does not address all of a sick child's problems, you will
+    now assess other problems the mother told you about. For example, she may have said the child
+    has a skin infection, itching or swollen neck glands. Or you may have observed another problem
+    during the assessment. Identify and treat any other problems according to your training,
+    experience and clinic policy. Refer the child for any other problem you cannot manage in clinic.
+
+   The last box on the "Classify" side of the chart has an important warning. It says:
+
+    MAKE SURE CHILD WITH ANY DANGER SIGN IS REFERRED after first dose of an
+    appropriate antibiotic and other urgent treatments.
+    Exception: Rehydration of the child according to Plan C may resolve danger signs so that
+    referral is no longer needed.
+
+   This note reminds you that a child with any general danger sign needs urgent treatment and
+    referral. It is possible, though uncommon, that a child may have a general danger sign, but may
+    not have a severe classification for any of the main symptoms. How to decide and plan for
+    referral of a child with a general danger sign and without any other severe classification is
+    taught in the module Identify Treatment.
+
+                                                                                                 90
+                                           EXERCISE R
+
+Read the 4 cases studies and practice using the entire process as described on the ASSESS &
+CLASSIFY chart. Record the child's signs and classify them on the Recording Form for each
+exercise. Refer to the chart as you do the exercise.
+Your Facilitator will give you 4 Recording forms.
+
+Case 1: Omer
+
+Omer is 9 months old. He weighs 9.5 kg. Length 60cm, his temperature is 37.5 C. His mother
+says he has had diarrhea for 1 week.
+Omer does not have any general danger signs. He does not have cough or difficult breathing.The
+health worker assessed Omer for signs of diarrhea. The mother said earlier that Omer has had
+diarrhea for 1 week. Omer does not have blood in the stool. He is not restless or irritable; he is not
+lethargic or unconscious. He has sunken eyes. He is thirsty and drinks eagerly when offered a drink.
+His skin pinch goes back slowly. Next, the health worker assessed for additional signs related to
+fever. Omer 's mother says he has felt hot for about 2 days.,he has not had measles in the last 3
+months. He does not have a stiff neck and he did not have signs suggesting measles.There is no ear
+problem. The health worker checked for signs of malnutrition he does not have edema of both feet.
+MUAC is 7226 The health worker determined his weight for length. Omer does not have palmar
+pallor2
+
+Omer has had BCG, Penta 1, Penta 2, and Penta 3. He has also had OPV 0, OPV 1, OPV 2 and OPV
+3 PCV 1 PCV 2 PCV3 and Rota1 and Rota2.
+Omer‟s card has no record of previous vitamin A treatment or supplementation, and his mother
+does not recall his receiving any.
+
+Case 2: Najwa
+Najwa is 4 months old. She weighs 5.5 kg. Her length is 60 cm, her temperature is 38.0 C.She is in
+the clinic today because she has diarrhea, she does not have any general danger signs. She is not
+coughing and does not have difficulty breathing.
+
+The health worker assessed her further for signs of diarrhea. She has had diarrhea for 2 days and
+there is blood in the stool, said the mother. Najwa was not restless or irritable; she was not
+unconscious or lethargic. Her eyes were not sunken. She drank normally, and did not seem to be
+thirsty. Her skin pinch went back immediately.
+The health worker next assessed her for fever. Najwa has had fever for 2 days, said the mother. She
+has not had measles in the last 3 months. She does not have a stiff neck. She has runny nose. There
+are no signs suggesting measles and malaria rapid diagnostic test was negative
+Najwa does not have an ear problem. The health worker checked her for sever acute malnutrition
+and anemia. She does not have oedema of both feet; the health worker determined her weight for
+height. Had no palmer pallor.
+
+At birth, Najwa received BCG and OPV 0. Four weeks ago, she received Penta 1 and OPV 1 PCV1
+ROTA1.
+                                                                                                     91
+Case 3: Jamila
+
+Jamila is 37 months old. She weighs 15.3 kg. height 80 cm, her temperature is 38.5 C. Jamila's
+family brought her to the clinic today because she has a stomachache, feels hot, has a runny nose
+andrash and she is coughing. The health worker checked her for general danger signs. She was able
+to drink, did not vomit everything she drank, did not have convulsions, and was not lethargic or
+unconscious. The health worker assessed the child for cough or difficult breathing. The parents said
+she has been coughing for 2 days. The health worker counted 55 breaths a minute. He did not see
+chest indrawing. He did not hear any unusual noise when she breathed in or out. Jamila does not
+have diarrhea, said the parents. However, she has been feeling hot, they said. The risk of malaria is
+high. She has had fever for two days. She has not had measles in the last 3 months. Her neck moves
+easily. The health worker looked for signs suggesting measles. Her rash was not generalized; it was
+only on her hand. Malaria test was positive. Jamila did not have an ear problem, said the parents.
+The health worker checked Jamila for malnutrition and anemia. She does not have edema of both
+feet. The health worker determined her weight for age. MUAC 13 cm. She does not have palmar
+pallor.
+
+Jamila has received BCG, OPV 0, OPV 1, OPV 2, OPV 3, Penta 1, Penta 2, and Penta 3 PCV1
+PCV2 PCV3 and ROTA1 ROTA 2. Jamila has received vitamin A supplementation one month ago.
+
+Case 4: Amel
+
+Amel is 6 months old, weighs 4 kg, length 55 cm her temperature is 37 C, her mother brought her to
+the clinic because Amel has cough. Her mother is also concerned that Amel looks thin. The health
+worker did not find any general danger signs. Then he assessed her cough; The mother said Amel
+had cough for 4 days. The health worker counted 52 breaths per minute. Amel did not have chest
+indrawing, and there was no stridor and was no wheeze when the child was calm.Amel did not have
+diarrhea, and she did not have fever. There was no ear problem, said the mother. She did not have
+oedema of both feet. The health worker determined the child's weight for length. MUAC 12.4 cm.
+The health worker saw that Amel did not have palmar pallor.
+
+She has had BCG, OPV 0. She received OPV 1, and Penta 1,PCV1 ROTA1 four weeks ago. She has
+not had vitamin A.
+
+                                                                                                  92
+                                           EXERCISE S
+
+In this video exercise, you will see a demonstration of how to assess a child with an ear problem and
+how to look for signs of malnutrition and anaemia. You will see a case study. Record the child‟s
+signs and classifications on the recording form your Facilitator will give you.
+
+EXERCISE S, Video Summary Case study 1
+
+                                                                                                   93
+                                    EXERCISE T
+
+In this Video exercise, you will watch two case studies. Record the child‟s signs and
+classifications on the Recording Form the Facilitator will give you.
+
+                                                                                   94
+

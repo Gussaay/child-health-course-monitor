@@ -1,0 +1,1294 @@
+           National Child Health Program
+Integrated Management of Childhood Illnesses (IMCI)
+
+
+
+
+                 FOLLOW UP
+
+
+
+
+                       2023
+
+
+                         1
+Integrated Management of Childhood Illness was prepared by the World Health
+Organization's Division of Diarrhoeal and Respiratory Disease Control (CDR),
+now the Division of Child Health and Development (CHD), and UNICEF through
+a contract with ACT International, Atlanta, Georgia, USA.
+
+
+                                    2
+                                                          Table of Contents
+Introduction ............................................................................................................................ 4
+
+learning objectives ................................................................................................................. 4
+
+1.0        conduct a follow-up visit for pneumonia ................................................................... 7
+
+2.0        conduct a follow-up visit for persistent diarrhoea ................................................... 10
+
+3.0        conduct a follow-up visit for dysentery.................................................................... 11
+
+4.0        conduct a follow-up visit for malaria ....................................................................... 14
+
+5.0        conduct a follow-up visit for fever no malaria .................................................... 15
+
+6.0        conduct a follow-up visit for measles with eye or mouth complications ................. 17
+
+7.0        conduct a follow-up visit for ear infection ............................................................... 19
+
+8.0        conduct a follow-up visit for feeding problem......................................................... 20
+
+10.0       conduct a follow-up visit for uncomplicated severe acute malnutrion .................... 21
+
+9.0        conduct a follow-up visit for anemia ....................................................................... 23
+
+11.0       give follow-up care for the sick young infant .......................................................... 26
+
+           11.1       conduct follow up visit for local bacterial infection .................................... 27
+
+           11.2       conduct follow up visit for jundice .............................................................. 28
+
+           11.3 conduct follow up visit for diarrhea ................................................................. 29
+
+           11.4       conduct follow up visit for feeding problem ................................................ 30
+
+           11.5       conduct follow up visit for low weight ........................................................ 31
+
+           11.6       conduct follow up visit for thrush ................................................................ 32
+
+
+
+
+                                                                          3
+                                      INTRODUCTION
+Some sick children need to return to the health worker for follow-up. Their mothers are told
+when to come for a follow-up visits (such as in 2 days or 14 days). At a follow-up visit the
+health worker can see if the child is improving on the drug or other treatment that was
+prescribed. Some children may not respond to a particular antibiotic or antimalarial and may
+need to try a second drug. Children with persistent diarrhoea also need follow-up to be sure
+that diarrhoea has stopped. Children with fever or eye infection need to be seen if they are not
+improving. Follow-up is especially important for children with a feeding problem, to be sure
+they are being fed adequately and are gaining weight.
+
+Because follow-up is important, your clinic should make special arrangements so that follow-
+up visits are convenient for mothers. If possible, mothers should not have to wait in the queue
+for a follow-up visit. Not charging for follow-up visits is another way to make follow-up
+convenient and acceptable for mothers. Some clinics use a system that makes it easy to find
+the records of children scheduled for follow-up.
+
+In a follow-up visit, you should do different steps than at a child's initial visit for
+a problem. Treatments given at the follow-up visit are often different than those given at an
+initial visit.
+
+                                LEARNING OBJECTIVES
+
+This module will describe what to do when a child returns to the clinic for a follow-up visit. This
+module does not address those children who have returned immediately to the clinic because they
+became sicker. These children should be assessed as at an initial visit. In the exercises in this
+module you will practice the steps for conducting
+a follow-up visit:
+
+ Deciding if the child's visit is for follow-up.
+
+ If the child has been brought for follow-up, assessing the signs specified in the follow-up
+  box for the child's previous classification.
+
+ Selecting treatment based on the child's signs.
+
+ If the child has any new problems, assessing and classifying them as you would in an initial
+  visit.
+
+
+
+
+                                                    4
+        Where is Follow-up Discussed on the Case Management Charts?
+
+In the "Identify Treatment" column of the ASSESS & CLASSIFY chart, some classifications
+have instructions to tell the mother to return for follow-up. "When to Return" box on the
+COUNSEL chart summarizes the schedules for follow-up visits.
+
+Specific instructions for conducting each follow-up visit are in "Give Follow-Up Care" section
+of TREAT THE CHILD chart. The boxes have headings that correspond to the classifications
+on ASSESS & CLASSIFY chart. Each box tells how to reassess and treat the child. Instructions
+for giving treatments, such as drug dosages for a second-line antibiotic or antimalarial, are on
+TREAT THE CHILD chart.
+
+Follow-up instructions for young infants are on YOUNG INFANT chart.
+
+                How to Manage a Child Who Comes for Follow-up:
+As Usual, ask the mother about the child's problem. You need to know if this is
+a follow-up or an initial visit for this illness. How you find out depends on how your clinic
+registers patients and how the clinic finds out why they have come.
+
+For example, the mother may say to you or other clinic staff that she was told to return for
+follow-up for a specific problem. If your clinic gives mothers follow-up slips that tell them
+when to return, ask to see the slip. If your clinic keeps a chart on each patient, you may see that
+the child came only a few days ago for the same illness.
+
+Once you know that the child has come to the clinic for follow-up of an illness, ask the mother
+if the child has, in addition, developed any new problems. For example, if the child has come
+for follow-up of pneumonia, but now he has developed diarrhoea, he has a new problem. This
+child requires a full assessment. Check for general danger signs and assess all the main
+symptoms and the child's nutritional status. Classify and treat the child for diarrhoea (the new
+problem) as you would at an initial visit. Reassess and treat pneumonia according to the follow-
+up box.
+
+If the child does not have a new problem, locate the follow-up box that matches the child's
+previous classification. Then follow the instructions in that box.
+
+     Assess the child according to the instructions in the follow-up box.
+The instructions may tell you to assess a major symptom as on the ASSESS & CLASSIFY chart.
+They may also tell you to assess additional signs.
+Note:
+Do not use the classification table to classify a main symptom. Skip the "Classify" and "Identify
+Treatment" columns on the ASSESS & CLASSIFY chart. This will avoid giving the child repeated
+treatments that do not make sense.
+There is one exception: If the child has any kind of diarrhoea, classify and treat dehydration as
+you would at an initial assessment.
+ Use information about the child's signs to select the appropriate treatment.
+ Give the treatment.
+ If a mother returns with her child who had cough or cold, or diarrhoea (without dysentery or
+persistent diarrhoea on the previous visit), because after 5 days the child is not better, do a full
+assessment of the child.
+
+
+                                                5
+ Some children will return repeatedly with chronic problems that do not respond to the treatment
+that you can give. For example, some children with AIDS may have persistent diarrhoea or
+repeated episodes of pneumonia.
+
+
+Important: If a child who comes for follow-up has several problems and is getting worse, REFER
+THE CHILD TO HOSPITAL. Also refer the child to hospital if a second-line drug is not
+available, or if you are worried about the child or do not know what to do for the child. If a child
+has not improved with treatment, the child may have a different illness than suggested by the chart.
+ He may need other treatment.
+
+
+
+
+                          Remember:
+                          If a child has any new problem, you
+                          should assess the child as at an initial visit.
+
+
+
+
+                                                 6
+            1.0     CONDUCT A FOLLOW-UP VISIT FOR PNEUMONIA
+ When a child receiving an antibiotic for PNEUMONIA returns to the clinic after 3 days for
+ follow-up, follow these instructions:
+   PNEUMONIA
+  After 3 days:
+  Check the child for general danger signs.
+  Assess the child for cough or difficult breathing .  See ASSESS & CLASSIFY chart.
+  Ask:
+         Is there is fever?
+         Is the child eating better?
+  Treatment:
+   If general danger sign stridor, give first dose of intramuscular antibiotics. Then
+
+  REFER URGENTLY to hospital.
+   If, chest indrawing, fast breathing or fever and eating are the same, refer
+  URGENTLY without giving injectable antibiotic*.
+     If breathing slower, less fever, or eating better, complete the 5 days course of antibiotic.
+
+ The box first describes how to assess the child. It says to check the child for general danger
+ signs and reassess the child for cough and difficult breathing. Next to these instructions, it says
+ to see the ASSESS & CLASSIFY chart. This means that you should assess general danger signs
+ and the main symptom cough exactly as described on the ASSESS & CLASSIFY chart. Then it
+ lists some additional items to check: Ask:
+      - Is the child is breathing more slowly?
+      - Is there less fever?
+      - Is the child eating better?
+ When you have assessed the child, use the information about the child's signs to select the
+ correct treatment.
+  If the child has chest indrawing, fast breathing, stridor general danger sign (not able to
+ drink or breastfeed, vomits everything, convulsions, lethargic or unconscious) the child is
+ getting worse. This child needs urgent referral to a hospital. Since the illness has worsened on
+ the first-line antibiotic for pneumonia, give intramuscular antibiotics before referral. Give a
+ rapid acting bronchodilator if the child is wheezing. Give diazepam if the child has convulsions
+ in the clinic.
+  If chest indrwing, breathing rate, fever, and eating are the same, refere URGENTLY1
+      to hospital, However, before you refere , ask the mother if the child took the antibiotic for
+      the previous 3 days. There may have been a problem so that the child did not receive the
+      antibiotic, or received too low or too infrequent a dose. If so, this child can be treated again
+      with the same antibiotic. Give a dose in clinic, and check that the mother knows how to
+      give the drug at home. Help her to solve any problems such as how to encourage the child
+      to take the drug when the child refuses it.
+  If a child with pneumonia had measles within the last 3 months, refer the child to
+      hospital.
+  If the child is breathing slower, has less fever (that is, fever is lower or is completely
+ subside) and is eating better, the child is improving. The child may cough, but most children
+ who are improving will no longer have fast breathing, Tell the mother that the child should
+ finish taking the 5 days of the antibiotic. Review with her the importance of finishing the
+ entire 5 days.
+
+
+* The WHO does not recommend a second line antibiotic at present, so the child needs referral
+                                                  7
+                                       EXERCISE A
+ Read about each child who came for follow-up of pneumonia. Then answer the questions about
+ how you would manage each child. Refer to any of the case management charts as needed.
+
+1. Elshikh's mother has brought him back for follow-up. He is one year old. 3 days ago he was
+   classified as having PNEUMONIA and you gave him Amoxicellin. You ask how he is doing
+   and if he has developed any new problems. His mother says that he is much better.
+
+i) How would you reassess Elshikh today? List all the signs you would look at and write the
+   questions you would ask his mother.
+   …………………………………………………………………………………………………
+   …………………………………………………………………………………………………
+   …………………………………………………………………………………………………
+   …………………………………………………………………………………………………
+   …………………………………………………………………………………………………
+ When you assess Elshikh, you find that he has no general danger signs. He is still coughing and
+ he has now been coughing for about 10 days. He is breathing 38 breaths per minute and has no
+ chest indrawing, no stridor and not wheezing. His mother said that he does not have fever. He
+ is breastfeeding well and eating some food (he was refusing all food before). He was playing
+ with his brother this morning.
+ii) Based on Elshikh's signs today, how should he must be treated?
+       ………………………………………………………………………………………………
+       ………………………………………………………………………………………………
+       ………………………………………………………………………………………………
+       ………………………………………………………………………………………………
+       ………………………………………………………………………………………………
+
+
+
+
+                                               8
+       2. Ahmed has been brought for a follow-up visit for pneumonia. He is three years old
+                                                                              Amoxicillin.
+       His mother says he is still sick and has vomited twice today.
+
+ A. How would you reassess Ahmed today? List the signs you would look at and the questions
+ you would ask his mother.
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+ B. When you reassess Ahmed, you find that he is able to drink and does not always vomit after
+ drinking. He has not had convulsions. He is not lethargic or unconscious and is not convulsing
+ now. He is still coughing, so he has been coughing now for about 2 weeks. He is breathing 55
+ breaths per minute. He has chest indrawing, He does not have wheezing. His mother says that
+ sometimes he feels hot. She is very worried because he is not better. He has hardly eaten for
+ two days.
+
+  I. Is Ahmed getting worse, the same, or better?
+ ……………………………………………………………………………………………………
+ ……………………………………………………………………………………………………
+
+ II. How should you treat Ahmed?
+………………………………………………………………………………………………………
+……………………………………………………………………………………………………..
+
+
+3. Two-year-old Flora has been brought by her mother to the clinic for follow-up. 3 days ago you
+classified Flora as having PNEUMONIA and gave her Amoxicillin. Flora's mother says that she
+has no new problems, but she is still coughing a lot.
+When you reassess Flora, you find that she has no general danger signs. She is breathing 45
+breaths per minute, has no chest indrawing, no stridor and no wheeze. She has no fever. Flora is
+not interested in eating.
+  i) Is Flora getting worse, the same, or better?
+………………………………………………………………………………………………………
+……………………………………………………………………………………………………..
+  ii) When you talk with this mother, she tells you she has given Flora the pills mixed with some
+  cereal in the morning and at night. You are sure that Flora has been receiving the antibiotic, but
+  her condition is the same. What treatment would you give Flora now? If you will give a drug,
+  specify the dose and schedule.
+………………………………………………………………………………………………………
+……………………………………………………………………………………………………..
+
+
+
+
+          When you have completed this exercise, discuss your work with a facilitator.
+
+
+                                                  9
+   2.0     CONDUCT A FOLLOW-UP VISIT FOR PERSISTENT DIARRHOEA
+
+ When a child with PERSISTENT DIARRHOEA returns for a follow-up visit after
+ 5 days, follow these instructions:
+    PERSISTENT DIARRHOEA
+      After 5 days:
+      Ask:
+        Has the diarrhoea stopped?
+        How many loose stool is the child having per day?
+      Treatment:
+     If diarrhoea has not stopped (child is still having 3 or more loose stools per day),
+
+      do a full reassessment for the child. Give any treatment needed. Then refer to
+      hospital.
+      If the diarrhoea has stopped (child having less than 3 loose stools per day), tell the
+       mother to follow the usual feeding recommendations for the child’s age.
+
+
+Ask if the diarrhoea has stopped and how many motions the child has per day.
+
+ If diarrhoea has not stopped (the child is still having 3 or more loose stools per day), do
+a full reassessment. This should include assessing the child completely as described on the
+ASSESS & CLASSIFY chart. Identify and manage any problems that require immediate attention
+such as dehydration. Then refer the child to hospital.
+
+ If diarrhoea has stopped (child having less than 3 loose stools per day), instruct the
+mother to follow the feeding recommendations for the child's age. If the child is not normally fed
+in this way, you will need to teach her the feeding recommendations on the COUNSEL chart.
+
+
+
+
+                                                 10
+           3.0    CONDUCT A FOLLOW-UP VISIT FOR DYSENTERY
+When a child classified as having DYSENTERY returns for a follow-up visit after
+3 days, follow these instructions:
+
+ DYSENTERY
+
+  After 3 days:
+  Assess the child for diarrhoea. > See ASSESS & CLASSIFY chart.
+  Ask:
+    Are there fewer stools?
+    Is there less blood in the stool?
+    Is there less fever?
+    Is there less abdominal pain?
+    Is the child eating better?
+  Treatment:
+     If the child is dehydrated, treat dehydration.
+       If number of stools, amount of blood in stools, fever, abdominal pain, or eating
+    is the same or worse: do full assessment treat dehydration if present and refere to
+    hospital.
+      If fewer stools, less blood in the stools, less fever, less abdominal pain, and
+    eating better, continue giving the same antibiotic until finish.
+
+
+Reassess the child for diarrhoea as described in the box, "Does the child have diarrhoea?" on
+the ASSESS & CLASSIFY chart. Ask the mother the additional questions to find out if the child
+is improving.
+
+Then use information about the child's signs to decide if the child is the same, worse, or better.
+Select the appropriate treatment:
+
+ If the child is dehydrated at the follow-up visit, use the classification table to classify
+dehydration. Select the appropriate fluid plan and treat dehydration.
+ If the number of stools, amount of blood in stools, fever, abdominal pain, or eating is
+the same or worse, refer to hospital.
+ If the child has fewer stools, less blood in the stools, less fever, less abdominal pain,
+and is eating better, the child is improving on the antibiotic. Usually all of these signs will
+diminish if the antibiotic is working. If only some signs have diminished, use your judgement
+to decide if the child is improving. Tell the mother to finish the 5 days of the antibiotic. Review
+with the mother the importance of finishing the antibiotic.
+
+
+
+
+                                                11
+                                         EXERCISE B
+ Read about each child who came for follow-up of DYSENTERY or PERSISTENT
+ DIARRHOEA and answer the questions. Refer to any of the case management charts as
+ needed.
+       This clinic refers children with severe dehydration because health workers
+      cannot give IV or NG therapy. A nearby hospital can provide IV therapy.
+
+       For dysentery, Ceprofloxacin is availabe in your clinic.
+
+1. Isam was brought for follow-up of PERSISTENT DIARRHOEA after 5 days. He is 9
+
+     His mother feeds him cereal twice a day and gives him a milk formula 4 times each day.
+     When you saw him last week, you advised his mother to give him only half his usual amount
+     of milk.You also advised the mother to replace half the milk by giving extra servings of
+     cereal with oil and vegetables or meat or fish added to it.
+  i) What is your first step for reassessing Isam?
+  ……………………………………………………………………………………………………
+  ……………………………………………………………………………………………………
+  ……………………………………………………………………………………………………
+  …………………………………………………………………………………………………….
+  ii) Isam's mother tells you that diarrhoea has not stopped. What would you do next?
+  ……………………………………………………………………………………………………
+  ……………………………………………………………………………………………………
+  ……………………………………………………………………………………………………
+  …………………………………………………………………………………………………….
+You do a complete reassessment of Isam, as on the ASSESS & CLASSIFY chart. You find that
+Isam has no general danger sign. He has no cough. When you reassess diarrhoea, his mother says
+that now he has had diarrhoea for about 3 weeks. There is no blood in the stool. Isam is restless and
+irritable. His eyes are not sunken. When you offer him some water, he takes
+a sip but does not seem thirsty. A skin pinch goes back immediately. He has no fever, no ear
+problem, and is classified as NO ANAEMIA AND NO ACUTE MALNUTRIYION. Isam's
+mother tells you that he has no other problem.
+  iii) Is Isam dehydrated?
+  ……………………………………………………………………………………………………
+  ……………………………………………………………………………………………………
+  iv) How will you treat Isam?
+  ……………………………………………………………………………………………………
+  ……………………………………………………………………………………………………
+  ……………………………………………………………………………………………………
+  …………………………………………………………………………………………………….
+  v) If in reassessment you found that Isam had some dehydration, what would you have done
+  before referral?
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+……………………………………………………………………………………………………
+                                                 12
+2. Faisal is 18 months
+    that 3 days ago he was classified as having diarrhoea with NO DEHYDRATION,
+    DYSENTERY and NO ANAEMIA AND NO ACUTE MALNUTRIYION . Faisal's mother
+    has brought him back after 3 days of treatment for DYSENTERY. When you ask if he has
+    any new problem, the mother says that Faisal now has a cold and is coughing.
+ i) How would you assess Faisal?
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+…………………………………………………………………………………………….
+ When you assess Faisal, you find he has no general danger sign. His breathing rate is 35
+ breaths per minute. He has no chest indrawing and no stridor. When you ask about diarrhoea,
+ his mother tells you that he still has some diarrhoea, but much less. There is less blood in the
+ stools. You find that he has no signs of dehydration. He has no fever. He has less abdominal
+ pain. He is eating better. His mother says that he feels much better, except for the cold.
+ ii) How would you classify his cough?
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+ iii) What would you do for Faisal's diarrhoea?
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+…………………………………………………………………………………………………….
+ iv) List the treatments for Faisal's cough and cold.
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+…………………………………………………………………………………………………….
+
+3. Masud is 1 year old and weighs 8 kg. Five days ago, he was classified as having
+     PERSISTENT DIARRHOEA. His young mother has brought him back for follow-up.
+     Masud is no longer breastfeeding. The mother tells you that she has replaced Masud's usual
+     milk feeds with yoghurt. She has also been giving him rice with bits of vegetables and fish,
+     and some family foods. The mother tells you that diarrhoea has stopped and he had only 1
+     motion yesterday. She is very relieved. There are no new problem.
+  i) Do you need to assess Masud further? If so, describe what you would assess.
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+…………………………………………………………………………………………….
+  ii) What instructions will you give the mother about feeding Masud?
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+…………………………………………………………………………………………….
+
+
+
+
+         When you have completed this exercise, discuss your work with a facilitator.
+
+
+
+
+                                                13
+                4.0    CONDUCT A FOLLOW-UP VISIT FOR MALARIA
+ Any child classified as having MALARIA should return for a follow-up visit if fever persists
+ for 3 days. If fever persists 3 days after the initial visit or if fever returns within 14 days, this
+ may mean that the child has a malaria parasite which is resistant to the first-line antimalarial,
+ causing the child's fever to continue.
+ If the child also had MEASLES at the initial visit, fever may be due to measles. It is very
+ common for fever Due to measles to continue for several days. Therefore, persistent fever may
+ be due to the measles rather than to resistant malaria.
+      MALARIA
+       If fever persists after 3 days, or returns within 14 days:
+        Do a full reassessment for the child. )See ASSESS & CLASSIFY( chart.
+            Assess for other causes of fever.
+       Treatment:
+       If the child has any general danger sign or stiff neck, treat as VERY SEVERE
+         FEBRILE DISEASE.
+          If the child has any cause of fever other than malaria, provide treatment.
+          If malaria is the only apparent cause of fever:
+              Treat with the (second-line or third line) oral antimalarial. (If no second-line
+               or third line antimalarial is available refer to hospital.) Advise the mother to
+               return again in 3 days if fever persists.
+              If fever has been present for 7 days, refer for assessment.
+ Do a full reassessment for the child as on ASSESS & CLASSIFY chart. As you reassess the
+ child, look for the cause of fever, possibly pneumonia, meningitis, measles, ear infection, or
+ dysentery. Also consider whether the child has any other problem that could cause fever, such
+ as tuberculosis, urinary tract infection, osteomyelitis or abscess. Do not use the classification
+ table of the ASSESS & CLASSIFY chart to classify the child's fever. Instead, choose the
+ appropriate treatment shown in the follow-up box. If you suspect a cause of fever other than
+ malaria, assess the problem further if needed and refer to any guidelines on treatment of the
+ problem.
+  If the child has any general danger sign or stiff neck, treat as described on ASSESS &
+ CLASSIFY chart for VERY SEVERE FEBRILE DISEASE. This includes giving quinine, a
+ first dose of an antibiotic and a dose of paracetamol. Give diazepam if the child has
+ convulsions in the clinic. Also treat to prevent low blood sugar and refer urgently to hospital.
+ If the child has already been on an antibiotic, worsening of the illness to very severe febrile
+ disease means he may have a bacterial infection, which is not responsive to this antibiotic.
+ Give a first dose of the intramuscular Ampicilin and Gentamycin and refer the child to the
+ hospital.
+  If the child has any cause of fever other than malaria, provide treatment for that cause.
+  For example, give treatment for the ear infection or refer for other problems such as urinary
+ tract infection or abscess.
+  If malaria is the only apparent cause of fever:
+ - Do malaria blood film for malarai (microscopy) if parasite seen and the child had finished
+      afull course of the first line Antimalaria, Treat with (second-line or third line oral
+      antimalarial ). Ask the mother to return again in 3 days if fever persists. If this is not
+      available, refer the child to hospital.
+ - If fever has been present every day for 7 days or more, refer the child for assessment. This
+      child may have typhoid fever or another serious infection requiring additional diagnostic
+      testing and special treatment.
+*Do not repeat rapid diagnostic test for malaria if it was positive in the initial visi
+                                                  14
+                5.0   CONDUCT A FOLLOW-UP VISIT FOR FEVER NO MALARIA
+
+ When a child with fever was classified as FEVER—MALARIA UNLIKELY returns for
+ follow—up after 3 days because fever persists, follow these instructions:
+
+ Fever NO MALARIA
+
+  If fever persists after 3 days:
+  Do a full reassessment of the child. ( See ASSESS & CLASSIFY chart.)
+  Assess for other causes of fever.
+  Repeat the malaria test.
+
+
+  Treatment:
+  If the child has any general danger sign or stiff neck, treat as VERY SEVERE FEBRILE
+
+    DISEASE.
+    If the child has any cause of fever other than malaria, provide treatment.
+    If malaria is the only apparent cause of fever:
+         Treat with the first-line oral antimalarial. Advise the mother to return again in 3 days
+            if the fever persists.
+         If fever has been present for 7 days, refer for assessment.
+ there may be some causes of fever that were not apparent at the first visit. Do a full reassessment
+of the child as on the ASSESS &CLASSIFY chart. Look for the cause of fever. Also consider
+whether the child has any other problem that cause fever, such as tuberculosis, urinary tract
+infection, osteomyelitis or abscess. Then select the appropriate treatment in the follow-up boxes.
+
+ ► If the child has any general danger sign or stiff neck, treat as VERY SEVERE FEBRILE
+ DISEASE.
+
+ ► If the child has any cause of fever other than malaria, provide treatment for that cause.
+
+ ► If malaria is the only apparent cause of fever, treat the child with first-line oral
+ antimalarial. Ask the mother to return again in 3 days if fever persists.
+
+ If fever has been present every day for 7 days or more, refer the child for assessment. This child
+ may have typhoid fever or another serious infection requiring additional diagnostic testing and
+ special treatment.
+
+
+
+
+                                                  15
+                                         EXERCISE C
+  Read about each child who returns for follow-up of MALARIA and answer the questions.
+  Refer to any of the case management charts as needed.
+
+
+    In this clinic, Coartem is the first-line oral antimalarial .DHAP is the second-line oral
+    antimalarial. AMOXICILLIN is the oral antibiotic for pneumonia.
+
+
+1. Haitham's mother has brought him back to the clinic because he still has fever. Two days ago
+    he was given Coartem for MALARIA. He was also given a dose of paracetamol. His mother
+    says that he has no new problem, just fever. He is 3 years old and weighs 14 kg. His axillary
+    temperature is 38.5
+i) How would you reassess Haisam?
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+    When you reassess Haisam, he has no general danger signs. He has no cough and no diarrhoea.
+     He has now had fever for 4 days. He does not have stiff neck. There is no generalized rash.
+    He has no ear problem. He is classified as having NO ANAEMIA AND NO ACUTE
+    MALNUTRITION . There is no other apparent cause of fever.
+ii) How would you treat Haisam? If you would give a drug, specify the dose and schedule.
+ ………………………………………………………………………………………………………
+ ………………………………………………………………………………………………………
+ ………………………………………………………………………………………………………
+ ………………………………………………………………………………………………………
+
+2. Noon's mother has come back to the clinic because Noon still has fever. Three days ago she
+   was given Coartem for MALARIA. Her mother says that she is sicker now, vomiting and very
+
+  When you assess Noon, her mother says that yesterday she could drink, but she vomited after
+  eating.    She    did     not    always   vomit     after   drinking    a   small    amount.
+  She has not had convulsions. She will not wake up when her mother tries to wake her. She is
+  unconscious. Her mother says that she does not have cough or diarrhoea. She has now had
+  fever for 5 days. She does not have stiff neck, or generalized rash. She does not have an ear
+  problem. She is classified as having NO ANAEMIA AND NO ACUTE MALNUTRITION.
+  How would you treat Noon? If you would give drugs, specify the dose and schedule.
+  ……………………………………………………………………………………………………
+  ……………………………………………………………………………………………………
+  ……………………………………………………………………………………………………
+
+
+          When you have completed this exercise, discuss your work with a facilitator.
+
+
+
+                                                16
+    6.0      CONDUCT A FOLLOW-UP VISIT FOR MEASLES WITH EYE OR
+                         MOUTH COMPLICATIONS
+When a child who was classified as having MEASLES WITH EYE OR MOUTH
+COMPLICATIONS returns for follow-up in 3 days, follow these instructions:
+
+
+      MEASLES WITH EYE OR MOUTH COMPLICATIONS
+
+          After 3 days:
+           Look for red eyes and pus draining from the eyes.
+           Look at mouth ulcers.
+           Smell the mouth.
+
+          Treatment for Eye Infection:
+           If pus is draining from the eye, ask the mother to describe how she has
+            treated the eye infection. If treatment has been correct, refer to hospital. If
+            treatment has not been correct, teach mother correct treatment.
+           If the pus is gone but redness remains, continue the treatment.
+
+           If no pus or redness, stop the treatment.
+
+
+
+          Treatment for Mouth Ulcers:
+           If mouth ulcers are worse, or there is a very foul smell from the mouth,
+
+            refer to hospital.
+           If mouth ulcers are the same or better, continue using half-strength gentian
+
+            violet for a total of 5 days.
+
+
+  To assess the child, check the eyes and mouth. Select treatment based on the child's sign.
+  Treatment for Eye Infection:
+     If pus is still draining from the eye, ask the mother to describe or show you how she has
+been treating the eye infection. If she has brought the tube of ointment with her, you can see
+whether it has been used. There may have been problems so that the mother did not do the
+treatment correctly. For example, she may not have treated the eye three times a day, or she may
+not have cleaned the eye before applying the ointment, or the child may have struggled so that
+she could not put the ointment in the eye.
+       If the mother has correctly treated the eye infection for 2 days and there is still pus
+          draining from the eye, refer the child to a hospital.
+       If the mother has not correctly treated the eye, ask her what problems she had in trying to
+          give the treatment. Teach her any parts of the treatment that she does not seem to know.
+          Discuss with her how to overcome difficulties she is having. Finally, explain to her the
+          importance of the treatment. Ask her to return again if the eye does not improve.
+          However, if you think that the mother still will not be able to treat the eye correctly,
+          arrange to treat the eye each day in clinic or refer the child to a hospital.
+
+  If pus is gone but redness remains, continue the treatment. Tell the mother that the
+ treatments are helping. Encourage her to continue giving the correct treatment until the redness
+ is gone.
+  If no pus or redness, stop the treatment. Praise the mother for treating the eye well. Tell
+ her the infection is gone.
+
+
+
+                                                 17
+Treat for Mouth Ulcers:
+ If mouth ulcers are worse, or there is a very foul smell from the mouth, refer to
+hospital.The mouth problem may prevent the child from eating or drinking and may become
+severe. A very foul smell may mean a serious infection. Mouth problems of measles could be
+complicated by thrush (fungal infection) or herpes (the virus which causes cold sores).
+ If mouth ulcers are the same or better, ask the mother to continue treating the mouth with
+half-strength gentian violet for a total of 5 days.
+
+She should continue to feed the child appropriately to compensate for weight lost during the
+acute illness and to prevent malnutrition. Review with the mother when to seek care and how
+to feed her child as described on COUNSEL THE MOTHER chart. Tell her that attention to
+feeding is especially important for children who have measles because they are at risk of
+developing malnutrition.
+
+Because the child with measles continues to have increased risk of illness for months,
+it is important that the mother know the signs to bring the child back for care. Children who
+have measles are at increased risk of developing complications or a new problem, due to
+immune suppression, which occurs during, and following measles.
+
+
+
+
+                                             18
+         7.0     CONDUCT A FOLLOW-UP VISIT FOR EAR INFECTION
+When a child classified as EAR INFECTION returns for a follow-up visit after 5 days, follow
+the instructions below. These instructions apply to an acute or a chronic ear infection.
+
+ EAR INFECTION
+
+ After 5 days:
+     Reassess for ear problem. (See ASSESS & CLASSIFY chart.)
+     Measure the child’s temperature.
+
+ Treatment:
+  If there is tender swelling behind the ear or high fever (38.5°C or above), refer
+ URGENTLY to hospital.
+    Acute ear infection: if ear pain or discharge persists, treat with 5 more days of the same
+     antibiotic. Continue wicking to dry the ear. Follow-up in 5 days.
+  Chronic ear infection: Check that the mother is wicking the ear correctly and giving ear
+ drops correctly. Encourage her to continue.
+    If no ear pain or discharge, praise the mother for her careful treatment. If she has not yet
+     finished the 5 days of antibiotic, tell her to use all of it before stopping.
+
+Reassess the child for ear problem and measure the child's temperature (or feel the child for
+fever). Then select treatment based on the child's signs.
+ If you feel a tender swelling behind the ear when compared to the other side, the child
+may have developed mastoiditis. If there is high fever
+above), the child may have a serious infection. A child with tender swelling behind the ear or
+high fever has gotten worse, and should be referred to a hospital.
+
+ Acute ear infection: If ear pain or ear discharge persists after taking an antibiotic for 5
+days, treat with 5 additional days of the same antibiotic. Ask the mother to return in 5 more
+days so that you can check whether the ear infection is improving.
+If the ear is still draining or has begun draining since the initial visit, show the mother how to
+wick the ear dry. Discuss with her the importance of keeping the ear dry so that it will heal.
+
+ Chronic ear infection: Check that the mother is wicking the ear correctly and giving ear
+drops correctly. To do this, ask her to describe or show you how she wicks the ear. Ask her
+how frequently she is able to wick the ear. Ask her what problems she has in trying to wick the
+ear and discuss with her how to overcome them. Encourage her to continue wicking the ear.
+Explain that drying is the only effective therapy for a draining ear. Not wicking the ear could
+leave the child with reduced hearing.
+    * if there is hearing problems refer the child for hearing asseement.
+
+ If no ear pain or discharge, praise the mother for her careful treatment. Ask her if she has
+given the child the 5 days of antibiotic. If not, tell her to use all of it before stopping.
+
+
+
+
+                                                19
+      8.0   CONDUCT A FOLLOW-UP VISIT FOR FEEDING PROBLEM
+When a child who had a feeding problem returns for follow-up in 5 days, follow these
+instructions:
+
+ FEEDING PROBLEM
+
+   After 7 days:
+    Reassess feeding. ( See questions at the top of COUNSEL) chart.
+    Ask about any feeding problems found on the initial visit.
+
+   treatment
+    Counsel the mother about any new or continuing feeding problems. If you counsel
+     the mother to make significant changes in feeding, ask her to bring the child back
+     again.
+     If the child is MODERATE ACUTE MALNUTRITION , ask the mother to return 30
+      days after the initial visit to measure the child’s weight gain.
+
+Reassess the child's feeding by asking the questions in the top box on COUNSEL THE
+MOTHER chart. Refer to the child's chart or follow-up note for a description of any feeding
+problems found at the initial visit and previous recommendations. Ask the mother how she has
+been carrying out the recommendations. For example, if on the last visit more active feeding
+was recommended, ask the mother to describe how and by whom the child is fed at each meal.
+
+ Counsel the mother about any new or continuing feeding problems.If she encountered
+problems when trying to feed the child, discuss ways to solve them.
+
+ For example, if the mother is having difficulty changing to more active feeding because it
+requires more time with the child, discuss some ways to reorganize the meal time.
+
+ If the child is MODERATE ACUTE MALNUTRITION , ask the mother to return 30 days
+after the initial visit. At that visit a health worker will measure the child's weight gain to
+determine if the changes in feeding are helping the child.
+
+Example: on the initial visit the mother of a 2-months-old infant said that she was giving the
+infant 2 or 3 bottles of milk and breastfeeding several times each day. The health worker
+advised the mother to give more frequent, longer breastfeeds and gradually reduce other milk
+or foods.
+In the follow-up visit, the health worker asks the mother questions to find out how often she is
+giving the other feeds and how often and for how long she is breastfeeding. The mother says
+that she now gives the infant only 1 bottle of milk each day and breastfeeds 6 or more times in
+24 hours. The health worker tells the mother that she is doing well. The health worker then
+asks the mother to completely stop the other milk and breastfeed 8 or more times in 24 hours.
+Since this is a significant change in feeding, the health worker also asks the mother to come
+back again.
+At that visit the health worker will check that the infant is feeding frequently enough and
+encourage the mother.
+
+
+
+
+                                              20
+  10.0 CONDUCT A FOLLOW-UP VISIT FOR UNCOMPLICATED SEVERE
+                     ACUTE MALNUTRION
+Follow these instructions for a follow-up visit for a child with UNCOMPLICATED SEVERE
+ACUTE MALNUTRION
+
+ UNCOMPLICATED SEVERE ACUTE MALNUTRITION
+
+ After 14 days or during regular follow up:
+     Do a full reassessment of the child. > See ASSESS & CLASSIFY chart.
+     Assess child with the same measurements (WFH/L, MUAC) as on the initial visit.
+     Check for oedema of both feet.
+     Check the child's appetite by offering ready-to use therapeutic food if the child is 6
+        months or older.
+
+ Treatment:
+     If the child has COMPLICATED SEVERE ACUTE MALNUTRITION (WFH/L less
+       than -3 z-scores or MUAC is less than 115 mm or oedema of both feet AND has
+       developed a medical complication or oedema, or fails the appetite test), refer
+       URGENTLY to hospital.
+
+        If the child has UNCOMPLICATED SEVERE ACUTE MALNUTRITION (WFH/L
+         less than -3 z-scores or MUAC is less than 115 mm or oedema of both feet but NO
+         medical complication and passes appetite test), counsel the mother and encourage her to
+         continue with appropriate RUTF feeding. Ask mother to return again in 14 days.
+
+
+        If the child has MODERATE ACUTE MALNUTRITION (WFH/L between -3 and -2
+         z-scores or MUAC between 115 and 125 mm), advise the mother to continue RUTF.
+         Counsel her to start other foods according to the age appropriate feeding
+         recommendations (see COUNSEL THE MOTHER chart). Tell her to return again in 14
+         days. Continue to see the child every 14 days until the child’s WFH/L is -2 z-scores or
+         more, and/or MUAC is 125 mm or more.
+
+        If the child has NO ACUTE MALNUTRITION (WFH/L is -2 z-scores or more, or
+         MUAC is 125 mm or more), praise the mother, STOP RUTF and counsel her about the
+         age appropriate feeding recommendations (see COUNSEL THE MOTHER chart).
+
+        If the child is continuing to lose weight and no change in feeding seems likely, refer the
+         child to hospital.
+     
+When to stop giving ready-to-use therapeutic food treatment:
+Base the decision to stop RUTF on the same measurements (WFH/L, MUAC) and oedema that
+were used to classify the child as severe acute malnutrition.
+Stop giving RUTF when:
+WFH/L is equal or more than -2 z-score and the child has had no oedema for at least 2 weeks,
+MUAC is equal or more than 125mm and the child has had no oedema for at least 2 weeks.
+
+
+
+
+                                                21
+     11.0 CONDUCT A FOLLOW-UP VISIT FOR MODERATE ACUTE MALNUTRION
+
+When a child classified as having MODERATE ACUTE MALNUTRITION returns for a
+follow-up visit after 30 days follow the instructions below
+
+
+ MODERATE ACUTE MALNUTRITION
+ After 30 days:
+ Assess the child using the same measurement (WFH/L or MUAC) used on the initial visit:
+          If WFH/L, weigh the child, measure height or length and determine if WFH/L.
+          If MUAC, measure using MUAC tape.
+          Check the child for oedema of both feet.
+          Reassess feeding. See questions in the COUNSEL THE MOTHER chart.
+ Treatment:
+  If the child is no longer classified as MODERATE ACUTE MALNUTRITION, praise
+   the mother and encourage her to continue.
+  If the child is still classified as MODERATE ACUTE MALNUTRITION, counsel the
+   mother about any feeding problem found. Ask the mother to return again in one month.
+   Continue to see the child monthly until the child is feeding well and gaining weight
+   regularly or his or her WFH/L is -2 z-scores or more or MUAC is 125 mm. or more.
+ Exception:
+ If you do not think that feeding will improve, or if the child has lost weight or his or her
+ MUAC has diminished, refer the child.
+
+
+
+
+                                                22
+               9.0     CONDUCT A FOLLOW-UP VISIT FOR ANEMIA
+ When a child who had palmar pallor returns for a follow-up visit after 14 days, follow these
+ instructions:
+
+    ANAEMIA
+
+     After 14 days:
+       Give iron. Advise mother to return in 14 days for more iron.
+        Continue giving iron every 14 days for 2 months.
+        If the child has palmar pallor after 2 months, refer for assessment
+
+
+ Give the mother additional iron for the child and advise her to return in 14 days for more iron.
+
+ Continue to give the mother iron when she returns every 14 days for up to 2 months.
+
+ If after 2 months the child still has palmar pallor, refer the child for assessment.
+
+
+
+
+                                                 23
+                                          EXERCISE D
+ Read about each child who came for follow-up and answer the questions. Refer to the case
+ management charts as needed.
+ 1. Mohamoud is an 18-month-old child. Five days ago he was in the clinic. You see on his
+ chart that he had diarrhoea. He was classified as having NO DEHYDRATION and
+ MODERATE ACUTE MALNUTRITION. His weight was 8.5 kg. He was treated according
+ to Plan A and his mother received counselling about feeding. The following notes were on his
+ chart
+
+              3 meals/day – (pancake) Gorassa with rice/beans, bananas plus coffee.
+            Nothing between meals. No milk. Stopped breastfeeding 3 months ago.
+    Advised to add 2 extra feeds per day: (pancake) Gorassa with beans mashed in oil and give
+                            banana/dates, eggs or milk when available.
+
+ Mohamoud has been brought back to clinic for follow-up of the feeding problem.
+ He still weighs 8.5 kg and looks unhappy but not visibly wasted.
+ i) Tick the items appropriate to do during this visit:
+   - Ask about any new problem. If there is a new problem, assess, classify and treat as at an
+       initial visit.
+   - Ask the questions in the top box of the COUNSEL chart. Identify any new feeding
+       problem.
+   - Ask the mother if she has been able to give extra meals each day.
+   - Ask what she fed Mohamoud and the number of meals.
+   - Since Mohamoud has not gained weight, immediately refer him to hospital.
+   - Advise the mother to resume breastfeeding.
+   - Give vitamin A.
+   - Since Mohamoud has had no weight gain, repeat the advice given to the mother before.
+       Behaviour change takes a long time.
+   - Ask the mother questions to identify additional feeding problems.
+   - Make recommendations for any feeding problems that you find.
+   - Ask if Mohamoud is still having diarrhoea.
+   - Check that Mohamoud is recieving zinc syrup.
+
+ You ask Mohamoud's mother questions to find out whether she has given the extra feeds, and
+ what foods she has given. You also ask how large is each serving, whether Mohamed has been
+ eating each serving, and whether he has his own plate.
+ You find that Mohamoud's mother has been giving Mohamoud Gorassa with mashed beans in
+ oil 2 times per day, as advised. He just eats a bite or ignores it completely. She puts it on a plate
+ in front of him while she goes to do other work. She has not gotten any eggs or milk yet but
+ intends to do so. She prepared Gorassa last week for dinner on three nights but his siblings ate
+ it all.
+ ii) What advice would you give Mohamed's mother now?
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+ iii) Should you ask the mother to bring Mohamed back to see you? If so, when should she
+ come back? Why?
+    …………………………………………………………………………………………………
+
+                                                  24
+  Amel is 10 months old. Her chart shows that she was seen 6 days ago
+
+  RECORD OF CLINIC VISITS
+  27/9/2019                                                                       Amel Ahmed
+
+                               T 39 C                   5.5 kg
+
+  NO          PNEUMONIA:                 COUGH          OR          COLD;           MALARIA
+
+  NO ACUTE MALNUTRITION
+
+  Rx: Coartem 2 days if fever persists , return 5 days (if cough not improving) , 30 days,
+
+  Feeding: breastfed once in evening; formula in morning bottle;
+
+  lunch is soup + oat cereal gruel; dinner - soup + mashed potatoes with beans. Advised to
+
+  replace morning bottle with breastfeeding before mother goes to work. Give cereal gruel
+
+  with animal milk mid-morning. Mash vegetables and mix with rice + spoonful oil for lunch.
+
+  Dinner - add spoonful oil or butter.
+
+
+
+
+ Amel returns today weighing 5.6 kg. She has no fever and no new problems.
+i) Write below 3 or more questions that you could ask Amel's mother to find out whether
+     Amel's feeding has improved.
+  ……………………………………………………………………………………………………
+  ……………………………………………………………………………………………………
+  ……………………………………………………………………………………………………
+  Amel's mother answers that she is making mashed vegetables with rice and oil for lunch. She
+  still makes soup (everybody needs to have soup). She does not like waking Amel to breastfeed
+  in the morning before work because it means that the take care of Amel to 10-years-old Nawal
+  also has to get up before sunrise to the baby. But she has done so and Amel is now getting a
+  morning and evening breastfeed. Nawal is doing her job making oat gruel with cow's milk mid-
+  morning.
+  At lunch Amel is eating soup. Then she eats a little bit of the vegetable mashed with rice.
+  ii) What would you advise the mother today? Also write something to praise.
+  ……………………………………………………………………………………………………
+  ……………………………………………………………………………………………………
+  ……………………………………………………………………………………………………
+  …………………………………………………………………………………………………..
+
+
+         When you have completed this exercise, discuss your work with a facilitator.
+
+
+                                                 25
+      11.0 GIVE FOLLOW-UP CARE FOR THE SICK YOUNG INFANT
+Follow-up visits are recommended for young infants who are classified as having LOCAL
+BACTERIAL INFECTION, FEEDING PROBLEM OR LOW WEIGHT (including thrush).
+Instructions for carrying out follow-up visits for the sick young infant age from birth up to 2
+months are on YOUNG INFANT chart.
+
+As with the sick child who comes for follow-up, a sick young infant is assessed differently at a
+follow-up visit than at an initial visit. Once you know that the young infant has been brought to
+the clinic for follow-up, ask whether there are any new problem. An infant who has a new
+problem should receive a full assessment as if it were an initial visit.
+
+If the infant does not have a new problem, locate the section of the YOUNG INFANT chart with
+the heading "Give Follow-Up Care for the Sick Young Infant." Use the box that matches the
+infant's previous classification.
+
+The instructions in the follow-up box (for the previous classification) tell how to assess the
+young infant. These instructions also tell the appropriate follow-up treatment to give. Do not
+use the classification tables for the young infant to classify the signs or determine treatment.
+
+
+
+
+                                               26
+11.1    CONDUCT FOLLOW UP VISIT FOR LOCAL BACTERIAL INFECTION
+ When a young infant classified as having LOCAL BACTERIAL INFECTION returns for
+ follow-up in 2 days, follow these instructions:
+
+
+        LOCAL BACTERIAL INFECTION
+         After 2 days:
+         Look at the umbilicus. Is it red or draining pus? Does redness extend to the skin?
+         Look at the skin pustules. Are there many or severe pustules?
+
+         Treatment of umblical infections:
+          If umblical pus or redness remains or is worse, refer to hospital.
+
+          If umblical pus and redness are improved, tell the mother to continue giving the 5
+           days of antibiotic and continue treating the local infection at home.
+
+        Treatment of skin infections:
+        If skin pustule are same or worse refer the child to hospital
+        If skin pustule improved tell the mother to continue the antbiotic for 5 days and treat
+         local infection at home
+
+
+
+
+ To assess the young infant, look at the umbilicus or skin pustules. Then select the appropriate
+ treatment.
+
+  If umblical pus or redness remains or is worse, refer the infant to hospital. Also refer if
+ there are more pustules than before.
+
+  If umblical pus and redness are improved, tell the mother to complete the 5 days of
+ antibiotic that she was given during the initial visit. Improved means there is less pus and it has
+ dried. There is also less redness. Emphasize that it is important to continue giving the antibiotic
+ even when the infant is improving. She should also continue treating the local infection at
+ home for 5 days (cleaning and applying gentian violet to the skin pustules or umbilicus).
+
+
+
+
+                                                 27
+11.2 Conduct follow up Visit for JUNDICE
+
+
+JAUNDICE
+After 1 day:
+Reassess infant for jaundice
+Look for jaundice. Are palms and soles yellow?
+TREATMENT
+    If the infant has yellow palms and soles , classify as SEVER JAUNDICE and refer
+       URGENTLY to the hospital.
+    If the infant does not have yellow palms and soles, but jaundice has not
+       decreased, advise the mother on home care and continue to follow up in 1 day until
+       jaundice start to decrease .
+    If jaundice has started decreasing, reassure the mother and ask her to continue home
+       care. Ask her to return for follow up at 2 weeks of age.
+    If jaundice continues beyond two weeks of age, refer the young infant to a hospital
+       for further assessment
+
+
+
+
+                                            28
+11.3 Conduct follow up visit for DIARRHEA
+
+
+DIARRHOEA
+After 2 days:
+· ASK: Has the diarrhoea stopped?
+If the diarrhoea has not stopped , assess, classify and treat the young infant for diarrhoea (see
+ASSESS AND CLASSIFY MODULE)
+if diarrhoea has stopped, tell the mother to continue exclusive breastfeeding.
+
+
+
+
+                                                29
+11.4   CONDUCT FOLLOW UP VISIT FOR FEEDING PROBLEM
+
+ When a young infant who had a feeding problem returns for follow-up in 2 days, follow these
+ instructions:
+
+
+
+   FEEDING PROBLEM
+     After 2 days:
+     Reassess feeding. > See ―Then Check for Feeding Problem or Low
+     Weight‖ above.
+     Ask about any feeding problems found on the initial visit.
+      Counsel the mother about any new or continuing feeding problems. If you counsel the
+
+       mother to make significant changes in feeding, ask her to
+       bring the young infant back again.
+
+       If the young infant is low weight for age, ask the mother to return 14 days after the
+ Reassess  the feeding by asking the questions in the young infant assessment box, "Then Check
+         initial
+ for Feeding     visit toormeasure
+              Problem              the young
+                            Low Weight."     infant’s
+                                           Assess     weight gain.
+                                                  breastfeeding if the infant is breastfed.
+
+ Refer Exception:
+       to the young infant's chart or follow-up note for a description of the feeding problem
+       If you do not think that feeding will improve, or if the young infant has lost weight,
+       refer the child.
+
+ found at the initial visit and previous recommendations. Ask the mother how successful she has
+ been carrying out these recommendations and ask about any problems she encountered in doing
+ so.
+
+  Counsel the mother about new or continuing feeding problems. Refer to the
+ recommendations in the box "Counsel the Mother About Feeding Problems" on the COUNSEL
+ chart and the box "Teach Correct Positioning and Attachment for Breastfeeding" on the
+ YOUNG INFANT chart.
+
+ For example, you may have asked a mother to stop giving an infant drinks of water or juice in a
+ bottle, and to breastfeed more frequently and for longer. You will assess how many times she is
+ now breastfeeding in 24 hours and whether she has stopped giving the bottle. Then advise and
+ encourage her as needed.
+
+  If the young infant is low weight for age, ask the mother to return 14 days after the initial
+ visit. At that time, you will assess the young infant's weight again.
+ Young infants are asked to return sooner to have their weight checked than older infants and
+ young children. This is because they should grow faster and are at higher risk if they do not
+ gain weight.
+
+
+
+
+                                                30
+11.5   CONDUCT FOLLOW UP VISIT FOR LOW WEIGHT
+ When a young infant who was classified as LOW WEIGHT returns for follow-up in
+ 14 days, follow these instructions:
+
+   LOW WEIGHT
+     After 14 days:
+     Weigh the young infant and determine if the infant is still low weight for age.
+     Reassess feeding. See ―Then Check for Feeding Problem or Low Weight‖ above.
+
+          If the infant is no longer low weight for age, praise the mother and encourage her to
+           continue.
+
+          If the infant is still low weight for age, but is feeding well, praise the mother. Ask her
+           to have her infant weighed again within a month or when she returns for
+           immunization.
+
+          If the infant is still low weight for age and still has a feeding problem, counsel the
+           mother about the feeding problem. Ask the mother to return again in 14 days (or
+           when she returns for immunization, if this is within 2 weeks). Continue to see the
+           young infant every few weeks until the infant is feeding well and gaining weight
+           regularly or is no longer low weight for age.
+
+           Exception:
+           If you do not think that feeding will improve, or if the young infant has lost weight,
+           refer to hospital.
+ Determine if the young infant is still low weight for age. Also reassess his feeding by asking
+ the questions in the assessment box, "Then Check for Feeding Problem or Low Weight."
+ Assess breastfeeding if the young infant is breastfed.
+
+  If the young infant is no longer low weight for age, praise the mother for feeding the
+ infant well. Encourage her to continue feeding the infant as she has been or with any additional
+ improvements you have suggested.
+
+  If the young infant is still low weight for age, but is feeding well, praise the mother. Ask
+ her to have her infant weighed again within a month or when she returns for immunization.You
+ will want to check that the infant continues to feed well and continues gaining weight. Many
+ young infants who were low birthweight will still be low weight for age, but will be feeding
+ and gaining weight well.
+
+  If the young infant is still low weight for age and still has a feeding problem, counsel the
+ mother about the problem. Ask the mother to return with her infant again in 14 days. Continue
+ to see the young infant every few weeks until you are sure he is feeding well and gaining
+ weight regularly or is no longer low weight for age.
+
+
+
+
+                                                  31
+11.6   CONDUCT FOLLOW UP VISIT FOR THRUSH
+
+ When a young infant who had thrush returns for follow-up in 2 days, follow these instructions:
+
+
+
+  THRUSH
+    After 2 days:
+    Look for ulcers or white patches in the mouth (thrush).
+    Reassess feeding. > See ―Then Check for Feeding Problem or Low Weight‖ above.
+
+          If thrush is worse, or the infant has problems with attachment or suckling, refer
+           to hospital.
+
+          If thrush is the same or better, and if the infant is feeding well, continue half-
+           strength gentian violet (0.25%) for a total of 5 days.
+
+
+ Check the thrush and reassess the infant's feeding.
+
+  If the thrush is worse or the infant has problems with attachment or suckling, refer to
+ hospital. It is very important that the infant be treated so that he can resume good feeding as
+ soon as possible.
+
+  If the thrush is the same or better and the infant is feeding well, continue the treatment
+ with half-strength gentian violet (0.25)%. Stop using gentian violet after 5 days.
+
+
+
+
+                                                 32
+                                         EXERCISE E
+
+ Read about each young infant who came for follow-up and answer the questions. Refer to
+ YOUNG INFANT chart as needed.
+
+ 1.   Mariam is a 5 weeks old. The health worker classified her as having LOCAL
+ BACTERIAL INFECTION because she had some skin pustules on her buttocks.
+ Her mother got amoxycillin tablets to give at home, and learned how to clean the skin and
+ apply gentian violet at home. She has returned for a follow-up visit after 2 days. Mariam has
+ no new problem.
+ i) How would you reassess Mariam?
+ ……………………………………………………………………………………………………
+ ……………………………………………………………………………………………………
+ ……………………………………………………………………………………………………
+ When you look at the skin of her buttocks, you see that there are fewer pustules and less
+ redness.
+ ii) What treatment does Mariam need now?
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+
+ 2.    Hafiya, a 5-weeks-old infant, was brought to the clinic 2 days ago. During that visit she
+ was classified with a FEEDING PROBLEM because she was not able to attach well to the
+ breast. She weighed 3.25 kg (not low weight for age). She was breastfeeding 5 times a day. She
+ also had white patches of thrush in her mouth. Hafiya's mother was taught how to position her
+ infant for breastfeeding and how to help her attach to the breast. She was advised to increase
+ the frequency of feeding to at least 8 times per 24 hours and to breastfeed as often as the infant
+ wants, day and night. She was taught to treat thrush at home. She was also asked to return for
+ follow-up in 2 days. Today, Hafiya's mother has come to see you for follow-up. She tells you
+ that the infant has no new problem.
+ i) How would you reassess this infant?
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+ Hafiya's weight today is 3.35 kg. When you reassess the infant's feeding, the mother tells you
+ that she is feeding easily. She is now breastfeeding Hafiya at least 8 times a day, and sometimes
+ more when she wants. She is not receiving other foods or drinks.You ask the mother to put
+ Hafiya to the breast. When you check the attachment, you note that the infant's chin is touching
+ the breast. The mouth is wide open with the lower lip turned outward. There is more areola
+ visible above than below the mouth. The infant is suckling effectively. You look in her mouth.
+  You cannot see white patches now.
+
+ ii) How will you treat this infant?
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+………………………………………………………………………………………………………
+
+                                                 33
+

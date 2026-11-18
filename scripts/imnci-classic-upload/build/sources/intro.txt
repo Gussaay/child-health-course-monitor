@@ -1,0 +1,682 @@
+INTEGRATED MANAGEMENT OF CHILDHOOD ILLNESSES
+                  (IMCI)
+
+           INTRODUCTION
+
+                    2023
+Integrated Management of Childhood Illness was prepared by the World
+Health Organization’s Division of Diarrhoeal & Acute Respiratory
+Disease Control (CDR), now the Division of Child Health and
+Development (CDH), and UNICEF through a contract with ACT
+International, Atlanta, Georgia, USA.
+
+                                 2
+                 CONTENTS
+
+ INTRODUCTION………………………………………….. 1
+ THE CASE MANAGEMENT PROCESS…………………. 2
+ PURPOSE OF THIS TRAINING COURSE………..……… 4
+ COURSE METHODS AND MATERIALS………………... 5
+ HOW TO SELECT THEC APPROPRIATE CASE
+  MANAGEMENT CHARTS………………………………...6
+ GLOSSARY………………………………………………… 7
+
+                     3
+                                INTRODUCTION
+
+Pneumonia, diarrhoea, malaria, measles, and malnutrition cause more than 70% of
+deaths in children under five years of age. There are feasible and effective ways that
+health workers in clinics can care for children with these illnesses and prevent most of
+these deaths. WHO & UNICEF used updated technical findings to describe
+management of these illnesses in a set of integrated (combined) guidelines, instead of
+separate guidelines for each illness. They then developed this training package to
+teach the integrated case management process to health workers who see sick
+children.
+
+Health workers have experience treating common childhood illnesses. They are often
+trained using separate, disease-specific guidelines, such as guidelines for treating
+malaria, or guidelines for managing diarrhoea. However, they may have difficulty
+combining different guidelines when caring for a sick child with several problems.
+They may not know which problems are most important to treat. With limited time
+and drugs, health workers may not be able to identify and treat all of a sick child’s
+problems. There are important relationships between the illnesses. For example,
+repeated diarrhoeal episodes often lead to malnutrition; diarrhoea, which often
+accompanies or follows measles, is particularly severe. Therefore, effective case
+management needs to consider all of a child’s symptoms.
+
+                                           4
+A health worker can follow the integrated case management process taught in this
+course to quickly consider all of a child’s symptoms and not overlook any problems.
+The health worker can determine if a child is severely ill and needs urgent referral. If
+not, the health worker can follow the guidelines to treat the child’s illnesses. The
+guidelines also describe counseling for mothers and other caretakers.
+
+The case management guidelines incorporate existing WHO guidelines, such as those
+for managing diarrhoeal disease, acute respiratory infections, malaria, and for
+immunization. In this course, health workers will see how the disease-specific
+guidelines fit into a more comprehensive and efficient process for management of a
+sick child.
+
+The case management guidelines describe how to care for a child who presents at a
+clinic with an illness for the first time or for a scheduled follow-up visit to check the
+child’s improvement. They address most but not all of the major reasons a child is
+brought to a clinic for illness. A child returning with chronic problems or less
+common illnesses may require special care, which is not described in this course. The
+course does not describe the management of trauma or other acute emergencies due to
+accidents or injuries.
+
+Although AIDS is not addressed specifically, the case management guidelines address
+the most common reasons children with HIV seek care: diarrhoea and respiratory
+infections. When a child who is believed to have HIV presents with any of these
+common illnesses, he can be treated like any child coming in with the illness for the
+first time. If a child’s illness does not respond to the standard treatments taught in this
+course, or if a child becomes severely malnourished, or returns to the clinic
+repeatedly, he is referred to a hospital for special care. This results in children with
+AIDS being referred.
+
+Case management can be effective only to the extent that families bring their sick
+children to a trained health worker for care in a timely way. If a family waits to bring
+a child to a clinic until the child is extremely sick or takes the child to an untrained
+provider, the child is more likely to die from the illness. Therefore, teaching families
+when to seek care is an important part of the case management process.
+
+                                            5
+THE CASE MANAGEMENT PROCESS
+
+The case management process is presented on a series of charts, which show the
+sequence of steps and provide information for performing them. The charts describe
+the following steps:
+     Assess the child or young infant.
+     Classify the illness.
+     Identify treatment.
+     Treat the child.
+     Counsel the mother.
+     Give follow-up care.
+
+These steps are probably similar to the way you care for sick children now, though
+you may have learnt different words ton describe them. The step called “assess the
+child” means taking a history and doing a physical examination. “Classify the illness”
+means making a decision on the severity of the illness. You will select a category, or
+“classification” for each of the child’s major symptoms, which corresponds to the
+severity of the disease. Classifications are not specific disease diagnosis. Instead, they
+are categories that are used to determine treatment.
+
+The charts recommend appropriate treatment for each classification. When using this
+process, selecting a classification on the chart is sufficient to allow you to identify
+treatment for a child. For example, a child with the classification VERY SEVERE
+FEBRILE DISEASE could have meningitis, severe malaria, or septicaemia. The
+treatments listed for VERY SEVERE FEBRILE DISEASE will be appropriate
+because they have been chosen to cover the most important diseases included in this
+classification.
+
+“Treat” means giving treatment in clinic, prescribing drugs or other treatments to be
+given at home, and also teaching the mother how to carry out the treatments. “Counsel
+the mother” includes assessing how the child is fed and telling her about the foods and
+fluids to give the child and when to bring the child back to the clinic.
+
+The case management process for sick children age 2 months up to 5 years is
+presented on three charts titled:
+
+    ASSESS AND CLASSIFY THE SICK CHILD
+    TREAT THE CHILD
+    COUNSEL THE MOTHER
+
+Management of the young infant age up to 2 months is somewhat different from older
+infants and children. It is described on a different chart titled ASSESS, CLASSIFY,
+AND TREAT THE SDICK YOUNG INFANT.
+
+                                            6
+The charts are designed to help health workers manage children correctly and
+efficiently. This course trains you to use the charts and gives you clinical practice
+managing sick children. After the course, the charts will help you recall and apply
+what you have learnt when managing sick children at your clinic.
+
+PURPOSE OF THIS TRAINING COURSE
+This training course is designed to teach the case management process to doctors,
+nurses, and other health workers who see sick children and infants. It is a case
+management process for a first-level facility such as a clinic, a health center, or an
+outpatient department of a hospital. The course uses the word “clinic” throughout to
+mean any such setting.
+
+You will learn to manage sick children according to the case management charts,
+including:
+
+       Assessing signs and symptoms of illness, and nutritional, immunization, and
+        vitamin A supplementation status,
+
+       Classify the illness,
+
+       Identifying treatments for the child’s classifications and deciding if a child
+        needs to be referred,
+
+       Giving important pre-referral treatments( such as a first dose of an antibiotic,
+        vitamin A, quinine injection, diazepam given rectally, rapid acting
+        bronchodilator and treatment to prevent low blood sugar) and referring the
+        child,
+
+       Providing treatments in the clinic, such as oral rehydration therapy, vitamin
+        A, and immunization,
+
+       Teaching the mother to give specific treatment at home, such as an oral
+        antibiotic or antimalarial, oral salbutamol, and paracetamol,
+
+       Counseling the mother about feeding and when to return,
+
+       When a child comes for scheduled follow-up, reassess the problem and
+        provide appropriate care.
+
+                                           7
+COURSE METHODS AND MATERIALS
+
+In addition to the case management charts, you will receive a series of booklets, called
+modules, which explain each step. They are titled::
+
+           1.   Assess and Classify the Sick Child Age 2 Months Up To 5 Years.
+           2.   Identify Treatment.
+           3.   Treat the Child.
+           4.   Counsel the Mother.
+           5.   Management of the Sick Young Infant Age Up To 2 Months.
+           6.   Follow-up.
+
+The modules include exercises that will help you learn the steps. Most exercises
+provide clinical information describing a sick child and ask questions. Some exercises
+use photographs or video. You will complete a module by reading it and working
+through the exercises.
+For approximately half of each day, you will go to nearby clinics to observe and
+practice managing sick children. In these clinical sessions you will assess, classify,
+and treat sick children, including teaching their mothers how to care for them at home.
+
+The clinical sessions give you opportunities to try the skills that you learn about in the
+modules. You may ask questions and receive guidance if difficulties arise. By the end
+of the course, you will have experience managing children according to the case
+management process and can feel comfortable continuing at your own clinic.
+
+A facilitator will guide you through the activities and exercises in the module, lead
+group discussions, and review your individual work on the modules. A facilitator will
+also supervise your practice during clinical sessions. You are encouraged to discuss
+any questions or problems with a facilitator.
+
+                                            8
+HOW TO SELECT THE APPROPRIATE CASE MANAGEMENT
+CHARTS?
+
+Most clinics have a procedure for registering children and identifying whether they
+have come because they are sick, or for some other reason, such as for a well-child
+visit or an immunization session, or for care of an injury received in an accident.
+When a woman brings a child because the child is sick (due to illness, not trauma) and
+the child is sent to you for attention, you need to know the age of the child in order to
+select the appropriate chart and begin the assessment process. Depending on the
+procedure for registering patients at your clinic, the child’s name, age, and other
+information such as address may have been recorded already. If not, you may begin
+by asking the child’s name and age.
+
+Decide which age group the child is in:
+           Age up to 2 months.
+           Age 2 months up to 5 years.
+
+If the child is age 2 months up to 5 years, select the chart ASSESS AND CLASSIFY
+THE SICK CHILD AGE 2 MONTHS UP TO 5 YEARS. “Up to 5 years” means the
+child has not yet had his fifth birthday. For example, this age group includes a child
+who is 4 years 11 months but not a child who is 5 years old.
+
+A child who is 2 months old would be in the group2 months up to 5 years, not in the
+group up to 2 months.
+
+If the child is not yet 2 months of age, the child is considered a young infant. Use the
+chart ASSESS, CLASSIFY AND TREAT THE SICK YOUNG INFANT.
+
+In the next module, Assess and Classify the Sick Child, you will learn how to assess
+and classify a child who is age 2 months up to 5 years. How to manage a young infant
+is taught later in the module Management of the Sick Young Infant.
+
+                                           9
+                                   GLOSSARY
+ Abscess: a collection of pus.
+
+ Sterile abscess: an abscess that contains bacteria.
+
+ Abdomen: the area of the body containing the stomach and bowel.
+
+Active feeding: encouraging a child to eat, for example, by sitting with him and helping to get
+the spoon into his mouth.
+
+ Active neurological disease of the nervous system: epilepsy and other current diseases of the brain
+ or spinal cord. This does not include permanent, old neurological problems from cerebral palsy,
+ polio, or injuries.
+
+ AIDS: Acquired Immune Deficiency Syndrome, caused by infection with the Human
+ Immunodeficiency Virus (HIV). AIDS is the final and most severe phase of HIV infection. The
+ immune system works poorly, and the patient may have various symptoms and diseases (such as
+ diarrhoea, fever, wasting, pneumonia).
+
+ Amoebiasis: amoebic dysentery; dysentery caused by E. histolytica.
+
+ Allergies: problems such as sneezing, a rash, or difficult breathing that affect certain people when
+ specific things are breathed in, eaten, injected, or touched.
+
+Antidiarrhoeal drugs: drugs that are claimed to decrease or stop diarrhoea, such as antimotility
+ drugs. These drugs are not useful for children with diarrhoea. Some are dangerous.
+
+Antiemetics: drugs that control vomiting.
+
+Antifolate drugs: drugs that act against folate. Both cotrimoxazole (trimethoprim-sulphamethoxazole
+ and the antimalarial sulfadoxine-pyramethamine (Fansidar) are antifolate drugs.
+
+Antimotility drugs: drugs that slow the movement of contents through the bowel by reducing its
+ muscular activity.
+
+ Appetite: the desire to eat.
+
+ Areola: the dark circle of skin around the nipple of the breast.
+
+ Aspiration: inhaling (breathing in) fluids.
+
+ Assess: to consider the relevant information and make a judgment. As used in this course, to examine
+ the child and identify the signs of illness.
+
+Axillary temperature: temperature measured in the armpit.
+
+BCG: an immunization to prevent tuberculosis, given at birth. The initials stand for Bacille
+ Calmette-Guerin.
+
+                                                10
+Bowel: Intestine.
+
+Breast cancer: malignant tumour that starts in the breast.
+
+Breast milk substitute: Formula or milk given instead of or in addition to breast milk. An
+example is cow’s milk made as follows: mix half a cup (100ml) boiled whole cow’s milk with
+one quarter of a cup (50ml) of boiled water and 2 level teaspoons (10grams) of sugar.
+
+Cerebral malaria: Falciparum malaria affecting the brain.
+
+Checking questions: questions intended to find out what someone understands and what needs
+further explaining. After teaching a mother about feeding, a health worker might ask the
+checking question, “What foods will you feed your child?”
+
+Chest indrawing: when the lower chest wall(lower ribs) goes in when a child breathes in. In a
+child age 2 months up to 5 years, if chest indrawing is clearly visible and present all the time
+during an examination, it is a sign of SEVERE PNEUMONIA OR VERY SEVERE DISEASE.
+
+ Severe chest indrawing: chest indrawing that is very deep and easy to see. In a young infant,
+ mild chest indrawing is normal, but severe chest indrawing is a sign of serious illness.
+
+Chronic: lasting a long time or recurring frequently.
+
+Classify: as used in this course, to select a category of illness and severity (called a
+classification) based on a child’s symptoms and signs.
+
+Clinic: as used in this course, any first level outpatient health facility such as a dispensary, rural
+ health post, health center, or the outpatient department of a hospital.
+
+Communication skills: as used in this course, skills used in teaching and counseling with
+mothers, including: ASK AND LISTEN, PRAISE, ADVISE, AND CHECK
+UNDERSTANDING.
+
+Complementary foods: foods given in addition to breast milk, starting when a child is 4-6
+months of age. By age 6 months, all children should receive a nutritious, thick complementary
+food, such as cereal mixed with oil and bits of meat, vegetables, or fish. Complementary foods
+are sometimes called “weaning foods”.
+
+Confidence: a feeling of being able to succeed.
+
+Contraindication: a situation or condition in which a certain treatment, procedure, or drug
+ should not be used.
+
+Corneal rupture: bursting of the cornea, that is, the clear outer layer of the eye.
+
+Counsel: as used in this module, to teach or advise a mother as part of the discussion which
+includes: asking questions, listening to the mother’s answers, praising and/or giving relevant
+advice, helping to solve problems, and checking understanding.
+
+                                           11
+Counseling: the process of teaching or advising as described above.
+
+Deficiency: a lack or shortage. Vitamin A deficiency is shortage of vitamin A in the body.
+
+Dehydration: loss of a large amount of water and salts from the body.
+
+Diagnostic test: special testing, such as laboratory tests or X rays, to determine the type or cause
+of illness.
+
+Digest: to process food so it can be absorbed and used in the body.
+
+Digital watch: a watch that shows the time in digits(numerals) instead of with moving hands.
+
+Disease: as used in this course, a specific illness or group of illnesses, classified on the basis of
+signs and symptoms, for example, “VERY SEVERE FEBRILE DISEASE’. This classification
+includes several illnesses such as meningitis, cerebral malaria, and septicaemia.
+
+DPT: immunization to prevent diphtheria, pertussis(whooping cough), and tetanus. For full
+protection a child needs 3 injections; at 6 weeks, 10 weeks, and 14 weeks.
+
+Energy-rich: full of ingredients that that give energy(or calories), such as starches or oil.
+
+ Engorgement: a condition in which a mother’s breasts are swollen, hard, and painful because
+ they are too full of milk.
+
+Episodes: occurrence of a disease, Diarrhoeal episodes are occurrences of diarrhoea.
+
+Essential: necessary. Essential vitamins and minerals (such as vitamins and iron) are those
+ necessary for good health.
+
+Essential fatty acids: fats that are necessary for a baby’s growing eyes and brain. These fatty
+ acids are not present in cow’s milk or most brands of formula milk.
+
+ Exclusive breastfeeding: giving a child only breast milk and no additional food, water, or other
+ fluids (with the exception of medicines and vitamins, if needed).
+
+Expertise: a high level of skill in a particular area.
+
+Falciparum malaria: malaria caused by the parasite Plasmodium falciparum.
+
+Family foods: foods ordinarily eaten by the family
+
+Febrile: having fever.
+
+Feeding assessment: the process of asking questions to find out about a child’s usual feeding
+and feeding during illness. (Appropriate questions are listed on the COUNSEL chart).
+
+ Feeding bottle: a bottle with a nipple or teat that a child sucks on. Feeding bottles should not be
+  used.
+
+                                            12
+Feeding problems: differences between a child’s actual feeding and feeding recommendations
+          listed on the COUNSEL chart, and other problems such as breast feeding, use of a
+          feeding bottle, lack of active feeding, or not feeding well during illness.
+
+Femoral artery: the main artery of the leg. Its pulsation can be felt in the groin (upper inner
+          thigh).
+
+Femoral vein: the main vein of the leg. It is located just medial to the femoral artery (that is,
+          towards the middle of the body from the femoral artery).
+
+Fever: as used in this course, fever includes:
+               A history of fever
+               Feeling hot to the touch
+               An axillary temperature of 37.5ºC (99.5ºF) or higher, or a rectal temperature
+                   of 38ºC (100.4ºF) or higher.
+
+First-level health facility: a facility such as a health center, clinic, rural health post, dispensary,
+            or outpatient department of a hospital, which is considered the first facility within the
+            health system where people seek care. In this course, the term clinic is used for any
+            first-level health facility.
+
+Folate: folic acid, a vitamin used in treatment of nutritional anaemia.
+
+Follow-up visit: a return visit requested by the health worker to see if treatment is working or if
+          further treatment or referral is needed.
+
+Fontanelle: the soft spot on top of a young infant’s head, where the bones of the head have not
+           come together.
+
+Full-term: word used to describe a baby born after 37 weeks of pregnancy.
+Glucose: a sugar used in oral rehydration salts and in IV fluids.
+
+Gruel: a food made by boiling cereal meal or legumes in milk or water. Gruel may be made
+           thick like porridge or thin like a drink. For complementary feeding, gruel should be
+           made thick.
+
+Grunting: soft, short sounds that a young infant makes when breathing out. Grunting occurs
+          when a young infant is having trouble breathing.
+
+Guilty: a feeling of having done wrong.
+
+Haemoglobin: a protein containing iron that carries oxygen and makes the blood red.
+
+Hepatitis B virus: one of the several viruses that causes hepatitis; this virus also causes liver
+           cancer. This virus is spread easily by blood, so needles and syringes must be sterile.
+
+HIV: Human Immunodeficiency Virus. HIV is the virus that causes AIDS.
+
+Hookworm: a small worm that may live as a parasite in a person’s intestines and suck blood.
+        This blood loss may lead to anaemia.
+
+                                            13
+Holoendemic Malaria area: high-risk malaria area where transmission is throughout the year.
+
+Hospital: as used in this course, any health facility with inpatient beds, supplies, and expertise to
+           treat a very sick child.
+
+Hygienically: using clean utensils and clean hands, avoiding germs.
+
+Hypernatraemia: too much sodium in the blood.
+
+Hypothermia: low body temperature (below 35.5ºC Axillary or 36ºC rectal temperature).
+
+Hypoxia: a condition in which too little oxygen is reaching the organs of the body.
+
+Illness: sickness. As described in this course, 90the symptoms and signs of illness need to be
+            assessed and classified in order to select treatment.
+
+Immune suppression: weakening of the immune system so that the body has little resistance to
+         disease.
+
+Immune system: the system that helps the body resist disease by producing antibiotics or special
+         cells to fight disease-causing agents.
+
+Immunization status: a comparison of the child’s past immunizations with the recommended
+         immunization schedule. Immunization status describes whether or not a child has
+         received all of the immunizations recommended for his age, and, if not, what
+         immunizations are needed now.
+
+Incompetent: lacking the ability or skill to do something.
+
+Infant: as used in this course, a baby up to 12 months.
+
+Young infant: as used in this course, a baby age 1 week up to 2 months.
+
+Infant feeding formulas: concentrated milk or soy products (to be combined with water) sold as
+           a substitute for breast milk.
+
+Initial visit: the first visit to a health worker for an episode of an illness or problem.
+
+Inpatient: a patient who stays at a health facility and receives a bed and food as well as
+           treatment.
+
+Integrated: combined.
+
+Integrated case management process: a process for treating patients that includes
+          consideration of all of their symptoms.
+
+Intramuscular (IM) injection: an injection (shot) put into a muscle, usually of the thigh.
+
+Intravenous (IV) infusion: continuous slow introduction of a fluid into a vein.
+
+                                            14
+Intravenous (IV) injection: an injection (shot) put directly into a vein.
+
+Jaundiced: having a yellow colour in the eyes and skin.
+
+Koplik spots: spots that occur in the mouth inside the cheek during the early stages of measles.
+          They are small, irregular, bright red spots with a white spot in the center. They do not
+          interfere with drinking or eating and do not need treatment.
+
+Kwashiorkor: a type of protein-energy malnutrition due to lack of protein in the diet. A child
+         with kwashiorkor has oedema, which may cause his limbs to appear puffy. The child
+         may have sparse hair and dry scaly skin.
+
+Lactulose: a sugar present in milk.
+
+Local: present in the nearby geographic area. For example, local foods are those found in the
+           area. (See “local infection” below for another meaning of local).
+
+Local infections: infections located only in a specific place on the body, for example, in the eye
+           or in the mouth.
+Low blood sugar: too little sugar in the blood, also called hypoglycemia.
+                                                12
+Low birthweight: low weight at birth, due either to poor growth in the womb or to prematurity
+           (being born early). Children less than 2500 grams have low birthweight.
+
+Malignant: tending to spread and result in death.
+
+Marasmus: a type of protein-energy malnutrition due to long-term lack of calories and protein.
+        A child with marasmus appears to be just like “skin and bones”.
+
+Mastoid: the skull bone behind the ear.
+
+Measles complications: problems or infections that occur during or after measles. Some
+          examples of measles complications are diarrhoea, pneumonia, stridor, mouth ulcers,
+          ear infection, and eye infection. A less common complication is encephalitis, an
+          inflammation of the brain.
+
+Meningitis: a dangerous infection in which the spinal cord and the membranes surrounding the
+          brain and spinal column become infected.
+
+Midwife: a health care worker who assists women in childbirth and may also provide other
+          health care.
+
+Main symptoms: as used in this course, those symptoms which the health worker should ask the
+         mother about when assessing the child. The four main symptoms listed on the
+         ASSESS AND CLASSIFY chart are: cough or difficult breathing, diarrhoea, fever,
+         and ear problem.
+
+                                          15
+Nasogastric (NG) tube: a tube inserted through a patient’s nose to his stomach. An NG tube
+          may be used to give ORS solution to severely dehydrated patients when IV therapy is
+          not available, or to feed a severely malnourished child who cannot eat.
+
+Nutrient: a substance in food that helps one grow and be healthy, such as protein, minerals, and
+           vitamins.
+
+Nutrient-rich: full of the essential nutrients. These include proteins as well as vitamins and
+           minerals.
+
+Nutritional status: the degree to which a child shows or does not show certain signs of
+           malnutrition or anaemia or low weight. In this course, a child’s nutritional status may
+           be classified as:     SEVERE MALNUTRITION OR SEVERE ANAEMIA,
+           ANAEMIA OR VERY LOW WEIGHT, or NO ANAEMIA AND NOT VERY LOW
+           WEIGHT.
+
+Oedema: swelling from excess fluid under the skin. Oedema usually occurs in the lower legs
+         and feet, sometimes elsewhere.
+
+Oppoprtunistic infection: infections caused by microorganisms, which the body’s immune
+         system is normally able to fight off. When the immune system is weakened, as in
+         AIDS, opportunistic infections can take hold. For example, in a healthy person, there
+         are organisms in the mouth, which do not normally cause infection; however, in a
+         person with a weakened immune system, these same organisms may cause oral
+         thrush.
+
+Outreach service (activity): vaccination activities conducted in villages or vaccination sites,
+          which are not within easy walking distance of the health center.
+
+Outreach team, mobile team: is a group of health workers who travel from the health center to
+          a village or vaccination site to conduct outreach vaccination sessions and return to
+          the health center in the same day.
+
+Oral Rehydration Salts (ORS): a mixture of glucose and salt conforming to the WHO
+         recommended formula (in grams per liter): sodium chloride 3.5; trisodium citrate
+         dehydrate 2.9, or sodium bicarbonate 2.5; potassium chloride 1.5; and glucose 20.0.
+
+OPV: oral polio vaccine. To prevent polio, it is given in 4 doses: at birth, 6weeks, 10 weeks, and
+          14 weeks.
+
+Outpatient: a patient who does not stay overnight at a health facility.
+
+Ovarian cancer: malignant tumour starting in the ovary (the female sex glands in which eggs
+          are formed).
+
+Overwhelmed: feeling as though there is too much to be remembered.
+
+Parasite: an organism living in or on another organism and causing it harm.
+
+Pathogen: an organism or microorganism that causes disease.
+
+                                          16
+Persist: to remain or endure.
+
+Practical: possible to do with the time and resources available.
+
+Pre-referral: before referral to a hospital.
+
+Premature: born early, before 37 weeks of pregnancy.
+
+Protein: a substance in food made up of amino acids needed for adequate growth. Meat, fish,
+           eggs, milk, and beans are examples of foods containing protein.
+
+Protein-energy malnutrition: a condition caused by lack of enough protein or energy in the
+          diet, or by frequent illness.
+
+Pulses: legumes, such as peas, beans, or lentils.
+Pustule: a reddish bump on the skin containing pus.
+
+Radial pulse: the pulse felt over the radial artery, which is the main blood vessel at the wrist on
+          the outside of the thumb.
+
+Reassessment: as used in this course, to examine the child again for signs of specific illness to
+         see if the child is improving.
+
+Full reassessment: to do the entire assessment process on the ASSESS AND CLASSIFY chart
+           again to see if there has been improvement and also to assess and classify any new
+           problems.
+
+Recommendations: advice, instructions that should be followed.
+
+Recurrent convulsions: spasms or fits that occur repeatedly.
+
+Reduce, reduction: decrease.
+
+Referral: as used in this course, sending a patient for further assessment and care at a hospital.
+
+Relactation: starting breastfeeding again and producing breast milk after stopping.
+
+Respiratory distress: discomfort from not getting enough air into the lungs.
+
+Semi-solid food: food that is part solid and part liquid. A soft wet food such as gruel or porridge
+           is semi-solid.
+
+Septicemia: an infection of the blood, also called sepsis in this course.
+
+Severe classification: as used in this course, a very serious illness requiring urgent attention and
+           usually referral or admissions for inpatient care. Severe classifications are listed in
+           pink-coloured rows on the ASSESS AND CLASSIFY CHART.
+
+                                           17
+Shock: a dangerous condition with severe weakness, lethargy, or unconsciousness, cold
+         extremities, and fast, weak pulse. It is caused by diarrhoea with very severe
+         dehydration, hemorrhage, burns, or sepsis.
+
+Signs: as used in this course, physical evidence of a health problem, which the health worker
+           observes by looking, listening, or feeling. Examples of signs include: fast breathing,
+           chest indrawing, sunken eyes, stiff neck, pus draining from the ear…etc.
+
+Stable: staying the same rather than getting worse.
+
+Stridor: a harsh musical voice heard during inspiration.
+
+Symptoms: as used in this course, health problems reported by the mother such as cough,
+          diarrhoea, or ear pain.
+Thrush: ulcers or white patches on the inside of the mouth and tongue caused by a yeast
+          infection.
+
+Trophozoites: stage of a protozoan organism such as Giardia lamblia or E. histolytica; the stage
+          that causes tissue damage.
+
+Ulcer: a painful open sore.
+       Mouth ulcers are sores on the inside of the mouth and lips or on the tongue. These may
+occur with measles and may be red or have white coating on them. They make it difficult to eat
+or drink.
+
+Upright: vertical (standing up).
+
+Semi-upright: partly upright, leaning.
+
+Urgent: requiring immediate attention, important to save a child’s life.
+
+Urgent referral: sending a patient immediately for further care at a hospital.
+
+Uterus: womb.
+
+Vulnerable: endangered, likely to become ill.
+
+Weaning foods: another term for complementary foods, given in addition to breastmilk starting
+at 4-6 months of age.
+
+Wheezing: a soft musical voice heard during expiration.
+
+Whipworm: a small worm that may live as a parasite in a person’s intestine and suck blood.
+This blood loss may lead to anaemia and diarrhoea.
+
+                                          18
+
