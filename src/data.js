@@ -4290,7 +4290,7 @@ export const LIVE_LIST_KEYS = Object.keys(LIVE_LISTS);
 
 // Turns a snapshot into { upserts, removed }. A record this device is still
 // writing (pending, no server time yet) is skipped: the confirmed copy follows.
-const deltaChanges = (snap, map = (d) => d, keep = () => true, collection = 'other') => {
+export const deltaChanges = (snap, map = (d) => d, keep = () => true, collection = 'other') => {
     const upserts = [];
     const removed = [];
     // The server sends (and Firestore bills) one read for each changed record,
@@ -4335,41 +4335,6 @@ export function subscribeFacilityDelta(filters, sinceMs, onChange, onError) {
         const changes = deltaChanges(snap, undefined, facilityLocalFilter(filters), 'healthFacilities');
         if (changes.upserts.length || changes.removed.length) onChange(changes);
     }, onError);
-}
-
-// --- LIVE COURSE RECORDS ---
-// One open course is kept current by listeners that ask the server only for
-// its records changed after a server-time mark (same idea as
-// subscribeListDelta). An unchanged course costs nothing; each record another
-// device adds or edits costs one read per device that has the course open.
-// Each needs a composite index (courseId + the stamp field, see
-// firestore.indexes.json). Without it the server refuses the listener and
-// onError runs, so callers fall back to a one-off full read.
-export function subscribeCourseRecords(col, courseId, sinceMs, onChange, onError, stampField = 'lastUpdatedAt') {
-    if (!courseId) return () => {};
-    const q = query(
-        collection(db, col),
-        where("courseId", "==", courseId),
-        where(stampField, ">", Timestamp.fromMillis(Math.max(0, sinceMs || 0))),
-    );
-    return onSnapshot(q, (snap) => {
-        const changes = deltaChanges(snap, undefined, undefined, col);
-        if (changes.upserts.length || changes.removed.length) onChange(changes, snap.metadata?.fromCache === true);
-    }, onError);
-}
-
-// The observations of some cases, from the server. A case edit replaces its
-// observations (the old ones are deleted), so a changed case's observations
-// are read again as a set instead of being listened to one by one.
-export async function listObservationsForCases(caseIds = []) {
-    const ids = [...new Set(caseIds.filter(Boolean))];
-    const out = [];
-    for (let i = 0; i < ids.length; i += 30) {
-        const q = query(collection(db, "observations"), where("caseId", "in", ids.slice(i, i + 30)));
-        const snap = await getDocs(q);
-        snap.docs.forEach(d => out.push({ id: d.id, ...d.data() }));
-    }
-    return out;
 }
 
 // --- IMCI OPERATIONAL GUIDE: DAILY EVALUATION ---

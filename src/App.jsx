@@ -47,6 +47,8 @@ if (typeof window !== 'undefined') {
 
 // --- Lazy Load View Components ---
 const DashboardView = lazy(() => import('./components/DashboardView'));
+// Keeps the open course live (participants, tests, monitoring, exercises); hooks/useLiveCourse.js.
+const LiveCourseSync = lazy(() => import('./hooks/useLiveCourse.js'));
 const CourseReportView = lazy(() => import('./components/CourseReportView.jsx').then(module => ({ default: module.CourseReportView })));
 const FinalReportManager = lazy(() => import('./components/FinalReportManager.jsx').then(module => ({ default: module.FinalReportManager })));
 const ObservationView = lazy(() => import('./components/MonitoringView').then(module => ({ default: module.ObservationView })));
@@ -168,7 +170,6 @@ import { STATE_LOCALITIES } from './components/constants.js';
 import SudanMiniMap from './components/SudanMiniMap';
 import { Card, Button, Spinner, Toast, Modal, Input, PageSkeleton, Skeleton, MenuTile, MenuGrid } from './components/CommonComponents';
 import { auth, db, isOnline, getConnectivity } from './firebase';
-import { useLiveCourseDetails } from './hooks/useLiveCourse.js';
 import OfflinePill from './components/OfflinePill';
 
 import { doc, getDoc, getDocFromServer, waitForPendingWrites, onSnapshot } from 'firebase/firestore';
@@ -2020,11 +2021,6 @@ export default function App() {
         }
     }, []);
 
-    // The open course stays live: participants, test scores, monitoring and
-    // exercise results changed on any device show here (hooks/useLiveCourse.js).
-    // If its listeners can't run, one full server read is the fallback.
-    useLiveCourseDetails({ courseId: selectedCourseId, details: courseDetailsCache[selectedCourseId], user, setCourseDetailsCache, onFallback: refreshCourseDetailsFromServer });
-
     useEffect(() => {
         if (selectedCourseId && !courseDetailsCache[selectedCourseId]?.allObs && !courseDetailsLoading) {
             const fetchFullCourseDetails = async () => {
@@ -3224,6 +3220,7 @@ case 'meetings':
         <div className="min-h-screen bg-surface flex flex-col pt-0 relative">
             {/* A shared link opened in a phone browser: offer the Android app. */}
             <GetAppBanner />
+            {selectedCourseId && user && <Suspense fallback={null}><LiveCourseSync courseId={selectedCourseId} details={courseDetailsCache[selectedCourseId]} user={user} setCourseDetailsCache={setCourseDetailsCache} onFallback={refreshCourseDetailsFromServer} /></Suspense>}
             
             <style>{`
                 @media (max-width: 768px) {
