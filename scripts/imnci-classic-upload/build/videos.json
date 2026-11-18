@@ -1,14 +1,99 @@
 {
- "note": "Paste each video's YouTube link next to its code, then rebuild (python3 build.py <repo>). An empty link shows the 'being recorded' placeholder.",
+ "note": "A code holds one YouTube link, or a list of clips [{url, title}] that show one after the other. An empty link shows the 'being recorded' placeholder. Rebuild: python3 build.py <repo>.",
  "videos": {
   "IN.1": "",
   "IN.2": "",
   "AC.1": "",
-  "AC.2": "",
-  "AC.3": "",
-  "AC.4": "",
-  "AC.5": "",
-  "AC.6": "",
+  "AC.2": [
+   {
+    "url": "https://youtu.be/tgTZPo6S2gk",
+    "title": "Checking for general danger signs"
+   },
+   {
+    "url": "https://youtu.be/HsqdrLpa7To",
+    "title": "Exercise: identifying lethargic or unconscious (part 1 of 2)"
+   },
+   {
+    "url": "https://youtu.be/fBZ62ruLo-s",
+    "title": "Exercise: identifying lethargic or unconscious (part 2 of 2)"
+   }
+  ],
+  "AC.3": [
+   {
+    "url": "https://youtu.be/t-ufkuEWl7A",
+    "title": "Exercise: counting the breaths in one minute"
+   }
+  ],
+  "AC.4": [
+   {
+    "url": "https://youtu.be/B2HFsLNdG88",
+    "title": "How to assess a child with cough or difficult breathing (part 1 of 4)"
+   },
+   {
+    "url": "https://youtu.be/sYhidkeeYrQ",
+    "title": "How to assess a child with cough or difficult breathing (part 2 of 4)"
+   },
+   {
+    "url": "https://youtu.be/1QzIN3MoFQY",
+    "title": "How to assess a child with cough or difficult breathing (part 3 of 4)"
+   },
+   {
+    "url": "https://youtu.be/lpixvQi9T0s",
+    "title": "How to assess a child with cough or difficult breathing (part 4 of 4)"
+   },
+   {
+    "url": "https://youtu.be/uFrMGfpI1I4",
+    "title": "Exercise: identifying chest indrawing (part 1 of 2)"
+   },
+   {
+    "url": "https://youtu.be/zWtNkHJ1hEU",
+    "title": "Exercise: identifying chest indrawing (part 2 of 2)"
+   },
+   {
+    "url": "https://youtu.be/4b-ufTB_9wA",
+    "title": "Exercise: identifying stridor (part 1 of 2)"
+   },
+   {
+    "url": "https://youtu.be/HHEtaWaq42w",
+    "title": "Exercise: identifying stridor (part 2 of 2)"
+   },
+   {
+    "url": "https://youtu.be/ODTqkofdJ-8",
+    "title": "Review exercises for chest indrawing (part 1 of 3)"
+   },
+   {
+    "url": "https://youtu.be/7voAv5Zwvj4",
+    "title": "Review exercises for chest indrawing (part 2 of 3)"
+   },
+   {
+    "url": "https://youtu.be/Mub8wkVXn7A",
+    "title": "Review exercises for chest indrawing (part 3 of 3)"
+   }
+  ],
+  "AC.5": [
+   {
+    "url": "https://youtu.be/uUuwOEZzxN8",
+    "title": "Exercise: the skin pinch (part 1 of 2)"
+   },
+   {
+    "url": "https://youtu.be/5GYyG_L0HeQ",
+    "title": "Exercise: the skin pinch (part 2 of 2)"
+   }
+  ],
+  "AC.6": [
+   {
+    "url": "https://youtu.be/mzuyYQb3ZyU",
+    "title": "How to assess a child for diarrhoea (part 1 of 3)"
+   },
+   {
+    "url": "https://youtu.be/wfnsRjoahqs",
+    "title": "How to assess a child for diarrhoea (part 2 of 3)"
+   },
+   {
+    "url": "https://youtu.be/BPM94GCFfk8",
+    "title": "How to assess a child for diarrhoea (part 3 of 3)"
+   }
+  ],
   "AC.7": "",
   "AC.8": "",
   "AC.9": "",
@@ -20,11 +105,100 @@
   "TR.3": "",
   "CM.1": "",
   "CM.2": "",
-  "YI.1": "",
+  "YI.1": [
+   {
+    "url": "https://youtu.be/EEblq39FEnU",
+    "title": "Assessing a young infant for very severe disease (part 1 of 5)"
+   },
+   {
+    "url": "https://youtu.be/HdK-Kwm7Vqs",
+    "title": "Assessing a young infant for very severe disease (part 2 of 5)"
+   },
+   {
+    "url": "https://youtu.be/yQahKgF5zjk",
+    "title": "Assessing a young infant for very severe disease (part 3 of 5)"
+   },
+   {
+    "url": "https://youtu.be/q7f-wLn004c",
+    "title": "Assessing a young infant for very severe disease (part 4 of 5)"
+   },
+   {
+    "url": "https://youtu.be/dDGOl-0_rn0",
+    "title": "Assessing a young infant for very severe disease (part 5 of 5)"
+   }
+  ],
   "YI.2": "",
-  "YI.3": "",
-  "YI.4": "",
-  "YI.5": "",
-  "YI.6": ""
+  "YI.3": [
+   {
+    "url": "https://youtu.be/Pw-hmgKVc6w",
+    "title": "Young infant feeding problem and assessing a breastfeed (part 1 of 3)"
+   },
+   {
+    "url": "https://youtu.be/MR0gkgH2KIU",
+    "title": "Young infant feeding problem and assessing a breastfeed (part 2 of 3)"
+   },
+   {
+    "url": "https://youtu.be/6-Zc9SdxOg4",
+    "title": "Young infant feeding problem and assessing a breastfeed (part 3 of 3)"
+   },
+   {
+    "url": "https://youtu.be/4xKwarqMeRk",
+    "title": "Part D: checking for a feeding problem (part 1 of 3)"
+   },
+   {
+    "url": "https://youtu.be/Jq2pXIxnzgI",
+    "title": "Part D: checking for a feeding problem (part 2 of 3)"
+   },
+   {
+    "url": "https://youtu.be/Qi43VSAWND0",
+    "title": "Part D: checking for a feeding problem (part 3 of 3)"
+   }
+  ],
+  "YI.4": [
+   {
+    "url": "https://youtu.be/RRcCkTBPnIQ",
+    "title": "Preparing and giving oral amoxicillin to a young infant (part 1 of 2)"
+   },
+   {
+    "url": "https://youtu.be/wCVZRSvs5qs",
+    "title": "Preparing and giving oral amoxicillin to a young infant (part 2 of 2)"
+   }
+  ],
+  "YI.5": [
+   {
+    "url": "https://youtu.be/BHtRgGSyUJI",
+    "title": "Breastfeeding: positioning and attachment (part 1 of 2)"
+   },
+   {
+    "url": "https://youtu.be/j6hyN370C9o",
+    "title": "Breastfeeding: positioning and attachment (part 2 of 2)"
+   },
+   {
+    "url": "https://youtu.be/ZLb0LZE6vSA",
+    "title": "Exercise: correct positioning and attachment (part 1 of 3)"
+   },
+   {
+    "url": "https://youtu.be/cQHlYTWtxdk",
+    "title": "Exercise: correct positioning and attachment (part 2 of 3)"
+   },
+   {
+    "url": "https://youtu.be/OrmwryshAJw",
+    "title": "Exercise: correct positioning and attachment (part 3 of 3)"
+   }
+  ],
+  "YI.6": [
+   {
+    "url": "https://youtu.be/RpIUMkThi0E",
+    "title": "Expressing breast milk (part 1 of 3)"
+   },
+   {
+    "url": "https://youtu.be/WoPStoMIJpo",
+    "title": "Expressing breast milk (part 2 of 3)"
+   },
+   {
+    "url": "https://youtu.be/XELCjw0ZVgs",
+    "title": "Expressing breast milk (part 3 of 3)"
+   }
+  ]
  }
 }

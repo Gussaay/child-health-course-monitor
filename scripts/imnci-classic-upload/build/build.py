@@ -33,9 +33,27 @@ pkg = {
 VID = json.load(open(os.path.join(HERE, "videos.json")))["videos"]
 for m in pkg["modules"]:
     for s_ in m["sections"]:
+        out_blocks = []
         for b in s_["read"]:
-            if b["type"] == "video" and VID.get(b.get("script")):
-                b["url"] = VID[b["script"]].strip()
+            v = VID.get(b.get("script")) if b["type"] == "video" else None
+            if not v:
+                out_blocks.append(b); continue
+            # a code can hold one link (string) or several clips: [{"url": ..., "title": ...}, ...]
+            clips = [{"url": v.strip()}] if isinstance(v, str) else [c for c in v if c.get("url")]
+            if not clips:
+                out_blocks.append(b); continue
+            for n, c in enumerate(clips):
+                nb = dict(b)
+                nb["url"] = c["url"].strip()
+                if n:  # extra clips of the same slot: own title, no second voice-over script
+                    nb["title"] = c.get("title") or b["title"]
+                    nb.pop("script", None)
+                    nb["caption"] = c.get("caption", "")
+                    if not nb["caption"]: nb.pop("caption")
+                elif c.get("title"):
+                    nb["title"] = c["title"]
+                out_blocks.append(nb)
+        s_["read"] = out_blocks
 
 # ---- checks
 errors = []
