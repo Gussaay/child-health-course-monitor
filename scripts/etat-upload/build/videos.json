@@ -1,0 +1,22 @@
+{
+ "note": "Paste each video's YouTube link next to its code, then rebuild (python3 build.py <repo>). An empty link shows the being-recorded placeholder.",
+ "videos": {
+  "ET1.1": "",
+  "ET1.2": "",
+  "ET2.1": "",
+  "ET2.2": "",
+  "ET2.3": "",
+  "ET2.4": "",
+  "ET2.5": "",
+  "ET3.1": "",
+  "ET3.2": "",
+  "ET3.3": "",
+  "ET4.1": "",
+  "ET4.2": "",
+  "ET4.3": "",
+  "ET5.1": "",
+  "ET5.2": "",
+  "ET6.1": "",
+  "ET7.1": ""
+ }
+}
