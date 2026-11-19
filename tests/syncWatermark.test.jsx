@@ -12,6 +12,8 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const calls = [];
 const live = [];
 let serverCourses = [];
+const itemCalls = [];
+let serverItems = [];
 vi.mock('./../src/hooks/useAuth', () => ({ useAuth: () => ({ user: { uid: 'u1' } }) }));
 vi.mock('../src/data', () => ({
     listAllParticipants: vi.fn(async () => []),
@@ -41,7 +43,10 @@ vi.mock('../src/data', () => ({
     listSupervisionAssessments: vi.fn(async () => []),
     getIMNCIProtocols: vi.fn(async () => []),
     listOnlineCourses: vi.fn(async () => []),
-    listOnlineCourseItems: vi.fn(async () => []),
+    listOnlineCourseItems: vi.fn(async (_opts, lastSync = 0) => {
+        itemCalls.push(lastSync);
+        return serverItems.filter((c) => c.lastUpdatedAt.toMillis() > lastSync);
+    }),
     listFinalReport: vi.fn(async () => []),
     fetchFacilitiesHistoryMultiDate: vi.fn(async () => []),
     listSnapshotsForFacility: vi.fn(async () => []),
@@ -162,5 +167,22 @@ describe('delta sync watermark', () => {
         expect(ctx.liveLists()).not.toContain('courses');
         await act(async () => { await ctx.syncLoaded({ skipLive: true }); });
         expect(calls.length).toBe(before + 1);
+    });
+
+    it('drops lessons deleted for good on the server: one full download of the lessons per device', async () => {
+        await act(async () => { root.render(<DataProvider><Probe /></DataProvider>); });
+        // The device saved the old module before this update …
+        serverItems = [{ id: 'old-m1', kind: 'module', lastUpdatedAt: ts(SERVER_NOW - 2 * DAY) }];
+        await act(async () => { await ctx.fetchOnlineCourseItems('sync'); });
+        localStorage.removeItem('fullEpoch_onlineCourseItems');
+        // … then an upload replaced it (hard delete, so no delta carries the removal).
+        serverItems = [{ id: 'new-m1', kind: 'module', lastUpdatedAt: ts(SERVER_NOW - DAY) }];
+        itemCalls.length = 0;
+        let list;
+        await act(async () => { list = await ctx.fetchOnlineCourseItems('sync'); });
+        expect(itemCalls.at(-1)).toBe(0);                       // full, not a delta
+        expect(list.map((i) => i.id)).toEqual(['new-m1']);      // the old module is gone
+        await act(async () => { await ctx.fetchOnlineCourseItems('sync'); });
+        expect(itemCalls.at(-1)).toBeGreaterThan(0);            // then deltas again
     });
 });

@@ -152,6 +152,23 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
         if (!onlineCourseItems) fetchOnlineCourseItems(false);
     }, [onlineCourses, onlineCourseItems, fetchOnlineCourses, fetchOnlineCourseItems]);
 
+    // An upload that replaces a course's lessons deletes the old ones for good
+    // and stamps the course with itemsResetAt. A delta sync cannot see a record
+    // that is gone, so a newer stamp than this device has seen means one full
+    // download of the lessons; otherwise the old modules show next to the new.
+    useEffect(() => {
+        if (!onlineCourses?.length) return;
+        const stamp = (v) => (v?.toMillis ? v.toMillis() : (typeof v?.seconds === 'number' ? v.seconds * 1000 : Number(v) || 0));
+        const newest = onlineCourses.reduce((m, c) => Math.max(m, stamp(c?.itemsResetAt)), 0);
+        let seen = 0;
+        try { seen = parseInt(localStorage.getItem('onlineItemsResetSeen') || '0', 10); } catch { /* private mode */ }
+        if (newest > seen) {
+            Promise.resolve(fetchOnlineCourseItems('full')).then(() => {
+                try { localStorage.setItem('onlineItemsResetSeen', String(newest)); } catch { /* private mode */ }
+            }).catch(() => {});
+        }
+    }, [onlineCourses, fetchOnlineCourseItems]);
+
     useEffect(() => {
         let alive = true;
         if (user?.uid) {
