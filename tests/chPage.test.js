@@ -32,7 +32,7 @@ describe('ch-sudan start page and link previews', () => {
 });
 
 describe('course link page', () => {
-    const { withCourseTags } = require('../functions/courseLinkPage.js');
+    const { withCourseTags } = require('../functions/courseLinkTags.js');
     it('puts the course title in the title and preview tags, escaped', () => {
         const out = withCourseTags(makeChHtml(source), {
             title: 'IMNCI <Module> "1"', description: 'Learn it', siteName: 'Sudan Child Health Online Training and Guidelines',
