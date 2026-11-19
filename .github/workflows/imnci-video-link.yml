@@ -1,0 +1,25 @@
+name: One-off - IMNCI video links
+# Runs scripts/imnci-video-link/set-video-links.cjs with the mode in mode.txt
+# (dry = read only, commit = write the links, undo = empty them again).
+on:
+  push:
+    branches: [claude/project-thread-88xrub]
+    paths: ['scripts/imnci-video-link/**', '.github/workflows/imnci-video-link.yml']
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-save --ignore-scripts firebase-admin@13
+        working-directory: scripts/imnci-video-link
+      - env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}
+        working-directory: scripts/imnci-video-link
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/key.json"
+          MODE=$(tr -d '[:space:]' < mode.txt)
+          FLAG=""; [ "$MODE" = commit ] && FLAG=--commit; [ "$MODE" = undo ] && FLAG=--undo
+          echo "Mode: ${MODE}"
+          KEY_FILE="$RUNNER_TEMP/key.json" node set-video-links.cjs $FLAG
