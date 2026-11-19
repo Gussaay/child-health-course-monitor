@@ -46,7 +46,7 @@ export const makeChHtml = (html) => {
 
 export const makeChManifest = () => JSON.stringify({
   name: CH_TITLE,
-  short_name: 'Sudan Child Health',
+  short_name: CH_TITLE,
   description: CH_DESCRIPTION,
   start_url: '/',
   display: 'standalone',

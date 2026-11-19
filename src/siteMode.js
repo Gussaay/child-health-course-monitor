@@ -55,7 +55,7 @@ const NCHP_APK_PREFIX = 'National_Child_Health_Program_APP_v';
 export const SITE_APPS = {
     nchp: { package: 'com.nchp.monitoring.app', name: 'NCHP', versionFile: 'native-version.json', updateManifest: 'latest/update.json', apkFilePrefix: NCHP_APK_PREFIX, downloadName: 'NCHP' },
     emonc: { package: 'com.nchp.monitoring.emonc', name: 'EmONC', versionFile: 'native-version-emonc.json', updateManifest: 'latest-emonc/update.json', apkFilePrefix: 'EmONC_APP_v', downloadName: 'EmONC' },
-    ch: { package: 'com.nchp.monitoring.ch', name: 'Sudan Child Health', versionFile: 'native-version-ch.json', updateManifest: 'latest-ch/update.json', apkFilePrefix: 'CH_Sudan_APP_v', downloadName: 'CH-Sudan' },
+    ch: { package: 'com.nchp.monitoring.ch', name: 'Sudan Child Health Online Training and Guidelines', versionFile: 'native-version-ch.json', updateManifest: 'latest-ch/update.json', apkFilePrefix: 'CH_Sudan_APP_v', downloadName: 'CH-Sudan' },
 };
 // What each app is called where it is offered (the get-the-app bar, the
 // "Share app" message). The ch-sudan subtitle is the one Qusay chose.

@@ -192,7 +192,7 @@ import GetAppBanner from './components/GetAppBanner';
 import { shareApp } from './utils/shareApp';
 import { findLinkedParticipant, rememberLinkedParticipant } from './utils/linkedParticipant';
 import { usePageAddAction, useFormTitleOverride, useFocusPageActive } from './utils/pageChrome';
-import { IS_EMONC_SITE, IS_CH_SITE, CH_SITE_TITLE, CH_SHORT_TITLE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_LOGO_URL, EMONC_LOGO_ALT, EMONC_SHORT_TITLE } from './siteMode';
+import { IS_EMONC_SITE, IS_CH_SITE, CH_SITE_TITLE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_LOGO_URL, EMONC_LOGO_ALT, EMONC_SHORT_TITLE } from './siteMode';
 import { useSiteHiddenViews } from './hooks/useSiteSettings';
 import { focusedCourseId } from './utils/courseLink';
 // The EmONC site shows its own logo, never the Child Health Program one.
@@ -3272,11 +3272,11 @@ case 'meetings':
                                 <img src={logoUrl} alt={IS_EMONC_SITE ? EMONC_LOGO_ALT : t('app_extra.header.logo_alt', 'NCHP Logo')} width="48" height="48" className="h-8 w-8 sm:h-12 sm:w-12 object-contain" />
                             </div>
                             <div className="min-w-0">
-                                <h1 className="text-[clamp(13px,4.3vw,17px)] sm:text-2xl font-bold text-white leading-tight whitespace-nowrap">{IS_EMONC_SITE ? (
+                                <h1 className={`font-bold text-white leading-tight ${IS_CH_SITE ? 'text-[clamp(12px,3.9vw,16px)] sm:text-xl lg:text-2xl' : 'text-[clamp(13px,4.3vw,17px)] sm:text-2xl whitespace-nowrap'}`}>{IS_EMONC_SITE ? (
                                     // The full EmONC name does not fit phone or tablet headers; they show the short name.
                                     <><span className="lg:hidden">{EMONC_SHORT_TITLE}</span><span className="hidden lg:inline">{EMONC_SITE_TITLE}</span></>
                                 ) : IS_CH_SITE ? (
-                                    <><span className="lg:hidden">{t('app.title_ch_short', CH_SHORT_TITLE)}</span><span className="hidden lg:inline">{t('app.title_ch', CH_SITE_TITLE)}</span></>
+                                    t('app.title_ch', CH_SITE_TITLE)
                                 ) : t('app.title', 'National Child Health Program')}</h1>
                                 <p className="text-[11px] sm:text-sm text-slate-300 flex items-center flex-wrap gap-1.5 sm:gap-2 mt-0.5 sm:mt-0">
                                     <span>{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : IS_CH_SITE ? t('app.subtitle_ch', 'National Child Health Program') : t('app.subtitle', 'Program & Course Monitoring System')}</span>
