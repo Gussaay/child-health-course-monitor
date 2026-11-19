@@ -116,6 +116,9 @@ const CLAUDE_CHAT_ENABLED = false;
 // "Ask the data" on every page: answers from the app's own data only, through
 // the aiAssistant Cloud Function (Gemini and Groq free tiers, no Anthropic key).
 // The panel loads the first time it is opened.
+// The EmONC and CH Sudan sites and apps: welcome card with the name only (no
+// summary figures) and no "Ask the data" (Qusay, 2026-11-18).
+const IS_SITE_APP = IS_EMONC_SITE || IS_CH_SITE;
 const DataAssistantPanel = lazy(() => import('./components/DataAssistant').then(m => ({ default: m.DataAssistantPanel })));
 // The phone app's QR scanner (camera code loads the first time it is opened).
 const QrScanner = lazy(() => import('./components/QrScanner'));
@@ -492,7 +495,7 @@ const LEVEL_CARDS = {
     locality: 'bg-violet-700',
 };
 
-function GreetingCard({ greeting, firstName, level, levelLabel, scope, stats, states = [] }) {
+function GreetingCard({ greeting, firstName, level, levelLabel, scope, stats, states = [], showSummary = true }) {
     const { t } = useTranslation();
     const [pick, setPick] = useState(() => Math.floor(Math.random() * 1000));
     const facts = homeFacts(t, stats, level);
@@ -508,7 +511,7 @@ function GreetingCard({ greeting, firstName, level, levelLabel, scope, stats, st
                 </h2>
                 <span className="shrink-0 max-w-[45%] truncate rounded-full bg-white text-slate-800 px-2 py-0.5 text-xs font-semibold">{scope || levelLabel}</span>
             </div>
-            {fact ? (
+            {!showSummary ? null : fact ? (
                 <button
                     type="button"
                     onClick={() => setPick(p => p + 1)}
@@ -527,7 +530,7 @@ function GreetingCard({ greeting, firstName, level, levelLabel, scope, stats, st
     );
 }
 
-function Landing({ navigate, permissions, user, userStates = [], userLocalities = [], stats = null, onAskData, onScanQr }) {
+function Landing({ navigate, permissions, user, userStates = [], userLocalities = [], stats = null, onAskData, onScanQr, showSummary = true }) {
     const { t, i18n } = useTranslation();
     const hour = new Date().getHours();
     const greeting = hour < 12 ? t('landing.good_morning', 'Good morning') : hour < 18 ? t('landing.good_afternoon', 'Good afternoon') : t('landing.good_evening', 'Good evening');
@@ -548,7 +551,7 @@ function Landing({ navigate, permissions, user, userStates = [], userLocalities 
     // same tile (big icon in the app's colour, bold name), as in August.
     return (
         <div className="flex flex-col min-h-full space-y-3 md:space-y-4">
-            <GreetingCard greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} states={userStates} />
+            <GreetingCard greeting={greeting} firstName={firstName} level={level} levelLabel={levelLabel} scope={scope} stats={stats} states={userStates} showSummary={showSummary} />
             <Card>
                 <div className="p-3 md:p-6">
                     {onScanQr && <div className={onAskData && accessibleButtons.length > 0 ? 'mb-2' : 'mb-3 md:mb-5'}><ScanQrCard onOpen={onScanQr} /></div>}
@@ -1160,7 +1163,7 @@ export default function App() {
     useEffect(() => {
         const onAsk = (e) => {
             const text = e?.detail?.question;
-            if (!text) return;
+            if (!text || IS_SITE_APP) return;
             setDataAssistant({ loaded: true, open: true, question: { text, nonce: Date.now() } });
         };
         window.addEventListener(ASK_DATA_EVENT, onAsk);
@@ -2651,7 +2654,7 @@ export default function App() {
         const viewToRender = view;
 
         switch (viewToRender) {
-            case 'landing': return <Landing navigate={navigate} permissions={permissions} user={user} roles={userRoles} userStates={userStates} userLocalities={userLocalities} stats={IS_EMONC_SITE ? null : homeStats} onAskData={IS_EMONC_SITE ? null : openDataAssistant} onScanQr={QR_SCAN_ENABLED ? openQrScanner : null} />;
+            case 'landing': return <Landing navigate={navigate} permissions={permissions} user={user} roles={userRoles} userStates={userStates} userLocalities={userLocalities} stats={IS_SITE_APP ? null : homeStats} onAskData={IS_SITE_APP ? null : openDataAssistant} showSummary={!IS_SITE_APP} onScanQr={QR_SCAN_ENABLED ? openQrScanner : null} />;
             case 'admin': return <AdminDashboard appRoles={userRoles} />;
             case 'about': return <AboutDeveloperPage permissions={permissions} />;
             case 'imciForm': 

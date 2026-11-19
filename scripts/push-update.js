@@ -119,9 +119,9 @@ async function pushUpdate() {
 
   console.log(`Deleting ${toDelete.length} old version(s).`);
   for (const record of toDelete) {
-    // The EmONC app's APK of the same release goes with it (deploy.yml).
+    // The EmONC and CH Sudan apps' APKs of the same release go with them (deploy.yml).
     const paths = record.versionString
-      ? [apkPathFor(record.versionString), `apks/EmONC_APP_v${record.versionString}.apk`]
+      ? [apkPathFor(record.versionString), `apks/EmONC_APP_v${record.versionString}.apk`, `apks/CH_Sudan_APP_v${record.versionString}.apk`]
       : [];
     for (const path of paths) {
       try {

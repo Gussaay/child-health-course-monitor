@@ -34,7 +34,8 @@ import {
     deleteOnlineCourse, deleteOnlineCourseItem, getOnlineProgress, setOnlineSectionComplete, setOnlineSectionActivities,
 } from '../../data';
 // The pieces of the course, one file each.
-import { useCoursePlace } from './onlineCourses/place';
+import { useCoursePlace, placeDepth } from './onlineCourses/place';
+import { focusedCourseId, clearFocusedCourse } from '../../utils/courseLink';
 import { readingMinutes } from './onlineCourses/search';
 import { BookPage, BookFormModal } from './onlineCourses/lazyParts';
 import { CourseScreen } from './onlineCourses/screen';
@@ -109,6 +110,14 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
     const [place, go, back] = useCoursePlace();
     const { course: openCourseId, module: openModuleId, section: openSectionId, tab: sectionTab, book: openBookId } = place;
     const setSectionTab = (tab) => go({ tab });
+    // Opened from a course link (utils/courseLink.js): only that course is
+    // shown, with no way to the list of the other courses. Ends when the
+    // learner leaves Online Courses.
+    const [focusId] = useState(() => (inManageArea ? null : focusedCourseId()));
+    useEffect(() => (focusId ? () => clearFocusedCourse() : undefined), [focusId]);
+    useEffect(() => {
+        if (focusId && !openCourseId) go({ course: focusId }, { replace: true });
+    }, [focusId, openCourseId, go]);
     const [compare, setCompare] = useState(false);
     const [progress, setProgress] = useState({ completed: {} });
 
@@ -185,8 +194,9 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
         // A course for facilitators (the facilitator guide, with answer keys
         // and the examination) is not shown to learners.
         .filter((c) => canSeeCourse(c, { canManage, canSeeProgress, isFacilitator }))
+        .filter((c) => !focusId || c.id === focusId)
         .sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.title).localeCompare(String(b.title))),
-    [onlineCourses, canManage, canSeeProgress, isFacilitator, inManageArea]);
+    [onlineCourses, canManage, canSeeProgress, isFacilitator, inManageArea, focusId]);
 
     const items = useMemo(() => (onlineCourseItems || []).filter((i) => i.isDeleted !== true), [onlineCourseItems]);
 
@@ -339,7 +349,8 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
     }, [user?.uid]);
 
     // The phone's back button and the app bar's arrow step out one level.
-    useInPageBack(back, !!openCourseId && !editingTab);
+    // A course opened from its link has nothing above it: back leaves the page.
+    useInPageBack(back, !!openCourseId && !editingTab && !(focusId && placeDepth(place) <= 1));
 
     const removeCourse = async (course) => {
         if (!await confirmDialog(t('imnci_ui.courses.main.delete_course_confirm', 'Delete "{{title}}" and hide all its content?', { title: course.title }),
@@ -407,7 +418,7 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
         setConvertOpen, setCourseModal, setEditing, setEditingTab, setFontScale, setImportOpen,
         setItemModal, setMode, setProgress, setQuery, setScale, setSectionTab, setSyncing, setTopTab,
         syncing, tabName, toggleComplete, topTab, user,
-        accessOf, area, enrolments, inManageArea, openOtherArea, userRoles,
+        accessOf, area, enrolments, inManageArea, openOtherArea, userRoles, focusId,
     };
     const Home = inManageArea ? ManageHome : CourseList;
     const gated = openCourse && !inManageArea && !canStudy(accessOf(openCourse));

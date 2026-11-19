@@ -88,11 +88,12 @@ export function useCoursePlace() {
         }
     }, []);
 
-    const go = useCallback((patch) => {
+    // { replace: true }: no new history entry (a course link opening its course).
+    const go = useCallback((patch, { replace = false } = {}) => {
         const cur = current.current;
         const next = { ...EMPTY, ...cur, ...patch };
         const deeper = placeDepth(next) > placeDepth(cur);
-        write(next, deeper ? 'push' : placeDepth(next) === placeDepth(cur) ? 'keep' : 'up');
+        write(next, replace ? 'keep' : deeper ? 'push' : placeDepth(next) === placeDepth(cur) ? 'keep' : 'up');
         setPlace(next);
     }, [write, setPlace]);
 

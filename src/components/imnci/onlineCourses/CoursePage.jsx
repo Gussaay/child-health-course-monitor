@@ -11,7 +11,7 @@ import React, { Suspense, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Plus, Pencil, ArrowLeft, ChevronRight, CheckCircle2, Lock, Search, X,
-    CloudDownload, PlayCircle, Award,
+    CloudDownload, PlayCircle, Award, Share2,
 } from 'lucide-react';
 import { Card, Button } from '../../CommonComponents';
 import { ItemModal } from './ItemModals';
@@ -21,6 +21,8 @@ import { savedModules } from './offline';
 import { useCourseScreen } from './screen';
 import { Pill, LockedBadge } from './ui';
 import { groupName } from './enrolment';
+import { notify } from '../../dialogs';
+import { shareCourseLink } from '../../../utils/courseShare';
 
 export function CoursePage() {
     const { t } = useTranslation();
@@ -28,8 +30,16 @@ export function CoursePage() {
         aiBooks, back, bookDialog, courseSections, doneCount, duration, go,
         inOrder, isAdmin, itemModal, minutesLeft, moduleLocked, modules, nextUp, openCourse,
         openCourseId, progress, query, reload, sectionLocked, sectionsByModule, setBookForm,
-        setItemModal, setQuery, enrolments, isArabic, inManageArea,
+        setItemModal, setQuery, enrolments, isArabic, inManageArea, focusId,
     } = useCourseScreen();
+    // A link that opens this course alone, in the app or the browser.
+    const shareCourse = async () => {
+        const res = await shareCourseLink(openCourse, {
+            text: t('imnci_ui.courses.share.message', 'Online course: {{title}}', { title: openCourse.title }),
+        });
+        if (res === 'copied') notify(t('imnci_ui.courses.share.copied', 'Course link copied. Paste it in WhatsApp, SMS or e-mail.'), 'success');
+        else if (res === 'failed') notify(t('imnci_ui.courses.share.failed', 'Could not share the link.'), 'error');
+    };
     // The learner's group in this course, and its facilitator if it has one.
     const mine = !inManageArea ? enrolments?.byCourse?.[openCourse.id] : null;
     const myGroup = mine?.status === 'approved' ? enrolments.groupById[mine.groupId] : null;
@@ -77,15 +87,25 @@ export function CoursePage() {
     return (
         <div className="space-y-4 max-w-4xl mx-auto">
             <div className="flex flex-wrap items-center justify-between gap-2">
-                <button onClick={back}
-                    className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-sky-700">
-                    <ArrowLeft size={15} className="rtl:rotate-180" /> {t('imnci_ui.courses.main.all_courses', 'All courses')}
-                </button>
-                {isAdmin && (
-                    <Button variant="secondary" onClick={() => setItemModal({ kind: 'module' })}>
-                        <Plus size={16} /> {t('imnci_ui.courses.item_modal.add_module', 'Add module')}
-                    </Button>
+                {focusId ? <span /> : (
+                    <button onClick={back}
+                        className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-sky-700">
+                        <ArrowLeft size={15} className="rtl:rotate-180" /> {t('imnci_ui.courses.main.all_courses', 'All courses')}
+                    </button>
                 )}
+                <div className="flex flex-wrap items-center gap-2">
+                    {/* A draft is not shown to learners, so its link would open nothing. */}
+                    {openCourse.isPublished && (
+                        <Button variant="secondary" onClick={shareCourse} data-testid="share-course">
+                            <Share2 size={16} /> {t('imnci_ui.courses.share.button', 'Share link')}
+                        </Button>
+                    )}
+                    {isAdmin && (
+                        <Button variant="secondary" onClick={() => setItemModal({ kind: 'module' })}>
+                            <Plus size={16} /> {t('imnci_ui.courses.item_modal.add_module', 'Add module')}
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {/* The course: its name, one line of numbers, and where to carry on. */}
