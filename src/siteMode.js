@@ -21,6 +21,13 @@ export const IS_EMONC_SITE = import.meta.env.VITE_SITE === 'emonc' || EMONC_HOST
 const CH_HOSTS = ['ch-sudan.web.app', 'ch-sudan.firebaseapp.com'];
 export const IS_CH_SITE = import.meta.env.VITE_SITE === 'ch' || CH_HOSTS.includes(hostname);
 
+// The ch-sudan site and app. The same words are in scripts/chPage.js (page
+// title and link previews) and the Android app name (android/app/src/ch/res).
+export const CH_SITE_TITLE = 'Sudan Child Health Online Training and Guidelines';
+export const CH_SITE_TITLE_AR = 'التدريب الإلكتروني والموجهات لصحة الطفل في السودان';
+// Shown in the header on phones and tablets, where the full name does not fit.
+export const CH_SHORT_TITLE = 'Sudan Child Health';
+
 export const EMONC_SITE_TITLE = 'Emergency Obstetrics and Newborn Care (EmONC)';
 // Shown in the header on phones and tablets, where the full name does not fit.
 export const EMONC_SHORT_TITLE = 'EmONC';
@@ -48,14 +55,14 @@ const NCHP_APK_PREFIX = 'National_Child_Health_Program_APP_v';
 export const SITE_APPS = {
     nchp: { package: 'com.nchp.monitoring.app', name: 'NCHP', versionFile: 'native-version.json', updateManifest: 'latest/update.json', apkFilePrefix: NCHP_APK_PREFIX, downloadName: 'NCHP' },
     emonc: { package: 'com.nchp.monitoring.emonc', name: 'EmONC', versionFile: 'native-version-emonc.json', updateManifest: 'latest-emonc/update.json', apkFilePrefix: 'EmONC_APP_v', downloadName: 'EmONC' },
-    ch: { package: 'com.nchp.monitoring.ch', name: 'Child Health Sudan', versionFile: 'native-version-ch.json', updateManifest: 'latest-ch/update.json', apkFilePrefix: 'CH_Sudan_APP_v', downloadName: 'CH-Sudan' },
+    ch: { package: 'com.nchp.monitoring.ch', name: 'Sudan Child Health', versionFile: 'native-version-ch.json', updateManifest: 'latest-ch/update.json', apkFilePrefix: 'CH_Sudan_APP_v', downloadName: 'CH-Sudan' },
 };
 // What each app is called where it is offered (the get-the-app bar, the
 // "Share app" message). The ch-sudan subtitle is the one Qusay chose.
 export const SITE_APP_TEXT = {
     nchp: { title: 'National Child Health Program', titleAr: 'البرنامج القومي لصحة الطفل', subtitle: 'Program & Course Monitoring System', subtitleAr: 'نظام متابعة البرامج والدورات' },
     emonc: { title: 'EmONC', titleAr: 'EmONC', subtitle: 'Course Monitoring System', subtitleAr: 'نظام متابعة الدورات' },
-    ch: { title: 'Child Health Sudan', titleAr: 'صحة الطفل السودان', subtitle: 'Online Course and Guidelines', subtitleAr: 'الدورة الإلكترونية والموجهات' },
+    ch: { title: CH_SITE_TITLE, titleAr: CH_SITE_TITLE_AR, subtitle: 'National Child Health Program', subtitleAr: 'البرنامج القومي لصحة الطفل' },
 };
 export const NATIVE_APP_ID = IS_EMONC_SITE ? 'emonc' : IS_CH_SITE ? 'ch' : 'nchp';
 export const NATIVE_APP = SITE_APPS[NATIVE_APP_ID];
@@ -138,5 +145,8 @@ export function hiddenViewsFor(site, settings) {
     const shown = new Set(siteModulesFor(site, settings));
     const hidden = new Set(MAIN_SITE_ONLY_VIEWS);
     SITE_MODULES.forEach(m => { if (!shown.has(m.id)) m.views.forEach(v => hidden.add(v)); });
+    // ch-sudan is the online-course site: every signed-in user gets Online
+    // Courses there, whatever module list was saved in Admin > Sites.
+    if (site === 'ch') hidden.delete('onlineCourses');
     return hidden;
 }

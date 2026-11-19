@@ -229,6 +229,13 @@
           "destination": "/app-links/assetlinks.json"
         },
         {
+          "source": "/learn/**",
+          "function": {
+            "functionId": "courseLinkPage",
+            "region": "us-central1"
+          }
+        },
+        {
           "regex": "^/($|[^a].*|a($|[^s].*)|as($|[^s].*)|ass($|[^e].*)|asse($|[^t].*)|asset($|[^s].*)|assets($|[^/].*))$",
           "destination": "/index.html"
         }
@@ -242,6 +249,7 @@
         "**/.*",
         "**/node_modules/**",
         "latest/*.zip",
+        "index.html",
         "latest-*/*.zip"
       ],
       "headers": [
@@ -265,6 +273,15 @@
         },
         {
           "source": "/index.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "/ch.html",
           "headers": [
             {
               "key": "Cache-Control",
@@ -402,8 +419,15 @@
           "destination": "/app-links/assetlinks.json"
         },
         {
+          "source": "/learn/**",
+          "function": {
+            "functionId": "courseLinkPage",
+            "region": "us-central1"
+          }
+        },
+        {
           "regex": "^/($|[^a].*|a($|[^s].*)|as($|[^s].*)|ass($|[^e].*)|asse($|[^t].*)|asset($|[^s].*)|assets($|[^/].*))$",
-          "destination": "/index.html"
+          "destination": "/ch.html"
         }
       ]
     },
@@ -574,6 +598,13 @@
         {
           "source": "/.well-known/assetlinks.json",
           "destination": "/app-links/assetlinks.json"
+        },
+        {
+          "source": "/learn/**",
+          "function": {
+            "functionId": "courseLinkPage",
+            "region": "us-central1"
+          }
         },
         {
           "regex": "^/($|[^a].*|a($|[^s].*)|as($|[^s].*)|ass($|[^e].*)|asse($|[^t].*)|asset($|[^s].*)|assets($|[^/].*))$",

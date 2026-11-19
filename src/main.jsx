@@ -16,7 +16,7 @@ import { DATA_ENTRY_PATH } from './hooks/useAppUpdate';
 import { applyWebUpdateQuietly } from './utils/quietWebUpdate';
 import { startUpdateHold } from './utils/updateHold';
 import { isOnline } from './firebase';
-import { IS_EMONC_SITE, EMONC_SITE_TITLE, EMONC_LOGO_URL } from './siteMode';
+import { IS_EMONC_SITE, IS_CH_SITE, CH_SITE_TITLE, EMONC_SITE_TITLE, EMONC_LOGO_URL } from './siteMode';
 import { isChunkLoadError, recoverFromStaleBuild } from './utils/staleBuild';
 import { installErrorCapture } from './utils/errorCapture';
 import { i18nReady } from './i18n';
@@ -34,6 +34,13 @@ if (IS_EMONC_SITE) {
     document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach((l) => { l.href = EMONC_LOGO_URL; });
     document.querySelector('meta[name="description"]')?.setAttribute('content', `${EMONC_SITE_TITLE} - Course Monitoring System`);
     document.querySelector('#boot-splash img')?.setAttribute('src', EMONC_LOGO_URL);
+}
+
+// ch-sudan gets ch.html on the live site (scripts/chPage.js); this covers the
+// Android app, `VITE_SITE=ch npm run dev` and any page served the main index.html.
+if (IS_CH_SITE) {
+    document.title = CH_SITE_TITLE;
+    document.querySelector('meta[name="description"]')?.setAttribute('content', CH_SITE_TITLE);
 }
 
 const IS_NATIVE = Capacitor.isNativePlatform();

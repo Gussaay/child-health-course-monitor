@@ -6,8 +6,8 @@
 // ExerciseMonitoring.jsx); evaluation answers are dailyEvalResponses.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
-import { Check, ClipboardCheck, Copy, Loader2, MessageSquareText, Users } from 'lucide-react';
-import { copyElementImage } from '../utils/copyImage';
+import { ClipboardCheck, MessageSquareText, Users } from 'lucide-react';
+import CopyImageButton from './CopyImageButton';
 import './chartSetup';
 import { CHART_COLORS } from './chartSetup';
 import { listDailyEvalForms, listDailyEvalResponses } from '../data.js';
@@ -37,6 +37,8 @@ export const exerciseRecords = (cases = []) => {
 // Course report: exercise KPIs
 // ---------------------------------------------------------------------------
 export function ExerciseKpiCard({ participants = [], cases = [] }) {
+    const kpiRef = useRef(null);
+    const tableRef = useRef(null);
     const active = participants.filter(p => !p.isDeleted);
     const records = useMemo(() => exerciseRecords(cases), [cases]);
     const perParticipant = active.map(p => summarize(records[p.id]));
@@ -73,6 +75,11 @@ export function ExerciseKpiCard({ participants = [], cases = [] }) {
                     <EmptyState message="No exercise has been recorded in course monitoring yet." />
                 ) : (
                     <>
+                        <div ref={kpiRef} className="space-y-4 bg-white">
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="export-only hidden text-sm font-bold text-slate-700">Exercise KPIs (operational guide)</div>
+                            <CopyImageButton target={kpiRef} fileName="exercise-kpis.png" label="Copy KPIs as image" title="Exercise KPIs" />
+                        </div>
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                             <Kpi label="Exercises completed" value={`${pct(totalDone, n * OPERATIONAL_GUIDE_EXERCISES.length)}%`} sub={`${totalDone} of ${n * OPERATIONAL_GUIDE_EXERCISES.length}`} />
                             <Kpi label="Average score" value={`${avgScorePct}%`} sub={`of ${TOTAL_MAX} marks`} tone={pctClass(avgScorePct, totalDone)} />
@@ -81,6 +88,12 @@ export function ExerciseKpiCard({ participants = [], cases = [] }) {
                         </div>
                         <div className="h-64">
                             <Bar data={chartData} options={{ maintainAspectRatio: false, scales: { y: { min: 0, max: 100, ticks: { callback: v => `${v}%` } } }, plugins: { legend: { position: 'bottom' }, datalabels: { display: false } } }} />
+                        </div>
+                        </div>
+                        <div ref={tableRef} className="space-y-2 bg-white">
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="export-only hidden text-sm font-bold text-slate-700">Exercise results by exercise</div>
+                            <CopyImageButton target={tableRef} fileName="exercise-results-table.png" label="Copy table as image" title="Exercise results" />
                         </div>
                         <div className="overflow-x-auto border border-gray-200 rounded-lg" dir="rtl">
                             <table className="min-w-full text-sm">
@@ -104,6 +117,7 @@ export function ExerciseKpiCard({ participants = [], cases = [] }) {
                                 </tbody>
                             </table>
                         </div>
+                        </div>
                     </>
                 )}
             </div>
@@ -117,13 +131,17 @@ export function ExerciseKpiCard({ participants = [], cases = [] }) {
 export function ExerciseParticipantReport({ participants = [], allCases = [] }) {
     const active = participants.filter(p => !p.isDeleted);
     const records = useMemo(() => exerciseRecords(allCases), [allCases]);
+    const tableRef = useRef(null);
     if (active.length === 0) return <EmptyState message="Add participants to this course first." />;
     const cell = (r) => !r ? <span className="text-slate-300">—</span>
         : r.exercise_status === 'not_done' ? <span className="text-red-600 font-semibold">✗</span>
         : <span className="text-green-700 font-semibold" dir="ltr">{r.exercise_max != null && r.exercise_score != null ? r.exercise_score : '✓'}</span>;
     return (
-        <div className="p-4 space-y-3">
-            <h3 className="text-lg font-bold text-slate-800">Exercises by participant</h3>
+        <div ref={tableRef} className="p-4 space-y-3 bg-white">
+            <div className="flex items-center justify-between gap-2">
+                <h3 className="text-lg font-bold text-slate-800">Exercises by participant</h3>
+                <CopyImageButton target={tableRef} fileName="exercises-by-participant.png" label="Copy as image" title="Exercises by participant" />
+            </div>
             <div className="overflow-x-auto border border-gray-200 rounded-lg no-scroll-wrapper" dir="rtl">
                 <table className="min-w-full text-sm">
                     <thead className="bg-gray-100 text-gray-700">
@@ -171,37 +189,6 @@ const countApply = (rs) => {
     return c;
 };
 
-// Copies the card it sits in as a picture (WhatsApp-ready); on phones without
-// image copy it opens the share sheet or downloads the picture.
-function CopyImageButton({ target, fileName, label = '' }) {
-    const [state, setState] = useState('');
-    const timer = useRef(null);
-    useEffect(() => () => clearTimeout(timer.current), []);
-    const onClick = async () => {
-        if (state === 'busy') return;
-        setState('busy');
-        let next = '';
-        try {
-            const r = await copyElementImage(target.current, fileName, { title: 'التقييم اليومي' });
-            next = r === 'copied' ? 'copied' : r === 'downloaded' ? 'downloaded' : r === 'shared' ? 'shared' : '';
-        } catch (e) {
-            console.error('Copy as image failed:', e);
-            next = 'failed';
-        }
-        setState(next);
-        clearTimeout(timer.current);
-        timer.current = setTimeout(() => setState(''), 2500);
-    };
-    const text = { busy: 'جارٍ النسخ…', copied: 'تم النسخ ✓', downloaded: 'تم التنزيل ✓', shared: 'تمت المشاركة ✓', failed: 'تعذّر النسخ' }[state] || label;
-    return (
-        <button type="button" onClick={onClick} disabled={state === 'busy'} title="نسخ كصورة · Copy as image"
-            className={`exclude-from-export shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors ${state === 'failed' ? 'border-red-200 text-red-600 bg-red-50' : state && state !== 'busy' ? 'border-emerald-200 text-emerald-700 bg-emerald-50' : 'border-slate-200 text-slate-600 bg-white hover:text-sky-700 hover:border-sky-300 hover:bg-sky-50'}`}>
-            {state === 'busy' ? <Loader2 size={14} className="animate-spin" /> : state && state !== 'failed' ? <Check size={14} /> : <Copy size={14} />}
-            {text && <span>{text}</span>}
-        </button>
-    );
-}
-
 // A card's title with its copy button. The caption shows only in the copied
 // picture, so a table pasted on its own still says which course and day it is.
 function CardHead({ title, caption, target, name, fileBase }) {
@@ -211,7 +198,7 @@ function CardHead({ title, caption, target, name, fileBase }) {
                 <div className="export-only hidden text-xs text-slate-500 mb-1">{caption}</div>
                 <h4 className="font-bold text-slate-800 flex items-center gap-2">{title}</h4>
             </div>
-            <CopyImageButton target={target} fileName={`${fileBase}-${name}.png`} />
+            <CopyImageButton target={target} fileName={`${fileBase}-${name}.png`} title="التقييم اليومي" />
         </div>
     );
 }
@@ -355,7 +342,7 @@ export function DailyEvaluationDashboard({ course }) {
                                     {data.forms.map(f => <option key={f.id} value={f.id}>اليوم {f.dayNumber} · {f.date} ({data.responses.filter(r => r.formId === f.id).length})</option>)}
                                 </Select>
                             </div>
-                            <CopyImageButton target={kpiRef} fileName={`${fileBase}-kpis.png`} label="نسخ كصورة" />
+                            <CopyImageButton target={kpiRef} fileName={`${fileBase}-kpis.png`} label="نسخ كصورة" title="التقييم اليومي" />
                         </div>
                     </div>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -511,9 +498,13 @@ export function ParticipantExerciseCard({ cases = [] }) {
         return m;
     }, [cases]);
     const s = summarize(byEx);
+    const cardRef = useRef(null);
     return (
-        <div className="space-y-3" dir="rtl">
-            <h3 className="text-lg font-bold text-slate-800">التمارين (الدليل التشغيلي)</h3>
+        <div ref={cardRef} className="space-y-3 bg-white" dir="rtl">
+            <div className="flex items-center justify-between gap-2">
+                <h3 className="text-lg font-bold text-slate-800">التمارين (الدليل التشغيلي)</h3>
+                <CopyImageButton target={cardRef} fileName="participant-exercises.png" label="نسخ كصورة" title="التمارين" />
+            </div>
             <div className="grid grid-cols-3 gap-3">
                 <Kpi label="التمارين المكتملة" value={`${s.count} / ${OPERATIONAL_GUIDE_EXERCISES.length}`} />
                 <Kpi label="الدرجة" value={`${s.score} / ${TOTAL_MAX}`} />

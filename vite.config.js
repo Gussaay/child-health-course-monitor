@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import pkg from './package.json';
 import { fileURLToPath } from 'node:url';
 import { makeEmoncHtml, makeEmoncManifest } from './scripts/emoncPage.js';
+import { makeChHtml, makeChManifest } from './scripts/chPage.js';
 
 // Translations are loaded on demand, one language per visitor (src/i18n.js).
 // A dynamic import only starts once the app code has run, so this puts a small
@@ -52,11 +53,27 @@ const emoncPage = () => ({
   },
 });
 
+// The same for the ch-sudan site: dist/ch.html with its own title, link-preview
+// tags and install manifest. firebase.json's ch target serves it in place of
+// index.html.
+const chPage = () => ({
+  name: 'ch-page',
+  apply: 'build',
+  enforce: 'post',
+  generateBundle(_, bundle) {
+    const index = bundle['index.html'];
+    if (!index || index.type !== 'asset') return;
+    this.emitFile({ type: 'asset', fileName: 'ch.html', source: makeChHtml(String(index.source)) });
+    this.emitFile({ type: 'asset', fileName: 'ch.webmanifest', source: makeChManifest() });
+  },
+});
+
 export default defineConfig({
   plugins: [
     react(),
     preloadLocale(),
     emoncPage(),
+    chPage(),
     VitePWA({
       // CHANGED from 'autoUpdate'. With 'autoUpdate' the plugin reloads the page
       // by itself as soon as a new service worker is ready, so the

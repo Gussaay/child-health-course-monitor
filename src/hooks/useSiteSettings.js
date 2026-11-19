@@ -2,7 +2,8 @@
 // main site). One listener is shared by every component that asks. The last
 // copy is kept in localStorage so the menu is right before the listener
 // answers, offline, and before sign-in (meta/ needs a signed-in user).
-import { useSyncExternalStore } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
+import { focusedCourseId } from '../utils/courseLink';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '../firebase';
@@ -51,5 +52,13 @@ function subscribe(fn) {
 
 // The set of page names this site hides (empty on the main site).
 export function useSiteHiddenViews() {
-    return useSyncExternalStore(subscribe, () => hidden, () => hidden);
+    const set = useSyncExternalStore(subscribe, () => hidden, () => hidden);
+    // A shared course link must open its course, even on a site whose saved
+    // module list leaves Online Courses out.
+    return useMemo(() => {
+        if (!set.has('onlineCourses') || !focusedCourseId()) return set;
+        const next = new Set(set);
+        next.delete('onlineCourses');
+        return next;
+    }, [set]);
 }

@@ -366,6 +366,9 @@ exports.onlineProgressReport = require("./onlineProgress").onlineProgressReport;
 // Online course enrolment and groups (managers approve, assign groups and facilitators).
 exports.onlineEnrolment = require("./onlineEnrolment").onlineEnrolment;
 
+// A shared course link (/learn/<id>): the start page with the course title in its link-preview tags.
+exports.courseLinkPage = require("./courseLinkPage").courseLinkPage;
+
 // Google's own Firestore read/write/delete counts for a month, for the super
 // users' Usage tab (googleUsage.js). Runs as the function's service account,
 // which needs the Monitoring Viewer role.

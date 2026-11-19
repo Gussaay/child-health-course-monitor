@@ -8473,7 +8473,9 @@
     "no_internet_pill": "No internet",
     "offline_pill_label": "Offline. Showing saved data; changes sync later.",
     "download_offline": "No internet right now, so this file cannot be downloaded. Try again when you are back online.",
-    "subtitle_ch": "Online Course and Guidelines"
+    "subtitle_ch": "National Child Health Program",
+    "title_ch": "Sudan Child Health Online Training and Guidelines",
+    "title_ch_short": "Sudan Child Health"
   },
   "imci": {
     "training": {

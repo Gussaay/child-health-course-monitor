@@ -1,6 +1,7 @@
 // ParticipantReport.jsx
 import React, { useState, useMemo, useRef } from 'react';
 import { isOperationalGuideCourse } from './ExerciseMonitoring.jsx';
+import CopyImageButton from './CopyImageButton';
 import { ParticipantExerciseCard } from './OperationalGuideReports.jsx';
 import jsPDF from 'jspdf';
 import html2canvas from '../utils/html2canvasLight';
@@ -49,6 +50,7 @@ export function ParticipantReportView({
     const [statusFilter, setStatusFilter] = useState('all');
     
     const reportContentRef = useRef(null);
+    const kpiCardRef = useRef(null);
     const caseChartByDayRef = useRef(null);
 
     // Relies on props populated from the central incremental cache in App.jsx
@@ -401,7 +403,11 @@ export function ParticipantReportView({
 
                 {(hasKpiData || hasTestScores) && (
                     <Card>
-                        <h3 className="text-xl font-bold mb-4">{t('shared_ui.participant_report.performance_kpis', 'Performance KPIs')}</h3>
+                        <div ref={kpiCardRef} className="bg-white">
+                        <div className="flex items-start justify-between gap-2 mb-4">
+                        <h3 className="text-xl font-bold">{t('shared_ui.participant_report.performance_kpis', 'Performance KPIs')}</h3>
+                            <CopyImageButton target={kpiCardRef} fileName="participant-kpis.png" label={t('course_report.copy_as_image', 'Copy as Image')} title={t('shared_ui.participant_report.performance_kpis', 'Performance KPIs')} />
+                        </div>
                         {hasKpiData && (
                             <div className="flex flex-col gap-6 w-full max-w-full min-w-0">
                                 <div>
@@ -431,6 +437,7 @@ export function ParticipantReportView({
                                 <div className={`p-4 rounded-lg sm:col-span-2 md:col-span-1 ${getImprovementBgClass(improvement)}`}><div className="text-sm font-semibold">{t('shared_ui.participant_report.improvement', 'Improvement')}</div><div className="text-3xl font-bold">{improvement.toFixed(1)}%</div></div>
                             </div>
                         )}
+                        </div>
                     </Card>
                 )}
                 

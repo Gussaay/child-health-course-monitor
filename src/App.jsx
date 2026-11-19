@@ -192,8 +192,9 @@ import GetAppBanner from './components/GetAppBanner';
 import { shareApp } from './utils/shareApp';
 import { findLinkedParticipant, rememberLinkedParticipant } from './utils/linkedParticipant';
 import { usePageAddAction, useFormTitleOverride, useFocusPageActive } from './utils/pageChrome';
-import { IS_EMONC_SITE, IS_CH_SITE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_LOGO_URL, EMONC_LOGO_ALT, EMONC_SHORT_TITLE } from './siteMode';
+import { IS_EMONC_SITE, IS_CH_SITE, CH_SITE_TITLE, CH_SHORT_TITLE, EMONC_SITE_TITLE, EMONC_COURSE_TYPES, EMONC_LOGO_URL, EMONC_LOGO_ALT, EMONC_SHORT_TITLE } from './siteMode';
 import { useSiteHiddenViews } from './hooks/useSiteSettings';
+import { focusedCourseId } from './utils/courseLink';
 // The EmONC site shows its own logo, never the Child Health Program one.
 const logoUrl = IS_EMONC_SITE ? EMONC_LOGO_URL : mainLogoUrl;
 import { ASK_DATA_EVENT } from './utils/askDataAssistant';
@@ -689,8 +690,8 @@ function SplashScreen() {
         <div className="fixed inset-0 bg-surface flex flex-col items-center justify-center gap-6 text-center p-4 z-[9999]">
             <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center p-1 shadow-xl animate-pulse"><img src={logoUrl} alt={IS_EMONC_SITE ? EMONC_LOGO_ALT : t('app_extra.header.logo_alt', 'NCHP Logo')} width="80" height="80" className="h-20 w-20 object-contain" /></div>
             <div>
-                <h1 className="text-3xl font-bold text-slate-800">{IS_EMONC_SITE ? EMONC_SITE_TITLE : t('app.title', 'National Child Health Program')}</h1>
-                <p className="text-lg text-slate-500 mt-1">{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : IS_CH_SITE ? t('app.subtitle_ch', 'Online Course and Guidelines') : t('app.subtitle', 'Program & Course Monitoring System')}</p>
+                <h1 className="text-3xl font-bold text-slate-800">{IS_EMONC_SITE ? EMONC_SITE_TITLE : IS_CH_SITE ? t('app.title_ch', CH_SITE_TITLE) : t('app.title', 'National Child Health Program')}</h1>
+                <p className="text-lg text-slate-500 mt-1">{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : IS_CH_SITE ? t('app.subtitle_ch', 'National Child Health Program') : t('app.subtitle', 'Program & Course Monitoring System')}</p>
             </div>
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mt-4"></div>
             <p className="text-slate-600 mt-4">{t('app.loading_system', 'Loading application, please wait...')}</p>
@@ -1600,7 +1601,9 @@ export default function App() {
         if (userRole?.toLowerCase() === 'user') { derivedPermissions.canViewSkillsMentorship = false; derivedPermissions.canManageSkillsMentorship = false; }
 
         const ALL_PERMISSIONS_MINIMAL = ALL_PERMISSION_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {});
-        return { ...ALL_PERMISSIONS_MINIMAL, ...derivedPermissions, role: userRole };
+        // Online Courses is for everyone who signs in: a saved permission set that
+        // predates the module (or leaves it off) must not hide it or a shared course link.
+        return { ...ALL_PERMISSIONS_MINIMAL, ...derivedPermissions, canViewOnlineCourses: true, role: userRole };
     }, [userRole, userPermissions]);
 
     useEffect(() => {
@@ -1620,7 +1623,9 @@ export default function App() {
             // effect below.
             const linked = new URLSearchParams(window.location.search).get('view');
             const page = settlePage(pageFromLocation(path, window.location.search));
+            // A shared course link (utils/courseLink.js) always opens Online Courses.
             if (linked) navigateRef.current?.(linked);
+            else if (focusedCourseId() && window.location.pathname.startsWith('/online-courses')) applyPageRef.current?.({ view: 'onlineCourses' });
             else if (page && page.view !== 'landing') applyPageRef.current?.(page);
             else setView("landing");
             setPageRestored(true);
@@ -3270,9 +3275,11 @@ case 'meetings':
                                 <h1 className="text-[clamp(13px,4.3vw,17px)] sm:text-2xl font-bold text-white leading-tight whitespace-nowrap">{IS_EMONC_SITE ? (
                                     // The full EmONC name does not fit phone or tablet headers; they show the short name.
                                     <><span className="lg:hidden">{EMONC_SHORT_TITLE}</span><span className="hidden lg:inline">{EMONC_SITE_TITLE}</span></>
+                                ) : IS_CH_SITE ? (
+                                    <><span className="lg:hidden">{t('app.title_ch_short', CH_SHORT_TITLE)}</span><span className="hidden lg:inline">{t('app.title_ch', CH_SITE_TITLE)}</span></>
                                 ) : t('app.title', 'National Child Health Program')}</h1>
                                 <p className="text-[11px] sm:text-sm text-slate-300 flex items-center flex-wrap gap-1.5 sm:gap-2 mt-0.5 sm:mt-0">
-                                    <span>{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : IS_CH_SITE ? t('app.subtitle_ch', 'Online Course and Guidelines') : t('app.subtitle', 'Program & Course Monitoring System')}</span>
+                                    <span>{IS_EMONC_SITE ? t('app.subtitle_courses', 'Course Monitoring System') : IS_CH_SITE ? t('app.subtitle_ch', 'National Child Health Program') : t('app.subtitle', 'Program & Course Monitoring System')}</span>
                                     <span
                                         onClick={(e) => { e.stopPropagation(); handleManualUpdateCheck(); }}
                                         className="bg-slate-700 text-sky-300 text-[10px] sm:text-xs leading-tight px-1 sm:px-1.5 py-0 sm:py-0.5 rounded border border-slate-600 font-mono shadow-sm cursor-pointer hover:bg-slate-600 hover:text-sky-200 transition-colors"

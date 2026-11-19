@@ -28,8 +28,10 @@ describe('site modules', () => {
         expect(hidden.has('dashboard')).toBe(true);
     });
 
-    it('an empty saved list hides every module', () => {
+    it('an empty saved list hides every module, except Online Courses on ch-sudan', () => {
         const hidden = hiddenViewsFor('ch', { sites: { ch: { modules: [] } } });
-        SITE_MODULES.forEach(m => expect(hidden.has(m.id)).toBe(true));
+        SITE_MODULES.filter(m => m.id !== 'onlineCourses').forEach(m => expect(hidden.has(m.id)).toBe(true));
+        expect(hidden.has('onlineCourses')).toBe(false);
+        expect(hiddenViewsFor('emonc', { sites: { emonc: { modules: [] } } }).has('onlineCourses')).toBe(true);
     });
 });

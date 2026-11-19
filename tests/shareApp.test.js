@@ -11,12 +11,12 @@ describe('share the app', () => {
         expect(shareAppFileName('', SITE_APPS.emonc)).toBe('EmONC.apk');
     });
     it('gives the ch-sudan app its subtitle', () => {
-        expect(SITE_APP_TEXT.ch.subtitle).toBe('Online Course and Guidelines');
+        expect(SITE_APP_TEXT.ch.title).toBe('Sudan Child Health Online Training and Guidelines');
         const msg = shareAppMessage({ apkUrl: 'https://x/CH_Sudan_APP_v3.2.apk', siteUrl: 'https://ch-sudan.web.app', text: SITE_APP_TEXT.ch });
-        expect(msg).toContain('Child Health Sudan – Online Course and Guidelines app');
+        expect(msg).toContain('Sudan Child Health Online Training and Guidelines – National Child Health Program app');
         expect(msg).toContain('https://x/CH_Sudan_APP_v3.2.apk');
         expect(msg).toContain('https://ch-sudan.web.app');
-        expect(shareAppMessage({ ar: true, text: SITE_APP_TEXT.ch })).toContain('الدورة الإلكترونية والموجهات');
+        expect(shareAppMessage({ ar: true, text: SITE_APP_TEXT.ch })).toContain('التدريب الإلكتروني والموجهات لصحة الطفل في السودان');
     });
     it('every app has its own text', () => {
         Object.keys(SITE_APPS).forEach((id) => expect(SITE_APP_TEXT[id]?.title).toBeTruthy());
