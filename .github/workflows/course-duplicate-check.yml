@@ -1,0 +1,20 @@
+name: One-off - Course duplicate check (read only)
+on:
+  push:
+    branches: [claude/project-thread-9pfygx]
+    paths: ['scripts/course-duplicate-check/**', '.github/workflows/course-duplicate-check.yml']
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-save --ignore-scripts firebase-admin@13
+        working-directory: scripts/course-duplicate-check
+      - env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}
+        working-directory: scripts/course-duplicate-check
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/key.json"
+          KEY_FILE="$RUNNER_TEMP/key.json" node inspect.cjs
