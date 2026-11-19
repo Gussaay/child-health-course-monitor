@@ -15,6 +15,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, ChevronDown, ChevronRight, ArrowUpRight, Users, CalendarClock } from 'lucide-react';
 import { useDataCache } from '../../DataContext';
+import { dropReplacedLeftovers } from '../../utils/replacedLeftovers';
 import { facilitatorContent, sectionContent } from './book';
 import { ContentBlocks } from './onlineCourses/blocks';
 import { CourseScreen } from './onlineCourses/screen';
@@ -55,7 +56,7 @@ export default function FacilitatorGuides({ category = '' }) {
     }, [onlineCourses, onlineCourseItems, fetchOnlineCourses, fetchOnlineCourseItems]);
 
     const courses = useMemo(() => (onlineCourses || []).filter((c) => !category || categoryOf(c) === category), [onlineCourses, category]);
-    const items = useMemo(() => onlineCourseItems || [], [onlineCourseItems]);
+    const items = useMemo(() => dropReplacedLeftovers(onlineCourseItems || []), [onlineCourseItems]);
     const guides = useMemo(() => guideCourses(courses, items), [courses, items]);
     const [chosen, setChosen] = useState(null);
     const current = guides.find((g) => g.course.id === chosen) || guides[0] || null;

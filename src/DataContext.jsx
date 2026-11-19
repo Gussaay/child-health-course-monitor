@@ -85,18 +85,6 @@ const rewindWatermark = (ms) => (ms > 0 ? Math.max(0, ms - SYNC_OVERLAP_MS) : 0)
 // so the first sync after this update re-downloads each collection once
 // (SYNC_MARK_VERSION); after that it is delta again.
 const SYNC_MARK_VERSION = 2;
-// A delta sync only sees records that still exist, so a record deleted for
-// good (an upload's "replace" removes the old lessons) stays in a device's
-// saved list for ever. Raising a list's number here makes every device
-// download that list in full once, which drops such leftovers.
-// onlineCourseItems 1: 2026-11-19, the Sudan IMNCI course showed every module
-// twice (the old modules removed by the replace of 2026-11-18 next to the new).
-const FULL_RELOAD_EPOCH = { onlineCourseItems: 1, onlineCourses: 1 };
-const fullEpochKey = (key) => `fullEpoch_${key}`;
-// When a list last came in full from the server on this device (0 = never).
-export const lastFullFetchAt = (key) => {
-    try { return parseInt(localStorage.getItem(`${CACHE_NS}lastFull_${key}`) || '0', 10); } catch { return 0; }
-};
 // Listeners start from a server-time mark, so a second of overlap is enough
 // to catch two records stamped in the same millisecond.
 const LIVE_OVERLAP_MS = 1000;
@@ -659,11 +647,8 @@ export const DataProvider = ({ children }) => {
 
         const fetcher = async (mode = false) => {
             await ensureScope(key);
-            const epochKey = `${CACHE_NS}${fullEpochKey(key)}`;
-            const wantEpoch = FULL_RELOAD_EPOCH[key] || 0;
-            const epochDue = wantEpoch > parseInt(localStorage.getItem(epochKey) || '0', 10);
-            const force = mode === true || mode === 'sync' || mode === 'full' || epochDue;
-            const fullReload = mode === 'full' || epochDue;
+            const force = mode === true || mode === 'sync' || mode === 'full';
+            const fullReload = mode === 'full';
 
             const currentCache = cacheRef.current[key];
             const hasData = currentCache !== null;
@@ -792,9 +777,6 @@ export const DataProvider = ({ children }) => {
                         ? (isCompleteAnswer ? newest : Math.max(storedMark, newest))
                         : (isCompleteAnswer ? (newestServerStamp(finalMergedData) || fetchStartedAt) : storedMark);
                     if (nextMark > 0) localStorage.setItem(syncMarkKey(key), String(nextMark));
-                    if (isCompleteAnswer && wantEpoch) localStorage.setItem(epochKey, String(wantEpoch));
-                    // When this list last came in full from the server (courses.jsx itemsResetAt).
-                    if (isCompleteAnswer) localStorage.setItem(`${CACHE_NS}lastFull_${key}`, String(fetchStartedAt));
 
                     setCache(prev => ({ ...prev, [key]: finalMergedData })); 
                     return finalMergedData;

@@ -189,9 +189,6 @@ async function undo() {
   for (let i = 0; i < oldItems.length; i += 400) {
     const b = db.batch(); oldItems.slice(i, i + 400).forEach((d) => b.delete(d.ref)); await b.commit();
   }
-  // Devices sync lessons by what changed, so they cannot see these deletions; this stamp makes the
-  // app download the course's lessons in full once (courses.jsx, itemsResetAt).
-  if (existing && oldItems.length) await existing.ref.update({ itemsResetAt: now(), lastUpdatedAt: now() });
   for (const e of [...exNew, ...exUpdate.map((x) => x.e)]) {
     await db.collection('exerciseDefinitions').doc(e.id).set({ ...exerciseRecord(e), importBatch: BATCH, lastUpdatedAt: now(), lastUpdatedAtLocal: new Date().toISOString() }, { merge: true });
   }

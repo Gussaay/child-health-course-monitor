@@ -26,7 +26,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Spinner, Skeleton, SkeletonCard, useInPageBack } from '../CommonComponents';
 import { notify, confirmDialog } from '../dialogs';
-import { useDataCache, lastFullFetchAt } from '../../DataContext';
+import { useDataCache } from '../../DataContext';
+import { dropReplacedLeftovers } from '../../utils/replacedLeftovers';
 import { useAuth } from '../../hooks/useAuth';
 import { useImnci } from './shared';
 import { listBooks } from '../aiLibrary/aiLibraryData';
@@ -152,31 +153,6 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
         if (!onlineCourseItems) fetchOnlineCourseItems(false);
     }, [onlineCourses, onlineCourseItems, fetchOnlineCourses, fetchOnlineCourseItems]);
 
-    // An upload that replaces a course's lessons deletes the old ones for good
-    // and stamps the course with itemsResetAt. A delta sync cannot see a record
-    // that is gone, so a newer stamp than this device has seen means one full
-    // download of the lessons; otherwise the old modules show next to the new.
-    const resetSeenRef = useRef(0);
-    const resetBusyRef = useRef(false);
-    useEffect(() => {
-        if (!onlineCourses?.length) return;
-        const stamp = (v) => (v?.toMillis ? v.toMillis() : (typeof v?.seconds === 'number' ? v.seconds * 1000 : Number(v) || 0));
-        const newest = onlineCourses.reduce((m, c) => Math.max(m, stamp(c?.itemsResetAt)), 0);
-        const read = (k) => { try { return parseInt(localStorage.getItem(k) || '0', 10); } catch { return 0; } };
-        if (newest <= Math.max(read('onlineItemsResetSeen'), resetSeenRef.current) || resetBusyRef.current) return;
-        // Marked as seen only once a full download really came in: offline, a
-        // failed request or a delta already under way leave it to the next try
-        // (this effect runs again when the lesson list changes).
-        const before = lastFullFetchAt('onlineCourseItems');
-        resetBusyRef.current = true;
-        Promise.resolve(fetchOnlineCourseItems('full')).then(() => {
-            if (lastFullFetchAt('onlineCourseItems') > before) {
-                resetSeenRef.current = Math.max(resetSeenRef.current, newest);
-                try { localStorage.setItem('onlineItemsResetSeen', String(newest)); } catch { /* private mode */ }
-            }
-        }).catch(() => {}).finally(() => { resetBusyRef.current = false; });
-    }, [onlineCourses, onlineCourseItems, fetchOnlineCourseItems]);
-
     useEffect(() => {
         let alive = true;
         if (user?.uid) {
@@ -223,12 +199,14 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
         .sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.title).localeCompare(String(b.title))),
     [onlineCourses, canManage, canSeeProgress, isFacilitator, inManageArea, focusId]);
 
-    const items = useMemo(() => (onlineCourseItems || []).filter((i) => i.isDeleted !== true), [onlineCourseItems]);
+    // Old copies left on this device by an upload's replace are dropped here.
+    const currentItems = useMemo(() => dropReplacedLeftovers(onlineCourseItems || []), [onlineCourseItems]);
+    const items = useMemo(() => currentItems.filter((i) => i.isDeleted !== true), [currentItems]);
 
     // Everything, deleted or not. The bin needs what the rest of the screen
     // filters out, and a permanent delete needs to know which pictures the
     // surviving sections still point at.
-    const allItems = useMemo(() => onlineCourseItems || [], [onlineCourseItems]);
+    const allItems = currentItems;
     const allCourses = useMemo(() => onlineCourses || [], [onlineCourses]);
     const deletedCount = useMemo(
         () => allCourses.filter((c) => c.isDeleted === true).length
