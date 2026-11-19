@@ -11,18 +11,28 @@ def _ex(e):
 
 # ---- pre-test: the ETAT Pre/Post Test Entry questions used in the app's face-to-face courses
 TEST = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "etat_test.json"), encoding="utf-8"))["questions"]
+# Shown in English (Qusay, 2026-11-19). The Arabic of the app's test is kept with each
+# question (questionAr, optionsAr) so an Arabic version can be switched on later
+# (exercise "arabicOn" in Manage Exercises).
 def test_questions():
     out = []
     for q in TEST:
         text = q["text"].split(". ", 1)[1] if q["text"][:3].strip(" .").isdigit() else q["text"]
         ids = [o["id"] for o in q["options"]]
-        out.append(mcq(q["id"], text, [o["text"] for o in q["options"]], ids.index(q["correctAnswer"])))
+        m = mcq(q["id"], q["textEn"], [o["textEn"] for o in q["options"]], ids.index(q["correctAnswer"]))
+        m["questionAr"] = text
+        m["optionsAr"] = [o["text"] for o in q["options"]]
+        out.append(m)
     return out
 
-PRE = _ex(equiz("sudan-etat-pre-test", 1, "Pre-test (ETAT Pre/Post Test)", [
-    "اختبار قبلي: 20 سؤالاً من اختبار ETAT القبلي والبعدي. أجب عن كل الأسئلة قبل أن تبدأ الدروس.",
-    "Pre-test: the 20 questions of the ETAT pre/post test. Answer every question before you start the lessons."],
-    test_questions(), minutes=20, pass_mark=60))
+def test_exercise(eid, order, title, title_ar, en, ar):
+    e = equiz(eid, order, title, [en], test_questions(), minutes=20, pass_mark=60)
+    e.update({"titleAr": title_ar, "narrativeAr": [ar], "arabicOn": False})
+    return e
+
+PRE = _ex(test_exercise("sudan-etat-pre-test", 1, "Pre-test (ETAT Pre/Post Test)", "الاختبار القبلي (اختبار ETAT القبلي والبعدي)",
+    "Pre-test: the 20 questions of the ETAT pre/post test. Answer every question before you start the lessons.",
+    "اختبار قبلي: 20 سؤالاً من اختبار ETAT القبلي والبعدي. أجب عن كل الأسئلة قبل أن تبدأ الدروس."))
 
 skip(1, 306)          # cover, acknowledgements, table of contents
 mark(400, 405)        # module title page
@@ -42,7 +52,7 @@ L.append(lesson("Welcome to the course and pre-test",
        "mask, oxygen, IV and intraosseous lines, rectal diazepam, IV glucose) still need hands-on practice with a facilitator, on a "
        "doll or a model, before you use them with a sick child."),
     H("Pre-test"),
-    P_("Before you start, take the pre-test. It has the 20 questions of the ETAT pre/post test, in Arabic. Do not worry about your "
+    P_("Before you start, take the pre-test. It has the 20 questions of the ETAT pre/post test, in English. It opens in a window over this lesson; close it to come back here. Do not worry about your "
        "score: the same test comes again at the end of the course, so you can see what you have learnt."),
     PRE,
 ]))

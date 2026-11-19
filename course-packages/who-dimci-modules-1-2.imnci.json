@@ -16,7 +16,7 @@
      "read": [
       {
        "type": "note",
-       "text": "Learn how to find your way in this course: opening modules and lessons, moving through a lesson, and the buttons you will use. This lesson takes about 5 minutes.",
+       "text": "Learn how to find your way in this course: opening modules and lessons, moving through a lesson, and the buttons you will use, then take the pre-test. Finding your way takes about 5 minutes; the pre-test about 20.",
        "label": "In this lesson"
       },
       {
@@ -145,6 +145,19 @@
        "type": "note",
        "text": "My progress, next to Courses, shows your lessons, the badge you earn for each module you finish, and how often you were right the first time. On a module page, Save for offline keeps the module on your phone so you can study without a connection.",
        "label": "Your progress"
+      },
+      {
+       "type": "heading",
+       "text": "Before you start: the pre-test"
+      },
+      {
+       "type": "paragraph",
+       "text": "Take the pre-test before the first clinical lesson. It has the 20 questions of the IMNCI pre/post test that is used in the face-to-face IMNCI courses. Press Start: the test opens in a window over this lesson, and you come back here when you close it. Do not worry about your score: it shows what you know now, before the course."
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "imnci-pre-test",
+       "note": "IMNCI pre-test: 20 questions, about 20 minutes."
       }
      ],
      "see": [],
@@ -7050,6 +7063,324 @@
      "type": "tf",
      "question": "Skin-to-skin contact keeps an infant warm.",
      "correct": true,
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "imnci-pre-test",
+   "order": 0,
+   "title": "IMNCI pre-test",
+   "titleAr": "",
+   "subCourse": "online IMCI course",
+   "kind": "quiz",
+   "passMark": 60,
+   "estimatedMinutes": 20,
+   "draft": true,
+   "arabicOn": false,
+   "source": "IMNCI Pre/Post Test (the test used in the app's face-to-face IMNCI courses)",
+   "narrative": [
+    "Pre-test: the 20 questions of the IMNCI pre/post test. Answer every question before you start the lessons. Do not worry about your score: it shows what you know now."
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "type": "mcq",
+     "question": "Which of the following signs are \"general danger sign\" in a sick child aged 2 months up to five years?",
+     "options": [
+      "Axillary temperature ≥39.0°c",
+      "Lethargy",
+      "Blood in the stool",
+      "Axillary temperature ≥37.5°c for more than 7 days"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q2",
+     "type": "mcq",
+     "question": "All of the following are the main causes of mortality in under-five children in the country except?",
+     "options": [
+      "Diarrheal diseases",
+      "Pneumonia",
+      "Road traffic injuries",
+      "Malnutrition"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q3",
+     "type": "mcq",
+     "question": "For which setting are the IMCI guidelines suitable for use?",
+     "options": [
+      "Inpatient ward of a district hospital",
+      "Critical care services (PICUs, NICUs…)",
+      "First-level health facilities",
+      "Inpatient ward of a specialized hospital"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q4",
+     "type": "mcq",
+     "question": "All of the following are needed to count the respiratory rate correctly in a child with cough except?",
+     "options": [
+      "child should be calm",
+      "the count should always be repeated",
+      "the count should be for a full minute",
+      "A timer should be used"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q5",
+     "type": "mcq",
+     "question": "Which of the following statements best describes wheezing?",
+     "options": [
+      "It is a harsh sound during inspiration",
+      "It is a soft musical sound that is heard during the expiration",
+      "It is a soft musical sound during inspiration",
+      "If heard leaning close to the child's mouth, it should be confirmed by auscultation"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q6",
+     "type": "mcq",
+     "question": "Which of the following signs would make you classify a 5-month-old child with difficulty breathing as having severe pneumonia or very severe disease?",
+     "options": [
+      "restlessness",
+      "vomiting",
+      "irritability",
+      "stridor in a calm baby"
+     ],
+     "correct": [
+      3
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q7",
+     "type": "mcq",
+     "question": "Which of the following signs in a 12-month-old child with a cough are an indication for urgent referral?",
+     "options": [
+      "severe palmar pallor",
+      "respiratory rate of 65 per minute",
+      "axillary temperature ≥ 39.0°c",
+      "restlessness"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q8",
+     "type": "mcq",
+     "question": "To classify dehydration status for an 8-month-old child with diarrhea all of the following signs are needed except?",
+     "options": [
+      "lethargic or unconscious",
+      "skin pinch returns back slowly",
+      "more than 3 watery stools",
+      "restless, irritable"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q9",
+     "type": "mcq",
+     "question": "How do you classify a 23-month-old child who has been having diarrhea for 5 days has no general danger signs, is alert, has no sunken eyes, and drinks normally, and in whom the skin pinch goes back slowly?",
+     "options": [
+      "severe dehydration",
+      "some dehydration",
+      "no dehydration",
+      "persistent diarrhea"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q10",
+     "type": "mcq",
+     "question": "How do you classify a 3-year-old child who has a history of fever for 2 days, has an axillary temperature of 39.5°c, and in whom there is resistance when you try to bend his neck forward toward his chest?",
+     "options": [
+      "very severe febrile disease",
+      "malaria",
+      "fever– malaria unlikely",
+      "mastoiditis"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q11",
+     "type": "mcq",
+     "question": "Which of the following signs classify a 3-year-old child as having mastoiditis?",
+     "options": [
+      "pus draining from the ear for 5 days",
+      "redness of ear pinna (auricle)",
+      "tender swelling behind the ear",
+      "ear pain"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q12",
+     "type": "mcq",
+     "question": "Which of the following signs are used to classify the child as having SAM malnutrition?",
+     "options": [
+      "mouth ulcers",
+      "edema of both feet",
+      "skin pigmentation",
+      "Hair changes"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q13",
+     "type": "mcq",
+     "question": "In a 12-month-old child with cough and diarrhea, which of the following signs is an indication for urgent referral?",
+     "options": [
+      "restless, irritable",
+      "respiratory rate of 65 per minute",
+      "axillary temperature ≥ 39.0°c",
+      "child unable to breastfeed"
+     ],
+     "correct": [
+      3
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q14",
+     "type": "mcq",
+     "question": "Which of the following statements are true?",
+     "options": [
+      "a child who is immunocompromised should not be given BCG vaccine",
+      "a child who has a fever should not be immunized",
+      "a child who is being referred for severe classification should be immunized before referral.",
+      "a child who is low weight should not be immunized"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q15",
+     "type": "mcq",
+     "question": "Which treatment is not given to a 2-year-old child who is having convulsions at the PHC health facility?",
+     "options": [
+      "diazepam rectally",
+      "first dose of an appropriate antibiotic",
+      "first dose of IV calcium",
+      "sugar water to prevent low blood sugar"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q16",
+     "type": "mcq",
+     "question": "How can a zinc tablet be given? All of the following are correct except?",
+     "options": [
+      "dissolved in a small amount of expressed breast milk",
+      "dissolved in ORS",
+      "dissolved in clean water",
+      "let the child chew it if less than 12 months old"
+     ],
+     "correct": [
+      3
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q17",
+     "type": "mcq",
+     "question": "4 yr-old child classified as having pneumonia which dose of amoxicillin syrup 250mg/5ml is correct?",
+     "options": [
+      "15 ml every 12 hours for 5 days",
+      "10 ml every 8 hours for 5 days",
+      "5 ml every 12 hours for 5 days",
+      "15 ml every 8 hours for 5 days"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q18",
+     "type": "mcq",
+     "question": "How do you classify a 4-day-old newborn who has yellow palms and soles?",
+     "options": [
+      "severe jaundice",
+      "jaundice",
+      "local bacterial infection",
+      "no jaundice"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q19",
+     "type": "mcq",
+     "question": "Which of the following are criteria for good positioning of the baby to his mother?",
+     "options": [
+      "chin touching the breast",
+      "mouth wide open",
+      "baby held close to his mother's body",
+      "lower lip turned in"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": ""
+    },
+    {
+     "id": "q20",
+     "type": "mcq",
+     "question": "How do you classify a 5-day-old infant who has severe chest indrawing and an axillary temperature of 36.8°c?",
+     "options": [
+      "very severe disease or possible serious bacterial infection",
+      "local bacterial infection",
+      "severe disease or local bacterial infection unlikely",
+      "fever– malaria unlikely"
+     ],
+     "correct": [
+      0
+     ],
      "explain": ""
     }
    ]

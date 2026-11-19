@@ -735,14 +735,33 @@ export function CasePlayer({ exercise, participant, onSubmit, onChecked, onExit,
 // 2b. QUIZ PAGE   (multiple choice, true/false, short answer — one page)
 // ============================================================================
 
-function QuizQuestion({ q, index, value, onChange, detail, locked }) {
+// The question in the language picked in the player: the Arabic translation
+// when there is one, otherwise the question as written.
+export function quizQuestionText(q, lang) {
+    const ar = lang === 'ar' && !!String(q.questionAr || '').trim();
+    const optsAr = lang === 'ar' && Array.isArray(q.optionsAr) && q.optionsAr.length === (q.options || []).length
+        && q.optionsAr.every(o => String(o || '').trim());
+    return {
+        question: ar ? q.questionAr : q.question,
+        options: optsAr ? q.optionsAr : (q.options || []),
+        explain: (lang === 'ar' && q.explainAr) ? q.explainAr : q.explain,
+        rtl: ar,
+    };
+}
+
+/** True when a quiz has an Arabic translation for its questions. */
+export const quizHasArabic = (questions) => (questions || []).some(q => String(q.questionAr || '').trim());
+
+function QuizQuestion({ q: raw, index, value, onChange, detail, locked, lang = 'en' }) {
     const { t } = useTranslation();
+    const shown = quizQuestionText(raw, lang);
+    const q = { ...raw, question: shown.question, options: shown.options, explain: shown.explain };
     const open = q.type === 'open';
     const wrong = detail && !open && !detail.ok;
     const right = detail && !open && detail.ok;
 
     return (
-        <div className={`border rounded-lg p-4 ${!detail || open ? 'border-slate-200 bg-white' : right ? 'border-emerald-300 bg-emerald-50/40' : 'border-rose-300 bg-rose-50/40'}`}>
+        <div dir={shown.rtl ? 'rtl' : undefined} className={`border rounded-lg p-4 ${!detail || open ? 'border-slate-200 bg-white' : right ? 'border-emerald-300 bg-emerald-50/40' : 'border-rose-300 bg-rose-50/40'}`}>
             <div className="flex items-start gap-2 mb-3">
                 <span className="text-xs font-bold text-slate-400 mt-0.5">{index + 1}.</span>
                 <p className="text-sm font-medium text-slate-800 flex-1 whitespace-pre-line">{q.question}</p>
@@ -825,9 +844,12 @@ function QuizQuestion({ q, index, value, onChange, detail, locked }) {
     );
 }
 
-export function QuizPlayer({ exercise, participant, onSubmit, onChecked, onExit, previousBest = null, readOnlyAttempt = null }) {
+export function QuizPlayer({ exercise, participant, onSubmit, onChecked, onExit, exitLabel = '', previousBest = null, readOnlyAttempt = null }) {
     const { t } = useTranslation();
     const [lang, setLang] = useState('en');
+    // Questions are shown in English. An Arabic translation stored with the
+    // questions can be offered by turning arabicOn on for the exercise.
+    const canSwitch = exercise.arabicOn === true && quizHasArabic(exercise.questions);
     const [answers, setAnswers] = useState(readOnlyAttempt?.submitted?.answers || {});
     const [result, setResult] = useState(readOnlyAttempt?.result || null);
     const [saving, setSaving] = useState(false);
@@ -870,9 +892,22 @@ export function QuizPlayer({ exercise, participant, onSubmit, onChecked, onExit,
             <ScenarioHeader exercise={exercise} participant={participant} lang={lang}
                 onToggleLang={() => setLang(l => (l === 'en' ? 'ar' : 'en'))} />
 
+            {canSwitch && (
+                <div className="flex justify-end">
+                    <div className="inline-flex rounded-lg border border-slate-300 overflow-hidden text-sm" role="group" aria-label={t('imnci_ui.exercises.quiz.language', 'Language')}>
+                        {[['en', 'English'], ['ar', 'عربي']].map(([code, label]) => (
+                            <button key={code} type="button" onClick={() => setLang(code)} aria-pressed={lang === code}
+                                className={`px-3 min-h-[36px] font-semibold ${lang === code ? 'bg-sky-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="space-y-3">
                 {questions.map((q, i) => (
-                    <QuizQuestion key={q.id} q={q} index={i}
+                    <QuizQuestion key={q.id} q={q} index={i} lang={canSwitch ? lang : 'en'}
                         value={answers[q.id]}
                         onChange={(v) => setAnswers(a => ({ ...a, [q.id]: v }))}
                         detail={result?.detail?.[q.id]}
@@ -903,7 +938,7 @@ export function QuizPlayer({ exercise, participant, onSubmit, onChecked, onExit,
                         </Button>
                     )}
                     {result && !review && <Button variant="secondary" onClick={() => { setAnswers({}); setResult(null); setSaved(false); startedAt.current = Date.now(); }}>{t('imnci_ui.exercises.quiz.try_again', 'Try again')}</Button>}
-                    {onExit && <Button variant="secondary" onClick={onExit}>{t('imnci_ui.exercises.common.back_to_exercises', 'Back to exercises')}</Button>}
+                    {onExit && <Button variant="secondary" onClick={onExit}>{exitLabel || t('imnci_ui.exercises.common.back_to_exercises', 'Back to exercises')}</Button>}
                 </div>
             </div>
 
@@ -2185,14 +2220,39 @@ function QuestionEditor({ q, index, total, onChange, onRemove, onMove }) {
                             <button type="button"
                                 onClick={() => setQ({
                                     options: q.options.filter((_, j) => j !== i),
+                                    ...(Array.isArray(q.optionsAr) ? { optionsAr: q.optionsAr.filter((_, j) => j !== i) } : {}),
                                     correct: (q.correct || []).filter(c => c !== i).map(c => (c > i ? c - 1 : c)),
                                 })}
                                 aria-label={t('shared_ui.common.remove', 'Remove')}
                                 className="text-xs px-2 py-1 border border-slate-200 rounded text-slate-500 flex items-center justify-center"><X size={14} aria-hidden="true" /></button>
                         </div>
                     ))}
-                    <Button variant="secondary" onClick={() => setQ({ options: [...(q.options || []), ''] })}>{t('imnci_ui.exercises.qeditor.add_option', 'Add option')}</Button>
+                    <Button variant="secondary" onClick={() => setQ({ options: [...(q.options || []), ''], ...(Array.isArray(q.optionsAr) ? { optionsAr: [...q.optionsAr, ''] } : {}) })}>{t('imnci_ui.exercises.qeditor.add_option', 'Add option')}</Button>
                 </div>
+            )}
+
+            {(q.type === 'mcq' || q.type === 'tf' || q.type === 'text') && (
+                <details className="pl-8 group" open={!!String(q.questionAr || '').trim() || undefined}>
+                    <summary className="text-xs font-semibold text-slate-500 cursor-pointer select-none">
+                        {t('imnci_ui.exercises.qeditor.arabic', 'Arabic translation (optional)')}
+                    </summary>
+                    <div className="mt-2 space-y-1.5" dir="rtl">
+                        <textarea rows={2} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                            value={q.questionAr || ''} onChange={e => setQ({ questionAr: e.target.value })}
+                            placeholder="نص السؤال بالعربية" />
+                        {q.type === 'mcq' && (q.options || []).map((_, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                                <span className="text-xs text-slate-400 font-mono w-4" dir="ltr">{String.fromCharCode(97 + i)}</span>
+                                <input className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                                    value={(q.optionsAr || [])[i] || ''}
+                                    onChange={e => {
+                                        const ar = (q.options || []).map((__, j) => (q.optionsAr || [])[j] || '');
+                                        ar[i] = e.target.value; setQ({ optionsAr: ar });
+                                    }} />
+                            </div>
+                        ))}
+                    </div>
+                </details>
             )}
 
             {q.type === 'tf' && (
@@ -2417,6 +2477,13 @@ export function ExerciseEditor({ initial, onSaved, onCancel, isBuiltIn = false }
                         onChange={e => setField('draft', e.target.checked)} />
                     {t('imnci_ui.exercises.editor.draft_label', 'Draft — facilitators see it, participants do not')}
                 </label>
+                {isQuiz && (
+                    <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" className="rounded w-4 h-4" checked={ex.arabicOn === true}
+                            onChange={e => setField('arabicOn', e.target.checked)} />
+                        {t('imnci_ui.exercises.editor.arabic_on', 'Let learners switch the questions to Arabic (uses the Arabic translation of each question)')}
+                    </label>
+                )}
                 {!isQuiz && (
                     <label className="flex items-center gap-2 text-sm">
                         <input type="checkbox" className="rounded w-4 h-4" checked={!!ex.expected.includeTreatment}

@@ -1,0 +1,25 @@
+name: One-off - online course pre-tests (ETAT English, IMNCI pre-test)
+# Runs scripts/pretests/pretests.cjs with the mode in scripts/pretests/mode.txt
+# (dry = read only, commit = write, undo = put back). Only from the claude/ branch.
+on:
+  push:
+    branches: [claude/project-thread-gg8ste]
+    paths: ['scripts/pretests/**', '.github/workflows/pretests.yml']
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-save --ignore-scripts firebase-admin@13
+        working-directory: scripts/pretests
+      - env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}
+        working-directory: scripts/pretests
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/key.json"
+          MODE=$(tr -d '[:space:]' < mode.txt)
+          FLAG=""; [ "$MODE" = commit ] && FLAG=--commit; [ "$MODE" = undo ] && FLAG=--undo
+          echo "Mode: ${MODE}"
+          KEY_FILE="$RUNNER_TEMP/key.json" node pretests.cjs $FLAG

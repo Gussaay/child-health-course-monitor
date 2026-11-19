@@ -985,13 +985,52 @@ def logbook(topic):
 # "How to study this course" (the first lesson of each course)
 # -----------------------------------------------------------------------------
 
-def how_to_practise(course_name):
+# -----------------------------------------------------------------------------
+# IMNCI pre-test (Qusay, 2026-11-19): the 20 questions of the app's IMNCI
+# Pre/Post Test (CourseTestForm.jsx IMNCI_TEST_QUESTIONS, used for every IMNCI
+# course type, including the online IMCI course and IMNCI in humanitarian
+# setting), copied to imnci_test.json. One exercise, linked from the first
+# lesson of both IMNCI online courses. It opens in a window over the lesson.
+# -----------------------------------------------------------------------------
+
+PRETEST_ID = "imnci-pre-test"
+
+def _pretest():
+    here = os.path.dirname(os.path.abspath(__file__))
+    data = json.load(open(os.path.join(here, "imnci_test.json"), encoding="utf-8"))
+    qs = []
+    for t in data["questions"]:
+        text = re.sub(r"^\s*\d+\.\s*", "", t["text"])
+        ids = [o["id"] for o in t["options"]]
+        qs.append({"id": t["id"], "type": "mcq", "question": text, "options": [o["text"] for o in t["options"]],
+                   "correct": [ids.index(t["correctAnswer"])], "explain": ""})
+    return {"id": PRETEST_ID, "order": 0, "title": "IMNCI pre-test", "titleAr": "", "subCourse": "online IMCI course",
+            "kind": "quiz", "passMark": 60, "estimatedMinutes": 20, "draft": True, "arabicOn": False,
+            "source": "IMNCI Pre/Post Test (the test used in the app's face-to-face IMNCI courses)",
+            "narrative": ["Pre-test: the 20 questions of the IMNCI pre/post test. Answer every question before you start the lessons. "
+                          "Do not worry about your score: it shows what you know now."],
+            "questions": qs}
+
+PRETEST_EXERCISES = [_pretest()]
+
+def pretest_blocks():
+    return [
+        {"type": "heading", "text": "Before you start: the pre-test"},
+        {"type": "paragraph", "text": "Take the pre-test before the first clinical lesson. It has the 20 questions of the IMNCI "
+                                      "pre/post test that is used in the face-to-face IMNCI courses. Press Start: the test opens in a "
+                                      "window over this lesson, and you come back here when you close it. Do not worry about your "
+                                      "score: it shows what you know now, before the course."},
+        {"type": "exercise", "exerciseId": PRETEST_ID, "note": "IMNCI pre-test: 20 questions, about 20 minutes."},
+    ]
+
+def how_to_practise(course_name, pretest=True):
     # Only how to find your way in the course: no clinical question, protocol
     # or chart here (Qusay, 2026-11-18). The clinical content starts in the
-    # next lesson.
+    # next lesson. The pre-test closes the lesson (Qusay, 2026-11-19).
     return {"title": "How to study this course", "kind": "howto", "read": [
         note(f"Learn how to find your way in {course_name}: opening modules and lessons, moving through a lesson, "
-             "and the buttons you will use. This lesson takes about 5 minutes.", "In this lesson"),
+             "and the buttons you will use, then take the pre-test. Finding your way takes about 5 minutes; the pre-test "
+             "about 20.", "In this lesson"),
         {"type": "steps", "title": "Find your way to a lesson", "steps": [
             {"title": "Open the course", "text": "From Online Courses, tap the course. Start opens it the first time; "
                                                  "Continue takes you back to where you stopped."},
@@ -1043,6 +1082,7 @@ def how_to_practise(course_name):
         note("My progress, next to Courses, shows your lessons, the badge you earn for each module you finish, and how "
              "often you were right the first time. On a module page, Save for offline keeps the module on your phone "
              "so you can study without a connection.", "Your progress"),
+        *(pretest_blocks() if pretest else []),
     ], "see": [], "practise": []}
 
 # -----------------------------------------------------------------------------

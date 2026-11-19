@@ -72,7 +72,7 @@ describe('WHO distance learning Module 1', () => {
         const check = checkPackage(PKG, []);
         expect(check.errors).toEqual([]);
         expect(check.warnings).toEqual([]);
-        expect(check.summary).toMatchObject({ modules: 1, sections: 11, exercises: 8 });
+        expect(check.summary).toMatchObject({ modules: 1, sections: 11, exercises: 9 });
         DIMCI_M1_EXERCISES.forEach((e) => expect(e.draft).toBe(true));
     });
 
@@ -261,7 +261,7 @@ describe('WHO distance learning Modules 3 and 4', () => {
         expect(PKG34.modules.map((m) => m.order)).toEqual([3, 4]);
         const all = checkPackage(read('who-dimci-modules-1-4.imnci.json'), []);
         expect(all.errors).toEqual([]);
-        expect(all.summary).toMatchObject({ modules: 4, sections: 74, exercises: 48 });
+        expect(all.summary).toMatchObject({ modules: 4, sections: 74, exercises: 49 });
     });
 
     it('have quiz answers that point at real options, and 20 logbook questions each', () => {
@@ -391,7 +391,7 @@ describe('course files', () => {
     it('keeps the app\'s exercises unless told to replace them', () => {
         const ids = ['dimci-m1-pretest'];
         expect(exercisesToSave(PKG, ids).map((e) => e.id)).not.toContain('dimci-m1-pretest');
-        expect(exercisesToSave(PKG, ids, { replace: true })).toHaveLength(8);
+        expect(exercisesToSave(PKG, ids, { replace: true })).toHaveLength(9);
         expect(checkPackage(PKG, ids).summary.clashes).toEqual(ids);
     });
 
@@ -460,7 +460,7 @@ describe('WHO distance learning Modules 5 to 9', () => {
         expect(later.summary).toMatchObject({ modules: 5, sections: 94, exercises: 59 });
         const all = read('who-dimci-modules-1-9.imnci.json');
         expect(checkPackage(all, []).errors).toEqual([]);
-        expect(checkPackage(all, []).summary).toMatchObject({ modules: 9, sections: 168, exercises: 107 });
+        expect(checkPackage(all, []).summary).toMatchObject({ modules: 9, sections: 168, exercises: 108 });
         expect(all.modules.map((m) => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     });
 

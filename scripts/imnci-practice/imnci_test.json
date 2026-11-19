@@ -1,0 +1,485 @@
+{
+ "source": "src/components/CourseTestForm.jsx IMNCI_TEST_QUESTIONS (IMNCI Pre/Post Test Entry, used by every IMNCI course type, including the online IMCI course and IMNCI in humanitarian setting)",
+ "questions": [
+  {
+   "id": "q1",
+   "text": "1. Which of the following signs are \"general danger sign\" in a sick child aged 2 months up to five years?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "Axillary temperature ≥39.0°c"
+    },
+    {
+     "id": "b",
+     "text": "Lethargy"
+    },
+    {
+     "id": "c",
+     "text": "Blood in the stool"
+    },
+    {
+     "id": "d",
+     "text": "Axillary temperature ≥37.5°c for more than 7 days"
+    }
+   ],
+   "correctAnswer": "b"
+  },
+  {
+   "id": "q2",
+   "text": "2. All of the following are the main causes of mortality in under-five children in the country except?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "Diarrheal diseases"
+    },
+    {
+     "id": "b",
+     "text": "Pneumonia"
+    },
+    {
+     "id": "c",
+     "text": "Road traffic injuries"
+    },
+    {
+     "id": "d",
+     "text": "Malnutrition"
+    }
+   ],
+   "correctAnswer": "c"
+  },
+  {
+   "id": "q3",
+   "text": "3. For which setting are the IMCI guidelines suitable for use?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "Inpatient ward of a district hospital"
+    },
+    {
+     "id": "b",
+     "text": "Critical care services (PICUs, NICUs…)"
+    },
+    {
+     "id": "c",
+     "text": "First-level health facilities"
+    },
+    {
+     "id": "d",
+     "text": "Inpatient ward of a specialized hospital"
+    }
+   ],
+   "correctAnswer": "c"
+  },
+  {
+   "id": "q4",
+   "text": "4. All of the following are needed to count the respiratory rate correctly in a child with cough except?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "child should be calm"
+    },
+    {
+     "id": "b",
+     "text": "the count should always be repeated"
+    },
+    {
+     "id": "c",
+     "text": "the count should be for a full minute"
+    },
+    {
+     "id": "d",
+     "text": "A timer should be used"
+    }
+   ],
+   "correctAnswer": "b"
+  },
+  {
+   "id": "q5",
+   "text": "5. Which of the following statements best describes wheezing?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "It is a harsh sound during inspiration"
+    },
+    {
+     "id": "b",
+     "text": "It is a soft musical sound that is heard during the expiration"
+    },
+    {
+     "id": "c",
+     "text": "It is a soft musical sound during inspiration"
+    },
+    {
+     "id": "d",
+     "text": "If heard leaning close to the child's mouth, it should be confirmed by auscultation"
+    }
+   ],
+   "correctAnswer": "b"
+  },
+  {
+   "id": "q6",
+   "text": "6. Which of the following signs would make you classify a 5-month-old child with difficulty breathing as having severe pneumonia or very severe disease?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "restlessness"
+    },
+    {
+     "id": "b",
+     "text": "vomiting"
+    },
+    {
+     "id": "c",
+     "text": "irritability"
+    },
+    {
+     "id": "d",
+     "text": "stridor in a calm baby"
+    }
+   ],
+   "correctAnswer": "d"
+  },
+  {
+   "id": "q7",
+   "text": "7. Which of the following signs in a 12-month-old child with a cough are an indication for urgent referral?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "severe palmar pallor"
+    },
+    {
+     "id": "b",
+     "text": "respiratory rate of 65 per minute"
+    },
+    {
+     "id": "c",
+     "text": "axillary temperature ≥ 39.0°c"
+    },
+    {
+     "id": "d",
+     "text": "restlessness"
+    }
+   ],
+   "correctAnswer": "a"
+  },
+  {
+   "id": "q8",
+   "text": "8. To classify dehydration status for an 8-month-old child with diarrhea all of the following signs are needed except?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "lethargic or unconscious"
+    },
+    {
+     "id": "b",
+     "text": "skin pinch returns back slowly"
+    },
+    {
+     "id": "c",
+     "text": "more than 3 watery stools"
+    },
+    {
+     "id": "d",
+     "text": "restless, irritable"
+    }
+   ],
+   "correctAnswer": "c"
+  },
+  {
+   "id": "q9",
+   "text": "9. How do you classify a 23-month-old child who has been having diarrhea for 5 days has no general danger signs, is alert, has no sunken eyes, and drinks normally, and in whom the skin pinch goes back slowly?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "severe dehydration"
+    },
+    {
+     "id": "b",
+     "text": "some dehydration"
+    },
+    {
+     "id": "c",
+     "text": "no dehydration"
+    },
+    {
+     "id": "d",
+     "text": "persistent diarrhea"
+    }
+   ],
+   "correctAnswer": "c"
+  },
+  {
+   "id": "q10",
+   "text": "10. How do you classify a 3-year-old child who has a history of fever for 2 days, has an axillary temperature of 39.5°c, and in whom there is resistance when you try to bend his neck forward toward his chest?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "very severe febrile disease"
+    },
+    {
+     "id": "b",
+     "text": "malaria"
+    },
+    {
+     "id": "c",
+     "text": "fever– malaria unlikely"
+    },
+    {
+     "id": "d",
+     "text": "mastoiditis"
+    }
+   ],
+   "correctAnswer": "a"
+  },
+  {
+   "id": "q11",
+   "text": "11. Which of the following signs classify a 3-year-old child as having mastoiditis?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "pus draining from the ear for 5 days"
+    },
+    {
+     "id": "b",
+     "text": "redness of ear pinna (auricle)"
+    },
+    {
+     "id": "c",
+     "text": "tender swelling behind the ear"
+    },
+    {
+     "id": "d",
+     "text": "ear pain"
+    }
+   ],
+   "correctAnswer": "c"
+  },
+  {
+   "id": "q12",
+   "text": "12. Which of the following signs are used to classify the child as having SAM malnutrition?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "mouth ulcers"
+    },
+    {
+     "id": "b",
+     "text": "edema of both feet"
+    },
+    {
+     "id": "c",
+     "text": "skin pigmentation"
+    },
+    {
+     "id": "d",
+     "text": "Hair changes"
+    }
+   ],
+   "correctAnswer": "b"
+  },
+  {
+   "id": "q13",
+   "text": "13. In a 12-month-old child with cough and diarrhea, which of the following signs is an indication for urgent referral?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "restless, irritable"
+    },
+    {
+     "id": "b",
+     "text": "respiratory rate of 65 per minute"
+    },
+    {
+     "id": "c",
+     "text": "axillary temperature ≥ 39.0°c"
+    },
+    {
+     "id": "d",
+     "text": "child unable to breastfeed"
+    }
+   ],
+   "correctAnswer": "d"
+  },
+  {
+   "id": "q14",
+   "text": "14. Which of the following statements are true?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "a child who is immunocompromised should not be given BCG vaccine"
+    },
+    {
+     "id": "b",
+     "text": "a child who has a fever should not be immunized"
+    },
+    {
+     "id": "c",
+     "text": "a child who is being referred for severe classification should be immunized before referral."
+    },
+    {
+     "id": "d",
+     "text": "a child who is low weight should not be immunized"
+    }
+   ],
+   "correctAnswer": "a"
+  },
+  {
+   "id": "q15",
+   "text": "15. Which treatment is not given to a 2-year-old child who is having convulsions at the PHC health facility?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "diazepam rectally"
+    },
+    {
+     "id": "b",
+     "text": "first dose of an appropriate antibiotic"
+    },
+    {
+     "id": "c",
+     "text": "first dose of IV calcium"
+    },
+    {
+     "id": "d",
+     "text": "sugar water to prevent low blood sugar"
+    }
+   ],
+   "correctAnswer": "c"
+  },
+  {
+   "id": "q16",
+   "text": "16. How can a zinc tablet be given? All of the following are correct except?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "dissolved in a small amount of expressed breast milk"
+    },
+    {
+     "id": "b",
+     "text": "dissolved in ORS"
+    },
+    {
+     "id": "c",
+     "text": "dissolved in clean water"
+    },
+    {
+     "id": "d",
+     "text": "let the child chew it if less than 12 months old"
+    }
+   ],
+   "correctAnswer": "d"
+  },
+  {
+   "id": "q17",
+   "text": "17. 4 yr-old child classified as having pneumonia which dose of amoxicillin syrup 250mg/5ml is correct?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "15 ml every 12 hours for 5 days"
+    },
+    {
+     "id": "b",
+     "text": "10 ml every 8 hours for 5 days"
+    },
+    {
+     "id": "c",
+     "text": "5 ml every 12 hours for 5 days"
+    },
+    {
+     "id": "d",
+     "text": "15 ml every 8 hours for 5 days"
+    }
+   ],
+   "correctAnswer": "a"
+  },
+  {
+   "id": "q18",
+   "text": "18. How do you classify a 4-day-old newborn who has yellow palms and soles?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "severe jaundice"
+    },
+    {
+     "id": "b",
+     "text": "jaundice"
+    },
+    {
+     "id": "c",
+     "text": "local bacterial infection"
+    },
+    {
+     "id": "d",
+     "text": "no jaundice"
+    }
+   ],
+   "correctAnswer": "a"
+  },
+  {
+   "id": "q19",
+   "text": "19. Which of the following are criteria for good positioning of the baby to his mother?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "chin touching the breast"
+    },
+    {
+     "id": "b",
+     "text": "mouth wide open"
+    },
+    {
+     "id": "c",
+     "text": "baby held close to his mother's body"
+    },
+    {
+     "id": "d",
+     "text": "lower lip turned in"
+    }
+   ],
+   "correctAnswer": "c"
+  },
+  {
+   "id": "q20",
+   "text": "20. How do you classify a 5-day-old infant who has severe chest indrawing and an axillary temperature of 36.8°c?",
+   "type": "mc",
+   "options": [
+    {
+     "id": "a",
+     "text": "very severe disease or possible serious bacterial infection"
+    },
+    {
+     "id": "b",
+     "text": "local bacterial infection"
+    },
+    {
+     "id": "c",
+     "text": "severe disease or local bacterial infection unlikely"
+    },
+    {
+     "id": "d",
+     "text": "fever– malaria unlikely"
+    }
+   ],
+   "correctAnswer": "a"
+  }
+ ]
+}

@@ -45,7 +45,7 @@
       },
       {
        "type": "paragraph",
-       "text": "Before you start, take the pre-test. It has the 20 questions of the ETAT pre/post test, in Arabic. Do not worry about your score: the same test comes again at the end of the course, so you can see what you have learnt."
+       "text": "Before you start, take the pre-test. It has the 20 questions of the ETAT pre/post test, in English. It opens in a window over this lesson; close it to come back here. Do not worry about your score: the same test comes again at the end of the course, so you can see what you have learnt."
       },
       {
        "type": "exercise",
@@ -7239,7 +7239,6 @@
    "draft": true,
    "source": "WHO ETAT manual for participants (2005)",
    "narrative": [
-    "اختبار قبلي: 20 سؤالاً من اختبار ETAT القبلي والبعدي. أجب عن كل الأسئلة قبل أن تبدأ الدروس.",
     "Pre-test: the 20 questions of the ETAT pre/post test. Answer every question before you start the lessons."
    ],
    "kind": "quiz",
@@ -7247,304 +7246,449 @@
     {
      "id": "q1",
      "type": "mcq",
-     "question": "ماذا يعني مصطلح \"الفرز \" (triage)؟",
+     "question": "What does the term \"triage\" mean?",
      "options": [
+      "Giving immediate treatment to all patients",
+      "Sorting patients into groups according to their priority of need",
+      "Sorting patients into groups according to the resources available",
+      "Both (b) and (c)"
+     ],
+     "correct": [
+      3
+     ],
+     "explain": "",
+     "questionAr": "ماذا يعني مصطلح \"الفرز \" (triage)؟",
+     "optionsAr": [
       "تقديم العلاج الفوري لجميع المرضى",
       "تصنيف المرضى إلى مجموعات حسب أولوية الاحتياج",
       "تصنيف المرضى إلى مجموعات حسب الموارد المتاحة",
       "الإجابتان (ب و ت) معا"
-     ],
-     "correct": [
-      3
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q2",
      "type": "mcq",
-     "question": "في منهجية ABCD في ETAT، ما الذي يمثله الحرف \"C\"؟",
+     "question": "In the ABCD approach of ETAT, what does the letter \"C\" stand for?",
      "options": [
+      "Circulation and coma",
+      "Consciousness and convulsions",
+      "Circulation, coma and convulsions",
+      "Circulation and consciousness"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "",
+     "questionAr": "في منهجية ABCD في ETAT، ما الذي يمثله الحرف \"C\"؟",
+     "optionsAr": [
       "الدورة الدموية والغيبوبة",
       "الوعي والتشنجات",
       "الدورة الدموية والغيبوبة والتشنجات",
       "الدورة الدموية والوعي"
-     ],
-     "correct": [
-      2
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q3",
      "type": "mcq",
-     "question": "أي من العلامات التالية تعتبر علامة طارئة؟",
+     "question": "Which of the following is an emergency sign?",
      "options": [
+      "Tiny baby (under 2 months)",
+      "Severe respiratory distress",
+      "High temperature (very hot)",
+      "Severe pallor"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "",
+     "questionAr": "أي من العلامات التالية تعتبر علامة طارئة؟",
+     "optionsAr": [
       "رضيع صغير جدًا (أقل من شهرين)",
       "ضيق تنفس شديد",
       "ارتفاع درجة الحرارة (حمى شديدة)",
       "شحوب شديد"
-     ],
-     "correct": [
-      1
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q4",
      "type": "mcq",
-     "question": "إذا ظهرت على الطفل علامات طارئة، ما الذي يجب فعله أولاً؟",
+     "question": "If a child has emergency signs, what should you do first?",
      "options": [
+      "Call the doctor or a senior health worker",
+      "Start emergency treatment immediately",
+      "Complete the registration",
+      "Assess for priority signs"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "",
+     "questionAr": "إذا ظهرت على الطفل علامات طارئة، ما الذي يجب فعله أولاً؟",
+     "optionsAr": [
       "الاتصال بالطبيب أو الكادر الصحي الأقدم",
       "البدء فوراً بالعلاج الطارئ",
       "إكمال إجراءات التسجيل",
       "تقييم العلامات ذات الأولوية"
-     ],
-     "correct": [
-      1
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q5",
      "type": "mcq",
-     "question": "ما هي الخطوات الثلاث للتحقق من مجرى التنفس والتنفس؟",
+     "question": "What are the three steps for checking the airway and breathing?",
      "options": [
+      "Look, listen and feel",
+      "Ask, assess and act",
+      "Open, clear and help breathing",
+      "Position, suction and give oxygen"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "",
+     "questionAr": "ما هي الخطوات الثلاث للتحقق من مجرى التنفس والتنفس؟",
+     "optionsAr": [
       "انظر، استمع، وتحسس",
       "اسأل، قيم، افعل",
       "افتح، نظف، ساعد على التنفس",
       "ضع بوضعية جيدة، أشفط، أعطِ الأكسجين"
-     ],
-     "correct": [
-      0
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q6",
      "type": "mcq",
-     "question": "في حالة اشتباه إصابة في رقبة الطفل، كيف يجب فتح مجرى التنفس؟",
+     "question": "If you suspect a neck injury in a child, how should you open the airway?",
      "options": [
+      "Chin lift",
+      "Head tilt",
+      "Jaw thrust",
+      "Neck extension"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "",
+     "questionAr": "في حالة اشتباه إصابة في رقبة الطفل، كيف يجب فتح مجرى التنفس؟",
+     "optionsAr": [
       "رفع الذقن",
       "إمالة الرأس للخلف",
       "دفع الفك السفلي لأعلى",
       "مد الرقبة"
-     ],
-     "correct": [
-      2
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q7",
      "type": "mcq",
-     "question": "ما هو معدل تدفق الأكسجين المبدئي الذي يجب إعطاءه لرضيع عمره أقل من سنة؟",
+     "question": "What starting oxygen flow rate should be given to an infant under 1 year of age?",
      "options": [
+      "0.5–1 litre/minute",
+      "1–2 litres/minute",
+      "2–4 litres/minute",
+      "4–6 litres/minute"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "",
+     "questionAr": "ما هو معدل تدفق الأكسجين المبدئي الذي يجب إعطاءه لرضيع عمره أقل من سنة؟",
+     "optionsAr": [
       "0.5–1 لتر/دقيقة",
       "1–2 لتر/دقيقة",
       "2–4 لتر/دقيقة",
       "4–6 لتر/دقيقة"
-     ],
-     "correct": [
-      0
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q8",
      "type": "mcq",
-     "question": "أي مما يلي يعتبر علامة على ضيق التنفس الشديد؟",
+     "question": "Which of the following is a sign of severe respiratory distress?",
      "options": [
+      "Mild chest indrawing",
+      "Nasal flaring with breathing",
+      "Head nodding with each breath in",
+      "Fast breathing with no signs of distress"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "",
+     "questionAr": "أي مما يلي يعتبر علامة على ضيق التنفس الشديد؟",
+     "optionsAr": [
       "إنسحاب الصدر الخفيف للداخل",
       "توسع فتحتي الأنف مع التنفس",
       "إيماءة الرأس مع كل شهيق",
       "تسارع التنفس دون علامات ضيق"
-     ],
-     "correct": [
-      2
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q9",
      "type": "mcq",
-     "question": "ما هو الزمن الطبيعي لعودة الامتلاء الشعيري؟",
+     "question": "What is the normal capillary refill time?",
      "options": [
+      "Less than 1 second",
+      "Less than 3 seconds",
+      "Less than 5 seconds",
+      "Less than 7 seconds"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "",
+     "questionAr": "ما هو الزمن الطبيعي لعودة الامتلاء الشعيري؟",
+     "optionsAr": [
       "أقل من ثانية واحدة",
       "أقل من 3 ثوانٍ",
       "أقل من 5 ثوانٍ",
       "أقل من 7 ثوانٍ"
-     ],
-     "correct": [
-      1
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q10",
      "type": "mcq",
-     "question": "إذا لم تتمكن من جس النبض الكعبري لدى طفل كبير، فأي نبض يجب التحقق منه بعد ذلك؟",
+     "question": "If you cannot feel the radial pulse in an older child, which pulse should you check next?",
      "options": [
+      "Femoral pulse",
+      "Brachial pulse",
+      "Carotid pulse",
+      "Popliteal pulse"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "",
+     "questionAr": "إذا لم تتمكن من جس النبض الكعبري لدى طفل كبير، فأي نبض يجب التحقق منه بعد ذلك؟",
+     "optionsAr": [
       "النبض الفخذي",
       "النبض العضدي",
       "النبض السباتي",
       "النبض المأبضي"
-     ],
-     "correct": [
-      2
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q11",
      "type": "mcq",
-     "question": "ما هو السائل الأولي الذي يعطى لعلاج الصدمة لدى الطفل جيد التغذية؟",
+     "question": "Which fluid is given first to treat shock in a well-nourished child?",
      "options": [
+      "5% glucose",
+      "Ringer's lactate",
+      "Half-normal saline",
+      "ReSoMal"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "",
+     "questionAr": "ما هو السائل الأولي الذي يعطى لعلاج الصدمة لدى الطفل جيد التغذية؟",
+     "optionsAr": [
       "محلول جلوكوز 5%",
       "رينجر لاكتات",
       "محلول ملحي نصف عياري",
       "ريسومال"
-     ],
-     "correct": [
-      1
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q12",
      "type": "mcq",
-     "question": "كم مقدار السائل الذي تعطيه لطفل ليس لديه سو التغذية، عمره سنة (11 كجم) كجرعة أولى سريعة لعلاج صدمة فقد السوائل؟",
+     "question": "How much fluid do you give a 1-year-old child (11 kg) who is not malnourished as the first rapid bolus to treat shock?",
      "options": [
+      "110 ml",
+      "220 ml",
+      "330 ml",
+      "440 ml"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "",
+     "questionAr": "كم مقدار السائل الذي تعطيه لطفل ليس لديه سو التغذية، عمره سنة (11 كجم) كجرعة أولى سريعة لعلاج صدمة فقد السوائل؟",
+     "optionsAr": [
       "110 مل",
       "220 مل",
       "330 مل",
       "440 مل"
-     ],
-     "correct": [
-      1
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q13",
      "type": "mcq",
-     "question": "ماذا يعني الحرف \"P\" في مقياس AVPU؟",
+     "question": "What does the letter \"P\" in the AVPU scale mean?",
      "options": [
-      "الاستجابة للألم",
-      "وجود النبض",
-      "تفاعل الحدقتين",
-      "وعي جزئي"
+      "Responds to pain",
+      "Pulse present",
+      "Pupils react",
+      "Partly conscious"
      ],
      "correct": [
       0
      ],
-     "explain": ""
+     "explain": "",
+     "questionAr": "ماذا يعني الحرف \"P\" في مقياس AVPU؟",
+     "optionsAr": [
+      "الاستجابة للألم",
+      "وجود النبض",
+      "تفاعل الحدقتين",
+      "وعي جزئي"
+     ]
     },
     {
      "id": "q14",
      "type": "mcq",
-     "question": "كم مقدار الديازيبام الشرجي (تركيز 10 مجم/2 مل) الذي يجب إعطاؤه لطفل عمره 4 سنوات (15 كجم) إثناء التتشنجات؟",
+     "question": "How much rectal diazepam (10 mg/2 ml) should be given to a 4-year-old child (15 kg) who is convulsing?",
      "options": [
+      "0.5 ml",
+      "1.0 ml",
+      "1.5 ml",
+      "2.0 ml"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "",
+     "questionAr": "كم مقدار الديازيبام الشرجي (تركيز 10 مجم/2 مل) الذي يجب إعطاؤه لطفل عمره 4 سنوات (15 كجم) إثناء التتشنجات؟",
+     "optionsAr": [
       "0.5 مل",
       "1.0 مل",
       "1.5 مل",
       "2.0 مل"
-     ],
-     "correct": [
-      2
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q15",
      "type": "mcq",
-     "question": "بعد كم من الزمن يمكن إعطاء جرعة ثانية من الديازيبام الشرجي إذا استمرت التشنجات؟",
+     "question": "If the convulsions continue, after how long can a second dose of rectal diazepam be given?",
      "options": [
+      "2 minutes",
+      "5 minutes",
+      "10 minutes",
+      "20 minutes"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "",
+     "questionAr": "بعد كم من الزمن يمكن إعطاء جرعة ثانية من الديازيبام الشرجي إذا استمرت التشنجات؟",
+     "optionsAr": [
       "دقيقتان",
       "5 دقائق",
       "10 دقائق",
       "20 دقيقة"
-     ],
-     "correct": [
-      2
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q16",
      "type": "mcq",
-     "question": "ما هي الخطوة الأولى في التعامل مع طفل فاقد للوعي دون تاريخ لإصابة أو كسور؟",
+     "question": "What is the first step in managing an unconscious child with no history of injury or fractures?",
      "options": [
-      "إعطاء جلوكوز وريدي",
-      "وضعه في وضعية الإفاقة",
-      "إعطاء الأكسجين",
-      "التعامل مع مجرى التنفس"
+      "Give IV glucose",
+      "Put the child in the recovery position",
+      "Give oxygen",
+      "Manage the airway"
      ],
      "correct": [
       3
      ],
-     "explain": ""
+     "explain": "",
+     "questionAr": "ما هي الخطوة الأولى في التعامل مع طفل فاقد للوعي دون تاريخ لإصابة أو كسور؟",
+     "optionsAr": [
+      "إعطاء جلوكوز وريدي",
+      "وضعه في وضعية الإفاقة",
+      "إعطاء الأكسجين",
+      "التعامل مع مجرى التنفس"
+     ]
     },
     {
      "id": "q17",
      "type": "mcq",
-     "question": "طفل عمره 8 أشهر ووزنه 6 كجم يعاني من جفاف شديد. كم مقدار السائل الوريدي الذي يجب إعطاؤه في الساعة الأولى؟",
+     "question": "An 8-month-old child weighing 6 kg has severe dehydration. How much IV fluid should be given in the first hour?",
      "options": [
+      "60 ml",
+      "120 ml",
+      "180 ml",
+      "240 ml"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "",
+     "questionAr": "طفل عمره 8 أشهر ووزنه 6 كجم يعاني من جفاف شديد. كم مقدار السائل الوريدي الذي يجب إعطاؤه في الساعة الأولى؟",
+     "optionsAr": [
       "60 مل",
       "120 مل",
       "180 مل",
       "240 مل"
-     ],
-     "correct": [
-      2
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q18",
      "type": "mcq",
-     "question": "إذا تعذر الوصول الوريدي، فكم مقدار محلول معالجة الجفاف عن طريق الفم (ORS) يجب إعطاؤه عبر الأنبوب الأنفي المعدي كل ساعة للجفاف الشديد؟",
+     "question": "If IV access is not possible, how much oral rehydration solution (ORS) should be given by nasogastric tube each hour for severe dehydration?",
      "options": [
+      "10 ml/kg/hour",
+      "20 ml/kg/hour",
+      "30 ml/kg/hour",
+      "40 ml/kg/hour"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "",
+     "questionAr": "إذا تعذر الوصول الوريدي، فكم مقدار محلول معالجة الجفاف عن طريق الفم (ORS) يجب إعطاؤه عبر الأنبوب الأنفي المعدي كل ساعة للجفاف الشديد؟",
+     "optionsAr": [
       "10 مل/كجم/ساعة",
       "20 مل/كجم/ساعة",
       "30 مل/كجم/ساعة",
       "40 مل/كجم/ساعة"
-     ],
-     "correct": [
-      1
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q19",
      "type": "mcq",
-     "question": "أي سائل يستخدم لعلاج الجفاف الشديد لدى الطفل المصاب بسوء تغذية حاد شديد؟",
+     "question": "Which fluid is used to treat severe dehydration in a child with severe acute malnutrition?",
      "options": [
-      "رينجر لاكتات",
-      "محلول ملحي عادي",
-      "ريسومال",
-      "محلول جلوكوز 5%"
+      "Ringer's lactate",
+      "Normal saline",
+      "ReSoMal",
+      "5% glucose"
      ],
      "correct": [
       2
      ],
-     "explain": ""
+     "explain": "",
+     "questionAr": "أي سائل يستخدم لعلاج الجفاف الشديد لدى الطفل المصاب بسوء تغذية حاد شديد؟",
+     "optionsAr": [
+      "رينجر لاكتات",
+      "محلول ملحي عادي",
+      "ريسومال",
+      "محلول جلوكوز 5%"
+     ]
     },
     {
      "id": "q20",
      "type": "mcq",
-     "question": "طفل عمره 3 سنوات (15 كجم) مصاب بجفاف شديد، تلقى 450 مل خلال 30 دقيقة. ما هي الخطوة التالية؟",
+     "question": "A 3-year-old child (15 kg) with severe dehydration has received 450 ml in 30 minutes. What is the next step?",
      "options": [
-      "إعطاء 450 مل أخرى خلال 2.5 ساعة",
-      "إعطاء 1050 مل خلال 2.5 ساعة",
-      "إعطاء 600 مل خلال 5 ساعات",
-      "التحول إلى محلول معالجة الجفاف عن طريق الفم فقط"
+      "Give another 450 ml over 2.5 hours",
+      "Give 1050 ml over 2.5 hours",
+      "Give 600 ml over 5 hours",
+      "Change to oral rehydration solution (ORS) only"
      ],
      "correct": [
       1
      ],
-     "explain": ""
+     "explain": "",
+     "questionAr": "طفل عمره 3 سنوات (15 كجم) مصاب بجفاف شديد، تلقى 450 مل خلال 30 دقيقة. ما هي الخطوة التالية؟",
+     "optionsAr": [
+      "إعطاء 450 مل أخرى خلال 2.5 ساعة",
+      "إعطاء 1050 مل خلال 2.5 ساعة",
+      "إعطاء 600 مل خلال 5 ساعات",
+      "التحول إلى محلول معالجة الجفاف عن طريق الفم فقط"
+     ]
     }
-   ]
+   ],
+   "titleAr": "الاختبار القبلي (اختبار ETAT القبلي والبعدي)",
+   "narrativeAr": [
+    "اختبار قبلي: 20 سؤالاً من اختبار ETAT القبلي والبعدي. أجب عن كل الأسئلة قبل أن تبدأ الدروس."
+   ],
+   "arabicOn": false
   },
   {
    "id": "sudan-etat-aq-triage",
@@ -8289,7 +8433,6 @@
    "draft": true,
    "source": "WHO ETAT manual for participants (2005)",
    "narrative": [
-    "اختبار بعدي: نفس الأسئلة العشرين للاختبار القبلي. قارن نتيجتك بنتيجة الاختبار القبلي.",
     "Post-test: the same 20 questions as the pre-test. Compare your score with your pre-test score."
    ],
    "kind": "quiz",
@@ -8297,304 +8440,449 @@
     {
      "id": "q1",
      "type": "mcq",
-     "question": "ماذا يعني مصطلح \"الفرز \" (triage)؟",
+     "question": "What does the term \"triage\" mean?",
      "options": [
+      "Giving immediate treatment to all patients",
+      "Sorting patients into groups according to their priority of need",
+      "Sorting patients into groups according to the resources available",
+      "Both (b) and (c)"
+     ],
+     "correct": [
+      3
+     ],
+     "explain": "",
+     "questionAr": "ماذا يعني مصطلح \"الفرز \" (triage)؟",
+     "optionsAr": [
       "تقديم العلاج الفوري لجميع المرضى",
       "تصنيف المرضى إلى مجموعات حسب أولوية الاحتياج",
       "تصنيف المرضى إلى مجموعات حسب الموارد المتاحة",
       "الإجابتان (ب و ت) معا"
-     ],
-     "correct": [
-      3
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q2",
      "type": "mcq",
-     "question": "في منهجية ABCD في ETAT، ما الذي يمثله الحرف \"C\"؟",
+     "question": "In the ABCD approach of ETAT, what does the letter \"C\" stand for?",
      "options": [
+      "Circulation and coma",
+      "Consciousness and convulsions",
+      "Circulation, coma and convulsions",
+      "Circulation and consciousness"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "",
+     "questionAr": "في منهجية ABCD في ETAT، ما الذي يمثله الحرف \"C\"؟",
+     "optionsAr": [
       "الدورة الدموية والغيبوبة",
       "الوعي والتشنجات",
       "الدورة الدموية والغيبوبة والتشنجات",
       "الدورة الدموية والوعي"
-     ],
-     "correct": [
-      2
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q3",
      "type": "mcq",
-     "question": "أي من العلامات التالية تعتبر علامة طارئة؟",
+     "question": "Which of the following is an emergency sign?",
      "options": [
+      "Tiny baby (under 2 months)",
+      "Severe respiratory distress",
+      "High temperature (very hot)",
+      "Severe pallor"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "",
+     "questionAr": "أي من العلامات التالية تعتبر علامة طارئة؟",
+     "optionsAr": [
       "رضيع صغير جدًا (أقل من شهرين)",
       "ضيق تنفس شديد",
       "ارتفاع درجة الحرارة (حمى شديدة)",
       "شحوب شديد"
-     ],
-     "correct": [
-      1
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q4",
      "type": "mcq",
-     "question": "إذا ظهرت على الطفل علامات طارئة، ما الذي يجب فعله أولاً؟",
+     "question": "If a child has emergency signs, what should you do first?",
      "options": [
+      "Call the doctor or a senior health worker",
+      "Start emergency treatment immediately",
+      "Complete the registration",
+      "Assess for priority signs"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "",
+     "questionAr": "إذا ظهرت على الطفل علامات طارئة، ما الذي يجب فعله أولاً؟",
+     "optionsAr": [
       "الاتصال بالطبيب أو الكادر الصحي الأقدم",
       "البدء فوراً بالعلاج الطارئ",
       "إكمال إجراءات التسجيل",
       "تقييم العلامات ذات الأولوية"
-     ],
-     "correct": [
-      1
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q5",
      "type": "mcq",
-     "question": "ما هي الخطوات الثلاث للتحقق من مجرى التنفس والتنفس؟",
+     "question": "What are the three steps for checking the airway and breathing?",
      "options": [
+      "Look, listen and feel",
+      "Ask, assess and act",
+      "Open, clear and help breathing",
+      "Position, suction and give oxygen"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "",
+     "questionAr": "ما هي الخطوات الثلاث للتحقق من مجرى التنفس والتنفس؟",
+     "optionsAr": [
       "انظر، استمع، وتحسس",
       "اسأل، قيم، افعل",
       "افتح، نظف، ساعد على التنفس",
       "ضع بوضعية جيدة، أشفط، أعطِ الأكسجين"
-     ],
-     "correct": [
-      0
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q6",
      "type": "mcq",
-     "question": "في حالة اشتباه إصابة في رقبة الطفل، كيف يجب فتح مجرى التنفس؟",
+     "question": "If you suspect a neck injury in a child, how should you open the airway?",
      "options": [
+      "Chin lift",
+      "Head tilt",
+      "Jaw thrust",
+      "Neck extension"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "",
+     "questionAr": "في حالة اشتباه إصابة في رقبة الطفل، كيف يجب فتح مجرى التنفس؟",
+     "optionsAr": [
       "رفع الذقن",
       "إمالة الرأس للخلف",
       "دفع الفك السفلي لأعلى",
       "مد الرقبة"
-     ],
-     "correct": [
-      2
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q7",
      "type": "mcq",
-     "question": "ما هو معدل تدفق الأكسجين المبدئي الذي يجب إعطاءه لرضيع عمره أقل من سنة؟",
+     "question": "What starting oxygen flow rate should be given to an infant under 1 year of age?",
      "options": [
+      "0.5–1 litre/minute",
+      "1–2 litres/minute",
+      "2–4 litres/minute",
+      "4–6 litres/minute"
+     ],
+     "correct": [
+      0
+     ],
+     "explain": "",
+     "questionAr": "ما هو معدل تدفق الأكسجين المبدئي الذي يجب إعطاءه لرضيع عمره أقل من سنة؟",
+     "optionsAr": [
       "0.5–1 لتر/دقيقة",
       "1–2 لتر/دقيقة",
       "2–4 لتر/دقيقة",
       "4–6 لتر/دقيقة"
-     ],
-     "correct": [
-      0
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q8",
      "type": "mcq",
-     "question": "أي مما يلي يعتبر علامة على ضيق التنفس الشديد؟",
+     "question": "Which of the following is a sign of severe respiratory distress?",
      "options": [
+      "Mild chest indrawing",
+      "Nasal flaring with breathing",
+      "Head nodding with each breath in",
+      "Fast breathing with no signs of distress"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "",
+     "questionAr": "أي مما يلي يعتبر علامة على ضيق التنفس الشديد؟",
+     "optionsAr": [
       "إنسحاب الصدر الخفيف للداخل",
       "توسع فتحتي الأنف مع التنفس",
       "إيماءة الرأس مع كل شهيق",
       "تسارع التنفس دون علامات ضيق"
-     ],
-     "correct": [
-      2
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q9",
      "type": "mcq",
-     "question": "ما هو الزمن الطبيعي لعودة الامتلاء الشعيري؟",
+     "question": "What is the normal capillary refill time?",
      "options": [
+      "Less than 1 second",
+      "Less than 3 seconds",
+      "Less than 5 seconds",
+      "Less than 7 seconds"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "",
+     "questionAr": "ما هو الزمن الطبيعي لعودة الامتلاء الشعيري؟",
+     "optionsAr": [
       "أقل من ثانية واحدة",
       "أقل من 3 ثوانٍ",
       "أقل من 5 ثوانٍ",
       "أقل من 7 ثوانٍ"
-     ],
-     "correct": [
-      1
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q10",
      "type": "mcq",
-     "question": "إذا لم تتمكن من جس النبض الكعبري لدى طفل كبير، فأي نبض يجب التحقق منه بعد ذلك؟",
+     "question": "If you cannot feel the radial pulse in an older child, which pulse should you check next?",
      "options": [
+      "Femoral pulse",
+      "Brachial pulse",
+      "Carotid pulse",
+      "Popliteal pulse"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "",
+     "questionAr": "إذا لم تتمكن من جس النبض الكعبري لدى طفل كبير، فأي نبض يجب التحقق منه بعد ذلك؟",
+     "optionsAr": [
       "النبض الفخذي",
       "النبض العضدي",
       "النبض السباتي",
       "النبض المأبضي"
-     ],
-     "correct": [
-      2
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q11",
      "type": "mcq",
-     "question": "ما هو السائل الأولي الذي يعطى لعلاج الصدمة لدى الطفل جيد التغذية؟",
+     "question": "Which fluid is given first to treat shock in a well-nourished child?",
      "options": [
+      "5% glucose",
+      "Ringer's lactate",
+      "Half-normal saline",
+      "ReSoMal"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "",
+     "questionAr": "ما هو السائل الأولي الذي يعطى لعلاج الصدمة لدى الطفل جيد التغذية؟",
+     "optionsAr": [
       "محلول جلوكوز 5%",
       "رينجر لاكتات",
       "محلول ملحي نصف عياري",
       "ريسومال"
-     ],
-     "correct": [
-      1
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q12",
      "type": "mcq",
-     "question": "كم مقدار السائل الذي تعطيه لطفل ليس لديه سو التغذية، عمره سنة (11 كجم) كجرعة أولى سريعة لعلاج صدمة فقد السوائل؟",
+     "question": "How much fluid do you give a 1-year-old child (11 kg) who is not malnourished as the first rapid bolus to treat shock?",
      "options": [
+      "110 ml",
+      "220 ml",
+      "330 ml",
+      "440 ml"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "",
+     "questionAr": "كم مقدار السائل الذي تعطيه لطفل ليس لديه سو التغذية، عمره سنة (11 كجم) كجرعة أولى سريعة لعلاج صدمة فقد السوائل؟",
+     "optionsAr": [
       "110 مل",
       "220 مل",
       "330 مل",
       "440 مل"
-     ],
-     "correct": [
-      1
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q13",
      "type": "mcq",
-     "question": "ماذا يعني الحرف \"P\" في مقياس AVPU؟",
+     "question": "What does the letter \"P\" in the AVPU scale mean?",
      "options": [
-      "الاستجابة للألم",
-      "وجود النبض",
-      "تفاعل الحدقتين",
-      "وعي جزئي"
+      "Responds to pain",
+      "Pulse present",
+      "Pupils react",
+      "Partly conscious"
      ],
      "correct": [
       0
      ],
-     "explain": ""
+     "explain": "",
+     "questionAr": "ماذا يعني الحرف \"P\" في مقياس AVPU؟",
+     "optionsAr": [
+      "الاستجابة للألم",
+      "وجود النبض",
+      "تفاعل الحدقتين",
+      "وعي جزئي"
+     ]
     },
     {
      "id": "q14",
      "type": "mcq",
-     "question": "كم مقدار الديازيبام الشرجي (تركيز 10 مجم/2 مل) الذي يجب إعطاؤه لطفل عمره 4 سنوات (15 كجم) إثناء التتشنجات؟",
+     "question": "How much rectal diazepam (10 mg/2 ml) should be given to a 4-year-old child (15 kg) who is convulsing?",
      "options": [
+      "0.5 ml",
+      "1.0 ml",
+      "1.5 ml",
+      "2.0 ml"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "",
+     "questionAr": "كم مقدار الديازيبام الشرجي (تركيز 10 مجم/2 مل) الذي يجب إعطاؤه لطفل عمره 4 سنوات (15 كجم) إثناء التتشنجات؟",
+     "optionsAr": [
       "0.5 مل",
       "1.0 مل",
       "1.5 مل",
       "2.0 مل"
-     ],
-     "correct": [
-      2
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q15",
      "type": "mcq",
-     "question": "بعد كم من الزمن يمكن إعطاء جرعة ثانية من الديازيبام الشرجي إذا استمرت التشنجات؟",
+     "question": "If the convulsions continue, after how long can a second dose of rectal diazepam be given?",
      "options": [
+      "2 minutes",
+      "5 minutes",
+      "10 minutes",
+      "20 minutes"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "",
+     "questionAr": "بعد كم من الزمن يمكن إعطاء جرعة ثانية من الديازيبام الشرجي إذا استمرت التشنجات؟",
+     "optionsAr": [
       "دقيقتان",
       "5 دقائق",
       "10 دقائق",
       "20 دقيقة"
-     ],
-     "correct": [
-      2
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q16",
      "type": "mcq",
-     "question": "ما هي الخطوة الأولى في التعامل مع طفل فاقد للوعي دون تاريخ لإصابة أو كسور؟",
+     "question": "What is the first step in managing an unconscious child with no history of injury or fractures?",
      "options": [
-      "إعطاء جلوكوز وريدي",
-      "وضعه في وضعية الإفاقة",
-      "إعطاء الأكسجين",
-      "التعامل مع مجرى التنفس"
+      "Give IV glucose",
+      "Put the child in the recovery position",
+      "Give oxygen",
+      "Manage the airway"
      ],
      "correct": [
       3
      ],
-     "explain": ""
+     "explain": "",
+     "questionAr": "ما هي الخطوة الأولى في التعامل مع طفل فاقد للوعي دون تاريخ لإصابة أو كسور؟",
+     "optionsAr": [
+      "إعطاء جلوكوز وريدي",
+      "وضعه في وضعية الإفاقة",
+      "إعطاء الأكسجين",
+      "التعامل مع مجرى التنفس"
+     ]
     },
     {
      "id": "q17",
      "type": "mcq",
-     "question": "طفل عمره 8 أشهر ووزنه 6 كجم يعاني من جفاف شديد. كم مقدار السائل الوريدي الذي يجب إعطاؤه في الساعة الأولى؟",
+     "question": "An 8-month-old child weighing 6 kg has severe dehydration. How much IV fluid should be given in the first hour?",
      "options": [
+      "60 ml",
+      "120 ml",
+      "180 ml",
+      "240 ml"
+     ],
+     "correct": [
+      2
+     ],
+     "explain": "",
+     "questionAr": "طفل عمره 8 أشهر ووزنه 6 كجم يعاني من جفاف شديد. كم مقدار السائل الوريدي الذي يجب إعطاؤه في الساعة الأولى؟",
+     "optionsAr": [
       "60 مل",
       "120 مل",
       "180 مل",
       "240 مل"
-     ],
-     "correct": [
-      2
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q18",
      "type": "mcq",
-     "question": "إذا تعذر الوصول الوريدي، فكم مقدار محلول معالجة الجفاف عن طريق الفم (ORS) يجب إعطاؤه عبر الأنبوب الأنفي المعدي كل ساعة للجفاف الشديد؟",
+     "question": "If IV access is not possible, how much oral rehydration solution (ORS) should be given by nasogastric tube each hour for severe dehydration?",
      "options": [
+      "10 ml/kg/hour",
+      "20 ml/kg/hour",
+      "30 ml/kg/hour",
+      "40 ml/kg/hour"
+     ],
+     "correct": [
+      1
+     ],
+     "explain": "",
+     "questionAr": "إذا تعذر الوصول الوريدي، فكم مقدار محلول معالجة الجفاف عن طريق الفم (ORS) يجب إعطاؤه عبر الأنبوب الأنفي المعدي كل ساعة للجفاف الشديد؟",
+     "optionsAr": [
       "10 مل/كجم/ساعة",
       "20 مل/كجم/ساعة",
       "30 مل/كجم/ساعة",
       "40 مل/كجم/ساعة"
-     ],
-     "correct": [
-      1
-     ],
-     "explain": ""
+     ]
     },
     {
      "id": "q19",
      "type": "mcq",
-     "question": "أي سائل يستخدم لعلاج الجفاف الشديد لدى الطفل المصاب بسوء تغذية حاد شديد؟",
+     "question": "Which fluid is used to treat severe dehydration in a child with severe acute malnutrition?",
      "options": [
-      "رينجر لاكتات",
-      "محلول ملحي عادي",
-      "ريسومال",
-      "محلول جلوكوز 5%"
+      "Ringer's lactate",
+      "Normal saline",
+      "ReSoMal",
+      "5% glucose"
      ],
      "correct": [
       2
      ],
-     "explain": ""
+     "explain": "",
+     "questionAr": "أي سائل يستخدم لعلاج الجفاف الشديد لدى الطفل المصاب بسوء تغذية حاد شديد؟",
+     "optionsAr": [
+      "رينجر لاكتات",
+      "محلول ملحي عادي",
+      "ريسومال",
+      "محلول جلوكوز 5%"
+     ]
     },
     {
      "id": "q20",
      "type": "mcq",
-     "question": "طفل عمره 3 سنوات (15 كجم) مصاب بجفاف شديد، تلقى 450 مل خلال 30 دقيقة. ما هي الخطوة التالية؟",
+     "question": "A 3-year-old child (15 kg) with severe dehydration has received 450 ml in 30 minutes. What is the next step?",
      "options": [
-      "إعطاء 450 مل أخرى خلال 2.5 ساعة",
-      "إعطاء 1050 مل خلال 2.5 ساعة",
-      "إعطاء 600 مل خلال 5 ساعات",
-      "التحول إلى محلول معالجة الجفاف عن طريق الفم فقط"
+      "Give another 450 ml over 2.5 hours",
+      "Give 1050 ml over 2.5 hours",
+      "Give 600 ml over 5 hours",
+      "Change to oral rehydration solution (ORS) only"
      ],
      "correct": [
       1
      ],
-     "explain": ""
+     "explain": "",
+     "questionAr": "طفل عمره 3 سنوات (15 كجم) مصاب بجفاف شديد، تلقى 450 مل خلال 30 دقيقة. ما هي الخطوة التالية؟",
+     "optionsAr": [
+      "إعطاء 450 مل أخرى خلال 2.5 ساعة",
+      "إعطاء 1050 مل خلال 2.5 ساعة",
+      "إعطاء 600 مل خلال 5 ساعات",
+      "التحول إلى محلول معالجة الجفاف عن طريق الفم فقط"
+     ]
     }
-   ]
+   ],
+   "titleAr": "الاختبار البعدي (اختبار ETAT القبلي والبعدي)",
+   "narrativeAr": [
+    "اختبار بعدي: نفس الأسئلة العشرين للاختبار القبلي. قارن نتيجتك بنتيجة الاختبار القبلي."
+   ],
+   "arabicOn": false
   },
   {
    "id": "sudan-etat-course-evaluation",

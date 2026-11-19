@@ -8,22 +8,27 @@
    "options": [
     {
      "id": "a",
-     "text": "تقديم العلاج الفوري لجميع المرضى"
+     "text": "تقديم العلاج الفوري لجميع المرضى",
+     "textEn": "Giving immediate treatment to all patients"
     },
     {
      "id": "b",
-     "text": "تصنيف المرضى إلى مجموعات حسب أولوية الاحتياج"
+     "text": "تصنيف المرضى إلى مجموعات حسب أولوية الاحتياج",
+     "textEn": "Sorting patients into groups according to their priority of need"
     },
     {
      "id": "c",
-     "text": "تصنيف المرضى إلى مجموعات حسب الموارد المتاحة"
+     "text": "تصنيف المرضى إلى مجموعات حسب الموارد المتاحة",
+     "textEn": "Sorting patients into groups according to the resources available"
     },
     {
      "id": "d",
-     "text": "الإجابتان (ب و ت) معا"
+     "text": "الإجابتان (ب و ت) معا",
+     "textEn": "Both (b) and (c)"
     }
    ],
-   "correctAnswer": "d"
+   "correctAnswer": "d",
+   "textEn": "What does the term \"triage\" mean?"
   },
   {
    "id": "q2",
@@ -32,22 +37,27 @@
    "options": [
     {
      "id": "a",
-     "text": "الدورة الدموية والغيبوبة"
+     "text": "الدورة الدموية والغيبوبة",
+     "textEn": "Circulation and coma"
     },
     {
      "id": "b",
-     "text": "الوعي والتشنجات"
+     "text": "الوعي والتشنجات",
+     "textEn": "Consciousness and convulsions"
     },
     {
      "id": "c",
-     "text": "الدورة الدموية والغيبوبة والتشنجات"
+     "text": "الدورة الدموية والغيبوبة والتشنجات",
+     "textEn": "Circulation, coma and convulsions"
     },
     {
      "id": "d",
-     "text": "الدورة الدموية والوعي"
+     "text": "الدورة الدموية والوعي",
+     "textEn": "Circulation and consciousness"
     }
    ],
-   "correctAnswer": "c"
+   "correctAnswer": "c",
+   "textEn": "In the ABCD approach of ETAT, what does the letter \"C\" stand for?"
   },
   {
    "id": "q3",
@@ -56,22 +66,27 @@
    "options": [
     {
      "id": "a",
-     "text": "رضيع صغير جدًا (أقل من شهرين)"
+     "text": "رضيع صغير جدًا (أقل من شهرين)",
+     "textEn": "Tiny baby (under 2 months)"
     },
     {
      "id": "b",
-     "text": "ضيق تنفس شديد"
+     "text": "ضيق تنفس شديد",
+     "textEn": "Severe respiratory distress"
     },
     {
      "id": "c",
-     "text": "ارتفاع درجة الحرارة (حمى شديدة)"
+     "text": "ارتفاع درجة الحرارة (حمى شديدة)",
+     "textEn": "High temperature (very hot)"
     },
     {
      "id": "d",
-     "text": "شحوب شديد"
+     "text": "شحوب شديد",
+     "textEn": "Severe pallor"
     }
    ],
-   "correctAnswer": "b"
+   "correctAnswer": "b",
+   "textEn": "Which of the following is an emergency sign?"
   },
   {
    "id": "q4",
@@ -80,22 +95,27 @@
    "options": [
     {
      "id": "a",
-     "text": "الاتصال بالطبيب أو الكادر الصحي الأقدم"
+     "text": "الاتصال بالطبيب أو الكادر الصحي الأقدم",
+     "textEn": "Call the doctor or a senior health worker"
     },
     {
      "id": "b",
-     "text": "البدء فوراً بالعلاج الطارئ"
+     "text": "البدء فوراً بالعلاج الطارئ",
+     "textEn": "Start emergency treatment immediately"
     },
     {
      "id": "c",
-     "text": "إكمال إجراءات التسجيل"
+     "text": "إكمال إجراءات التسجيل",
+     "textEn": "Complete the registration"
     },
     {
      "id": "d",
-     "text": "تقييم العلامات ذات الأولوية"
+     "text": "تقييم العلامات ذات الأولوية",
+     "textEn": "Assess for priority signs"
     }
    ],
-   "correctAnswer": "b"
+   "correctAnswer": "b",
+   "textEn": "If a child has emergency signs, what should you do first?"
   },
   {
    "id": "q5",
@@ -104,22 +124,27 @@
    "options": [
     {
      "id": "a",
-     "text": "انظر، استمع، وتحسس"
+     "text": "انظر، استمع، وتحسس",
+     "textEn": "Look, listen and feel"
     },
     {
      "id": "b",
-     "text": "اسأل، قيم، افعل"
+     "text": "اسأل، قيم، افعل",
+     "textEn": "Ask, assess and act"
     },
     {
      "id": "c",
-     "text": "افتح، نظف، ساعد على التنفس"
+     "text": "افتح، نظف، ساعد على التنفس",
+     "textEn": "Open, clear and help breathing"
     },
     {
      "id": "d",
-     "text": "ضع بوضعية جيدة، أشفط، أعطِ الأكسجين"
+     "text": "ضع بوضعية جيدة، أشفط، أعطِ الأكسجين",
+     "textEn": "Position, suction and give oxygen"
     }
    ],
-   "correctAnswer": "a"
+   "correctAnswer": "a",
+   "textEn": "What are the three steps for checking the airway and breathing?"
   },
   {
    "id": "q6",
@@ -128,22 +153,27 @@
    "options": [
     {
      "id": "a",
-     "text": "رفع الذقن"
+     "text": "رفع الذقن",
+     "textEn": "Chin lift"
     },
     {
      "id": "b",
-     "text": "إمالة الرأس للخلف"
+     "text": "إمالة الرأس للخلف",
+     "textEn": "Head tilt"
     },
     {
      "id": "c",
-     "text": "دفع الفك السفلي لأعلى"
+     "text": "دفع الفك السفلي لأعلى",
+     "textEn": "Jaw thrust"
     },
     {
      "id": "d",
-     "text": "مد الرقبة"
+     "text": "مد الرقبة",
+     "textEn": "Neck extension"
     }
    ],
-   "correctAnswer": "c"
+   "correctAnswer": "c",
+   "textEn": "If you suspect a neck injury in a child, how should you open the airway?"
   },
   {
    "id": "q7",
@@ -152,22 +182,27 @@
    "options": [
     {
      "id": "a",
-     "text": "0.5–1 لتر/دقيقة"
+     "text": "0.5–1 لتر/دقيقة",
+     "textEn": "0.5–1 litre/minute"
     },
     {
      "id": "b",
-     "text": "1–2 لتر/دقيقة"
+     "text": "1–2 لتر/دقيقة",
+     "textEn": "1–2 litres/minute"
     },
     {
      "id": "c",
-     "text": "2–4 لتر/دقيقة"
+     "text": "2–4 لتر/دقيقة",
+     "textEn": "2–4 litres/minute"
     },
     {
      "id": "d",
-     "text": "4–6 لتر/دقيقة"
+     "text": "4–6 لتر/دقيقة",
+     "textEn": "4–6 litres/minute"
     }
    ],
-   "correctAnswer": "a"
+   "correctAnswer": "a",
+   "textEn": "What starting oxygen flow rate should be given to an infant under 1 year of age?"
   },
   {
    "id": "q8",
@@ -176,22 +211,27 @@
    "options": [
     {
      "id": "a",
-     "text": "إنسحاب الصدر الخفيف للداخل"
+     "text": "إنسحاب الصدر الخفيف للداخل",
+     "textEn": "Mild chest indrawing"
     },
     {
      "id": "b",
-     "text": "توسع فتحتي الأنف مع التنفس"
+     "text": "توسع فتحتي الأنف مع التنفس",
+     "textEn": "Nasal flaring with breathing"
     },
     {
      "id": "c",
-     "text": "إيماءة الرأس مع كل شهيق"
+     "text": "إيماءة الرأس مع كل شهيق",
+     "textEn": "Head nodding with each breath in"
     },
     {
      "id": "d",
-     "text": "تسارع التنفس دون علامات ضيق"
+     "text": "تسارع التنفس دون علامات ضيق",
+     "textEn": "Fast breathing with no signs of distress"
     }
    ],
-   "correctAnswer": "c"
+   "correctAnswer": "c",
+   "textEn": "Which of the following is a sign of severe respiratory distress?"
   },
   {
    "id": "q9",
@@ -200,22 +240,27 @@
    "options": [
     {
      "id": "a",
-     "text": "أقل من ثانية واحدة"
+     "text": "أقل من ثانية واحدة",
+     "textEn": "Less than 1 second"
     },
     {
      "id": "b",
-     "text": "أقل من 3 ثوانٍ"
+     "text": "أقل من 3 ثوانٍ",
+     "textEn": "Less than 3 seconds"
     },
     {
      "id": "c",
-     "text": "أقل من 5 ثوانٍ"
+     "text": "أقل من 5 ثوانٍ",
+     "textEn": "Less than 5 seconds"
     },
     {
      "id": "d",
-     "text": "أقل من 7 ثوانٍ"
+     "text": "أقل من 7 ثوانٍ",
+     "textEn": "Less than 7 seconds"
     }
    ],
-   "correctAnswer": "b"
+   "correctAnswer": "b",
+   "textEn": "What is the normal capillary refill time?"
   },
   {
    "id": "q10",
@@ -224,22 +269,27 @@
    "options": [
     {
      "id": "a",
-     "text": "النبض الفخذي"
+     "text": "النبض الفخذي",
+     "textEn": "Femoral pulse"
     },
     {
      "id": "b",
-     "text": "النبض العضدي"
+     "text": "النبض العضدي",
+     "textEn": "Brachial pulse"
     },
     {
      "id": "c",
-     "text": "النبض السباتي"
+     "text": "النبض السباتي",
+     "textEn": "Carotid pulse"
     },
     {
      "id": "d",
-     "text": "النبض المأبضي"
+     "text": "النبض المأبضي",
+     "textEn": "Popliteal pulse"
     }
    ],
-   "correctAnswer": "c"
+   "correctAnswer": "c",
+   "textEn": "If you cannot feel the radial pulse in an older child, which pulse should you check next?"
   },
   {
    "id": "q11",
@@ -248,22 +298,27 @@
    "options": [
     {
      "id": "a",
-     "text": "محلول جلوكوز 5%"
+     "text": "محلول جلوكوز 5%",
+     "textEn": "5% glucose"
     },
     {
      "id": "b",
-     "text": "رينجر لاكتات"
+     "text": "رينجر لاكتات",
+     "textEn": "Ringer's lactate"
     },
     {
      "id": "c",
-     "text": "محلول ملحي نصف عياري"
+     "text": "محلول ملحي نصف عياري",
+     "textEn": "Half-normal saline"
     },
     {
      "id": "d",
-     "text": "ريسومال"
+     "text": "ريسومال",
+     "textEn": "ReSoMal"
     }
    ],
-   "correctAnswer": "b"
+   "correctAnswer": "b",
+   "textEn": "Which fluid is given first to treat shock in a well-nourished child?"
   },
   {
    "id": "q12",
@@ -272,22 +327,27 @@
    "options": [
     {
      "id": "a",
-     "text": "110 مل"
+     "text": "110 مل",
+     "textEn": "110 ml"
     },
     {
      "id": "b",
-     "text": "220 مل"
+     "text": "220 مل",
+     "textEn": "220 ml"
     },
     {
      "id": "c",
-     "text": "330 مل"
+     "text": "330 مل",
+     "textEn": "330 ml"
     },
     {
      "id": "d",
-     "text": "440 مل"
+     "text": "440 مل",
+     "textEn": "440 ml"
     }
    ],
-   "correctAnswer": "b"
+   "correctAnswer": "b",
+   "textEn": "How much fluid do you give a 1-year-old child (11 kg) who is not malnourished as the first rapid bolus to treat shock?"
   },
   {
    "id": "q13",
@@ -296,22 +356,27 @@
    "options": [
     {
      "id": "a",
-     "text": "الاستجابة للألم"
+     "text": "الاستجابة للألم",
+     "textEn": "Responds to pain"
     },
     {
      "id": "b",
-     "text": "وجود النبض"
+     "text": "وجود النبض",
+     "textEn": "Pulse present"
     },
     {
      "id": "c",
-     "text": "تفاعل الحدقتين"
+     "text": "تفاعل الحدقتين",
+     "textEn": "Pupils react"
     },
     {
      "id": "d",
-     "text": "وعي جزئي"
+     "text": "وعي جزئي",
+     "textEn": "Partly conscious"
     }
    ],
-   "correctAnswer": "a"
+   "correctAnswer": "a",
+   "textEn": "What does the letter \"P\" in the AVPU scale mean?"
   },
   {
    "id": "q14",
@@ -320,22 +385,27 @@
    "options": [
     {
      "id": "a",
-     "text": "0.5 مل"
+     "text": "0.5 مل",
+     "textEn": "0.5 ml"
     },
     {
      "id": "b",
-     "text": "1.0 مل"
+     "text": "1.0 مل",
+     "textEn": "1.0 ml"
     },
     {
      "id": "c",
-     "text": "1.5 مل"
+     "text": "1.5 مل",
+     "textEn": "1.5 ml"
     },
     {
      "id": "d",
-     "text": "2.0 مل"
+     "text": "2.0 مل",
+     "textEn": "2.0 ml"
     }
    ],
-   "correctAnswer": "c"
+   "correctAnswer": "c",
+   "textEn": "How much rectal diazepam (10 mg/2 ml) should be given to a 4-year-old child (15 kg) who is convulsing?"
   },
   {
    "id": "q15",
@@ -344,22 +414,27 @@
    "options": [
     {
      "id": "a",
-     "text": "دقيقتان"
+     "text": "دقيقتان",
+     "textEn": "2 minutes"
     },
     {
      "id": "b",
-     "text": "5 دقائق"
+     "text": "5 دقائق",
+     "textEn": "5 minutes"
     },
     {
      "id": "c",
-     "text": "10 دقائق"
+     "text": "10 دقائق",
+     "textEn": "10 minutes"
     },
     {
      "id": "d",
-     "text": "20 دقيقة"
+     "text": "20 دقيقة",
+     "textEn": "20 minutes"
     }
    ],
-   "correctAnswer": "c"
+   "correctAnswer": "c",
+   "textEn": "If the convulsions continue, after how long can a second dose of rectal diazepam be given?"
   },
   {
    "id": "q16",
@@ -368,22 +443,27 @@
    "options": [
     {
      "id": "a",
-     "text": "إعطاء جلوكوز وريدي"
+     "text": "إعطاء جلوكوز وريدي",
+     "textEn": "Give IV glucose"
     },
     {
      "id": "b",
-     "text": "وضعه في وضعية الإفاقة"
+     "text": "وضعه في وضعية الإفاقة",
+     "textEn": "Put the child in the recovery position"
     },
     {
      "id": "c",
-     "text": "إعطاء الأكسجين"
+     "text": "إعطاء الأكسجين",
+     "textEn": "Give oxygen"
     },
     {
      "id": "d",
-     "text": "التعامل مع مجرى التنفس"
+     "text": "التعامل مع مجرى التنفس",
+     "textEn": "Manage the airway"
     }
    ],
-   "correctAnswer": "d"
+   "correctAnswer": "d",
+   "textEn": "What is the first step in managing an unconscious child with no history of injury or fractures?"
   },
   {
    "id": "q17",
@@ -392,22 +472,27 @@
    "options": [
     {
      "id": "a",
-     "text": "60 مل"
+     "text": "60 مل",
+     "textEn": "60 ml"
     },
     {
      "id": "b",
-     "text": "120 مل"
+     "text": "120 مل",
+     "textEn": "120 ml"
     },
     {
      "id": "c",
-     "text": "180 مل"
+     "text": "180 مل",
+     "textEn": "180 ml"
     },
     {
      "id": "d",
-     "text": "240 مل"
+     "text": "240 مل",
+     "textEn": "240 ml"
     }
    ],
-   "correctAnswer": "c"
+   "correctAnswer": "c",
+   "textEn": "An 8-month-old child weighing 6 kg has severe dehydration. How much IV fluid should be given in the first hour?"
   },
   {
    "id": "q18",
@@ -416,22 +501,27 @@
    "options": [
     {
      "id": "a",
-     "text": "10 مل/كجم/ساعة"
+     "text": "10 مل/كجم/ساعة",
+     "textEn": "10 ml/kg/hour"
     },
     {
      "id": "b",
-     "text": "20 مل/كجم/ساعة"
+     "text": "20 مل/كجم/ساعة",
+     "textEn": "20 ml/kg/hour"
     },
     {
      "id": "c",
-     "text": "30 مل/كجم/ساعة"
+     "text": "30 مل/كجم/ساعة",
+     "textEn": "30 ml/kg/hour"
     },
     {
      "id": "d",
-     "text": "40 مل/كجم/ساعة"
+     "text": "40 مل/كجم/ساعة",
+     "textEn": "40 ml/kg/hour"
     }
    ],
-   "correctAnswer": "b"
+   "correctAnswer": "b",
+   "textEn": "If IV access is not possible, how much oral rehydration solution (ORS) should be given by nasogastric tube each hour for severe dehydration?"
   },
   {
    "id": "q19",
@@ -440,22 +530,27 @@
    "options": [
     {
      "id": "a",
-     "text": "رينجر لاكتات"
+     "text": "رينجر لاكتات",
+     "textEn": "Ringer's lactate"
     },
     {
      "id": "b",
-     "text": "محلول ملحي عادي"
+     "text": "محلول ملحي عادي",
+     "textEn": "Normal saline"
     },
     {
      "id": "c",
-     "text": "ريسومال"
+     "text": "ريسومال",
+     "textEn": "ReSoMal"
     },
     {
      "id": "d",
-     "text": "محلول جلوكوز 5%"
+     "text": "محلول جلوكوز 5%",
+     "textEn": "5% glucose"
     }
    ],
-   "correctAnswer": "c"
+   "correctAnswer": "c",
+   "textEn": "Which fluid is used to treat severe dehydration in a child with severe acute malnutrition?"
   },
   {
    "id": "q20",
@@ -464,22 +559,28 @@
    "options": [
     {
      "id": "a",
-     "text": "إعطاء 450 مل أخرى خلال 2.5 ساعة"
+     "text": "إعطاء 450 مل أخرى خلال 2.5 ساعة",
+     "textEn": "Give another 450 ml over 2.5 hours"
     },
     {
      "id": "b",
-     "text": "إعطاء 1050 مل خلال 2.5 ساعة"
+     "text": "إعطاء 1050 مل خلال 2.5 ساعة",
+     "textEn": "Give 1050 ml over 2.5 hours"
     },
     {
      "id": "c",
-     "text": "إعطاء 600 مل خلال 5 ساعات"
+     "text": "إعطاء 600 مل خلال 5 ساعات",
+     "textEn": "Give 600 ml over 5 hours"
     },
     {
      "id": "d",
-     "text": "التحول إلى محلول معالجة الجفاف عن طريق الفم فقط"
+     "text": "التحول إلى محلول معالجة الجفاف عن طريق الفم فقط",
+     "textEn": "Change to oral rehydration solution (ORS) only"
     }
    ],
-   "correctAnswer": "b"
+   "correctAnswer": "b",
+   "textEn": "A 3-year-old child (15 kg) with severe dehydration has received 450 ml in 30 minutes. What is the next step?"
   }
- ]
+ ],
+ "translation": "textEn: English translation (2026-11-19) of the Arabic questions in the app; the online course shows English and keeps the Arabic as questionAr/optionsAr so it can be switched on later."
 }

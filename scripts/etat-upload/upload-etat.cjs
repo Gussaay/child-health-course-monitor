@@ -39,7 +39,7 @@ const byOrder = (x, y) => (x.order || 0) - (y.order || 0);
 const exerciseRecord = (e) => ({
   id: e.id, order: Number(e.order) || 0, title: e.title, titleAr: e.titleAr || '', subCourse: e.subCourse || '',
   kind: e.kind || 'case', formType: e.formType || 'child', passMark: Number(e.passMark) || 80,
-  estimatedMinutes: Number(e.estimatedMinutes) || 15, draft: e.draft !== false, explain: e.explain || '',
+  estimatedMinutes: Number(e.estimatedMinutes) || 15, draft: e.draft !== false, arabicOn: e.arabicOn === true, explain: e.explain || '',
   learningPointsJson: JSON.stringify(e.learningPoints || []), narrativeJson: JSON.stringify(e.narrative || []),
   narrativeArJson: JSON.stringify(e.narrativeAr || []), expectedJson: JSON.stringify(e.expected || {}),
   questionsJson: JSON.stringify(e.questions || []), isDeleted: false,

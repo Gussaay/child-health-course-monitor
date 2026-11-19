@@ -4107,6 +4107,10 @@ export async function upsertExerciseDefinition(exercise) {
         passMark: Number(exercise.passMark) || 80,
         estimatedMinutes: Number(exercise.estimatedMinutes) || 15,
         draft: exercise.draft !== false,
+        // A quiz can carry an Arabic translation of each question (questionAr,
+        // optionsAr). Learners see English; the switch to Arabic only shows
+        // once arabicOn is turned on.
+        arabicOn: exercise.arabicOn === true,
         explain: exercise.explain || '',
         // Stored as a JSON string for the same reason as narrative: it is a
         // list, and it is only ever read back whole.

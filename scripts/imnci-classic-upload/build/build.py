@@ -26,7 +26,7 @@ pkg = {
     "course": {"title": "Sudan IMNCI course",
                "description": "The Sudan national IMNCI course, in the order of the national facilitator guide, with the national module text."},
     "modules": practice.enrich([m.MODULE for m in MODS], practice.classic_plans()),
-    "exercises": [e for m in MODS for e in m.EXERCISES],
+    "exercises": [e for m in MODS for e in m.EXERCISES] + practice.PRETEST_EXERCISES,
 }
 
 # ---- activities in the middle of long reading (midreads.py): inserted after a book paragraph, text unchanged

@@ -470,7 +470,8 @@ export function ExerciseLinkBlock({ block, activityKey }) {
             {playing && (
                 <Overlay title={ex.title} onClose={() => setPlaying(false)}>
                     <Suspense fallback={<div className="h-40 bg-slate-100 rounded-xl animate-pulse" />}>
-                        <Player exercise={ex} participant={null} onExit={() => setPlaying(false)} onChecked={markDone} />
+                        <Player exercise={ex} participant={null} onExit={() => setPlaying(false)} onChecked={markDone}
+                            exitLabel={t('imnci_ui.courses.exlink.back_to_lesson', 'Back to the lesson')} />
                     </Suspense>
                     <p className="text-xs text-slate-500 text-center mt-4">
                         {t('imnci_ui.courses.exlink.practice_note', 'Practice in the course is marked but not recorded. Scored attempts for a training course are taken in Online Exercises.')}

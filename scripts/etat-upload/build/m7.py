@@ -5,7 +5,7 @@
 # The post-test (same questions as the pre-test) and the course evaluation (facilitator
 # guide Annex 6) close the course.
 from elib import *
-from m1 import test_questions
+from m1 import test_questions, test_exercise
 
 EXERCISES = []
 def _ex(e):
@@ -119,10 +119,9 @@ L.append(lesson("Developing your plan of action",
 ]))
 mark(3545, 3564)
 
-POST = _ex(equiz("sudan-etat-post-test", 72, "Post-test (ETAT Pre/Post Test)", [
-    "اختبار بعدي: نفس الأسئلة العشرين للاختبار القبلي. قارن نتيجتك بنتيجة الاختبار القبلي.",
-    "Post-test: the same 20 questions as the pre-test. Compare your score with your pre-test score."],
-    test_questions(), minutes=20, pass_mark=60))
+POST = _ex(test_exercise("sudan-etat-post-test", 72, "Post-test (ETAT Pre/Post Test)", "الاختبار البعدي (اختبار ETAT القبلي والبعدي)",
+    "Post-test: the same 20 questions as the pre-test. Compare your score with your pre-test score.",
+    "اختبار بعدي: نفس الأسئلة العشرين للاختبار القبلي. قارن نتيجتك بنتيجة الاختبار القبلي."))
 
 EVAL_QS = ["What was most useful and can be put into practice?", "What will you not be able to do in your setting?",
            "What was most difficult to understand?", "Was the training clear?", "Was the time adequate?", "For whom is ETAT suitable?",
