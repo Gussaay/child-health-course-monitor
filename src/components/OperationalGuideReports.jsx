@@ -4,9 +4,10 @@
 // individual participant report, and the daily evaluation results dashboard.
 // Exercise results are the monitoring cases with setting 'EXERCISE' (see
 // ExerciseMonitoring.jsx); evaluation answers are dailyEvalResponses.
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
-import { ClipboardCheck, MessageSquareText, Users } from 'lucide-react';
+import { Check, ClipboardCheck, Copy, Loader2, MessageSquareText, Users } from 'lucide-react';
+import { copyElementImage } from '../utils/copyImage';
 import './chartSetup';
 import { CHART_COLORS } from './chartSetup';
 import { listDailyEvalForms, listDailyEvalResponses } from '../data.js';
@@ -163,6 +164,58 @@ const avg = (vals) => { const v = vals.filter(x => typeof x === 'number'); retur
 const scoreTone = (a) => a == null ? 'text-slate-400' : a >= 4 ? 'text-emerald-600' : a >= 3 ? 'text-amber-600' : 'text-red-600';
 const fmt = (a) => (a == null ? '–' : a.toFixed(1));
 
+const ALL_DAYS = '__all__';
+const countApply = (rs) => {
+    const c = { very_high: 0, high: 0, medium: 0, low: 0 };
+    rs.forEach(r => { if (c[r.applyLevel] != null) c[r.applyLevel] += 1; });
+    return c;
+};
+
+// Copies the card it sits in as a picture (WhatsApp-ready); on phones without
+// image copy it opens the share sheet or downloads the picture.
+function CopyImageButton({ target, fileName, label = '' }) {
+    const [state, setState] = useState('');
+    const timer = useRef(null);
+    useEffect(() => () => clearTimeout(timer.current), []);
+    const onClick = async () => {
+        if (state === 'busy') return;
+        setState('busy');
+        let next = '';
+        try {
+            const r = await copyElementImage(target.current, fileName, { title: 'التقييم اليومي' });
+            next = r === 'copied' ? 'copied' : r === 'downloaded' ? 'downloaded' : r === 'shared' ? 'shared' : '';
+        } catch (e) {
+            console.error('Copy as image failed:', e);
+            next = 'failed';
+        }
+        setState(next);
+        clearTimeout(timer.current);
+        timer.current = setTimeout(() => setState(''), 2500);
+    };
+    const text = { busy: 'جارٍ النسخ…', copied: 'تم النسخ ✓', downloaded: 'تم التنزيل ✓', shared: 'تمت المشاركة ✓', failed: 'تعذّر النسخ' }[state] || label;
+    return (
+        <button type="button" onClick={onClick} disabled={state === 'busy'} title="نسخ كصورة · Copy as image"
+            className={`exclude-from-export shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors ${state === 'failed' ? 'border-red-200 text-red-600 bg-red-50' : state && state !== 'busy' ? 'border-emerald-200 text-emerald-700 bg-emerald-50' : 'border-slate-200 text-slate-600 bg-white hover:text-sky-700 hover:border-sky-300 hover:bg-sky-50'}`}>
+            {state === 'busy' ? <Loader2 size={14} className="animate-spin" /> : state && state !== 'failed' ? <Check size={14} /> : <Copy size={14} />}
+            {text && <span>{text}</span>}
+        </button>
+    );
+}
+
+// A card's title with its copy button. The caption shows only in the copied
+// picture, so a table pasted on its own still says which course and day it is.
+function CardHead({ title, caption, target, name, fileBase }) {
+    return (
+        <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+                <div className="export-only hidden text-xs text-slate-500 mb-1">{caption}</div>
+                <h4 className="font-bold text-slate-800 flex items-center gap-2">{title}</h4>
+            </div>
+            <CopyImageButton target={target} fileName={`${fileBase}-${name}.png`} />
+        </div>
+    );
+}
+
 function ScoreBar({ value }) {
     const w = value == null ? 0 : (value / 5) * 100;
     const color = value == null ? 'bg-slate-200' : value >= 4 ? 'bg-emerald-500' : value >= 3 ? 'bg-amber-500' : 'bg-red-500';
@@ -227,41 +280,82 @@ export function DailyEvaluationDashboard({ course }) {
         return () => { try { unsub(); } catch { /* closed */ } };
     }, [course.id, data !== null, loadedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const form = data?.forms.find(f => f.id === formId);
-    const responses = useMemo(() => (data?.responses || []).filter(r => r.formId === formId), [data, formId]);
+    const isAll = formId === ALL_DAYS;
+    const form = isAll ? null : data?.forms.find(f => f.id === formId);
+    const responses = useMemo(() => (data?.responses || []).filter(r => (isAll ? (data?.forms || []).some(f => f.id === r.formId) : r.formId === formId)), [data, formId, isAll]);
+    // The days this view covers: the chosen day, or every day.
+    const days = useMemo(() => (isAll ? (data?.forms || []) : form ? [form] : []), [data, form, isAll]);
 
-    const lectureRows = useMemo(() => (form?.lectures || []).map(l => {
-        const per = CRITERIA.map(([k]) => avg(responses.map(r => r.lectures?.[l.id]?.[k])));
-        return { l, per, overall: avg(per.filter(x => x != null)) };
-    }), [form, responses]);
-    const generalRows = useMemo(() => (form?.general || DEFAULT_GENERAL.map((t, i) => ({ id: `g${i + 1}`, text: t }))).map(g => ({ g, value: avg(responses.map(r => r.general?.[g.id])) })), [form, responses]);
-    const applyCounts = useMemo(() => {
-        const c = { very_high: 0, high: 0, medium: 0, low: 0 };
-        responses.forEach(r => { if (c[r.applyLevel] != null) c[r.applyLevel] += 1; });
-        return c;
-    }, [responses]);
+    const lectureRows = useMemo(() => days.flatMap(f => {
+        const rs = responses.filter(r => r.formId === f.id);
+        return (f.lectures || []).map(l => {
+            const per = CRITERIA.map(([k]) => avg(rs.map(r => r.lectures?.[l.id]?.[k])));
+            return { key: `${f.id}_${l.id}`, l, day: f, per, overall: avg(per.filter(x => x != null)) };
+        });
+    }).filter(row => !isAll || row.overall != null), [days, responses, isAll]);
+    // General items: the same wording on several days is one row (the average
+    // of every answer to it).
+    const generalRows = useMemo(() => {
+        const rows = new Map();
+        days.forEach(f => {
+            const rs = responses.filter(r => r.formId === f.id);
+            (f.general || DEFAULT_GENERAL.map((t, i) => ({ id: `g${i + 1}`, text: t }))).forEach(g => {
+                const k = (g.text || '').trim();
+                if (!rows.has(k)) rows.set(k, { g: { id: k, text: g.text }, vals: [] });
+                rows.get(k).vals.push(...rs.map(r => r.general?.[g.id]));
+            });
+        });
+        return Array.from(rows.values()).map(({ g, vals }) => ({ g, value: avg(vals) }));
+    }, [days, responses]);
+    const applyCounts = useMemo(() => countApply(responses), [responses]);
     const applyAnswered = Object.values(applyCounts).reduce((a, b) => a + b, 0);
     const overallLectures = avg(lectureRows.map(r => r.overall).filter(x => x != null));
     const overallGeneral = avg(generalRows.map(r => r.value).filter(x => x != null));
-    const texts = (key) => responses.map(r => (r[key] || '').trim()).filter(Boolean);
+    const dayLabel = (f) => `اليوم ${f.dayNumber ?? ''} · ${f.date || ''}`;
+    const texts = (key) => days.flatMap(f => responses.filter(r => r.formId === f.id).map(r => ({ txt: (r[key] || '').trim(), day: f })).filter(x => x.txt));
+    // One line per day, for the combined view.
+    const dayRows = useMemo(() => (isAll ? (data?.forms || []).map(f => {
+        const rs = responses.filter(r => r.formId === f.id);
+        const lec = (f.lectures || []).map(l => avg(CRITERIA.flatMap(([k]) => rs.map(r => r.lectures?.[l.id]?.[k])))).filter(x => x != null);
+        const gen = (f.general || DEFAULT_GENERAL.map((t, i) => ({ id: `g${i + 1}`, text: t }))).map(g => avg(rs.map(r => r.general?.[g.id]))).filter(x => x != null);
+        const c = countApply(rs);
+        const n = Object.values(c).reduce((a, b) => a + b, 0);
+        return { f, count: rs.length, lectures: avg(lec), general: avg(gen), high: n ? pct(c.very_high + c.high, n) : null };
+    }) : []), [data, responses, isAll]);
+
+    const kpiRef = useRef(null);
+    const daysRef = useRef(null);
+    const lecturesRef = useRef(null);
+    const generalRef = useRef(null);
+    const applyRef = useRef(null);
+    const commentsRef = useRef(null);
 
     if (!data) return <SkeletonCard lines={6} />;
     if (error) return <Card><div className="p-4"><EmptyState message={error} /></div></Card>;
     if (data.forms.length === 0) return <Card><div className="p-4"><EmptyState message="No daily evaluation has been shared for this course yet. Share one from the course's Share button." /></div></Card>;
 
+    const scope = isAll ? `كل الأيام (${data.forms.length} أيام)` : form ? dayLabel(form) : '';
+    const fileBase = `daily-evaluation-${isAll ? 'all-days' : `day-${form?.dayNumber ?? ''}`}`;
+    const caption = [course.course_type, scope].filter(Boolean).join(' · ');
+
     return (
         <div className="space-y-4" dir="rtl">
             <Card>
-                <div className="p-4 space-y-4">
+                <div className="p-4 space-y-4 bg-white rounded-xl" ref={kpiRef}>
                     <div className="flex flex-wrap items-end gap-3 justify-between">
                         <div>
                             <h3 className="text-xl font-bold text-slate-800">نتائج التقييم اليومي</h3>
-                            <p className="text-sm text-slate-500">Daily evaluation results · answers are anonymous</p>
+                            <p className="text-sm text-slate-500 exclude-from-export">Daily evaluation results · answers are anonymous</p>
+                            <p className="export-only hidden text-sm text-slate-600 font-semibold">{caption}</p>
                         </div>
-                        <div className="w-full sm:w-72">
-                            <Select label="اليوم" value={formId} onChange={e => setFormId(e.target.value)}>
-                                {data.forms.map(f => <option key={f.id} value={f.id}>اليوم {f.dayNumber} · {f.date} ({data.responses.filter(r => r.formId === f.id).length})</option>)}
-                            </Select>
+                        <div className="flex items-end gap-2 w-full sm:w-auto exclude-from-export">
+                            <div className="flex-1 sm:w-72">
+                                <Select label="اليوم" value={formId} onChange={e => setFormId(e.target.value)}>
+                                    {data.forms.length > 1 && <option value={ALL_DAYS}>كل الأيام مجتمعة ({data.responses.filter(r => data.forms.some(f => f.id === r.formId)).length})</option>}
+                                    {data.forms.map(f => <option key={f.id} value={f.id}>اليوم {f.dayNumber} · {f.date} ({data.responses.filter(r => r.formId === f.id).length})</option>)}
+                                </Select>
+                            </div>
+                            <CopyImageButton target={kpiRef} fileName={`${fileBase}-kpis.png`} label="نسخ كصورة" />
                         </div>
                     </div>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -274,13 +368,52 @@ export function DailyEvaluationDashboard({ course }) {
             </Card>
 
             {responses.length === 0 ? (
-                <Card><div className="p-4"><EmptyState message="لم تصل أي إجابة لهذا اليوم بعد." /></div></Card>
+                <Card><div className="p-4"><EmptyState message={isAll ? 'لم تصل أي إجابة بعد.' : 'لم تصل أي إجابة لهذا اليوم بعد.'} /></div></Card>
             ) : (
                 <>
+                    {isAll && (
+                        <Card>
+                            <div className="p-4 space-y-3 bg-white rounded-xl" ref={daysRef}>
+                                <CardHead fileBase={fileBase} caption={caption} title="ملخص الأيام" target={daysRef} name="days" />
+                                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                                    <table className="min-w-full text-sm">
+                                        <thead className="bg-gray-100 text-gray-700">
+                                            <tr>
+                                                <th className="px-3 py-2 text-start font-semibold">اليوم</th>
+                                                <th className="px-3 py-2 font-semibold">الاستمارات</th>
+                                                <th className="px-3 py-2 font-semibold whitespace-nowrap">تقييم المحاضرات</th>
+                                                <th className="px-3 py-2 font-semibold whitespace-nowrap">التقييم العام</th>
+                                                <th className="px-3 py-2 font-semibold whitespace-nowrap">استفادة كبيرة</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200 bg-white">
+                                            {dayRows.map(({ f, count, lectures, general, high }) => (
+                                                <tr key={f.id}>
+                                                    <td className="px-3 py-2 text-slate-800 whitespace-nowrap">{dayLabel(f)}</td>
+                                                    <td className="px-3 py-2 text-center tabular-nums" dir="ltr">{count}</td>
+                                                    <td className="px-3 py-2"><ScoreBar value={lectures} /></td>
+                                                    <td className="px-3 py-2"><ScoreBar value={general} /></td>
+                                                    <td className="px-3 py-2 text-center tabular-nums font-semibold text-slate-700" dir="ltr">{high == null ? '–' : `${high}%`}</td>
+                                                </tr>
+                                            ))}
+                                            <tr className="bg-slate-50 font-bold">
+                                                <td className="px-3 py-2 text-slate-800">كل الأيام</td>
+                                                <td className="px-3 py-2 text-center tabular-nums" dir="ltr">{responses.length}</td>
+                                                <td className="px-3 py-2"><ScoreBar value={overallLectures} /></td>
+                                                <td className="px-3 py-2"><ScoreBar value={overallGeneral} /></td>
+                                                <td className="px-3 py-2 text-center tabular-nums text-slate-700" dir="ltr">{applyAnswered ? `${pct(applyCounts.very_high + applyCounts.high, applyAnswered)}%` : '–'}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+
                     {lectureRows.length > 0 && (
                         <Card>
-                            <div className="p-4 space-y-3">
-                                <h4 className="font-bold text-slate-800">أولًا: تقييم المحاضرات (من 5)</h4>
+                            <div className="p-4 space-y-3 bg-white rounded-xl" ref={lecturesRef}>
+                                <CardHead fileBase={fileBase} caption={caption} title="أولًا: تقييم المحاضرات (من 5)" target={lecturesRef} name="lectures" />
                                 <div className="overflow-x-auto border border-gray-200 rounded-lg">
                                     <table className="min-w-full text-sm">
                                         <thead className="bg-gray-100 text-gray-700">
@@ -291,12 +424,17 @@ export function DailyEvaluationDashboard({ course }) {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200 bg-white">
-                                            {lectureRows.map(({ l, per, overall }, i) => (
-                                                <tr key={l.id}>
-                                                    <td className="px-3 py-2 text-slate-800 min-w-[12rem]">{i + 1}. {l.text}</td>
-                                                    {per.map((v, j) => <td key={j} className="px-3 py-2"><ScoreBar value={v} /></td>)}
-                                                    <td className={`px-3 py-2 text-center font-bold tabular-nums ${scoreTone(overall)}`} dir="ltr">{fmt(overall)}</td>
-                                                </tr>
+                                            {lectureRows.map(({ key, l, day, per, overall }, i) => (
+                                                <React.Fragment key={key}>
+                                                    {isAll && (i === 0 || lectureRows[i - 1].day.id !== day.id) && (
+                                                        <tr className="bg-sky-50"><td colSpan={CRITERIA.length + 2} className="px-3 py-1.5 text-xs font-bold text-sky-800">{dayLabel(day)}</td></tr>
+                                                    )}
+                                                    <tr>
+                                                        <td className="px-3 py-2 text-slate-800 min-w-[12rem]">{(isAll ? lectureRows.slice(0, i + 1).filter(r => r.day.id === day.id).length : i + 1)}. {l.text}</td>
+                                                        {per.map((v, j) => <td key={j} className="px-3 py-2"><ScoreBar value={v} /></td>)}
+                                                        <td className={`px-3 py-2 text-center font-bold tabular-nums ${scoreTone(overall)}`} dir="ltr">{fmt(overall)}</td>
+                                                    </tr>
+                                                </React.Fragment>
                                             ))}
                                         </tbody>
                                     </table>
@@ -307,8 +445,8 @@ export function DailyEvaluationDashboard({ course }) {
 
                     <div className="grid gap-4 lg:grid-cols-2">
                         <Card>
-                            <div className="p-4 space-y-3">
-                                <h4 className="font-bold text-slate-800">ثانيًا: التقييم العام لليوم (من 5)</h4>
+                            <div className="p-4 space-y-3 bg-white rounded-xl" ref={generalRef}>
+                                <CardHead fileBase={fileBase} caption={caption} title={isAll ? 'ثانيًا: التقييم العام لكل الأيام (من 5)' : 'ثانيًا: التقييم العام لليوم (من 5)'} target={generalRef} name="general" />
                                 <div className="divide-y divide-slate-100">
                                     {generalRows.map(({ g, value }) => (
                                         <div key={g.id} className="flex items-center justify-between gap-3 py-2">
@@ -320,8 +458,8 @@ export function DailyEvaluationDashboard({ course }) {
                             </div>
                         </Card>
                         <Card>
-                            <div className="p-4 space-y-3">
-                                <h4 className="font-bold text-slate-800">ثالثًا: الاستفادة في تطبيق العلاج المتكامل</h4>
+                            <div className="p-4 space-y-3 bg-white rounded-xl" ref={applyRef}>
+                                <CardHead fileBase={fileBase} caption={caption} title="ثالثًا: الاستفادة في تطبيق العلاج المتكامل" target={applyRef} name="apply" />
                                 <div className="space-y-2">
                                     {Object.entries(APPLY_LABELS).map(([k, label]) => (
                                         <div key={k} className="flex items-center gap-3">
@@ -336,8 +474,8 @@ export function DailyEvaluationDashboard({ course }) {
                     </div>
 
                     <Card>
-                        <div className="p-4 space-y-4">
-                            <h4 className="font-bold text-slate-800 flex items-center gap-2"><MessageSquareText className="w-5 h-5 text-sky-600" /> رابعًا: ملاحظات ومقترحات</h4>
+                        <div className="p-4 space-y-4 bg-white rounded-xl" ref={commentsRef}>
+                            <CardHead fileBase={fileBase} caption={caption} title={<><MessageSquareText className="w-5 h-5 text-sky-600" /> رابعًا: ملاحظات ومقترحات</>} target={commentsRef} name="comments" />
                             {[['applyText', 'شيء سيطبقه المشارك في عمله'], ['difficulty', 'أجزاء صعبة الفهم'], ['suggestions', 'مقترحات لتحسين الأيام القادمة']].map(([key, label]) => {
                                 const list = texts(key);
                                 return (
@@ -345,7 +483,11 @@ export function DailyEvaluationDashboard({ course }) {
                                         <div className="text-sm font-semibold text-slate-700 mb-1">{label} <span className="text-xs font-normal text-slate-500">({list.length})</span></div>
                                         {list.length === 0 ? <div className="text-sm text-slate-400">—</div> : (
                                             <ul className="space-y-1">
-                                                {list.map((txt, i) => <li key={i} className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-md px-3 py-2">{txt}</li>)}
+                                                {list.map(({ txt, day }, i) => (
+                                                    <li key={i} className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-md px-3 py-2">
+                                                        {isAll && <span className="text-xs font-semibold text-sky-700 ms-0 me-2">اليوم {day.dayNumber}</span>}{txt}
+                                                    </li>
+                                                ))}
                                             </ul>
                                         )}
                                     </div>
