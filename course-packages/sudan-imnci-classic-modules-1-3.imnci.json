@@ -1103,10 +1103,20 @@
       },
       {
        "type": "video",
-       "url": "",
+       "url": "https://youtu.be/tgTZPo6S2gk",
        "title": "Checking for general danger signs",
        "caption": "The narration is being recorded.",
        "script": "AC.2"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/HsqdrLpa7To",
+       "title": "Exercise: identifying lethargic or unconscious (part 1 of 2)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/fBZ62ruLo-s",
+       "title": "Exercise: identifying lethargic or unconscious (part 2 of 2)"
       },
       {
        "type": "paragraph",
@@ -1690,8 +1700,8 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Counting the breaths in one minute",
+       "url": "https://youtu.be/t-ufkuEWl7A",
+       "title": "Exercise: counting the breaths in one minute",
        "caption": "The narration is being recorded.",
        "script": "AC.3"
       },
@@ -2234,10 +2244,60 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Exercise C: general danger signs, and cough or difficult breathing",
+       "url": "https://youtu.be/B2HFsLNdG88",
+       "title": "How to assess a child with cough or difficult breathing (part 1 of 4)",
        "caption": "The video exercise. The narration is being recorded.",
        "script": "AC.4"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/sYhidkeeYrQ",
+       "title": "How to assess a child with cough or difficult breathing (part 2 of 4)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/1QzIN3MoFQY",
+       "title": "How to assess a child with cough or difficult breathing (part 3 of 4)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/lpixvQi9T0s",
+       "title": "How to assess a child with cough or difficult breathing (part 4 of 4)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/uFrMGfpI1I4",
+       "title": "Exercise: identifying chest indrawing (part 1 of 2)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/zWtNkHJ1hEU",
+       "title": "Exercise: identifying chest indrawing (part 2 of 2)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/4b-ufTB_9wA",
+       "title": "Exercise: identifying stridor (part 1 of 2)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/HHEtaWaq42w",
+       "title": "Exercise: identifying stridor (part 2 of 2)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/ODTqkofdJ-8",
+       "title": "Review exercises for chest indrawing (part 1 of 3)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/7voAv5Zwvj4",
+       "title": "Review exercises for chest indrawing (part 2 of 3)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/Mub8wkVXn7A",
+       "title": "Review exercises for chest indrawing (part 3 of 3)"
       },
       {
        "type": "exercise",
@@ -2859,10 +2919,15 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Offering fluid and doing the skin pinch",
+       "url": "https://youtu.be/uUuwOEZzxN8",
+       "title": "Exercise: the skin pinch (part 1 of 2)",
        "caption": "The narration is being recorded.",
        "script": "AC.5"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/5GYyG_L0HeQ",
+       "title": "Exercise: the skin pinch (part 2 of 2)"
       },
       {
        "type": "heading",
@@ -3538,10 +3603,20 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Exercise G: does the child have diarrhoea?",
+       "url": "https://youtu.be/mzuyYQb3ZyU",
+       "title": "How to assess a child for diarrhoea (part 1 of 3)",
        "caption": "The video exercise. The narration is being recorded.",
        "script": "AC.6"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/wfnsRjoahqs",
+       "title": "How to assess a child for diarrhoea (part 2 of 3)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/BPM94GCFfk8",
+       "title": "How to assess a child for diarrhoea (part 3 of 3)"
       },
       {
        "type": "exercise",
@@ -15401,10 +15476,30 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Assessing a young infant for possible bacterial infection",
+       "url": "https://youtu.be/EEblq39FEnU",
+       "title": "Assessing a young infant for very severe disease (part 1 of 5)",
        "caption": "Video for Exercise A, Part 1.",
        "script": "YI.1"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/HdK-Kwm7Vqs",
+       "title": "Assessing a young infant for very severe disease (part 2 of 5)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/yQahKgF5zjk",
+       "title": "Assessing a young infant for very severe disease (part 3 of 5)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/q7f-wLn004c",
+       "title": "Assessing a young infant for very severe disease (part 4 of 5)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/dDGOl-0_rn0",
+       "title": "Assessing a young infant for very severe disease (part 5 of 5)"
       },
       {
        "type": "paragraph",
@@ -16748,10 +16843,35 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Checking for a feeding problem and assessing breastfeeding",
+       "url": "https://youtu.be/Pw-hmgKVc6w",
+       "title": "Young infant feeding problem and assessing a breastfeed (part 1 of 3)",
        "caption": "Video for Exercise D, Part 1.",
        "script": "YI.3"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/MR0gkgH2KIU",
+       "title": "Young infant feeding problem and assessing a breastfeed (part 2 of 3)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/6-Zc9SdxOg4",
+       "title": "Young infant feeding problem and assessing a breastfeed (part 3 of 3)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/4xKwarqMeRk",
+       "title": "Part D: checking for a feeding problem (part 1 of 3)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/Jq2pXIxnzgI",
+       "title": "Part D: checking for a feeding problem (part 2 of 3)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/Qi43VSAWND0",
+       "title": "Part D: checking for a feeding problem (part 3 of 3)"
       },
       {
        "type": "paragraph",
@@ -17400,10 +17520,15 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Preparing and giving gentamicin and oral amoxicillin to a young infant",
+       "url": "https://youtu.be/RRcCkTBPnIQ",
+       "title": "Preparing and giving oral amoxicillin to a young infant (part 1 of 2)",
        "caption": "Video demonstration (Exercise F in the facilitator guide).",
        "script": "YI.4"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/wCVZRSvs5qs",
+       "title": "Preparing and giving oral amoxicillin to a young infant (part 2 of 2)"
       },
       {
        "type": "paragraph",
@@ -17712,10 +17837,30 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Helping a mother to improve her baby's positioning and attachment",
+       "url": "https://youtu.be/BHtRgGSyUJI",
+       "title": "Breastfeeding: positioning and attachment (part 1 of 2)",
        "caption": "Video for Exercise G, Part 1.",
        "script": "YI.5"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/j6hyN370C9o",
+       "title": "Breastfeeding: positioning and attachment (part 2 of 2)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/ZLb0LZE6vSA",
+       "title": "Exercise: correct positioning and attachment (part 1 of 3)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/cQHlYTWtxdk",
+       "title": "Exercise: correct positioning and attachment (part 2 of 3)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/OrmwryshAJw",
+       "title": "Exercise: correct positioning and attachment (part 3 of 3)"
       },
       {
        "type": "paragraph",
@@ -17796,10 +17941,20 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Expressing breast milk, keeping the infant warm, cup feeding and treating thrush",
+       "url": "https://youtu.be/RpIUMkThi0E",
+       "title": "Expressing breast milk (part 1 of 3)",
        "caption": "Video demonstration (Exercise I in the facilitator guide).",
        "script": "YI.6"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/WoPStoMIJpo",
+       "title": "Expressing breast milk (part 2 of 3)"
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/XELCjw0ZVgs",
+       "title": "Expressing breast milk (part 3 of 3)"
       },
       {
        "type": "paragraph",

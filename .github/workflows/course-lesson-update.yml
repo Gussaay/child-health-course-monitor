@@ -3,7 +3,7 @@ name: One-off - update course lessons in place (keeps learner progress)
 # courses.txt, with the mode in mode.txt (dry = read only, commit = write, undo = put back).
 on:
   push:
-    branches: [claude/project-thread-1qukec]
+    branches: [claude/project-thread-1qukec, claude/project-thread-h8n9e8]
     paths: ['scripts/course-lesson-update/**', 'course-packages/*.imnci.json', '.github/workflows/course-lesson-update.yml']
 jobs:
   run:
