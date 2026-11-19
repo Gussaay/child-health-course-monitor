@@ -896,6 +896,17 @@
        "text": "A mother (or other family member such as the father, grandmother, sister or brother) usually brings a child to the clinic because the child is sick. But mothers also bring children for well-child visits, immunization sessions and for treatment of injuries. The steps on the ASSESS & CLASSIFY chart describe what you should do when a mother brings her child to the clinic because he is sick. The chart should not be used for a well-child brought for immunization or for a child with an injury or burn."
       },
       {
+       "type": "question",
+       "text": "When should the ASSESS & CLASSIFY chart be used?",
+       "options": [
+        "When a mother brings her child because he is sick",
+        "For a well-child brought for immunization",
+        "For a child with an injury or a burn"
+       ],
+       "answer": 0,
+       "explanation": "The steps on the ASSESS & CLASSIFY chart describe what you should do when a mother brings her child to the clinic because he is sick. The chart should not be used for a well-child brought for immunization or for a child with an injury or burn."
+      },
+      {
        "type": "paragraph",
        "text": "When patients arrive at most clinics, the clinic staffs identify the reason for the child's visit. Clinic staffs obtain the child's weight height ,or length and temperature and record them on a patient chart, another written record, or on a small piece of paper. Then the mother and child see a health worker."
       },
@@ -919,12 +930,28 @@
        "text": "Record what the mother tells you about the child's problems; An important reason for asking this question is to open good communication with the mother. Using of good communication helps to reassure the mother that her child will receive good care. When you treat the child's illness later in the visit, you will need to teach and advise the mother about caring for her sick child at home. So, it is important to have good communication with the mother from the beginning of the visit."
       },
       {
+       "type": "reveal",
+       "text": "Why is it important to have good communication with the mother from the beginning of the visit?",
+       "answer": "Using good communication helps to reassure the mother that her child will receive good care. When you treat the child's illness later in the visit, you will need to teach and advise the mother about caring for her sick child at home."
+      },
+      {
        "type": "rich",
        "text": "<ul><li>Use Good Communication skills:<ul><li>Listen carefully to what the mother tells you. This will show her that you are taking her concerns seriously.</li><li>Use words the mother understands. If she does not understand the questions you asked her, she cannot give the information you need to assess and classify the child correctly.</li><li>Give the mother time to answer the questions. For example, she may need time to decide if the sign you asked about is present.</li><li>Ask additional questions when the mother is not sure about her answer. When you ask about a main symptom or related sign, the mother may not be sure if it is present. Ask her additional questions to help her give clear answers.</li></ul></li><li>Determine if this is an initial or follow-up visit for this problem.<ul><li>If this is the child's first visit for this episode of an illness or problem, then this is an initial visit.</li><li>If the child was seen a few days ago for the same illness, this is a follow- up visit.</li></ul></li></ul>"
       },
       {
        "type": "paragraph",
        "text": "A follow-up visit has a different purpose than an initial visit. During a follow-up visit, the health worker finds out if the treatment he gave during the initial visit has helped the child. If the child is not improving or is getting worse after a few days, the health worker refers the child to a hospital or changes the child's treatment."
+      },
+      {
+       "type": "question",
+       "text": "What does the health worker find out during a follow-up visit?",
+       "options": [
+        "Whether the treatment given at the initial visit has helped the child",
+        "The child's age",
+        "Which chart to use"
+       ],
+       "answer": 0,
+       "explanation": "During a follow-up visit, the health worker finds out if the treatment he gave during the initial visit has helped the child. If the child is not improving or is getting worse after a few days, the health worker refers the child to a hospital or changes the child's treatment."
       },
       {
        "type": "paragraph",
@@ -1094,6 +1121,16 @@
        "text": "A child has the sign \"not able to drink or breastfeed\" if the child is too weak to drink and is not able to suck or swallow when offered a drink or breast milk."
       },
       {
+       "type": "question",
+       "text": "A breastfed child cannot suck because his nose is blocked. You clear the nose and he can then breastfeed. Does he have the danger sign?",
+       "options": [
+        "Yes: not able to drink or breastfeed",
+        "No: the nose was blocked, and he can breastfeed once it is cleared"
+       ],
+       "answer": 1,
+       "explanation": "A child who is breastfed may have difficulty sucking when his nose is blocked. If the child can breastfeed after his nose is cleared, the child does not have the danger sign, \"not able to drink or breastfeed.\""
+      },
+      {
        "type": "paragraph",
        "text": "When you ask the mother if the child is able to drink, make sure that she understands the question. If she says that the child is not able to drink or breastfeed, ask her to offer the child a drink of clean water or breast milk. Look to see if the child is swallowing the water or breast milk."
       },
@@ -1108,6 +1145,16 @@
       {
        "type": "paragraph",
        "text": "A child who is not able to hold anything in stomach at all has the sign \"vomits everything.\" What goes down comes back up, a child who vomits several times but can hold down some fluids does not have this general danger sign. When you ask the question, use words the mother understands. Give her time to answer."
+      },
+      {
+       "type": "question",
+       "text": "A child vomits several times but holds down some fluids. Does he have the danger sign \"vomits everything\"?",
+       "options": [
+        "Yes",
+        "No"
+       ],
+       "answer": 1,
+       "explanation": "A child who vomits several times but can hold down some fluids does not have this general danger sign."
       },
       {
        "type": "paragraph",
@@ -1126,6 +1173,11 @@
        "text": "Convulsions may be the result of fever. In this instance, they do little harm beyond frightening the mother. But convulsions may be associated with meningitis, cerebral malaria or other life-threatening conditions."
       },
       {
+       "type": "reveal",
+       "text": "Name two words a mother may use for convulsions, and say why you use words she understands.",
+       "answer": "The mother may know convulsions as \"fits\" or \"spasms.\" Use words the mother understands."
+      },
+      {
        "type": "paragraph",
        "text": "Ask the mother if the child has had convulsions during this current illness. Use words the mother understands. For example, the mother may know convulsions as \"fits\" or \"spasms.\""
       },
@@ -1140,6 +1192,17 @@
       {
        "type": "paragraph",
        "text": "An unconscious child cannot be wakened. He does not respond when he is touched, shaken or spoken to."
+      },
+      {
+       "type": "question",
+       "text": "A sleeping child wakens when the mother talks to him or you clap your hands. Is he lethargic or unconscious?",
+       "options": [
+        "Lethargic",
+        "Unconscious",
+        "Neither: he was asleep, which is not abnormal"
+       ],
+       "answer": 2,
+       "explanation": "If the child wakens, it means the child was asleep. This is not abnormal."
       },
       {
        "type": "paragraph",
@@ -1557,6 +1620,17 @@
        "text": "\"Difficult breathing\" is any unusual pattern of breathing. Mothers describe this in different ways. They may say that their child's breathing is \"fast\", \"noisy\", or \"interrupted.\""
       },
       {
+       "type": "question",
+       "text": "A child has had a cough for more than 2 weeks. What does the book say this may be a sign of?",
+       "options": [
+        "Tuberculosis, asthma, whooping cough or another problem",
+        "Only a common cold",
+        "Nothing: ignore it"
+       ],
+       "answer": 0,
+       "explanation": "A child who has a cough or difficulty breathing for more than 2 weeks has a chronic cough. This may be a sign of tuberculosis, asthma, whooping cough or another problem."
+      },
+      {
        "type": "paragraph",
        "text": "If the mother answers NO, look to see if you think the child has cough or difficult breathing. If the child does not have cough or difficult breathing, ask about the next main symptom, diarrhea. Do not assess the child further for signs related to cough or difficult breathing."
       },
@@ -1583,6 +1657,24 @@
       {
        "type": "paragraph",
        "text": "If you are not sure about the number of breaths you counted (for example, if the child was actively moving and it was difficult to watch the chest, or if the child was upset or crying), repeat the count."
+      },
+      {
+       "type": "flip",
+       "title": "Fast breathing: the cut-off by age",
+       "cards": [
+        {
+         "front": "2 months up to 12 months",
+         "back": "50 breaths per minute or more"
+        },
+        {
+         "front": "12 months up to 5 years",
+         "back": "40 breaths per minute or more"
+        },
+        {
+         "front": "A child who is exactly 12 months old",
+         "back": "Fast breathing if you count 40 breaths per minute or more"
+        }
+       ]
       },
       {
        "type": "paragraph",
@@ -1667,6 +1759,16 @@
        "text": "LOOK for chest indrawing."
       },
       {
+       "type": "question",
+       "text": "You see the lower chest wall go IN only when the child is crying. Does he have chest indrawing?",
+       "options": [
+        "Yes",
+        "No: it must be clearly visible and present all the time"
+       ],
+       "answer": 1,
+       "explanation": "For chest indrawing to be present, it must be clearly visible and present all the time. If you only see chest indrawing when the child is crying or feeding, the child does not have chest indrawing."
+      },
+      {
        "type": "list",
        "items": [
         "If you did not lift the child's shirt when you counted the child's breaths, ask the mother to lift it now.",
@@ -1679,6 +1781,11 @@
       {
        "type": "heading",
        "text": "LOOK and LISTEN for Stridor:"
+      },
+      {
+       "type": "reveal",
+       "text": "When do you look and listen for stridor, and why?",
+       "answer": "Be sure to look and listen for stridor when the child is calm. A child who is not very ill may have stridor only when he is crying or upset. A child who has stridor when calm has a dangerous condition."
       },
       {
        "type": "list",
@@ -3831,6 +3938,17 @@
        "text": "MALARIA:"
       },
       {
+       "type": "question",
+       "text": "A child has malaria and also cough with fast breathing. What does he need?",
+       "options": [
+        "Treatment for malaria only",
+        "Treatment for both falciparum malaria and pneumonia",
+        "Treatment for pneumonia only"
+       ],
+       "answer": 1,
+       "explanation": "Signs of malaria can overlap with signs of other illness. This child needs treatment for both falciparum malaria and pneumonia."
+      },
+      {
        "type": "paragraph",
        "text": "Malaria is caused by parasites in the blood called “plasmodia.” They are transmitted through the bite of anopheles mosquitoes. Four species of plasmodia can cause malaria, but the only dangerous one is plasmodium falciparum. Other species that commonly causes malaria is Plasmodium vivax, which rarely causes very severe form but contributes to malaria morbidity in some countries. Malaria may occur throughout the year or during the rainy season in some countries. It is important to know when malaria occurs and which species cause it in your country or area of work."
       },
@@ -3851,6 +3969,11 @@
        "text": "Severe malaria is malaria with complications such as cerebral malaria or severe anemia. The child can die if he does not receive urgent treatment."
       },
       {
+       "type": "reveal",
+       "text": "How soon can uncomplicated malaria become severe malaria?",
+       "answer": "A case of uncomplicated malaria can develop into severe malaria as soon as 24 hours after the fever first appears. Severe malaria is malaria with complications such as cerebral malaria or severe anemia; the child can die if he does not receive urgent treatment."
+      },
+      {
        "type": "heading",
        "text": "MEASLES:"
       },
@@ -3865,6 +3988,36 @@
       {
        "type": "paragraph",
        "text": "Complications of measles occur in about 30% of all cases. The most important are:"
+      },
+      {
+       "type": "flip",
+       "title": "The complications of measles",
+       "cards": [
+        {
+         "front": "Brain",
+         "back": "Encephalitis"
+        },
+        {
+         "front": "Gut",
+         "back": "Diarrhea (including dysentery and persistent diarrhea)"
+        },
+        {
+         "front": "Lung",
+         "back": "Pneumonia"
+        },
+        {
+         "front": "Mouth",
+         "back": "Mouth ulcers"
+        },
+        {
+         "front": "Ear",
+         "back": "Ear infection"
+        },
+        {
+         "front": "Eye",
+         "back": "Severe eye infection (which may lead to corneal ulceration and blindness)"
+        }
+       ]
       },
       {
        "type": "list",
@@ -4161,6 +4314,16 @@
        "text": "A child with fever and stiff neck may have meningitis. A child with meningitis needs urgent treatment with injectable antibiotics and referral to a hospital. While you talk with the mother during the assessment, look to see if the child moves and bends his neck easily as he looks around. If the child is moving and bending his neck, he is not having a stiff neck. If you do not see any movement, or if you are not sure, draw the child’s attention to his umbilicus or toes. For example, you can shine a flashlight on his toes or umbilicus or tickle his toes to encourage the child to look down. Look to see if the child can bend his neck when he looks down at his umbilicus or toes. If you still have not seen the child bend his neck by himself, ask the mother to help you lay the child on his back. Lean over the child, gently support his back and shoulder with one hand. With the other hand, hold his head. Then carefully bend the head forward towards his chest. Another method can be used, when the child lies on his back with one hand hold his head, put the other hand on his chest and then carefully try to bend the head towards his chest. If the neck bends easily, the child does not have stiff neck. If the neck feels stiff and there is resistance to bending, the child has a stiff neck. Often a child with a stiff neck will cry when you try to bend the neck."
       },
       {
+       "type": "question",
+       "text": "If the neck bends easily when you gently bend the head towards the chest, what does the child have?",
+       "options": [
+        "A stiff neck",
+        "No stiff neck"
+       ],
+       "answer": 1,
+       "explanation": "If the neck bends easily, the child does not have stiff neck. If the neck feels stiff and there is resistance to bending, the child has a stiff neck."
+      },
+      {
        "type": "heading",
        "text": "LOOK for signs suggesting MEASLES"
       },
@@ -4171,12 +4334,33 @@
        ]
       },
       {
+       "type": "question",
+       "text": "Which rash does the book describe as measles?",
+       "options": [
+        "A rash that itches and has blisters",
+        "A red rash that begins behind the ears and on the neck, spreads to the face and then the body, and does not itch",
+        "A rash on the hands, feet, ankles and elbows that itches"
+       ],
+       "answer": 1,
+       "explanation": "A measles rash does not have vesicles (blisters) or pustules. The rash does not itch. Chickenpox is a generalized rash with vesicles; scabies occurs on the hands, feet, ankles, elbows, buttocks and axilla and itches."
+      },
+      {
        "type": "heading",
        "text": "LOOK: for any other cause of fever"
       },
       {
        "type": "paragraph",
        "text": "Assess the child for signs of any other infection that can cause fever . A runny nose in a child with fever may mean that the child has a common cold. Remember that an obvious cause of fever also includes a cough or difficulty breathing, classification DYSENTERY - a main symptom, which would have been already assessed- or an ear problem – the next main symptom that will be assessed-. Also, look for signs of possible bacterial infection: local tenderness, refusal to use a limb, hot tender swelling, red tender skin or boils. If the child is older, check if the child has lower abdominal pain or pain on passing urine. DO malaria test? It is not possible to clinically distinguish fever caused by malaria from other causes of fever because there are many causes of fever. To be sure that a child with a fever or history of fever has a malaria infection, you need to do a malaria test. Testing for malaria will also help in distinguishing malaria caused by P. falciparum from that caused by P. vivax. P. falciparum is the most dangerous."
+      },
+      {
+       "type": "question",
+       "text": "A child with fever has a danger sign or a stiff neck. Do you do a malaria test first?",
+       "options": [
+        "Yes",
+        "No: do not delay referral; give pre-referral antimalarial and antibiotic treatment and refer urgently"
+       ],
+       "answer": 1,
+       "explanation": "Do not do a malaria test if a child has a danger sign or a stiff neck to avoid delay in referral but give pre-referral antimalarial and antibiotic treatment, and refer the child urgently."
       },
       {
        "type": "rich",
@@ -6355,6 +6539,11 @@
        "text": "Conducting an appetite test means offering the child Ready-to-Use Therapeutic Food (RUTF) and assessing whether the child ate at least the amount described below. The appetite test is conducted at the initial visit and each follow-up visit to the health facility. The test usually takes a short time but may take up to 30 minutes."
       },
       {
+       "type": "reveal",
+       "text": "Why does a poor appetite matter in a child with severe acute malnutrition?",
+       "answer": "Major complications lead to a loss of appetite. A poor appetite means that the child has a significant infection or a major metabolic abnormality. Such a child is at immediate risk of death."
+      },
+      {
        "type": "paragraph",
        "text": "Conduct an appetite test for a child aged 6 months or more who:"
       },
@@ -7310,6 +7499,33 @@
       {
        "type": "paragraph",
        "text": "There are only three situations at present, which are contraindications to immunization:"
+      },
+      {
+       "type": "sort",
+       "text": "Is it a contraindication to immunization? Sort each one the way the book says.",
+       "groups": [
+        "A contraindication",
+        "Not a contraindication"
+       ],
+       "items": [
+        {
+         "text": "BCG for a child known to have AIDS",
+         "group": 0
+        },
+        {
+         "text": "Penta 2 or Penta 3 for a child who had convulsions or shock within 3 days of the most recent dose",
+         "group": 0
+        },
+        {
+         "text": "Penta for a child with recurrent convulsions or another active neurological disease of the central nervous system",
+         "group": 0
+        },
+        {
+         "text": "A sick child who is well enough to go home",
+         "group": 1
+        }
+       ],
+       "explanation": "There are only three contraindications. There are no contraindications to immunization of a sick child if the child is well enough to go home."
       },
       {
        "type": "list",
