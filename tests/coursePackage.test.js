@@ -447,7 +447,7 @@ describe('WHO distance learning Modules 5 to 9', () => {
     const lessonsOf = (pkg) => pkg.modules.flatMap((m) => m.sections);
 
     it('are valid course files with every exercise as a draft', () => {
-        const counts = [[18, 10], [18, 11], [13, 9], [28, 19], [17, 10]];
+        const counts = [[18, 10], [18, 11], [13, 9], [28, 19], [17, 11]];
         each.forEach((pkg, i) => {
             const check = checkPackage(pkg, []);
             expect(check.errors).toEqual([]);
@@ -457,10 +457,10 @@ describe('WHO distance learning Modules 5 to 9', () => {
         });
         const later = checkPackage(read('who-dimci-modules-5-9.imnci.json'), []);
         expect(later.errors).toEqual([]);
-        expect(later.summary).toMatchObject({ modules: 5, sections: 94, exercises: 59 });
+        expect(later.summary).toMatchObject({ modules: 5, sections: 94, exercises: 60 });
         const all = read('who-dimci-modules-1-9.imnci.json');
         expect(checkPackage(all, []).errors).toEqual([]);
-        expect(checkPackage(all, []).summary).toMatchObject({ modules: 9, sections: 168, exercises: 108 });
+        expect(checkPackage(all, []).summary).toMatchObject({ modules: 9, sections: 168, exercises: 109 });
         expect(all.modules.map((m) => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     });
 

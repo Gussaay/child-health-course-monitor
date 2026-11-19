@@ -55,6 +55,23 @@ describe('IMNCI pre-test in both IMNCI online courses', () => {
     }
 });
 
+describe('IMNCI post-test at the end of both IMNCI online courses', () => {
+    for (const f of ['sudan-imnci-classic-modules-1-3.imnci.json', 'who-dimci-modules-1-9.imnci.json']) {
+        it(`${f}: the last lesson links the post-test, with the pre-test's questions`, () => {
+            const p = pkg(f);
+            const mods = [...p.modules].sort((a, b) => a.order - b.order);
+            const lastModule = mods[mods.length - 1];
+            const last = [...lastModule.sections].sort((a, b) => a.order - b.order).pop();
+            expect(last.read.some((b) => b.type === 'exercise' && b.exerciseId === 'imnci-post-test')).toBe(true);
+            const pre = p.exercises.find((e) => e.id === 'imnci-pre-test');
+            const post = p.exercises.find((e) => e.id === 'imnci-post-test');
+            expect(post.questions).toEqual(pre.questions);
+            // Only the last module ends with it.
+            mods.slice(0, -1).forEach((m) => expect(JSON.stringify(m)).not.toContain('imnci-post-test'));
+        });
+    }
+});
+
 describe('quiz language switch', () => {
     const q = { id: 'q1', type: 'mcq', question: 'Which?', options: ['A', 'B'], correct: [0], questionAr: 'أي؟', optionsAr: ['أ', 'ب'] };
     it('shows English unless Arabic is picked, and falls back when a translation is missing', () => {

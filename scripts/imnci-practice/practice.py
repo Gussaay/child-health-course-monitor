@@ -919,7 +919,8 @@ OPENERS = {
 # Module endings: recap, logbook, reflection and rating
 # -----------------------------------------------------------------------------
 
-def ending(title, recap, logbook):
+def ending(title, recap, logbook, posttest=False):
+    # posttest: the last module of a course closes with the IMNCI post-test (Qusay, 2026-11-19).
     return {"title": title, "kind": "ending", "read": [
         note("Look back on what you learned, plan how you will use it, and tell us what you think. When you finish this "
              "lesson the module badge is yours.", "In this lesson"),
@@ -929,6 +930,7 @@ def ending(title, recap, logbook):
             "What is one thing you will do differently in your clinic after this module?",
             "Which part was hardest for you? What will you practise again?",
         ], "rating": True, "ratingText": "How useful was this module for your work?"},
+        *(posttest_blocks() if posttest else []),
     ], "see": [], "practise": []}
 
 RECAPS = {
@@ -1011,7 +1013,15 @@ def _pretest():
                           "Do not worry about your score: it shows what you know now."],
             "questions": qs}
 
-PRETEST_EXERCISES = [_pretest()]
+def _posttest():
+    e = _pretest()
+    e.update({"id": POSTTEST_ID, "order": 999, "title": "IMNCI post-test",
+              "narrative": ["Post-test: the same 20 questions as the pre-test. Compare your score with your pre-test score "
+                            "to see what you have learnt."]})
+    return e
+
+POSTTEST_ID = "imnci-post-test"
+PRETEST_EXERCISES = [_pretest(), _posttest()]
 
 def pretest_blocks():
     return [
@@ -1021,6 +1031,16 @@ def pretest_blocks():
                                       "window over this lesson, and you come back here when you close it. Do not worry about your "
                                       "score: it shows what you know now, before the course."},
         {"type": "exercise", "exerciseId": PRETEST_ID, "note": "IMNCI pre-test: 20 questions, about 20 minutes."},
+    ]
+
+def posttest_blocks():
+    return [
+        {"type": "heading", "text": "End of the course: the post-test"},
+        {"type": "paragraph", "text": "You have reached the end of the course. Take the post-test: it has the same 20 questions as "
+                                      "the pre-test you took at the start. Press Start: the test opens in a window over this lesson, "
+                                      "and you come back here when you close it. Compare your score with your pre-test score to see "
+                                      "what you have learnt."},
+        {"type": "exercise", "exerciseId": POSTTEST_ID, "note": "IMNCI post-test: 20 questions, about 20 minutes."},
     ]
 
 def how_to_practise(course_name, pretest=True):
@@ -1249,7 +1269,7 @@ def dimci_plans():
             ("after", r"^Classify an ear problem", L["ear"]()),
             ("end", None, ending("Module 7 wrap-up", RECAPS["ear"], logbook("an ear problem")))],
         8: [("end", None, ending("Module 8 wrap-up", RECAPS["hiv"], logbook("HIV exposure or infection")))],
-        9: [("end", None, ending("Module 9 wrap-up", RECAPS["well"], logbook("a well-child visit")))],
+        9: [("end", None, ending("Module 9 wrap-up", RECAPS["well"], logbook("a well-child visit"), posttest=True))],
     }
 
 def classic_plans():
@@ -1304,7 +1324,7 @@ def classic_plans():
             ("after", r"^Exercise E: assess and classify feeding", L["feeding"]()),
             ("end", None, ending("Module 6 wrap-up", RECAPS["infant"], logbook("a sick young infant")))],
         7: [("open", r"^1\.0 Follow-up visit for pneumonia", [O["followup"]]),
-            ("end", None, ending("Module 7 wrap-up", RECAPS["followup"], logbook("a follow-up visit")))],
+            ("end", None, ending("Module 7 wrap-up", RECAPS["followup"], logbook("a follow-up visit"), posttest=True))],
     }
 
 def module_number(module):

@@ -11,6 +11,12 @@
 //     - Sudan IMNCI course and IMNCI distance learning modules, Module 1 "How to study
 //       this course": the pre-test part (heading, paragraph, exercise) added at the end.
 //
+//  4. IMNCI post-test (exerciseDefinitions imnci-post-test, same questions), added at the end
+//     of the last lesson of each IMNCI course (Sudan IMNCI Module 7 wrap-up, WHO Module 9 wrap-up).
+//
+// tag.txt names the tag of this run (pretests-2026-11-19 for 1-3, posttests-2026-11-19 for 4), so
+// undo puts back one run at a time. Steps already done are reported as up to date and skipped.
+//
 //   node pretests.cjs            dry run: shows what would change, writes nothing
 //   node pretests.cjs --commit   writes it; every document touched is tagged
 //   node pretests.cjs --undo     puts back what --commit changed (and removes imnci-pre-test)
@@ -20,7 +26,7 @@ const path = require('path'), fs = require('fs');
 const req = (m) => require(require.resolve(m, { paths: [process.cwd(), path.join(__dirname, '..', '..'), __dirname] }));
 const admin = req('firebase-admin');
 
-const TAG = 'pretests-2026-11-19';
+const TAG = (() => { try { return fs.readFileSync(path.join(__dirname, 'tag.txt'), 'utf8').trim() || 'pretests-2026-11-19'; } catch { return 'pretests-2026-11-19'; } })();
 const PKG = (f) => JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'course-packages', f), 'utf8'));
 const COURSES = {
   etat: { batch: 'sudan-etat-training-2026-11-18', file: 'sudan-etat-training.imnci.json' },
@@ -86,9 +92,9 @@ async function undo() {
   const etatPkg = PKG(COURSES.etat.file), classicPkg = PKG(COURSES.classic.file);
   const wanted = [
     ...etatPkg.exercises.filter((e) => ['sudan-etat-pre-test', 'sudan-etat-post-test'].includes(e.id)),
-    ...classicPkg.exercises.filter((e) => e.id === 'imnci-pre-test'),
+    ...classicPkg.exercises.filter((e) => ['imnci-pre-test', 'imnci-post-test'].includes(e.id)),
   ];
-  if (wanted.length !== 3) throw new Error(`Expected 3 exercises in the course files, found ${wanted.map((e) => e.id)}`);
+  if (wanted.length !== 4) throw new Error(`Expected 3 exercises in the course files, found ${wanted.map((e) => e.id)}`);
   for (const e of wanted) {
     const ref = db.collection('exerciseDefinitions').doc(e.id);
     const d = await ref.get();
@@ -135,6 +141,25 @@ async function undo() {
           set: { read: next }, prev: { read }, show: () => [`       was: ${plain(read[i])}`, `       now: ${newText}`] });
       }
     }
+  }
+  for (const key of ['classic', 'dimci']) {
+    const c = await findCourse(key);
+    if (!c) continue;
+    const pkg = PKG(COURSES[key].file);
+    const fm = [...pkg.modules].sort(byOrder);
+    const fileLast = [...fm[fm.length - 1].sections].sort(byOrder).pop();
+    const items = (await db.collection('onlineCourseItems').where('courseId', '==', c.id).get()).docs.filter((d) => !d.data().isDeleted);
+    const mods = items.filter((d) => d.data().kind === 'module').sort((x, y) => byOrder(x.data(), y.data()));
+    const lastMod = mods[mods.length - 1];
+    const hit = lastMod && items.filter((d) => d.data().kind === 'section' && d.data().moduleId === lastMod.id && norm(d.data().title) === norm(fileLast.title));
+    if (!hit || hit.length !== 1) { notes.push(`${key}: last lesson "${fileLast.title}" not found in the last module.`); continue; }
+    const L = hit[0], read = L.data().read || [];
+    if (read.some((b) => b.type === 'exercise' && b.exerciseId === 'imnci-post-test')) { notes.push(`${key}: post-test already in "${fileLast.title}".`); continue; }
+    const at = fileLast.read.findIndex((b) => b.type === 'heading' && /post-test/i.test(b.text));
+    const add = fileLast.read.slice(at);
+    plan.push({ ref: L.ref, label: `${c.data().title} (${c.id}), last module "${lastMod.data().title}", lesson "${L.data().title}": ${read.length} blocks -> ${read.length + add.length}`,
+      set: { read: [...read, ...add] }, prev: { read },
+      show: () => add.map((b) => `       + ${b.type.padEnd(9)} ${plain(b).slice(0, 120)}`) });
   }
   for (const key of ['classic', 'dimci']) {
     const c = await findCourse(key);
