@@ -26,7 +26,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Spinner, Skeleton, SkeletonCard, useInPageBack } from '../CommonComponents';
 import { notify, confirmDialog } from '../dialogs';
-import { useDataCache } from '../../DataContext';
+import { useDataCache, lastFullFetchAt } from '../../DataContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useImnci } from './shared';
 import { listBooks } from '../aiLibrary/aiLibraryData';
@@ -156,18 +156,26 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
     // and stamps the course with itemsResetAt. A delta sync cannot see a record
     // that is gone, so a newer stamp than this device has seen means one full
     // download of the lessons; otherwise the old modules show next to the new.
+    const resetSeenRef = useRef(0);
+    const resetBusyRef = useRef(false);
     useEffect(() => {
         if (!onlineCourses?.length) return;
         const stamp = (v) => (v?.toMillis ? v.toMillis() : (typeof v?.seconds === 'number' ? v.seconds * 1000 : Number(v) || 0));
         const newest = onlineCourses.reduce((m, c) => Math.max(m, stamp(c?.itemsResetAt)), 0);
-        let seen = 0;
-        try { seen = parseInt(localStorage.getItem('onlineItemsResetSeen') || '0', 10); } catch { /* private mode */ }
-        if (newest > seen) {
-            Promise.resolve(fetchOnlineCourseItems('full')).then(() => {
+        const read = (k) => { try { return parseInt(localStorage.getItem(k) || '0', 10); } catch { return 0; } };
+        if (newest <= Math.max(read('onlineItemsResetSeen'), resetSeenRef.current) || resetBusyRef.current) return;
+        // Marked as seen only once a full download really came in: offline, a
+        // failed request or a delta already under way leave it to the next try
+        // (this effect runs again when the lesson list changes).
+        const before = lastFullFetchAt('onlineCourseItems');
+        resetBusyRef.current = true;
+        Promise.resolve(fetchOnlineCourseItems('full')).then(() => {
+            if (lastFullFetchAt('onlineCourseItems') > before) {
+                resetSeenRef.current = Math.max(resetSeenRef.current, newest);
                 try { localStorage.setItem('onlineItemsResetSeen', String(newest)); } catch { /* private mode */ }
-            }).catch(() => {});
-        }
-    }, [onlineCourses, fetchOnlineCourseItems]);
+            }
+        }).catch(() => {}).finally(() => { resetBusyRef.current = false; });
+    }, [onlineCourses, onlineCourseItems, fetchOnlineCourseItems]);
 
     useEffect(() => {
         let alive = true;

@@ -93,6 +93,10 @@ const SYNC_MARK_VERSION = 2;
 // twice (the old modules removed by the replace of 2026-11-18 next to the new).
 const FULL_RELOAD_EPOCH = { onlineCourseItems: 1, onlineCourses: 1 };
 const fullEpochKey = (key) => `fullEpoch_${key}`;
+// When a list last came in full from the server on this device (0 = never).
+export const lastFullFetchAt = (key) => {
+    try { return parseInt(localStorage.getItem(`${CACHE_NS}lastFull_${key}`) || '0', 10); } catch { return 0; }
+};
 // Listeners start from a server-time mark, so a second of overlap is enough
 // to catch two records stamped in the same millisecond.
 const LIVE_OVERLAP_MS = 1000;
@@ -789,6 +793,8 @@ export const DataProvider = ({ children }) => {
                         : (isCompleteAnswer ? (newestServerStamp(finalMergedData) || fetchStartedAt) : storedMark);
                     if (nextMark > 0) localStorage.setItem(syncMarkKey(key), String(nextMark));
                     if (isCompleteAnswer && wantEpoch) localStorage.setItem(epochKey, String(wantEpoch));
+                    // When this list last came in full from the server (courses.jsx itemsResetAt).
+                    if (isCompleteAnswer) localStorage.setItem(`${CACHE_NS}lastFull_${key}`, String(fetchStartedAt));
 
                     setCache(prev => ({ ...prev, [key]: finalMergedData })); 
                     return finalMergedData;
