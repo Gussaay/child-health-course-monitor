@@ -1,244 +1,274 @@
 // src/components/imnci/onlineCourses/SectionTabEditor.jsx
-import React, { useState, useEffect, useRef } from 'react';
+//
+// The lesson editor.
+//
+// A lesson is shown the way the learner sees it, one element after another:
+// text, videos, questions, flip cards and the rest. Tap an element to choose
+// it; text is then written in place, and anything else opens its own form,
+// with a named box for every field and one box per item of a list (a card, a
+// step, an answer), and a "Learner sees" preview under it. "+" between two
+// elements adds a new one there. Lines between elements show where the lesson
+// is split into parts: what follows an activity opens when it is done.
+//
+// It replaces an editor where the whole lesson was one block of rich text with
+// "[[card c3]]" markers in it, and every list was typed as lines split by
+// " | ". The saved lesson is the same list of blocks either way (see
+// editor/model.js), so lessons, learners' progress and the exercise manager
+// are not affected.
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, Stethoscope, Film, BookOpen, ClipboardList, Flag, Lightbulb, Layers, Shuffle, ListOrdered, BookOpenCheck, LineChart, Link2, Users, Calculator, Search, Timer, Palette, NotebookPen } from 'lucide-react';
+import { Plus, ArrowUp, ArrowDown, Copy, Trash2, Pencil, Eye, EyeOff, Lock, X } from 'lucide-react';
 import { ref as storageRef, getDownloadURL, uploadBytes } from 'firebase/storage';
-import { Button, Modal, Input, Select, Textarea } from '../../CommonComponents';
-import { notify } from '../../dialogs';
+import { Button, Modal } from '../../CommonComponents';
+import { notify, confirmDialog } from '../../dialogs';
 import { storage } from '../../../firebase';
 import { upsertOnlineCourseItem } from '../../../data';
 import { IMNCI_SEVERITIES } from '../../constants';
 import { signOptions, classificationOptions, treatmentSuggestions } from '../standardLists';
 import { liveProtocol, SEVERITY_OF_COLOR } from '../vocabulary';
-import { SECTION_TABS, tabContent, sectionContent, newQuestion, newExerciseLink, splitForEditor, joinFromEditor, cardMarker, isFacilitatorBlock } from '../book';
-import {
-    cardsFromText, cardsToText, stepsFromText, stepsToText, groupsFromText, sortItemsFromText, sortItemsToText,
-    chaptersFromText, chaptersToText, stopsFromText, stopsToText,
-    parseOptionsMulti, optionsTextMulti, feedbackFromText, feedbackToText, dialogueFromText, dialogueToText,
-    recordFromText, recordToText, classCardsFromText, classCardsToText,
-} from './cardText';
-import { NATIONAL_PROTOCOLS } from '../nationalProtocol';
-import { NATIONAL_FORMS } from '../recordingForms';
-import { RichTextEditor, useImnci } from '../shared';
+import { SECTION_TABS, tabContent, sectionContent, isActivity } from '../book';
+import { RichTextEditor } from '../shared';
 import { ASSET_ROOT } from './assets';
-import { BookImage, VideoBlock, BookletBlock, FormBlock } from './blocks';
+import { ContentBlocks } from './blocks';
+import { ELEMENTS, GROUPS, elementInfo, newElement } from './editor/elements';
+import { toElements, fromElements, findProblem, partBreaks, withKey, isEmptyElement } from './editor/model';
+import { ElementForm } from './editor/forms';
 
-// =============================================================================
-// Book manager
-//
-// This is what makes automatic conversion safe to use. The parser gets the
-// prose right and the headings right, but the classification tables in these
-// books are drawn as vector graphics — roughly 7,800 path operations in module
-// 2 — so their grid and their colour do not survive extraction even though the
-// cell text does. In IMCI that colour is clinical meaning, not decoration.
-//
-// So rather than pretending the converter is perfect, a federal manager can
-// open any converted section and fix it: correct the text, drop what came
-// through as noise, and build the classification tables properly with their
-// pink, yellow and green rows.
-// =============================================================================
-
-// One tab of one section. Each tab is edited on its own: correcting the prose
-// against the book and building the practice cases are different jobs, often
-// done by different people, and neither should be able to lose the other's work
-// by saving a whole section at once.
-// A section tab, written as one document.
-//
-// It used to be one editor per paragraph. With a converted book that is thirty
-// contentEditable elements on a page, each re-writing its own innerHTML on every
-// change, and typing in it crawled. It also made no sense as a writing surface:
-// a paragraph break is something you make by pressing Enter, not by pressing a
-// button called "add block".
-//
-// So the flowing content — text, lists, pictures, charts — is one document, and
-// only the things that are not prose keep a card of their own: a video, a
-// question, a link to a case, a captured book page, a chart booklet table or
-// recording form from the protocol, a labelled note. Each card sits in the
-// text at its marker (see splitForEditor in book.js).
-
-// What a new card starts as.
-const newCard = (type) => (
-    type === 'question' ? newQuestion()
-        : type === 'exercise' ? newExerciseLink()
-            : type === 'booklet' ? { type: 'booklet', part: 'child', categories: [], caption: '' }
-                : type === 'form' ? { type: 'form', part: 'child', sections: [], caption: '' }
-                    : type === 'sudan' ? { type: 'note', label: 'Sudan national protocol', text: '' }
-                    : type === 'facilitator' ? { type: 'note', label: 'From your facilitator', text: '', facilitator: true }
-                    : type === 'calc' ? { type: 'calc', title: '', text: '', question: '', answer: 0, tolerance: 0, unit: 'ml', hint: '', explanation: '' }
-                        : type === 'reveal' ? { type: 'reveal', text: '', answer: '' }
-                            : type === 'flip' ? { type: 'flip', title: '', cards: [] }
-                                : type === 'sort' ? { type: 'sort', text: '', groups: [], items: [], explanation: '' }
-                                    : type === 'steps' ? { type: 'steps', title: '', steps: [] }
-                                        : type === 'story' ? { type: 'story', title: '', stages: [{ text: '', question: '', options: [], answer: 0, explanation: '' }] }
-                                            : type === 'growthchart' ? { type: 'growthchart', title: '', text: '', sex: 'female', ageMonths: 12, weightKg: 8, lengthCm: 72, explanation: '' }
-                                            : type === 'courselink' ? { type: 'courselink', course: 'IMNCI distance learning modules', module: 1, lesson: '', label: '', text: '' }
-                                            : type === 'scenario' ? { type: 'scenario', title: '', text: '', part: 'child', categories: [], cases: [newCase()] }
-                                            : type === 'spot' ? { type: 'spot', title: 'Find the error', text: '', part: 'child', child: {}, record: [], explanation: '' }
-                                            : type === 'drill' ? { type: 'drill', title: '', text: '', url: '', given: '', count: { answer: 0, tolerance: 2, unit: 'breaths per minute' }, question: '', options: [], answer: 0, explanation: '' }
-                                            : type === 'classcards' ? { type: 'classcards', title: '', text: '', cards: [] }
-                                            : type === 'reflect' ? { type: 'reflect', title: '', text: '', prompts: [], rating: false }
-                                            : { type: 'video', url: '', title: '', caption: '' });
-
-const CARD_NAMES = {
-    booklet: 'Chart booklet table', form: 'Recording form', note: 'Note', video: 'Video',
-    question: 'Question', exercise: 'Case or exercise', page: 'Book page',
-    reveal: 'Think first', flip: 'Flip cards', sort: 'Sort it', steps: 'Step by step', story: 'Case in stages', calc: 'Work it out',
-    growthchart: 'Plot on the chart', courselink: 'Link to a module', facilitator: 'Facilitator note',
-    scenario: 'Practice cases', spot: 'Find the error', drill: 'Skill drill', classcards: 'Colour cards', reflect: 'Reflect',
+const PROBLEMS = {
+    two_answers: ['imnci_ui.courses.editor.two_answers', 'Each question needs at least two answers to choose from.'],
+    question_text: ['imnci_ui.courses.editor2.need_question', 'Write the question.'],
+    choose_case: ['imnci_ui.courses.editor.choose_case', 'Choose which case the card points at.'],
+    choose_tables: ['imnci_ui.courses.editor.choose_tables', 'Tick at least one chart booklet table.'],
+    empty_cards: ['imnci_ui.courses.editor2.need_card', 'Write the front of at least one card.'],
 };
 
-const newCase = () => ({ child: { name: '', age: '' }, text: '', record: [], question: 'What is the classification?', options: [], answer: 0, feedback: [], explanation: '' });
-
-// The child at the top of a filled form: name, age, weight, length,
-// temperature, MUAC and the problem, as short fields.
-function ChildFields({ child = {}, onChange, t }) {
-    const fields = [['name', t('imnci_ui.courses.practice.name', 'Name')], ['age', t('imnci_ui.courses.practice.age', 'Age')],
-        ['weight', t('imnci_ui.courses.practice.weight', 'Weight') + ' (kg)'], ['length', t('imnci_ui.courses.practice.length', 'Length or height') + ' (cm)'],
-        ['temp', t('imnci_ui.courses.practice.temperature', 'Temperature') + ' (°C)'], ['muac', 'MUAC (cm)']];
+// What the learner sees of one element. Clicks are kept for the editor, so
+// tapping a question chooses it rather than answering it.
+function LearnerLook({ block }) {
+    const blocks = useMemo(() => fromElements([block]), [block]);
+    if (!blocks.length) return null;
     return (
-        <div className="space-y-1.5">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                {fields.map(([k, label]) => (
-                    <input key={k} value={child[k] || ''} placeholder={label} title={label} dir="auto"
-                        onChange={(e) => onChange({ ...child, [k]: e.target.value })} className="border rounded px-2 py-1 text-sm" />
-                ))}
-            </div>
-            <input value={child.problem || ''} dir="auto" placeholder={t('imnci_ui.courses.practice.problems', 'Ask: what are the child’s problems?')}
-                onChange={(e) => onChange({ ...child, problem: e.target.value })} className="w-full border rounded px-2 py-1 text-sm" />
+        <div className="pointer-events-none select-none [&_iframe]:pointer-events-none" aria-hidden="true">
+            <ContentBlocks blocks={blocks} />
         </div>
     );
 }
 
-// A question written as one line of options (several may be starred), with
-// feedback for each option and an explanation.
-function OptionsFields({ q, onChange, t }) {
+function AddPoint({ onAdd, label }) {
     return (
-        <>
-            <Input value={optionsTextMulti(q)} placeholder={t('imnci_ui.courses.editor.options_multi', 'Answers split by ; with the right one starred (star several for "select all that apply")')}
-                onChange={(e) => onChange(parseOptionsMulti(e.target.value))} />
-            <LinesField label={t('imnci_ui.courses.editor.feedback', 'Feedback for each answer')} hint={t('imnci_ui.courses.editor.feedback_lines', 'One line per answer, in the same order; leave a line empty for none')}
-                rows={3} value={q.feedback || []} toText={feedbackToText} fromText={feedbackFromText} onChange={(v) => onChange({ feedback: v })} />
-            <Input value={q.explanation || ''} placeholder={t('imnci_ui.courses.editor.why_after', 'Why (shown after answering)')}
-                onChange={(e) => onChange({ explanation: e.target.value })} />
-        </>
+        <div className="relative h-7 flex items-center justify-center group">
+            <span className="absolute inset-x-6 top-1/2 h-px bg-transparent group-hover:bg-sky-200" aria-hidden="true" />
+            <button type="button" onClick={onAdd} aria-label={label} title={label}
+                className="relative w-7 h-7 rounded-full grid place-items-center border border-dashed border-slate-300 bg-white text-slate-400 hover:border-sky-500 hover:text-sky-700 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                <Plus size={15} />
+            </button>
+        </div>
     );
 }
 
-const recordHint = (t) => t('imnci_ui.courses.editor.record_lines', 'One line per part of the form: part | finding ; finding | CLASSIFICATION. Start the wrong entry with ! and add feedback after ::');
-
-// A list written as lines. It keeps what is typed as typed and hands the
-// parsed list up, so a half-written line is not re-formatted under the cursor.
-function LinesField({ label, hint, value, toText, fromText, onChange, rows = 4 }) {
-    const [raw, setRaw] = useState(() => toText(value));
+function PartLine({ n, after, t }) {
     return (
-        <label className="block text-sm">
-            <span className="font-medium text-slate-700">{label}</span>
-            {hint && <span className="block text-xs text-slate-500">{hint}</span>}
-            <textarea rows={rows} value={raw} dir="auto"
-                onChange={(e) => { setRaw(e.target.value); onChange(fromText(e.target.value)); }}
-                className="mt-1 w-full border rounded px-2 py-1 text-sm font-mono" />
-        </label>
+        <div className="flex items-center gap-2 pt-2 text-[11px] font-bold uppercase tracking-wider text-slate-400" data-testid="part-line">
+            <Lock size={12} />
+            <span>{t('imnci_ui.courses.editor2.part_n', 'Part {{n}}', { n })}</span>
+            {after && <span className="normal-case tracking-normal font-medium">· {t('imnci_ui.courses.editor2.opens_after', 'opens when the {{what}} above is done', { what: after.toLowerCase() })}</span>}
+            <span className="flex-1 h-px bg-slate-200" aria-hidden="true" />
+        </div>
     );
 }
 
-const toggle = (list = [], id) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
+// The "Add" menu: every kind of element, grouped by what it is for.
+function AddMenu({ isOpen, onClose, onPick, t }) {
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={t('imnci_ui.courses.editor2.add_title', 'Add to the lesson')}>
+            <div className="space-y-4">
+                {GROUPS.map(([group, label]) => (
+                    <div key={group}>
+                        <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">{t(`imnci_ui.courses.editor2.group_${group}`, label)}</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {ELEMENTS.filter((e) => e[3] === group).map(([kind, name, Icon, , desc]) => (
+                                <button key={kind} type="button" onClick={() => onPick(kind)} data-testid={`add-${kind}`}
+                                    className="flex items-start gap-2.5 text-start rounded-xl border border-slate-200 bg-white p-2.5 hover:border-sky-400 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                                    <span className={`w-8 h-8 shrink-0 rounded-lg grid place-items-center ${group === 'check' || group === 'practise' ? 'bg-violet-50 text-violet-700' : 'bg-sky-50 text-sky-700'}`}><Icon size={16} /></span>
+                                    <span className="min-w-0">
+                                        <span className="block text-sm font-semibold text-slate-800">{t(`imnci_ui.courses.editor2.el_${kind}`, name)}</span>
+                                        <span className="block text-xs text-slate-500 leading-snug">{t(`imnci_ui.courses.editor2.el_${kind}_desc`, desc)}</span>
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </Modal>
+    );
+}
 
-export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
+// The form for one element, with what the learner will see under it.
+function EditSheet({ draft, setDraft, onDone, onCancel, uploadPicture, t }) {
+    if (!draft) return null;
+    const info = elementInfo(draft);
+    return (
+        <Modal isOpen onClose={onCancel} title={t('imnci_ui.courses.editor2.edit_title', 'Edit: {{name}}', { name: t(`imnci_ui.courses.editor2.el_${info.kind}`, info.name) })}>
+            <div className="space-y-4" data-testid="edit-sheet">
+                <ElementForm block={draft} onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))} uploadPicture={uploadPicture} />
+                {!isEmptyElement(draft) && (
+                    <div className="border-t pt-3">
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">{t('imnci_ui.courses.editor2.learner_sees', 'Learner sees')}</div>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <LearnerLook block={draft} />
+                        </div>
+                    </div>
+                )}
+                <div className="sticky bottom-0 -mx-4 -mb-4 px-4 py-3 bg-white border-t flex justify-end gap-2">
+                    <Button variant="secondary" onClick={onCancel}>{t('imnci_ui.courses.common.cancel', 'Cancel')}</Button>
+                    <Button onClick={onDone}>{t('imnci_ui.courses.editor2.done', 'Done')}</Button>
+                </div>
+            </div>
+        </Modal>
+    );
+}
+
+export function SectionTabEditor({ section, tab = 'all', onSaved, onCancel }) {
     const { t, i18n } = useTranslation();
-    const [html, setHtml] = useState('');
-    const [extras, setExtras] = useState([]);
+    const [elements, setElements] = useState([]);
     const [title, setTitle] = useState('');
+    const [selected, setSelected] = useState(null);
+    const [adding, setAdding] = useState(null);
+    const [editing, setEditing] = useState(null);
+    const [draft, setDraft] = useState(null);
+    const [preview, setPreview] = useState(false);
     const [saving, setSaving] = useState(false);
     const [charting, setCharting] = useState(false);
-    // 'all' is the whole section, on one page; a tab id edits that tab only
+    const [changed, setChanged] = useState(false);
+    const insertRef = useRef(null);
+    // 'all' is the whole lesson on one page; a tab id edits that tab only
     // (kept for sections still written with tabs).
     const whole = tab === 'all';
     const meta = SECTION_TABS.find((x) => x.id === tab) || SECTION_TABS[0];
-    const tabLabel = whole ? t('imnci_ui.courses.editor.the_section', 'section')
+    const tabLabel = whole ? t('imnci_ui.courses.editor2.the_lesson', 'lesson')
         : i18n.language === 'ar' && meta.labelAr ? meta.labelAr : meta.label;
-    const { exercises } = useImnci();
-    const insertRef = useRef(null);
-    const nextKey = useRef(1);
 
     useEffect(() => {
         if (!section) return;
-        // Everything that can be expressed as text becomes one document; the
-        // rest keeps its card, held in place in the text by a marker.
-        const { html: doc, cards } = splitForEditor(whole ? sectionContent(section) : tabContent(section, tab));
-        nextKey.current = cards.length + 1;
-        setHtml(doc);
-        setExtras(cards);
+        setElements(toElements(whole ? sectionContent(section) : tabContent(section, tab)));
         setTitle(section.title || '');
+        setSelected(null);
+        setChanged(false);
     }, [section, tab, whole]);
 
-    const updateExtra = (i, patch) => setExtras((p) => p.map((b, j) => (j === i ? { ...b, ...patch } : b)));
-    const removeExtra = (i) => setExtras((p) => p.filter((_, j) => j !== i));
-    // A new card is placed where the cursor is in the text; with no cursor it
-    // goes after the text.
-    const addExtra = (type) => {
-        let key = `c${nextKey.current++}`;
-        while (extras.some((x) => x._k === key)) key = `c${nextKey.current++}`;
-        setExtras((p) => [...p, { ...newCard(type), _k: key }]);
-        insertRef.current?.(`<p>${cardMarker(key)}</p>`);
+    const update = (fn) => { setElements(fn); setChanged(true); };
+    const indexOf = (k) => elements.findIndex((b) => b._k === k);
+    const nameOf = (b) => { const info = elementInfo(b); return t(`imnci_ui.courses.editor2.el_${info.kind}`, info.name); };
+
+    const move = (k, by) => update((list) => {
+        const i = list.findIndex((b) => b._k === k);
+        const j = i + by;
+        if (i < 0 || j < 0 || j >= list.length) return list;
+        const next = [...list];
+        [next[i], next[j]] = [next[j], next[i]];
+        return next;
+    });
+    const duplicate = (k) => {
+        const i = indexOf(k);
+        if (i < 0) return;
+        const copy = withKey(elements[i]);
+        update((list) => [...list.slice(0, i + 1), copy, ...list.slice(i + 1)]);
+        setSelected(copy._k);
+    };
+    // Deleting always asks first, and says what will go.
+    const remove = async (k) => {
+        const b = elements[indexOf(k)];
+        if (!b) return;
+        const ok = await confirmDialog(
+            t('imnci_ui.courses.editor2.delete_q', 'Delete the {{name}} element from the lesson? It is removed when you save the lesson.', { name: nameOf(b).toLowerCase() }),
+            { title: t('imnci_ui.courses.editor2.delete_title', 'Delete {{name}}?', { name: nameOf(b) }), confirmLabel: t('imnci_ui.courses.editor2.delete', 'Delete'), danger: true },
+        );
+        if (!ok) return;
+        update((list) => list.filter((x) => x._k !== k));
+        setSelected(null);
     };
 
-    // Uploads and hands back a URL, because a picture in the text goes straight
-    // into an <img> rather than resolving a storage path when it renders.
-    const uploadInline = async (file) => {
-        if (!file || !section?.id) return null;
-        try {
-            const clean = file.name.replace(/[^\w.-]+/g, '-');
-            const path = `${ASSET_ROOT}/figures/${section.courseId}/${section.id}/${Date.now()}-${clean}`;
-            const dest = storageRef(storage, path);
-            await uploadBytes(dest, file, { contentType: file.type });
-            return await getDownloadURL(dest);
-        } catch (e) {
-            console.error('Could not upload the image:', e);
-            notify(t('imnci_ui.courses.editor.upload_failed', 'Could not upload that image. {{msg}}', { msg: e?.message || '' }).trim(), 'error');
-            return null;
+    const openEdit = (k, isNew = false) => {
+        const b = elements.find((x) => x._k === k);
+        if (!b) return;
+        setDraft(JSON.parse(JSON.stringify(b)));
+        setEditing({ k, isNew });
+    };
+    const closeEdit = () => {
+        // A new element that was never finished is not left behind, empty.
+        if (editing?.isNew) setElements((list) => list.filter((x) => x._k !== editing.k));
+        setEditing(null);
+        setDraft(null);
+    };
+    const finishEdit = () => {
+        const problem = findProblem([draft]);
+        if (problem) { notify(t(...PROBLEMS[problem.reason]), 'error'); return; }
+        update((list) => list.map((x) => (x._k === editing.k ? draft : x)));
+        setEditing(null);
+        setDraft(null);
+    };
+
+    const add = (kind) => {
+        const at = adding;
+        setAdding(null);
+        const b = withKey(newElement(kind));
+        update((list) => [...list.slice(0, at), b, ...list.slice(at)]);
+        setSelected(b._k);
+        if (kind !== 'text') {
+            setDraft(JSON.parse(JSON.stringify(b)));
+            setEditing({ k: b._k, isNew: true });
         }
     };
 
+    // A picture in the text goes straight into an <img>, so it is a link.
+    const uploadTo = async (file) => {
+        const clean = file.name.replace(/[^\w.-]+/g, '-');
+        const rel = `figures/${section.courseId}/${section.id}/${Date.now()}-${clean}`;
+        const dest = storageRef(storage, `${ASSET_ROOT}/${rel}`);
+        await uploadBytes(dest, file, { contentType: file.type });
+        return { rel, dest };
+    };
+    const uploadFailed = (e) => {
+        console.error('Could not upload the image:', e);
+        notify(t('imnci_ui.courses.editor.upload_failed', 'Could not upload that image. {{msg}}', { msg: e?.message || '' }).trim(), 'error');
+        return null;
+    };
+    const uploadInline = async (file) => {
+        if (!file || !section?.id) return null;
+        try { const { dest } = await uploadTo(file); return await getDownloadURL(dest); } catch (e) { return uploadFailed(e); }
+    };
+    // A picture on a step is a course file, found the way book figures are.
+    const uploadPicture = async (file) => {
+        if (!file || !section?.id) return null;
+        try { const { rel } = await uploadTo(file); return rel; } catch (e) { return uploadFailed(e); }
+    };
+
+    const cancel = async () => {
+        if (changed) {
+            const ok = await confirmDialog(t('imnci_ui.courses.editor2.leave_q', 'Leave without saving? Your changes to this lesson will be lost.'),
+                { confirmLabel: t('imnci_ui.courses.editor2.leave', 'Leave without saving'), danger: true });
+            if (!ok) return;
+        }
+        onCancel();
+    };
+
     const save = async () => {
+        const problem = findProblem(elements);
+        if (problem) {
+            setSelected(elements[problem.index]._k);
+            notify(t(...PROBLEMS[problem.reason]), 'error');
+            return;
+        }
         setSaving(true);
         try {
-            // A video with no address yet is kept when it has a title: it is a
-            // place held for a video still being recorded.
-            const kept = extras.filter((b) => (
-                b.type === 'video' ? String(b.url || b.title || '').trim()
-                    : b.type === 'note' ? String(b.text || '').trim() : true
-            ));
-
-            // Caught here rather than saved and met by a learner: a question
-            // with one answer to choose from is not a question, and a card that
-            // points at no case is a dead end.
-            const problem = kept.find((b) => (
-                b.type === 'question'
-                    ? (b.options || []).filter((o) => String(o).trim()).length < 2
-                    : b.type === 'exercise' ? !b.exerciseId
-                        : b.type === 'booklet' ? !(b.categories || []).length : false
-            ));
-            if (problem) {
-                notify(problem.type === 'exercise'
-                    ? t('imnci_ui.courses.editor.choose_case', 'Choose which case the card points at.')
-                    : problem.type === 'booklet'
-                        ? t('imnci_ui.courses.editor.choose_tables', 'Tick at least one chart booklet table.')
-                        : t('imnci_ui.courses.editor.two_answers', 'Each question needs at least two answers to choose from.'), 'error');
-                setSaving(false);
-                return;
-            }
-
             // Sections written before the tabs existed keep their text in
-            // `blocks`. Saving the Read tab moves it across and empties the old
-            // field, so a section is migrated the first time someone edits it
-            // and nothing has to be rewritten in bulk.
-            const patch = { ...section, title: title.trim(), [whole ? 'read' : tab]: joinFromEditor(html, kept) };
-            // The whole section is saved as one list. What was in the See and
-            // Practise tabs is part of it now, so those are emptied.
+            // `blocks`; they move across the first time they are saved.
+            const patch = { ...section, title: title.trim(), [whole ? 'read' : tab]: fromElements(elements) };
             if (whole) Object.assign(patch, { see: [], practise: [], test: [], blocks: [] });
             if (tab === 'read' && section.blocks?.length) patch.blocks = [];
             await upsertOnlineCourseItem(patch);
-            notify(t('imnci_ui.courses.editor.tab_saved', '{{tab}} saved.', { tab: tabLabel }), 'success');
+            notify(t('imnci_ui.courses.editor2.saved', 'Lesson saved.'), 'success');
             onSaved();
         } catch (e) {
             console.error('Could not save the section:', e);
@@ -250,521 +280,136 @@ export function SectionTabEditor({ section, tab = 'read', onSaved, onCancel }) {
 
     if (!section) return null;
 
+    const breaks = partBreaks(elements, isActivity);
+    let part = 1;
+
     return (
-        <div className="space-y-4">
-            {/* Editing happens on the page the text is read on, at the width it
-                will be read at. It used to be a dialog, which meant writing a
-                paragraph in a box half the size of the page it appears on. */}
-            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-300">
-                <span className="text-sm text-amber-900 font-semibold">
-                    {t('imnci_ui.courses.editor.editing', 'Editing {{tab}}', { tab: tabLabel })}
+        <div className="space-y-3" data-testid="lesson-editor">
+            {/* Kept in view while scrolling a long lesson. */}
+            <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 px-4 sm:px-6 py-2.5 bg-white/95 backdrop-blur border-b border-slate-200 rounded-t-2xl flex flex-wrap items-center gap-2">
+                <span className="hidden sm:inline text-xs font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                    {t('imnci_ui.courses.editor2.editing', 'Editing')}
                 </span>
-                <span className="flex gap-2">
-                    <Button variant="secondary" onClick={onCancel} disabled={saving}>{t('imnci_ui.courses.common.cancel', 'Cancel')}</Button>
-                    <Button onClick={save} disabled={saving}>{saving ? t('imnci_ui.courses.common.saving', 'Saving…') : t('imnci_ui.courses.common.save', 'Save')}</Button>
-                </span>
+                <span className="flex-1" />
+                <button type="button" onClick={() => { setPreview((p) => !p); setSelected(null); }} aria-pressed={preview}
+                    className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border text-sm font-semibold ${preview ? 'border-sky-300 bg-sky-50 text-sky-800' : 'border-slate-300 bg-white text-slate-700'}`}>
+                    {preview ? <EyeOff size={15} /> : <Eye size={15} />}
+                    {preview ? t('imnci_ui.courses.editor2.back_to_edit', 'Back to editing') : t('imnci_ui.courses.editor2.preview', 'Preview')}
+                </button>
+                <Button variant="secondary" onClick={cancel} disabled={saving}>{t('imnci_ui.courses.common.cancel', 'Cancel')}</Button>
+                <Button onClick={save} disabled={saving}>{saving ? t('imnci_ui.courses.common.saving', 'Saving…') : t('imnci_ui.courses.common.save', 'Save')}</Button>
             </div>
 
-            <Input label={t('imnci_ui.courses.editor.section_title', 'Section title')} value={title} onChange={(e) => setTitle(e.target.value)} />
+            <label className="block">
+                <span className="block text-xs font-semibold text-slate-500 mb-1">{t('imnci_ui.courses.editor2.lesson_title', 'Lesson title')}</span>
+                <input value={title} dir="auto" onChange={(e) => { setTitle(e.target.value); setChanged(true); }}
+                    className="w-full text-xl font-bold text-slate-900 border-0 border-b-2 border-slate-200 focus:border-sky-500 focus:outline-none px-0 py-1 bg-transparent" />
+            </label>
 
-            <RichTextEditor
-                value={html}
-                onChange={setHtml}
-                onInsertImage={uploadInline}
-                onInsertChart={() => setCharting(true)}
-                registerInsert={(fn) => { insertRef.current = fn; }}
-                placeholder={t('imnci_ui.courses.editor.placeholder', 'Write the {{tab}} text here. Press Enter for a new paragraph.', { tab: tabLabel.toLowerCase() })}
-                className="min-h-[24rem]"
-            />
+            {preview ? (
+                <div className="rounded-xl border border-slate-200 p-3 sm:p-4" data-testid="lesson-preview">
+                    <ContentBlocks blocks={fromElements(elements)} />
+                </div>
+            ) : (
+                <div>
+                    {elements.length === 0 && (
+                        <p className="text-sm text-slate-500 text-center py-6">{t('imnci_ui.courses.editor2.empty', 'This {{what}} is empty. Use “Add” to start it.', { what: tabLabel })}</p>
+                    )}
+                    {elements.length > 0 && <PartLine n={1} t={t} />}
+                    {elements.map((b, i) => {
+                        const info = elementInfo(b);
+                        const on = selected === b._k;
+                        const isText = info.kind === 'text';
+                        const canEdit = !isText && !['image', 'table'].includes(b.type);
+                        const breakAfter = breaks.has(i);
+                        if (breakAfter) part += 1;
+                        return (
+                            <React.Fragment key={b._k}>
+                                <AddPoint onAdd={() => setAdding(i)} label={t('imnci_ui.courses.editor2.add_here', 'Add here')} />
+                                <div
+                                    data-testid="element"
+                                    onClick={() => { if (!on) setSelected(b._k); }}
+                                    onDoubleClick={() => { if (canEdit) openEdit(b._k); }}
+                                    className={`relative rounded-xl border-2 transition-colors ${on ? 'border-sky-500 bg-white shadow-sm' : 'border-transparent hover:border-slate-200 cursor-pointer'} ${isText ? 'px-2 py-1' : 'p-3 bg-white shadow-sm border-slate-100'}`}
+                                >
+                                    {!isText && (
+                                        <div className="flex items-center gap-1.5 mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                            <span className={`w-5 h-5 rounded grid place-items-center ${info.activity ? 'bg-violet-50 text-violet-700' : 'bg-sky-50 text-sky-700'}`}><info.Icon size={12} /></span>
+                                            {nameOf(b)}
+                                            {info.kind === 'facilitator' && (
+                                                <span className="normal-case tracking-normal font-semibold text-violet-700 bg-violet-50 rounded-full px-2">{t('imnci_ui.courses.editor2.not_learners', 'Not shown to learners')}</span>
+                                            )}
+                                        </div>
+                                    )}
 
+                                    {isText && on ? (
+                                        <RichTextEditor
+                                            key={b._k}
+                                            value={b.text}
+                                            autoFocus
+                                            onChange={(html) => update((list) => list.map((x) => (x._k === b._k ? { ...x, text: html } : x)))}
+                                            onInsertImage={uploadInline}
+                                            onInsertChart={() => setCharting(true)}
+                                            registerInsert={(fn) => { insertRef.current = fn; }}
+                                            placeholder={t('imnci_ui.courses.editor2.write_here', 'Write here. Press Enter for a new paragraph.')}
+                                            className="min-h-[8rem]"
+                                        />
+                                    ) : isEmptyElement(b) ? (
+                                        <p className="text-sm italic text-slate-400 py-1">
+                                            {isText ? t('imnci_ui.courses.editor2.tap_to_write', 'Empty text. Tap to write.') : t('imnci_ui.courses.editor2.tap_edit', 'Not filled in yet. Tap Edit.')}
+                                        </p>
+                                    ) : (
+                                        <LearnerLook block={b} />
+                                    )}
+
+                                    {on && (
+                                        <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-dashed border-slate-200" data-testid="element-tools">
+                                            {canEdit && (
+                                                <button type="button" onClick={(e) => { e.stopPropagation(); openEdit(b._k); }}
+                                                    className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700">
+                                                    <Pencil size={14} /> {t('imnci_ui.courses.editor2.edit', 'Edit')}
+                                                </button>
+                                            )}
+                                            <button type="button" disabled={i === 0} onClick={(e) => { e.stopPropagation(); move(b._k, -1); }} aria-label={t('imnci_ui.courses.editor2.move_up', 'Move up')}
+                                                className="h-9 w-9 grid place-items-center rounded-lg border border-slate-300 bg-white disabled:opacity-30"><ArrowUp size={15} /></button>
+                                            <button type="button" disabled={i === elements.length - 1} onClick={(e) => { e.stopPropagation(); move(b._k, 1); }} aria-label={t('imnci_ui.courses.editor2.move_down', 'Move down')}
+                                                className="h-9 w-9 grid place-items-center rounded-lg border border-slate-300 bg-white disabled:opacity-30"><ArrowDown size={15} /></button>
+                                            <button type="button" onClick={(e) => { e.stopPropagation(); duplicate(b._k); }}
+                                                className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700">
+                                                <Copy size={14} /> {t('imnci_ui.courses.editor2.duplicate', 'Duplicate')}
+                                            </button>
+                                            <span className="flex-1" />
+                                            <button type="button" onClick={(e) => { e.stopPropagation(); remove(b._k); }} data-testid="delete-element"
+                                                className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-red-200 bg-white text-sm font-semibold text-red-600 hover:bg-red-50">
+                                                <Trash2 size={14} /> {t('imnci_ui.courses.editor2.delete', 'Delete')}
+                                            </button>
+                                            <button type="button" onClick={(e) => { e.stopPropagation(); setSelected(null); }} aria-label={t('imnci_ui.courses.editor2.deselect', 'Done with this element')}
+                                                className="h-9 w-9 grid place-items-center rounded-lg border border-slate-300 bg-white text-slate-500"><X size={15} /></button>
+                                        </div>
+                                    )}
+                                </div>
+                                {breakAfter && <PartLine n={part} after={nameOf(b)} t={t} />}
+                            </React.Fragment>
+                        );
+                    })}
+                    <button type="button" onClick={() => setAdding(elements.length)} data-testid="add-end"
+                        className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 py-3 text-sm font-semibold text-sky-700 hover:border-sky-400 hover:bg-sky-50">
+                        <Plus size={16} /> {t('imnci_ui.courses.editor2.add_end', 'Add to the end of the lesson')}
+                    </button>
+                </div>
+            )}
+
+            <AddMenu isOpen={adding !== null} onClose={() => setAdding(null)} onPick={add} t={t} />
+            <EditSheet draft={draft} setDraft={setDraft} onDone={finishEdit} onCancel={closeEdit} uploadPicture={uploadPicture} t={t} />
             <ChartBuilderModal
                 isOpen={charting}
                 onClose={() => setCharting(false)}
                 onInsert={(tableHtml) => { insertRef.current?.(tableHtml); setCharting(false); }}
             />
-
-            {/* Everything that is not prose. A question is a set of fields, not
-                a paragraph, so it keeps a card rather than being typed into the
-                text as markup nobody can see. */}
-            <div className="space-y-2">
-                {extras.length > 0 && (
-                    <p className="text-xs text-slate-500">
-                        {t('imnci_ui.courses.editor.cards_hint', 'Each card shows in the text where its marker is, for example [[card c1]]. Move the marker line to move the card.')}
-                    </p>
-                )}
-                {extras.map((b, i) => (
-                    <div key={b._k || i} className="border rounded-lg p-3 bg-white space-y-2">
-                        <div className="flex items-center gap-2 text-xs">
-                            <span className="font-semibold text-slate-700">{b.label || CARD_NAMES[b.type] || b.type}</span>
-                            <span className="font-mono text-slate-400 flex-1">{b._k ? cardMarker(b._k) : ''}</span>
-                            <button onClick={() => removeExtra(i)}
-                                className="px-1.5 py-0.5 border rounded text-red-600 hover:bg-red-50">
-                                <Trash2 size={12} />
-                            </button>
-                        </div>
-
-                        {b.type === 'page' && (
-                            <div className="text-xs text-slate-500">
-                                {t('imnci_ui.courses.editor.page_captured', 'Page {{page}} of the book, captured when it was converted.', { page: b.page })}
-                                <BookImage block={b} />
-                            </div>
-                        )}
-
-                        {b.type === 'video' && (
-                            <div className="space-y-2">
-                                <Input label={t('imnci_ui.courses.editor.video_address', 'Video address')} value={b.url || ''}
-                                    placeholder={t('imnci_ui.courses.editor.video_placeholder', 'https://www.youtube.com/watch?v=… or a link to an MP4')}
-                                    onChange={(e) => updateExtra(i, { url: e.target.value })} />
-                                <Input label={t('imnci_ui.courses.editor.caption', 'Caption')} value={b.caption || ''}
-                                    onChange={(e) => updateExtra(i, { caption: e.target.value })} />
-                                <Input label={t('imnci_ui.courses.editor.video_title', 'Title (shown on the player, also while the video is being recorded)')} value={b.title || ''}
-                                    onChange={(e) => updateExtra(i, { title: e.target.value })} />
-                                <Input label={t('imnci_ui.courses.editor.video_script', 'Narration script number (in the video scripts file)')} value={b.script || ''}
-                                    onChange={(e) => updateExtra(i, { script: e.target.value })} />
-                                <LinesField label={t('imnci_ui.courses.editor.chapters', 'Chapters')} rows={3}
-                                    hint={t('imnci_ui.courses.editor.chapters_hint', 'One per line: time | label, for example 1:05 | Counting breaths')}
-                                    value={b.chapters} toText={chaptersToText} fromText={chaptersFromText}
-                                    onChange={(v) => updateExtra(i, { chapters: v })} />
-                                <LinesField label={t('imnci_ui.courses.editor.stops', 'Pause-and-answer questions (video files only)')} rows={3}
-                                    hint={t('imnci_ui.courses.editor.stops_hint', 'One per line: time | question | answers split by ; with the right one starred | why')}
-                                    value={b.stops} toText={stopsToText} fromText={stopsFromText}
-                                    onChange={(v) => updateExtra(i, { stops: v })} />
-                                <VideoBlock block={b} />
-                            </div>
-                        )}
-
-                        {b.type === 'exercise' && (
-                            <div className="space-y-2">
-                                <Select label={t('imnci_ui.courses.editor.which_case', 'Which case')} value={b.exerciseId || ''} disabled={!exercises}
-                                    onChange={(e) => updateExtra(i, { exerciseId: e.target.value })}>
-                                    <option value="">{exercises ? t('imnci_ui.courses.editor.choose_a_case', '— choose a case —') : t('imnci_ui.courses.editor.loading_cases', 'Loading the cases…')}</option>
-                                    {(exercises || []).map((ex) => (
-                                        <option key={ex.id} value={ex.id}>
-                                            {ex.title}{ex.draft ? t('imnci_ui.courses.editor.draft_suffix', ' (draft)') : ''}
-                                        </option>
-                                    ))}
-                                </Select>
-                                <p className="text-xs text-slate-500">
-                                    {t('imnci_ui.courses.editor.cases_written', 'Cases are written in the case builder, from Manage mode.')}
-                                </p>
-                                <Input label={t('imnci_ui.courses.editor.why_here', 'Why it is here (optional)')} value={b.note || ''}
-                                    onChange={(e) => updateExtra(i, { note: e.target.value })} />
-                            </div>
-                        )}
-
-                        {b.type === 'booklet' && (
-                            <div className="space-y-2">
-                                <Select label={t('imnci_ui.courses.editor.booklet_part', 'Chart booklet')} value={b.part || 'child'}
-                                    onChange={(e) => updateExtra(i, { part: e.target.value, categories: [] })}>
-                                    <option value="child">{t('clinical_ui.protocol.parts.child', 'Sick child (2 months – 5 years)')}</option>
-                                    <option value="infant">{t('clinical_ui.protocol.parts.infant', 'Young infant (up to 2 months)')}</option>
-                                </Select>
-                                <div className="text-xs text-slate-500">{t('imnci_ui.courses.editor.booklet_tables', 'Tables to show. They are read from the saved protocol, so a change in Protocol management shows here too.')}</div>
-                                <div className="flex flex-wrap gap-x-4 gap-y-1">
-                                    {Object.entries(NATIONAL_PROTOCOLS[b.part === 'infant' ? 'infant' : 'child']?.categories || {}).map(([id, cat]) => (
-                                        <label key={id} className="inline-flex items-center gap-1.5 text-sm">
-                                            <input type="checkbox" checked={(b.categories || []).includes(id)}
-                                                onChange={() => updateExtra(i, { categories: toggle(b.categories, id) })} />
-                                            {cat.title || id}
-                                        </label>
-                                    ))}
-                                </div>
-                                <Input label={t('imnci_ui.courses.editor.caption', 'Caption')} value={b.caption || ''}
-                                    onChange={(e) => updateExtra(i, { caption: e.target.value })} />
-                                {(b.categories || []).length > 0 && <BookletBlock block={b} />}
-                            </div>
-                        )}
-
-                        {b.type === 'form' && (
-                            <div className="space-y-2">
-                                <Select label={t('imnci_ui.courses.editor.form_part', 'Recording form')} value={b.part || 'child'}
-                                    onChange={(e) => updateExtra(i, { part: e.target.value, sections: [] })}>
-                                    <option value="child">{t('clinical_ui.protocol.parts.child', 'Sick child (2 months – 5 years)')}</option>
-                                    <option value="infant">{t('clinical_ui.protocol.parts.infant', 'Young infant (up to 2 months)')}</option>
-                                </Select>
-                                <div className="text-xs text-slate-500">{t('imnci_ui.courses.editor.form_rows', 'Rows to show (none ticked shows the whole form).')}</div>
-                                <div className="flex flex-wrap gap-x-4 gap-y-1">
-                                    {(NATIONAL_FORMS[b.part === 'infant' ? 'form_infant' : 'form_child']?.sections || []).map((s) => (
-                                        <label key={s.id} className="inline-flex items-center gap-1.5 text-sm">
-                                            <input type="checkbox" checked={(b.sections || []).includes(s.id)}
-                                                onChange={() => updateExtra(i, { sections: toggle(b.sections, s.id) })} />
-                                            {s.en?.title || s.id}
-                                        </label>
-                                    ))}
-                                </div>
-                                <Input label={t('imnci_ui.courses.editor.caption', 'Caption')} value={b.caption || ''}
-                                    onChange={(e) => updateExtra(i, { caption: e.target.value })} />
-                                <FormBlock block={b} />
-                            </div>
-                        )}
-
-                        {b.type === 'note' && (
-                            <div className="space-y-2">
-                                <Input label={t('imnci_ui.courses.editor.note_label', 'Label')} value={b.label || ''}
-                                    onChange={(e) => updateExtra(i, { label: e.target.value })} />
-                                <label className="inline-flex items-center gap-1.5 text-sm">
-                                    <input type="checkbox" checked={isFacilitatorBlock(b)} disabled={isFacilitatorBlock({ ...b, facilitator: false })}
-                                        onChange={(e) => updateExtra(i, { facilitator: e.target.checked })} />
-                                    {t('imnci_ui.courses.editor.note_facilitator', 'For the facilitator only (shown in Protocol management > Facilitator guides, not to learners)')}
-                                </label>
-                                <Textarea rows={4} value={b.text || ''} dir="auto"
-                                    placeholder={t('imnci_ui.courses.editor.sudan_placeholder', 'What the Sudan national protocol says, then what the WHO module says.')}
-                                    onChange={(e) => updateExtra(i, { text: e.target.value })} />
-                            </div>
-                        )}
-
-                        {b.type === 'reveal' && (
-                            <div className="space-y-2">
-                                <Textarea rows={2} value={b.text || ''} dir="auto" placeholder={t('imnci_ui.courses.editor.reveal_prompt', 'What the learner should think about first')}
-                                    onChange={(e) => updateExtra(i, { text: e.target.value })} />
-                                <Textarea rows={3} value={b.answer || ''} dir="auto" placeholder={t('imnci_ui.courses.editor.reveal_answer', 'The answer, shown when they tap')}
-                                    onChange={(e) => updateExtra(i, { answer: e.target.value })} />
-                            </div>
-                        )}
-
-                        {b.type === 'flip' && (
-                            <div className="space-y-2">
-                                <Input label={t('imnci_ui.courses.editor.title', 'Title')} value={b.title || ''} onChange={(e) => updateExtra(i, { title: e.target.value })} />
-                                <LinesField label={t('imnci_ui.courses.editor.cards', 'Cards')} hint={t('imnci_ui.courses.editor.cards_lines', 'One per line: front | back')}
-                                    value={b.cards} toText={cardsToText} fromText={cardsFromText} onChange={(v) => updateExtra(i, { cards: v })} />
-                            </div>
-                        )}
-
-                        {b.type === 'sort' && (
-                            <div className="space-y-2">
-                                <Input label={t('imnci_ui.courses.editor.sort_task', 'What to do')} value={b.text || ''} onChange={(e) => updateExtra(i, { text: e.target.value })} />
-                                <Input label={t('imnci_ui.courses.editor.sort_groups', 'Groups, separated by commas')} value={(b.groups || []).join(', ')}
-                                    onChange={(e) => updateExtra(i, { groups: groupsFromText(e.target.value) })} />
-                                <LinesField label={t('imnci_ui.courses.editor.sort_items', 'Items')} hint={t('imnci_ui.courses.editor.sort_lines', 'One per line: item | its group | why (optional)')}
-                                    value={b.items} toText={(v) => sortItemsToText(v, b.groups)} fromText={(v) => sortItemsFromText(v, b.groups)}
-                                    onChange={(v) => updateExtra(i, { items: v })} />
-                                <Input label={t('imnci_ui.courses.editor.why_after', 'Why (shown after answering)')} value={b.explanation || ''}
-                                    onChange={(e) => updateExtra(i, { explanation: e.target.value })} />
-                            </div>
-                        )}
-
-                        {b.type === 'steps' && (
-                            <div className="space-y-2">
-                                <Input label={t('imnci_ui.courses.editor.title', 'Title')} value={b.title || ''} onChange={(e) => updateExtra(i, { title: e.target.value })} />
-                                <LinesField label={t('imnci_ui.courses.editor.steps', 'Steps')} hint={t('imnci_ui.courses.editor.steps_lines', 'One per line: step | what to do')}
-                                    value={b.steps} toText={stepsToText}
-                                    fromText={(v) => stepsFromText(v).map((st, k) => ({ ...st, ...((b.steps || [])[k]?.image ? { image: b.steps[k].image } : {}) }))}
-                                    onChange={(v) => updateExtra(i, { steps: v })} />
-                                <LinesField label={t('imnci_ui.courses.editor.step_pictures', 'Pictures')} hint={t('imnci_ui.courses.editor.step_pictures_hint', 'One per line in step order, a course file such as imnci-photos/photo-12.jpg; leave a line empty for none')}
-                                    rows={3} value={(b.steps || []).map((st) => st.image || '')} toText={(v) => v.join('\n')}
-                                    fromText={(v) => v.split('\n').map((x) => x.trim())}
-                                    onChange={(imgs) => updateExtra(i, { steps: (b.steps || []).map((st, k) => { const { image, ...rest } = st; return imgs[k] ? { ...rest, image: imgs[k] } : rest; }) })} />
-                            </div>
-                        )}
-
-                        {b.type === 'story' && (
-                            <div className="space-y-2">
-                                <Input label={t('imnci_ui.courses.editor.title', 'Title')} value={b.title || ''} onChange={(e) => updateExtra(i, { title: e.target.value })} />
-                                {(b.stages || []).map((st, si) => {
-                                    const setStage = (patch) => updateExtra(i, { stages: b.stages.map((x, k) => (k === si ? { ...x, ...patch } : x)) });
-                                    return (
-                                        <div key={si} className="border rounded p-2 space-y-1.5 bg-slate-50">
-                                            <div className="flex items-center text-xs font-semibold text-slate-600">
-                                                <span className="flex-1">{t('imnci_ui.courses.editor.stage_n', 'Stage {{n}}', { n: si + 1 })}</span>
-                                                <button onClick={() => updateExtra(i, { stages: b.stages.filter((_, k) => k !== si) })}
-                                                    disabled={(b.stages || []).length <= 1} className="px-1.5 border rounded text-red-600 disabled:opacity-30">−</button>
-                                            </div>
-                                            <Textarea rows={2} value={st.text || ''} dir="auto" placeholder={t('imnci_ui.courses.editor.stage_text', 'What happens')}
-                                                onChange={(e) => setStage({ text: e.target.value })} />
-                                            <LinesField label={t('imnci_ui.courses.editor.dialogue', 'Conversation (optional)')} hint={t('imnci_ui.courses.editor.dialogue_lines', 'One line each, "Name: words". Lines from "You" or "Health worker" show on the health worker side.')}
-                                                rows={3} value={st.dialogue || []} toText={dialogueToText} fromText={dialogueFromText} onChange={(v) => setStage({ dialogue: v })} />
-                                            <Input value={st.question || ''} placeholder={t('imnci_ui.courses.editor.stage_question', 'A question at this point (optional)')}
-                                                onChange={(e) => setStage({ question: e.target.value })} />
-                                            <OptionsFields q={st} onChange={setStage} t={t} />
-                                        </div>
-                                    );
-                                })}
-                                <button onClick={() => updateExtra(i, { stages: [...(b.stages || []), { text: '', question: '', options: [], answer: 0, explanation: '' }] })}
-                                    className="text-xs text-sky-700 font-semibold">{t('imnci_ui.courses.editor.add_stage', '+ add a stage')}</button>
-                            </div>
-                        )}
-
-                        {b.type === 'calc' && (
-                            <div className="space-y-2">
-                                <Input label={t('imnci_ui.courses.editor.title', 'Title')} value={b.title || ''} onChange={(e) => updateExtra(i, { title: e.target.value })} />
-                                <Textarea rows={2} value={b.text || ''} dir="auto" placeholder={t('imnci_ui.courses.editor.calc_case', 'The child: age, weight and what is needed')}
-                                    onChange={(e) => updateExtra(i, { text: e.target.value })} />
-                                <Input value={b.question || ''} placeholder={t('imnci_ui.courses.editor.calc_question', 'What to work out, for example How many ml in the first hour?')}
-                                    onChange={(e) => updateExtra(i, { question: e.target.value })} />
-                                <div className="grid grid-cols-3 gap-2">
-                                    <Input label={t('imnci_ui.courses.editor.calc_answer', 'Answer (several: split by ;)')} value={(Array.isArray(b.answers) && b.answers.length ? b.answers : [b.answer ?? '']).join(' ; ')}
-                                        onChange={(e) => { const list = e.target.value.split(';').map((x) => x.trim()).filter((x) => x !== '').map(Number).filter((n) => !Number.isNaN(n)); updateExtra(i, { answer: list[0] ?? 0, answers: list.length > 1 ? list : undefined }); }} />
-                                    <Input type="number" label={t('imnci_ui.courses.editor.calc_tolerance', 'Accept ± ')} value={b.tolerance ?? 0}
-                                        onChange={(e) => updateExtra(i, { tolerance: Number(e.target.value) || 0 })} />
-                                    <Input label={t('imnci_ui.courses.editor.calc_unit', 'Unit')} value={b.unit || ''} onChange={(e) => updateExtra(i, { unit: e.target.value })} />
-                                </div>
-                                <Input label={t('imnci_ui.courses.editor.calc_hint', 'Hint after a wrong number')} value={b.hint || ''} onChange={(e) => updateExtra(i, { hint: e.target.value })} />
-                                <Input label={t('imnci_ui.courses.editor.why_after', 'Why (shown after answering)')} value={b.explanation || ''}
-                                    onChange={(e) => updateExtra(i, { explanation: e.target.value })} />
-                            </div>
-                        )}
-
-                        {b.type === 'growthchart' && (
-                            <div className="space-y-2">
-                                <Input label={t('imnci_ui.courses.editor.title', 'Title')} value={b.title || ''} onChange={(e) => updateExtra(i, { title: e.target.value })} />
-                                <Textarea rows={2} value={b.text || ''} dir="auto" placeholder={t('imnci_ui.courses.editor.growth_case', 'The case (optional). Leave the weight empty for free practice, where learners type their own numbers.')}
-                                    onChange={(e) => updateExtra(i, { text: e.target.value })} />
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                    <Select label={t('imnci_ui.courses.editor.growth_chart', 'Chart')} value={b.chart || ''}
-                                        onChange={(e) => updateExtra(i, { chart: e.target.value || undefined })}>
-                                        <option value="">{t('imnci_ui.courses.editor.growth_by_age', 'By age (length under 2 years, height from 2)')}</option>
-                                        <option value="wfl">{t('imnci_ui.courses.editor.growth_wfl', 'Weight-for-length (0 to 2 years)')}</option>
-                                        <option value="wfh">{t('imnci_ui.courses.editor.growth_wfh', 'Weight-for-height (2 to 5 years)')}</option>
-                                        <option value="wfa">{t('imnci_ui.courses.editor.growth_wfa', 'Weight-for-age (0 to 6 months)')}</option>
-                                    </Select>
-                                    <Select label={t('imci.growth_chart.sex', 'Sex')} value={b.sex || 'female'} onChange={(e) => updateExtra(i, { sex: e.target.value })}>
-                                        <option value="female">{t('imci.growth_chart.girl', 'Girl')}</option>
-                                        <option value="male">{t('imci.growth_chart.boy', 'Boy')}</option>
-                                    </Select>
-                                    {b.chart === 'wfa' ? (
-                                        <Input type="number" label={t('imci.growth_chart.age_in_weeks', 'Age (weeks)')} value={b.ageWeeks ?? ''}
-                                            onChange={(e) => updateExtra(i, { ageWeeks: e.target.value === '' ? undefined : Number(e.target.value) })} />
-                                    ) : (
-                                        <Input type="number" label={t('imci.growth_chart.age_in_months', 'Age (months)')} value={b.ageMonths ?? ''}
-                                            onChange={(e) => updateExtra(i, { ageMonths: e.target.value === '' ? undefined : Number(e.target.value) })} />
-                                    )}
-                                    <Input type="number" label={t('imci.growth_chart.weight_kg', 'Weight (kg)')} value={b.weightKg ?? ''}
-                                        onChange={(e) => updateExtra(i, { weightKg: e.target.value === '' ? undefined : Number(e.target.value) })} />
-                                    {b.chart !== 'wfa' && (
-                                        <Input type="number" label={t('imci.growth_chart.length_cm', 'Length or height (cm)')} value={b.lengthCm ?? ''}
-                                            onChange={(e) => updateExtra(i, { lengthCm: e.target.value === '' ? undefined : Number(e.target.value) })} />
-                                    )}
-                                    {b.chart === 'wfa' && (
-                                        <Select label={t('imnci_ui.courses.editor.growth_low', 'Is the weight low for age?')} value={b.lowWeightForAge ? 'yes' : 'no'}
-                                            onChange={(e) => updateExtra(i, { lowWeightForAge: e.target.value === 'yes' })}>
-                                            <option value="yes">{t('imnci_ui.courses.editor.growth_low_yes', 'Yes, below the -2 line')}</option>
-                                            <option value="no">{t('imnci_ui.courses.editor.growth_low_no', 'No')}</option>
-                                        </Select>
-                                    )}
-                                </div>
-                                <Input label={t('imnci_ui.courses.editor.why_after', 'Why (shown after answering)')} value={b.explanation || ''}
-                                    onChange={(e) => updateExtra(i, { explanation: e.target.value })} />
-                            </div>
-                        )}
-
-                        {b.type === 'courselink' && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <Input label={t('imnci_ui.courses.editor.link_course', 'Course (its title)')} value={b.course || ''}
-                                    onChange={(e) => updateExtra(i, { course: e.target.value })} />
-                                <Input type="number" label={t('imnci_ui.courses.editor.link_module', 'Module number')} value={b.module ?? ''}
-                                    onChange={(e) => updateExtra(i, { module: e.target.value === '' ? undefined : Number(e.target.value) })} />
-                                <Input label={t('imnci_ui.courses.editor.link_lesson', 'Lesson title (optional: empty opens the module)')} value={b.lesson || ''}
-                                    onChange={(e) => updateExtra(i, { lesson: e.target.value })} />
-                                <Input label={t('imnci_ui.courses.editor.link_label', 'Label on the link (optional)')} value={b.label || ''}
-                                    onChange={(e) => updateExtra(i, { label: e.target.value })} />
-                                <div className="sm:col-span-2">
-                                    <Input label={t('imnci_ui.courses.editor.link_text', 'What to do there (optional)')} value={b.text || ''}
-                                        onChange={(e) => updateExtra(i, { text: e.target.value })} />
-                                </div>
-                            </div>
-                        )}
-
-                        {b.type === 'scenario' && (
-                            <div className="space-y-2">
-                                <Input label={t('imnci_ui.courses.editor.title', 'Title')} value={b.title || ''} onChange={(e) => updateExtra(i, { title: e.target.value })} />
-                                <Textarea rows={2} value={b.text || ''} dir="auto" placeholder={t('imnci_ui.courses.editor.intro', 'What the learner does (optional)')}
-                                    onChange={(e) => updateExtra(i, { text: e.target.value })} />
-                                <div className="flex flex-wrap gap-2 items-center text-sm">
-                                    <select value={b.part || 'child'} onChange={(e) => updateExtra(i, { part: e.target.value })} className="border rounded px-2 py-1">
-                                        <option value="child">{t('imnci_ui.courses.editor.sick_child', 'Sick child')}</option>
-                                        <option value="infant">{t('imnci_ui.courses.editor.young_infant', 'Young infant')}</option>
-                                    </select>
-                                    <input value={(b.categories || []).join(', ')} placeholder={t('imnci_ui.courses.editor.booklet_tables', 'Booklet tables, e.g. cough, diarrhea')}
-                                        onChange={(e) => updateExtra(i, { categories: groupsFromText(e.target.value) })} className="flex-1 min-w-[12rem] border rounded px-2 py-1" />
-                                </div>
-                                {(b.cases || []).map((c, ci) => {
-                                    const setCase = (patch) => updateExtra(i, { cases: b.cases.map((x, k) => (k === ci ? { ...x, ...patch } : x)) });
-                                    return (
-                                        <div key={ci} className="border rounded p-2 space-y-1.5 bg-slate-50">
-                                            <div className="flex items-center text-xs font-semibold text-slate-600">
-                                                <span className="flex-1">{t('imnci_ui.courses.practice.case_n', 'Case {{n}} of {{total}}', { n: ci + 1, total: b.cases.length })}</span>
-                                                <button onClick={() => updateExtra(i, { cases: b.cases.filter((_, k) => k !== ci) })}
-                                                    disabled={b.cases.length <= 1} className="px-1.5 border rounded text-red-600 disabled:opacity-30">−</button>
-                                            </div>
-                                            <ChildFields child={c.child} onChange={(child) => setCase({ child })} t={t} />
-                                            <Textarea rows={3} value={c.text || ''} dir="auto" placeholder={t('imnci_ui.courses.editor.case_text', 'The case, a few lines')}
-                                                onChange={(e) => setCase({ text: e.target.value })} />
-                                            <LinesField label={t('imnci_ui.courses.editor.record', 'The child’s recording form')} hint={recordHint(t)}
-                                                rows={3} value={c.record || []} toText={recordToText} fromText={recordFromText} onChange={(v) => setCase({ record: v })} />
-                                            <Input value={c.question || ''} placeholder={t('imnci_ui.courses.editor.the_question', 'The question')}
-                                                onChange={(e) => setCase({ question: e.target.value })} />
-                                            <OptionsFields q={c} onChange={setCase} t={t} />
-                                        </div>
-                                    );
-                                })}
-                                <button onClick={() => updateExtra(i, { cases: [...(b.cases || []), newCase()] })}
-                                    className="text-xs text-sky-700 font-semibold">{t('imnci_ui.courses.editor.add_case', '+ add a case')}</button>
-                            </div>
-                        )}
-
-                        {b.type === 'spot' && (
-                            <div className="space-y-2">
-                                <Input label={t('imnci_ui.courses.editor.title', 'Title')} value={b.title || ''} onChange={(e) => updateExtra(i, { title: e.target.value })} />
-                                <Textarea rows={2} value={b.text || ''} dir="auto" placeholder={t('imnci_ui.courses.editor.intro', 'What the learner does (optional)')}
-                                    onChange={(e) => updateExtra(i, { text: e.target.value })} />
-                                <select value={b.part || 'child'} onChange={(e) => updateExtra(i, { part: e.target.value })} className="border rounded px-2 py-1 text-sm">
-                                    <option value="child">{t('imnci_ui.courses.editor.sick_child', 'Sick child')}</option>
-                                    <option value="infant">{t('imnci_ui.courses.editor.young_infant', 'Young infant')}</option>
-                                </select>
-                                <ChildFields child={b.child} onChange={(child) => updateExtra(i, { child })} t={t} />
-                                <LinesField label={t('imnci_ui.courses.editor.record', 'The child’s recording form')} hint={recordHint(t)}
-                                    rows={4} value={b.record || []} toText={recordToText} fromText={recordFromText} onChange={(v) => updateExtra(i, { record: v })} />
-                                <Input value={b.explanation || ''} placeholder={t('imnci_ui.courses.editor.why_after', 'Why (shown after answering)')}
-                                    onChange={(e) => updateExtra(i, { explanation: e.target.value })} />
-                            </div>
-                        )}
-
-                        {b.type === 'drill' && (
-                            <div className="space-y-2">
-                                <Input label={t('imnci_ui.courses.editor.title', 'Title')} value={b.title || ''} onChange={(e) => updateExtra(i, { title: e.target.value })} />
-                                <Textarea rows={2} value={b.text || ''} dir="auto" placeholder={t('imnci_ui.courses.editor.drill_task', 'The task, e.g. count the breaths for one minute')}
-                                    onChange={(e) => updateExtra(i, { text: e.target.value })} />
-                                <Input value={b.url || ''} placeholder={t('imnci_ui.courses.editor.video_url', 'Video link (YouTube, Vimeo or a file)')}
-                                    onChange={(e) => updateExtra(i, { url: e.target.value })} />
-                                <Input value={b.given || ''} placeholder={t('imnci_ui.courses.editor.drill_given', 'Until the video is added: what the learner is told instead (e.g. the count)')}
-                                    onChange={(e) => updateExtra(i, { given: e.target.value })} />
-                                <div className="flex flex-wrap gap-2 text-sm">
-                                    <input type="number" value={b.count?.answer ?? ''} placeholder={t('imnci_ui.courses.editor.drill_answer', 'Right count')}
-                                        onChange={(e) => updateExtra(i, { count: { ...(b.count || {}), answer: Number(e.target.value) } })} className="w-28 border rounded px-2 py-1" />
-                                    <input type="number" value={b.count?.tolerance ?? 2} title={t('imnci_ui.courses.editor.drill_tolerance', 'Accepted difference')}
-                                        onChange={(e) => updateExtra(i, { count: { ...(b.count || {}), tolerance: Number(e.target.value) } })} className="w-20 border rounded px-2 py-1" />
-                                    <input value={b.count?.unit || ''} placeholder={t('imnci_ui.courses.editor.drill_unit', 'Unit, e.g. breaths per minute')}
-                                        onChange={(e) => updateExtra(i, { count: { ...(b.count || {}), unit: e.target.value } })} className="flex-1 border rounded px-2 py-1" />
-                                </div>
-                                <Input value={b.question || ''} placeholder={t('imnci_ui.courses.editor.the_question', 'The question')}
-                                    onChange={(e) => updateExtra(i, { question: e.target.value })} />
-                                <OptionsFields q={b} onChange={(patch) => updateExtra(i, patch)} t={t} />
-                            </div>
-                        )}
-
-                        {b.type === 'classcards' && (
-                            <div className="space-y-2">
-                                <Input label={t('imnci_ui.courses.editor.title', 'Title')} value={b.title || ''} onChange={(e) => updateExtra(i, { title: e.target.value })} />
-                                <Input value={b.text || ''} placeholder={t('imnci_ui.courses.editor.intro', 'What the learner does (optional)')} onChange={(e) => updateExtra(i, { text: e.target.value })} />
-                                <LinesField label={t('imnci_ui.courses.editor.class_cards', 'Cards')} hint={t('imnci_ui.courses.editor.class_cards_lines', 'One per line: pink, yellow or green | CLASSIFICATION | where treated | signs | treatment')}
-                                    value={b.cards} toText={classCardsToText} fromText={classCardsFromText} onChange={(v) => updateExtra(i, { cards: v })} />
-                            </div>
-                        )}
-
-                        {b.type === 'reflect' && (
-                            <div className="space-y-2">
-                                <Input label={t('imnci_ui.courses.editor.title', 'Title')} value={b.title || ''} onChange={(e) => updateExtra(i, { title: e.target.value })} />
-                                <Input value={b.text || ''} placeholder={t('imnci_ui.courses.editor.intro', 'What the learner does (optional)')} onChange={(e) => updateExtra(i, { text: e.target.value })} />
-                                <LinesField label={t('imnci_ui.courses.editor.prompts', 'Questions to think over')} hint={t('imnci_ui.courses.editor.prompts_lines', 'One per line')}
-                                    value={b.prompts || []} toText={(v) => v.join('\n')} fromText={(v) => v.split('\n').map((x) => x.trim()).filter(Boolean)}
-                                    onChange={(v) => updateExtra(i, { prompts: v })} />
-                                <label className="flex items-center gap-2 text-sm">
-                                    <input type="checkbox" checked={!!b.rating} onChange={(e) => updateExtra(i, { rating: e.target.checked })} />
-                                    {t('imnci_ui.courses.editor.ask_rating', 'Ask for a 1 to 5 star rating of the module')}
-                                </label>
-                            </div>
-                        )}
-
-                        {b.type === 'question' && (
-                            <div className="space-y-2">
-                                <Textarea rows={2} value={b.text || ''} placeholder={t('imnci_ui.courses.editor.the_question', 'The question')}
-                                    onChange={(e) => updateExtra(i, { text: e.target.value })} />
-                                {(b.options || []).map((opt, oi) => (
-                                    <div key={oi} className="flex gap-2 items-center">
-                                        <input type="radio" name={`ans-${i}`} checked={(b.answer ?? 0) === oi}
-                                            onChange={() => updateExtra(i, { answer: oi })} title={t('imnci_ui.courses.editor.correct_answer', 'The correct answer')} />
-                                        <input value={opt} placeholder={t('imnci_ui.courses.editor.answer_n', 'Answer {{letter}}', { letter: String.fromCharCode(97 + oi) })}
-                                            onChange={(e) => updateExtra(i, {
-                                                options: b.options.map((x, k) => (k === oi ? e.target.value : x)),
-                                            })} className="flex-1 border rounded px-2 py-1 text-sm" />
-                                        <button disabled={(b.options || []).length <= 2}
-                                            onClick={() => updateExtra(i, {
-                                                options: b.options.filter((_, k) => k !== oi),
-                                                answer: (b.answer ?? 0) > oi ? (b.answer ?? 0) - 1
-                                                    : Math.min(b.answer ?? 0, b.options.length - 2),
-                                            })} className="px-2 border rounded text-red-600 disabled:opacity-30">−</button>
-                                    </div>
-                                ))}
-                                <button onClick={() => updateExtra(i, { options: [...(b.options || []), ''] })}
-                                    className="text-xs text-sky-700 font-semibold">{t('imnci_ui.courses.editor.add_answer', '+ add answer')}</button>
-                                <label className="flex items-center gap-2 text-sm">
-                                    <input type="checkbox" checked={Array.isArray(b.answers) && b.answers.length > 0}
-                                        onChange={(e) => updateExtra(i, e.target.checked ? { answers: [b.answer ?? 0] } : { answers: undefined })} />
-                                    {t('imnci_ui.courses.editor.select_all', 'Select all that apply (several right answers)')}
-                                </label>
-                                {Array.isArray(b.answers) && b.answers.length > 0 && (
-                                    <div className="flex flex-wrap gap-2 text-xs">
-                                        {(b.options || []).map((opt, oi) => (
-                                            <label key={oi} className="inline-flex items-center gap-1 border rounded px-2 py-1">
-                                                <input type="checkbox" checked={b.answers.includes(oi)}
-                                                    onChange={() => updateExtra(i, { answers: b.answers.includes(oi) ? b.answers.filter((x) => x !== oi) : [...b.answers, oi].sort() })} />
-                                                {String.fromCharCode(65 + oi)} {t('imnci_ui.courses.editor.is_right', 'is right')}
-                                            </label>
-                                        ))}
-                                    </div>
-                                )}
-                                <LinesField label={t('imnci_ui.courses.editor.feedback', 'Feedback for each answer')} hint={t('imnci_ui.courses.editor.feedback_lines', 'One line per answer, in the same order; leave a line empty for none')}
-                                    rows={3} value={b.feedback || []} toText={feedbackToText} fromText={feedbackFromText} onChange={(v) => updateExtra(i, { feedback: v })} />
-                                <Input label={t('imnci_ui.courses.editor.why_after', 'Why (shown after answering)')} value={b.explanation || ''}
-                                    onChange={(e) => updateExtra(i, { explanation: e.target.value })} />
-                            </div>
-                        )}
-                    </div>
-                ))}
-            </div>
-
-            <div className="flex flex-wrap gap-2 pt-2 border-t">
-                <span className="text-xs text-slate-500 self-center">{t('imnci_ui.courses.editor.add_at_cursor', 'Add at the cursor:')}</span>
-                {(whole || tab === 'practise') && (
-                    <>
-                        <button onClick={() => addExtra('question')}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
-                            <Plus size={13} /> {t('imnci_ui.courses.editor.question', 'Question')}
-                        </button>
-                        <button onClick={() => addExtra('exercise')}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
-                            <Stethoscope size={13} /> {t('imnci_ui.courses.editor.link_case', 'Link a case')}
-                        </button>
-                    </>
-                )}
-                {(whole || tab !== 'practise') && (
-                    <button onClick={() => addExtra('video')}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
-                        <Film size={13} /> {t('imnci_ui.courses.video.video', 'Video')}
-                    </button>
-                )}
-                <button onClick={() => addExtra('booklet')}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
-                    <BookOpen size={13} /> {t('imnci_ui.courses.editor.add_booklet', 'Chart booklet table')}
-                </button>
-                <button onClick={() => addExtra('form')}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
-                    <ClipboardList size={13} /> {t('imnci_ui.courses.editor.add_form', 'Recording form')}
-                </button>
-                {(whole || tab === 'read') && (
-                    <button onClick={() => addExtra('sudan')}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
-                        <Flag size={13} /> {t('imnci_ui.courses.editor.add_sudan', 'Sudan protocol note')}
-                    </button>
-                )}
-                {whole && [
-                    ['reveal', Lightbulb], ['flip', Layers], ['sort', Shuffle], ['steps', ListOrdered], ['story', BookOpenCheck], ['calc', Calculator], ['growthchart', LineChart], ['courselink', Link2], ['facilitator', Users],
-                    ['scenario', Users], ['spot', Search], ['drill', Timer], ['classcards', Palette], ['reflect', NotebookPen],
-                ].map(([type, Icon]) => (
-                    <button key={type} onClick={() => addExtra(type)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border rounded hover:bg-slate-50 hover:border-sky-300">
-                        <Icon size={13} /> {t(`imnci_ui.courses.editor.add_${type}`, CARD_NAMES[type])}
-                    </button>
-                ))}
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2 border-t">
-                <Button variant="secondary" onClick={onCancel} disabled={saving}>{t('imnci_ui.courses.common.cancel', 'Cancel')}</Button>
-                <Button onClick={save} disabled={saving}>{saving ? t('imnci_ui.courses.common.saving', 'Saving…') : t('imnci_ui.courses.editor.save_tab', 'Save {{tab}}', { tab: tabLabel })}</Button>
-            </div>
         </div>
     );
 }
+
 
 // Builds a classification chart and hands back the HTML for it, so it can be
 // dropped into the text where it belongs rather than living in a separate list
