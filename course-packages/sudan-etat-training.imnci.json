@@ -1688,7 +1688,7 @@
       },
       {
        "type": "video",
-       "url": "",
+       "url": "https://www.youtube.com/watch?v=z5a8yLa83p8",
        "title": "Signs of severe respiratory distress",
        "caption": "Watch the signs: cyanosis, very fast breathing, chest indrawing, head nodding, stridor, grunting.",
        "script": "ET2.3"
@@ -1977,6 +1977,13 @@
        "title": "Oxygen: sources and delivery",
        "caption": "The oxygen video: concentrator, cylinder, nasal prongs and nasal catheter.",
        "script": "ET2.5"
+      },
+      {
+       "type": "video",
+       "url": "https://www.youtube.com/watch?v=nQ4FGkblHoY",
+       "title": "Signs that a child needs oxygen",
+       "caption": "WHO ETAT video: when to give oxygen, and who to give it to first if the supply is limited.",
+       "script": "ET2.6"
       },
       {
        "type": "sort",
