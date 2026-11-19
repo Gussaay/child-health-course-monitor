@@ -34,7 +34,7 @@ const TABS = ['read', 'see', 'practise'];
           if (UNDO) {
             if (b.url !== L.url) { console.log(`  ${L.script} in "${x.title}": url is "${b.url || ''}", not the one in links.json — left as it is`); return b; }
             touched = true; console.log(`  ${L.script} in "${x.title}" (${tab}): url "${b.url}" -> "" , chapters removed`);
-            const { chapters, ...rest } = b; return { ...rest, url: '' };
+            const rest = { ...b }; delete rest.chapters; return { ...rest, url: '' };
           }
           if (b.url === L.url && JSON.stringify(b.chapters || []) === JSON.stringify(L.chapters || [])) { console.log(`  ${L.script} in "${x.title}": already set`); return b; }
           touched = true;
