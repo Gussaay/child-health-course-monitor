@@ -6,7 +6,7 @@ import React, { useState, useEffect, useRef, useContext, Suspense, lazy } from '
 import { useTranslation } from 'react-i18next';
 import {
     BookOpenText, MonitorPlay, Stethoscope, CheckCircle2, GraduationCap, X, Lightbulb, ClipboardCheck,
-    Play, Pencil, Film, BookOpen, Syringe, Printer, Lock, RotateCcw,
+    Play, Pencil, Film, BookOpen, Syringe, Printer, Lock,
 } from 'lucide-react';
 import { severityById } from '../../constants';
 import { videoSource, blockHtml } from '../book';
@@ -178,94 +178,10 @@ export const RESULT_CARD = {
 // goes on.
 const clock = (sec) => `${Math.floor((Number(sec) || 0) / 60)}:${String(Math.floor((Number(sec) || 0) % 60)).padStart(2, '0')}`;
 
-// A YouTube video plays from the privacy-enhanced address with the player's
-// extras turned off: no related videos from other channels (rel=0), no notes
-// over the picture, the smallest branding YouTube allows. YouTube does not let
-// a page remove its logo, so before the first play the lesson shows its own
-// cover, and when the video is paused or ends the lesson covers the player, so
-// YouTube's "more videos" panel and end screen never show.
-export const youtubeId = (src) => (String(src || '').match(/youtube(?:-nocookie)?\.com\/embed\/([\w-]{6,})/) || [])[1] || null;
-export function youtubeEmbed(id, { start = null, end = null, autoplay = false } = {}) {
-    const params = new URLSearchParams({
-        rel: '0', modestbranding: '1', iv_load_policy: '3', playsinline: '1', enablejsapi: '1', fs: '1', color: 'white',
-    });
-    if (typeof window !== 'undefined' && window.location?.origin?.startsWith('http')) params.set('origin', window.location.origin);
-    if (start != null) params.set('start', String(start));
-    if (end != null && Number(end) > Number(start || 0)) params.set('end', String(end));
-    if (autoplay) params.set('autoplay', '1');
-    return `https://www.youtube-nocookie.com/embed/${id}?${params}`;
-}
-
-// A clip of a longer video plays from `clipStart` to `clipEnd` (seconds), so a
-// lesson can show only the part that shows the sign it has just described.
-export function YouTubePlayer({ id, title, startAt, onEnded, clipStart = null, clipEnd = null }) {
-    const { t } = useTranslation();
-    const frame = useRef(null);
-    // 'cover' before the first play, then 'playing', 'paused' or 'ended'.
-    const [state, setState] = useState('cover');
-    const ended = useRef(onEnded);
-    ended.current = onEnded;
-    useEffect(() => { if (startAt != null) setState('playing'); }, [startAt]);
-    useEffect(() => {
-        const onMessage = (e) => {
-            if (!frame.current || e.source !== frame.current.contentWindow) return;
-            let data = e.data;
-            try { if (typeof data === 'string') data = JSON.parse(data); } catch { return; }
-            const ps = data?.info?.playerState ?? (data?.event === 'onStateChange' ? data.info : undefined);
-            if (ps === 1) setState('playing');
-            else if (ps === 2) setState('paused');
-            else if (ps === 0) { setState('ended'); ended.current?.(); }
-        };
-        window.addEventListener('message', onMessage);
-        return () => window.removeEventListener('message', onMessage);
-    }, []);
-    const send = (func, args = []) => frame.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
-    // Ask the player to report its state (the IFrame API's handshake).
-    const listen = () => {
-        const w = frame.current?.contentWindow;
-        if (!w) return;
-        w.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*');
-        w.postMessage(JSON.stringify({ event: 'command', func: 'addEventListener', args: ['onStateChange'], id: 1, channel: 'widget' }), '*');
-    };
-    const from = startAt ?? (clipStart != null ? Math.floor(Number(clipStart) || 0) : null);
-    const src = youtubeEmbed(id, { start: from, end: clipEnd != null ? Math.ceil(Number(clipEnd)) : null, autoplay: state !== 'cover' });
-    if (state === 'cover') {
-        return (
-            <button type="button" onClick={() => setState('playing')} aria-label={t('imnci_ui.courses.video.play', 'Play the video')}
-                className="absolute inset-0 w-full h-full group">
-                <img src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-                <span className="absolute inset-0 bg-black/40" />
-                <span className="absolute inset-0 grid place-items-center">
-                    <span className="w-16 h-16 rounded-full bg-white/95 text-sky-800 grid place-items-center shadow-lg">
-                        <Play size={30} className="ms-1" fill="currentColor" />
-                    </span>
-                </span>
-                {title && <span className="absolute bottom-0 inset-x-0 p-3 text-start text-white text-sm font-semibold bg-black/50">{title}</span>}
-            </button>
-        );
-    }
-    return (
-        <>
-            <iframe ref={frame} key={src} src={src} title={title || t('imnci_ui.courses.video.video', 'Video')} allowFullScreen onLoad={listen}
-                className="absolute inset-0 w-full h-full"
-                allow="accelerometer; autoplay; encrypted-media; picture-in-picture; fullscreen" />
-            {(state === 'paused' || state === 'ended') && (
-                <button type="button" data-testid="video-cover"
-                    onClick={() => { if (state === 'ended') send('seekTo', [Number(clipStart) || 0, true]); send('playVideo'); setState('playing'); }}
-                    className="absolute inset-0 w-full h-full bg-slate-900/90 text-white grid place-items-center">
-                    <span className="flex flex-col items-center gap-2">
-                        <span className="w-14 h-14 rounded-full bg-white text-sky-800 grid place-items-center shadow-lg">
-                            {state === 'ended' ? <RotateCcw size={26} /> : <Play size={28} className="ms-1" fill="currentColor" />}
-                        </span>
-                        <span className="text-sm font-semibold">
-                            {state === 'ended' ? t('imnci_ui.courses.video.again', 'Watch again') : t('imnci_ui.courses.video.resume', 'Continue watching')}
-                        </span>
-                    </span>
-                </button>
-            )}
-        </>
-    );
-}
+// YouTube videos play in the lesson's own player (youtubePlayer.jsx): YouTube's
+// controls, title, logo and links never show.
+export { YouTubePlayer, youtubeId, youtubeEmbed } from './youtubePlayer';
+import { YouTubePlayer, youtubeId } from './youtubePlayer';
 
 export function VideoBlock({ block, activityKey }) {
     const { t } = useTranslation();

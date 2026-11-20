@@ -4,7 +4,7 @@
 // related videos); a file plays from `start` and stops at `end`.
 import React, { useRef } from 'react';
 import { videoSource } from '../book';
-import { YouTubePlayer, youtubeId } from './blocks';
+import { YouTubePlayer, youtubeId } from './youtubePlayer';
 
 export function QuestionVideo({ video }) {
     const src = videoSource(video?.url);
