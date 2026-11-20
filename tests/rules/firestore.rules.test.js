@@ -1070,3 +1070,77 @@ describe('participants — the training link is saved on the course record', () 
         await assertSucceeds(updateDoc(doc(as('plainUser'), 'participants', 'p1'), { trainingLink: null }));
     });
 });
+
+
+// =============================================================================
+// Patch: notifications marking-seen + facilitySnapshots read.
+// Both come from Admin → Problems permission reports: recipients could not
+// clear a notification (update/delete were manager-only, while the bell
+// tried to delete direct notifications), and the Child Health Services
+// screens read facilitySnapshots for users the rules restricted to
+// managers.
+// =============================================================================
+describe('notifications — a recipient can mark seen, and nothing more', () => {
+    const seedNotification = async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            const db = context.firestore();
+            await setDoc(doc(db, 'notifications', 'n1'), {
+                title: 'Course update', message: 'Your course moved',
+                targetUser: 'plainUser', readBy: [], deletedBy: [],
+            });
+        });
+    };
+
+    it('lets a plain user add their own uid to readBy and deletedBy', async () => {
+        await seedNotification();
+        await assertSucceeds(updateDoc(doc(as('plainUser'), 'notifications', 'n1'), {
+            readBy: ['plainUser'], deletedBy: ['plainUser'],
+        }));
+    });
+
+    it('does NOT let a plain user change the content', async () => {
+        await seedNotification();
+        await assertFails(updateDoc(doc(as('plainUser'), 'notifications', 'n1'), { title: 'Changed' }));
+        await assertFails(updateDoc(doc(as('plainUser'), 'notifications', 'n1'), {
+            readBy: ['plainUser'], title: 'Changed',
+        }));
+    });
+
+    it('does NOT let a plain user remove someone else from readBy', async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            const db = context.firestore();
+            await setDoc(doc(db, 'notifications', 'n2'), {
+                title: 'T', message: 'M', readBy: ['facilitator'], deletedBy: [],
+            });
+        });
+        await assertFails(updateDoc(doc(as('plainUser'), 'notifications', 'n2'), { readBy: [] }));
+    });
+
+    it('does NOT let a plain user delete a notification, but a manager can', async () => {
+        await seedNotification();
+        await assertFails(deleteDoc(doc(as('plainUser'), 'notifications', 'n1')));
+        await assertSucceeds(deleteDoc(doc(as('federalManager'), 'notifications', 'n1')));
+    });
+});
+
+describe('facilitySnapshots — signed-in users can read, managers write', () => {
+    const seedSnapshot = async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            const db = context.firestore();
+            await setDoc(doc(db, 'facilitySnapshots', 's1'), { facilityId: 'f1', effectiveDate: Timestamp.now() });
+        });
+    };
+
+    it('lets a plain signed-in user read a snapshot', async () => {
+        await seedSnapshot();
+        await assertSucceeds(getDoc(doc(as('plainUser'), 'facilitySnapshots', 's1')));
+        await assertSucceeds(getDocs(collection(as('facilitator'), 'facilitySnapshots')));
+    });
+
+    it('still blocks anonymous reads and non-manager writes', async () => {
+        await seedSnapshot();
+        await assertFails(getDoc(doc(anonymous(), 'facilitySnapshots', 's1')));
+        await assertFails(setDoc(doc(as('plainUser'), 'facilitySnapshots', 's2'), { facilityId: 'f1' }));
+        await assertSucceeds(setDoc(doc(as('statesManager'), 'facilitySnapshots', 's2'), { facilityId: 'f1' }));
+    });
+});

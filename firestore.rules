@@ -443,7 +443,13 @@ service cloud.firestore {
       allow write: if request.auth != null && isManager();
     }
     match /facilitySnapshots/{snapshotId} {
-      allow read: if request.auth != null && isManager();
+      // Read was manager-only, but the Child Health Services screens call
+      // getFacilitySnapshots() for every signed-in user, so plain users
+      // produced "Error fetching snapshots for facility" permission
+      // reports. Snapshots hold the same facility data as
+      // healthFacilities above (readable by anyone); writes stay
+      // manager-only.
+      allow read: if request.auth != null;
       allow write: if request.auth != null && isManager();
     }
 
@@ -773,6 +779,21 @@ service cloud.firestore {
 
     // =========================================================================
     // --- System Notifications ---
+    // A recipient marking a notification seen: only readBy/deletedBy may
+    // change, each may only grow, and by at most one entry (their own uid).
+    function marksNotificationSeen() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let readBy = request.resource.data.get('readBy', []);
+      let deletedBy = request.resource.data.get('deletedBy', []);
+      let oldReadBy = resource.data.get('readBy', []);
+      let oldDeletedBy = resource.data.get('deletedBy', []);
+      return changed.hasOnly(['readBy', 'deletedBy'])
+        && readBy.hasAll(oldReadBy) && readBy.size() <= oldReadBy.size() + 1
+        && deletedBy.hasAll(oldDeletedBy) && deletedBy.size() <= oldDeletedBy.size() + 1
+        && (readBy.hasAny([request.auth.uid]) || deletedBy.hasAny([request.auth.uid])
+            || (readBy.size() == oldReadBy.size() && deletedBy.size() == oldDeletedBy.size()));
+    }
+
     match /notifications/{notificationId} {
       allow read: if request.auth != null;
 
@@ -791,8 +812,17 @@ service cloud.firestore {
         && request.resource.data.message is string
         && request.resource.data.message.size() <= 2000;
 
-      // Keep modifications and deletions restricted to managers
-      allow update, delete: if request.auth != null && isManager();
+      // Editing or deleting a notification stays manager-only — but
+      // marking one seen is something every recipient must be able to do:
+      // the bell (NotificationBell.jsx) hides a notification for the
+      // reader by adding their uid to readBy/deletedBy, and with the old
+      // rule every non-manager who tapped a notification produced the
+      // "Error clearing notification" permission reports in
+      // Admin → Problems. The exception is deliberately narrow: only
+      // those two fields may change, each list may only grow, and by at
+      // most the reader's own entry.
+      allow update: if request.auth != null && (isManager() || marksNotificationSeen());
+      allow delete: if request.auth != null && isManager();
     }
     // =========================================================================
 
