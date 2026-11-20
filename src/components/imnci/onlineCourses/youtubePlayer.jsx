@@ -78,6 +78,7 @@ export function YouTubePlayer({ id, title, startAt, onEnded, clipStart = null, c
     const warm = useRef(null);
     const hideTimer = useRef(null);
     const timeRef = useRef(from);
+    const srcRef = useRef(null);
 
     const send = useCallback((func, args = []) => {
         frame.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
@@ -235,8 +236,12 @@ export function YouTubePlayer({ id, title, startAt, onEnded, clipStart = null, c
     const pct = clipLen ? Math.min(100, Math.max(0, (shownTime / clipLen) * 100)) : 0;
     const big = full || pseudo;
     const thumb = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
-    const src = phase === 'cover' ? null
-        : youtubeEmbed(id, { start: firstStart.current, end: to, autoplay: true, captions });
+    // Built once when the video first starts: changing it later would reload the
+    // player and lose the place. Captions switched later go through the player.
+    if (phase !== 'cover' && !srcRef.current) {
+        srcRef.current = youtubeEmbed(id, { start: firstStart.current, end: to, autoplay: true, captions });
+    }
+    const src = srcRef.current;
 
     const rootClass = pseudo
         ? 'fixed inset-0 z-[1000] bg-black'
