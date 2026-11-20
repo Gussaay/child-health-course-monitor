@@ -18,6 +18,7 @@ import { notify, confirmDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
 import { publicBaseUrl } from '../utils/publicLink';
 import { useLeaveGuard, leaveForm } from '../utils/leaveGuard';
+import { textIncludes } from '../utils/textSearch';
 import FormPdfButton from './FormPdfButton';
 
 export const EENC_TEST_QUESTIONS = [
@@ -1459,7 +1460,7 @@ const FacilitySelectionModal = ({
     const filteredOptions = useMemo(() => {
         if (!searchTerm) return options;
         return options.filter(opt => 
-            opt.name.toLowerCase().includes(searchTerm.toLowerCase())
+            textIncludes(opt.name, searchTerm)
         );
     }, [options, searchTerm]);
 

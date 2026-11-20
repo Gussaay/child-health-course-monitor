@@ -42,6 +42,7 @@ import { startCertificateDownload, certificatePdfBase64 } from './CertificateGen
 import { confirmDialog, alertDialog } from './dialogs';
 import { publicBaseUrl } from '../utils/publicLink';
 import { whatsappLink } from '../utils/whatsapp';
+import { textIncludes } from '../utils/textSearch';
 import { sharePdf, certificateFileName } from '../utils/sharePdf';
 import { Capacitor } from '@capacitor/core';
 import { useRememberedState } from '../utils/rememberedState';
@@ -522,7 +523,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) =
             return options;
         }
 
-        return options.filter(opt => opt.name.toLowerCase().includes(inputValue.toLowerCase()));
+        return options.filter(opt => textIncludes(opt.name, inputValue));
     }, [options, inputValue, value]);
 
     const handleSelect = (option) => {
@@ -1481,7 +1482,7 @@ const CreatableNameInput = ({ value, onChange, options, onSelect, disabled }) =>
 
     const filteredOptions = useMemo(() => {
         if (!inputValue) return options;
-        return options.filter(opt => opt.name && opt.name.toLowerCase().includes(inputValue.toLowerCase()));
+        return options.filter(opt => textIncludes(opt.name, inputValue));
     }, [options, inputValue]);
 
     const handleSelect = (option) => {
