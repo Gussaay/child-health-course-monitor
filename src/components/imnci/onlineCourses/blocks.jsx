@@ -6,7 +6,7 @@ import React, { useState, useEffect, useRef, useContext, Suspense, lazy } from '
 import { useTranslation } from 'react-i18next';
 import {
     BookOpenText, MonitorPlay, Stethoscope, CheckCircle2, GraduationCap, X, Lightbulb, ClipboardCheck,
-    Play, Pencil, Film, BookOpen, Syringe, Printer, ChevronDown, Lock, RotateCcw,
+    Play, Pencil, Film, BookOpen, Syringe, Printer, Lock, RotateCcw,
 } from 'lucide-react';
 import { severityById } from '../../constants';
 import { videoSource, blockHtml } from '../book';
@@ -185,17 +185,20 @@ const clock = (sec) => `${Math.floor((Number(sec) || 0) / 60)}:${String(Math.flo
 // cover, and when the video is paused or ends the lesson covers the player, so
 // YouTube's "more videos" panel and end screen never show.
 export const youtubeId = (src) => (String(src || '').match(/youtube(?:-nocookie)?\.com\/embed\/([\w-]{6,})/) || [])[1] || null;
-export function youtubeEmbed(id, { start = null, autoplay = false } = {}) {
+export function youtubeEmbed(id, { start = null, end = null, autoplay = false } = {}) {
     const params = new URLSearchParams({
         rel: '0', modestbranding: '1', iv_load_policy: '3', playsinline: '1', enablejsapi: '1', fs: '1', color: 'white',
     });
     if (typeof window !== 'undefined' && window.location?.origin?.startsWith('http')) params.set('origin', window.location.origin);
     if (start != null) params.set('start', String(start));
+    if (end != null && Number(end) > Number(start || 0)) params.set('end', String(end));
     if (autoplay) params.set('autoplay', '1');
     return `https://www.youtube-nocookie.com/embed/${id}?${params}`;
 }
 
-function YouTubePlayer({ id, title, startAt, onEnded }) {
+// A clip of a longer video plays from `clipStart` to `clipEnd` (seconds), so a
+// lesson can show only the part that shows the sign it has just described.
+export function YouTubePlayer({ id, title, startAt, onEnded, clipStart = null, clipEnd = null }) {
     const { t } = useTranslation();
     const frame = useRef(null);
     // 'cover' before the first play, then 'playing', 'paused' or 'ended'.
@@ -224,7 +227,8 @@ function YouTubePlayer({ id, title, startAt, onEnded }) {
         w.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*');
         w.postMessage(JSON.stringify({ event: 'command', func: 'addEventListener', args: ['onStateChange'], id: 1, channel: 'widget' }), '*');
     };
-    const src = youtubeEmbed(id, { start: startAt, autoplay: state !== 'cover' });
+    const from = startAt ?? (clipStart != null ? Math.floor(Number(clipStart) || 0) : null);
+    const src = youtubeEmbed(id, { start: from, end: clipEnd != null ? Math.ceil(Number(clipEnd)) : null, autoplay: state !== 'cover' });
     if (state === 'cover') {
         return (
             <button type="button" onClick={() => setState('playing')} aria-label={t('imnci_ui.courses.video.play', 'Play the video')}
@@ -247,7 +251,7 @@ function YouTubePlayer({ id, title, startAt, onEnded }) {
                 allow="accelerometer; autoplay; encrypted-media; picture-in-picture; fullscreen" />
             {(state === 'paused' || state === 'ended') && (
                 <button type="button" data-testid="video-cover"
-                    onClick={() => { if (state === 'ended') send('seekTo', [0, true]); send('playVideo'); setState('playing'); }}
+                    onClick={() => { if (state === 'ended') send('seekTo', [Number(clipStart) || 0, true]); send('playVideo'); setState('playing'); }}
                     className="absolute inset-0 w-full h-full bg-slate-900/90 text-white grid place-items-center">
                     <span className="flex flex-col items-center gap-2">
                         <span className="w-14 h-14 rounded-full bg-white text-sky-800 grid place-items-center shadow-lg">
@@ -331,14 +335,18 @@ export function VideoBlock({ block, activityKey }) {
             <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 bg-black shadow-sm"
                 style={{ aspectRatio: '16 / 9' }}>
                 {ytId ? (
-                    <YouTubePlayer id={ytId} title={title} startAt={startAt} onEnded={markDone} />
+                    <YouTubePlayer id={ytId} title={title} startAt={startAt} onEnded={markDone} clipStart={block.start ?? null} clipEnd={block.end ?? null} />
                 ) : src.kind === 'embed' ? (
                     <iframe key={embedSrc} src={embedSrc} title={title || t('imnci_ui.courses.video.video', 'Video')} allowFullScreen
                         className="absolute inset-0 w-full h-full"
                         allow="accelerometer; autoplay; encrypted-media; picture-in-picture" />
                 ) : (
                     <video ref={videoRef} src={src.src} controls playsInline className="absolute inset-0 w-full h-full"
-                        onTimeUpdate={stops.length ? onTime : undefined} onEnded={markDone} />
+                        onLoadedMetadata={block.start ? (e) => { e.currentTarget.currentTime = Number(block.start) || 0; } : undefined}
+                        onTimeUpdate={(stops.length || block.end) ? (e) => {
+                            if (block.end && e.currentTarget.currentTime >= Number(block.end)) { e.currentTarget.pause(); markDone(); return; }
+                            if (stops.length) onTime(e);
+                        } : undefined} onEnded={markDone} />
                 )}
                 {q && (
                     <div className="absolute inset-0 bg-slate-900/90 text-white p-4 overflow-y-auto">
@@ -633,47 +641,18 @@ export function splitLongText(text, max = 480) {
     return parts;
 }
 
-const plainLength = (b) => {
-    if (!b) return 0;
-    if (b.type === 'list') return (b.items || []).join(' ').length;
-    if (b.type === 'table') return JSON.stringify(b.rows || []).length / 2;
-    return String(b.text || '').replace(/<[^>]*>/g, ' ').length;
-};
-// Blocks that are read rather than done. A long run of them is shown a part
-// at a time.
-const READ_TYPES = ['paragraph', 'heading', 'list', 'rich', 'note', 'table', 'image', 'page'];
-// About a phone screen of reading before the learner is asked to go on.
-export const PART_LENGTH = 1100;
-
 /**
  * Where a lesson read part by part stops: the blocks shown, in order, with
- * the reason the next part is held back. A part ends at an activity not done
- * yet (it opens when the activity is done) or, in a long run of reading, at a
- * "Continue" the learner presses (`breaks` holds the ones pressed).
+ * the reason the next part is held back. A part ends only at an activity not
+ * done yet; it opens when the activity is done. Reading is never cut by a
+ * bare "Continue": where a long text needs a pause, the lesson itself has a
+ * short activity there.
  */
-export function lessonParts(blocks = [], keys = [], isDone = () => false, breaks = new Set()) {
-    let run = 0;
+export function lessonParts(blocks = [], keys = [], isDone = () => false) {
     for (let i = 0; i < blocks.length; i += 1) {
-        const b = blocks[i];
-        if (READ_TYPES.includes(b.type)) {
-            const len = plainLength(b);
-            // Break before a heading, or before any reading once the run is long.
-            const due = run > 0 && (run + len > PART_LENGTH * 1.3 || (b.type === 'heading' && run > PART_LENGTH * 0.6));
-            if (due) {
-                const id = `p${i}`;
-                if (!breaks.has(id)) return { shown: i, wait: 'continue', id };
-                run = 0;
-            }
-            run += len;
-        } else run = 0;
         if (keys[i] && !isDone(keys[i])) return { shown: i + 1, wait: i + 1 < blocks.length ? 'activity' : null };
     }
     return { shown: blocks.length, wait: null };
-}
-
-const breaksKey = (id) => `oc-parts-${id}`;
-function readBreaks(id) {
-    try { return new Set(JSON.parse(localStorage.getItem(breaksKey(id)) || '[]')); } catch { return new Set(); }
 }
 
 // A part of a lesson that opens slides gently into place. Done in script
@@ -688,11 +667,9 @@ function PartIn({ children, ...rest }) {
     return <div ref={ref} {...rest}>{children}</div>;
 }
 
-export function ContentBlocks({ blocks, scale = 1, activities = false, gated = false, partsId = null }) {
+export function ContentBlocks({ blocks, scale = 1, activities = false, gated = false }) {
     const { t } = useTranslation();
     const ctx = useContext(ActivityContext);
-    const [breaks, setBreaks] = useState(() => ({ id: partsId, set: readBreaks(partsId) }));
-    const breakSet = breaks.id === partsId ? breaks.set : readBreaks(partsId);
     if (!blocks?.length) return null;
     // Activities are keyed by their place in the section, so the section can
     // count which have been done.
@@ -701,16 +678,10 @@ export function ContentBlocks({ blocks, scale = 1, activities = false, gated = f
     // Questions are numbered among themselves, "Question 2 of 3".
     const questionTotal = blocks.filter((b) => b.type === 'question').length;
     let questionNo = 0;
-    // Read part by part: what comes after an activity opens when it is done,
-    // and a long stretch of reading opens a screen at a time.
+    // Read part by part: what comes after an activity opens when it is done.
     const parts = gated && activities && ctx
-        ? lessonParts(blocks, keys, ctx.isDone, breakSet)
+        ? lessonParts(blocks, keys, ctx.isDone)
         : { shown: blocks.length, wait: null };
-    const goOn = (id) => {
-        const next = new Set(breakSet).add(id);
-        try { localStorage.setItem(breaksKey(partsId), JSON.stringify([...next])); } catch { /* private mode */ }
-        setBreaks({ id: partsId, set: next });
-    };
     const rendered = blocks.slice(0, parts.shown).map((b, i) => {
         const el = block(b, i);
         // An activity carries an anchor, so the lesson's checklist can take the learner to it.
@@ -722,15 +693,6 @@ export function ContentBlocks({ blocks, scale = 1, activities = false, gated = f
             style={{ fontSize: `${scale}rem` }}
         >
             {rendered}
-            {parts.wait === 'continue' && (
-                <div className="not-prose flex flex-col items-center gap-1 pt-2" data-testid="part-continue">
-                    <button type="button" onClick={() => goOn(parts.id)}
-                        className="inline-flex items-center gap-2 min-h-[44px] px-5 rounded-full bg-sky-700 text-white text-sm font-semibold shadow-sm hover:bg-sky-800">
-                        {t('imnci_ui.courses.parts.continue', 'Continue')} <ChevronDown size={18} />
-                    </button>
-                    <span className="text-xs text-slate-500">{t('imnci_ui.courses.parts.continue_hint', 'The lesson goes on below')}</span>
-                </div>
-            )}
             {parts.wait === 'activity' && (
                 <div className="not-prose flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600" data-testid="part-waiting">
                     <Lock size={16} className="text-slate-400 shrink-0" />

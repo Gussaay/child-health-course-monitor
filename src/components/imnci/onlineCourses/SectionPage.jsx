@@ -305,7 +305,7 @@ export function SectionPage() {
                     ) : content.length > 0 ? (
                         <ActivityContext.Provider value={activityValue}>
                             <ContentBlocks key={openSection.id} blocks={content} scale={fontScale} activities
-                                gated={readInParts} partsId={`${user?.uid || 'guest'}-${openSection.id}`} />
+                                gated={readInParts} />
                         </ActivityContext.Provider>
                     ) : (
                         <div className="text-sm text-slate-500 py-12 text-center border border-dashed rounded-lg">

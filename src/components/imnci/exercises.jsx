@@ -54,6 +54,7 @@ import {
     getExerciseById, getExercisesForSubCourse, matchesSubCourse,
 } from './exercises';
 import { findLinkedParticipant } from '../../utils/linkedParticipant';
+import { QuestionVideo } from './onlineCourses/questionVideo';
 
 export {
     ONLINE_SUB_COURSE, EXERCISES, ALL_SECTIONS, SECTION_LABELS,
@@ -769,6 +770,8 @@ function QuizQuestion({ q: raw, index, value, onChange, detail, locked, lang = '
                 {wrong && <XCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />}
             </div>
 
+            {q.video?.url && <QuestionVideo video={q.video} />}
+
             {open ? (
                 <textarea
                     disabled={locked}
@@ -839,6 +842,12 @@ function QuizQuestion({ q: raw, index, value, onChange, detail, locked, lang = '
             )}
             {detail && q.explain && (
                 <p className="text-xs text-slate-600 mt-2 leading-relaxed">{q.explain}</p>
+            )}
+            {detail && q.answerVideo?.url && (
+                <div className="mt-3">
+                    <p className="text-xs font-semibold text-slate-600 mb-1">{t('imnci_ui.exercises.quiz.answer_video', 'Watch the answer')}</p>
+                    <QuestionVideo video={q.answerVideo} />
+                </div>
             )}
         </div>
     );
@@ -2297,6 +2306,43 @@ function QuestionEditor({ q, index, total, onChange, onRemove, onMove }) {
                 <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     value={q.explain || ''} onChange={e => setQ({ explain: e.target.value })}
                     placeholder={t('imnci_ui.exercises.qeditor.explanation', 'Explanation shown after checking (optional)')} />
+            </div>
+
+            <QuestionVideoFields label={t('imnci_ui.exercises.qeditor.video', 'Video the learner watches before answering (optional)')}
+                value={q.video} onChange={(video) => setQ({ video })} />
+            <QuestionVideoFields label={t('imnci_ui.exercises.qeditor.answer_video', 'Video that shows the answer, after checking (optional)')}
+                value={q.answerVideo} onChange={(answerVideo) => setQ({ answerVideo })} />
+        </div>
+    );
+}
+
+// A YouTube link with an optional part of it (from / to, as 1:05). Times are
+// kept as typed while editing and saved in seconds.
+const toSec = (v) => {
+    const parts = String(v || '').trim().split(':').map(Number);
+    if (!String(v || '').trim() || parts.some(Number.isNaN)) return undefined;
+    return parts.reduce((a, n) => a * 60 + n, 0);
+};
+const toClockText = (n) => (n == null ? '' : `${Math.floor(n / 60)}:${String(Math.floor(n % 60)).padStart(2, '0')}`);
+function QuestionVideoFields({ label, value, onChange }) {
+    const { t } = useTranslation();
+    const [from, setFrom] = useState(toClockText(value?.start));
+    const [to, setTo] = useState(toClockText(value?.end));
+    const set = (patch) => {
+        const next = { ...(value || {}), ...patch };
+        Object.keys(next).forEach(k => next[k] === undefined && delete next[k]);
+        onChange(next.url ? next : undefined);
+    };
+    return (
+        <div className="pl-8">
+            <p className="text-xs text-slate-500 mb-1">{label}</p>
+            <div className="grid grid-cols-[1fr_5rem_5rem] gap-2">
+                <input className="rounded-md border border-slate-300 px-3 py-2 text-sm" value={value?.url || ''}
+                    placeholder="https://youtu.be/…" onChange={e => set({ url: e.target.value.trim() || undefined })} />
+                <input className="rounded-md border border-slate-300 px-2 py-2 text-sm" value={from} placeholder={t('imnci_ui.exercises.qeditor.from', 'from 0:46')}
+                    onChange={e => { setFrom(e.target.value); set({ start: toSec(e.target.value) }); }} />
+                <input className="rounded-md border border-slate-300 px-2 py-2 text-sm" value={to} placeholder={t('imnci_ui.exercises.qeditor.to', 'to 1:31')}
+                    onChange={e => { setTo(e.target.value); set({ end: toSec(e.target.value) }); }} />
             </div>
         </div>
     );

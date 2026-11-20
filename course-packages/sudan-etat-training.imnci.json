@@ -16,11 +16,6 @@
      "read": [
       {
        "type": "note",
-       "text": "Know how this course works and take the pre-test before you start.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "Day 1, 08:00 to 09:00: opening. Participants and facilitators introduce themselves and the course objectives are presented. The course runs over three and a half days: Module 1 Triage and the ABCD concept, Module 2 Airway and breathing (Day 1), Module 3 Circulation, Module 4 Coma and convulsion (Day 2), Module 5 Dehydration, Module 6 Case management scenarios (Day 3), Module 7 Implementing ETAT (Day 4).",
        "label": "Course timetable"
       },
@@ -60,11 +55,6 @@
     {
      "title": "Introduction: why emergency triage?",
      "read": [
-      {
-       "type": "note",
-       "text": "Explain why sick children need rapid triage and emergency treatment as soon as they arrive.",
-       "label": "In this lesson"
-      },
       {
        "type": "heading",
        "text": "Introduction"
@@ -170,11 +160,6 @@
      "title": "Learning objectives for the training course",
      "read": [
       {
-       "type": "note",
-       "text": "List what you will be able to do at the end of the course.",
-       "label": "In this lesson"
-      },
-      {
        "type": "heading",
        "text": "Learning objectives for the training course"
       },
@@ -225,11 +210,6 @@
     {
      "title": "What is triage?",
      "read": [
-      {
-       "type": "note",
-       "text": "Define triage and name the three groups children are sorted into.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 1, 09:00: review the concept of triage (10 minutes).",
@@ -305,11 +285,6 @@
     {
      "title": "The ABCD concept and priority signs",
      "read": [
-      {
-       "type": "note",
-       "text": "Say what the letters A, B, C and D stand for and list the priority signs (3 TPR - MOB).",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 1: review the ABCD concept and the priority signs concept (10 minutes each).",
@@ -407,11 +382,6 @@
      "read": [
       {
        "type": "note",
-       "text": "Say when and where triage takes place and who should triage.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "Day 1: review the triaging process (10 minutes): when and where should triage take place, who should triage, and how to triage.",
        "label": "Course timetable"
       },
@@ -481,11 +451,6 @@
     {
      "title": "How to triage: the ABCD signs",
      "read": [
-      {
-       "type": "note",
-       "text": "Use the ABCD steps to look for emergency signs, including the AVPU scale for coma.",
-       "label": "In this lesson"
-      },
       {
        "type": "heading",
        "text": "HOW TO TRIAGE?"
@@ -600,11 +565,6 @@
      "title": "Assessing priority signs: tiny baby to poisoning",
      "read": [
       {
-       "type": "note",
-       "text": "Recognize the first priority signs: tiny infant, high temperature, trauma, severe pallor and poisoning.",
-       "label": "In this lesson"
-      },
-      {
        "type": "heading",
        "text": "Assessing priority signs"
       },
@@ -689,11 +649,6 @@
      "title": "Assessing priority signs: pain to burns",
      "read": [
       {
-       "type": "note",
-       "text": "Recognize the other priority signs: severe pain, lethargy or irritability, respiratory distress, urgent referral, malnutrition and burns.",
-       "label": "In this lesson"
-      },
-      {
        "type": "heading",
        "text": "Severe Pain"
       },
@@ -776,11 +731,6 @@
      "read": [
       {
        "type": "note",
-       "text": "Follow the triage steps, start treatment for a positive sign, and reassess the child through ABCD.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "Day 1: review the emergency and priority signs with ETAT chart (Chart 2), and the general principles of treatment of emergencies (10 minutes each).",
        "label": "Course timetable"
       },
@@ -830,11 +780,7 @@
       },
       {
        "type": "paragraph",
-       "text": "Priority signs lead to quicker assessment of the child by moving the child to the front of the queue. While waiting, some supportive treatments may already be given. For example, a child found to have a hot body may receive an antipyretic"
-      },
-      {
-       "type": "paragraph",
-       "text": "such as paracetamol. Similarly, a child with a burn may have severe pain and the pain could be controlled while waiting for definitive treatment. If a child has no emergency signs or priority signs, she/he may return to the queue."
+       "text": "Priority signs lead to quicker assessment of the child by moving the child to the front of the queue. While waiting, some supportive treatments may already be given. For example, a child found to have a hot body may receive an antipyretic such as paracetamol. Similarly, a child with a burn may have severe pain and the pain could be controlled while waiting for definitive treatment. If a child has no emergency signs or priority signs, she/he may return to the queue."
       },
       {
        "type": "heading",
@@ -883,11 +829,6 @@
      "title": "Summary and Chart 2: Triage of all sick children",
      "read": [
       {
-       "type": "note",
-       "text": "Review the summary of triage and read Chart 2, the triage chart for all sick children.",
-       "label": "In this lesson"
-      },
-      {
        "type": "rich",
        "text": "<h3>SUMMARY</h3><p>Triage is the sorting of patients into priority groups according to their need.</p><p>All children should undergo triage. The main steps in triage are:</p><ul style=\"margin:0;padding-left:18px\"><li>Look for emergency signs.</li><li>Treat any emergency signs you find.</li><li>Call a senior health worker to see any emergency.</li><li>Look for any priority signs.</li><li>Place priority patients at the front of the queue.</li><li>Move on to the next patient.</li></ul><p>Triage should be carried out quickly. You will soon learn to observe several things at once. For example, when assessing the airway and breathing you may note that the baby is very small or is restless. With practice, a complete triage (if no emergency treatment is needed) takes less than a minute.</p>"
       },
@@ -934,11 +875,6 @@
     {
      "title": "Drill 1: emergency and triage",
      "read": [
-      {
-       "type": "note",
-       "text": "Answer quickly, as in the drill, what to do next at each finding.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 1, 10:15 to 10:30: drill on emergency and triage, with a resuscitation doll. The facilitator tells each participant a finding and asks for the correct response; keep the pace quick.",
@@ -1119,11 +1055,6 @@
      "read": [
       {
        "type": "note",
-       "text": "Answer the assessment questions on triage, then compare with the model answers.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "These questions are given as self-assessment at the end of Day 1; the model answers (facilitator guide Annex 5) are discussed on Day 2 at 08:00.",
        "label": "Course timetable"
       },
@@ -1155,11 +1086,6 @@
     {
      "title": "Airway and breathing: what to look for",
      "read": [
-      {
-       "type": "note",
-       "text": "Name the four questions for airway and breathing and the emergency treatments in Table 1.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 1, 10:30 (15 minutes): presentation of “Airway and Breathing”: the module objectives, the airway and breathing section of the triage chart, and the links to Charts 3 and 4.",
@@ -1225,11 +1151,6 @@
     {
      "title": "Is the airway obstructed? The choking child",
      "read": [
-      {
-       "type": "note",
-       "text": "Recognize a choking child and manage a choking infant with back slaps and chest thrusts.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 1, 10:45 (15 minutes): the facilitator demonstrates how to recognize a choking child, back slaps and chest thrusts in infants (on a doll), and back blows and the Heimlich manoeuvre in an older child (simulated on an adult volunteer).",
@@ -1320,11 +1241,6 @@
      "title": "Managing the choking child",
      "read": [
       {
-       "type": "note",
-       "text": "Manage a choking child with back blows and the Heimlich manoeuvre, then check the mouth and breathing.",
-       "label": "In this lesson"
-      },
-      {
        "type": "heading",
        "text": "Management of child (see Figure 3)"
       },
@@ -1402,11 +1318,6 @@
      "read": [
       {
        "type": "note",
-       "text": "Open the airway with the chin lift: nose up for an infant, chin up for an older child.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "Day 1, 11:00 (20 minutes): the facilitator explains and demonstrates assessment and management of the airway: chin lift if no trauma (infants: neutral position; children: sniffing position), where to look for a foreign body, how to clear secretions (finger, finger wrapped in gauze, or a suction device), and letting a breathing child with no obstruction take the position of maximal comfort.",
        "label": "Course timetable"
       },
@@ -1416,17 +1327,13 @@
       },
       {
        "type": "paragraph",
-       "text": "An airway or breathing problem is life-threatening. This child needs immediate treatment to improve or restore the breathing, even before you continue with the assessment of emergency signs. To treat an airway or breathing problem you should first open the airway and then begin giving the child oxygen. The drawings below show the chin lift. This is a way of opening the airway in children who have not been subjected to trauma. The drawings illustrate two different positions. Figure 4 shows the position for infants, the nose pointing upwards. Figure 5 shows the position for children, the chin pointing up. In both cases, place your hand on the child’s forehead and apply a little pressure"
+       "text": "An airway or breathing problem is life-threatening. This child needs immediate treatment to improve or restore the breathing, even before you continue with the assessment of emergency signs. To treat an airway or breathing problem you should first open the airway and then begin giving the child oxygen. The drawings below show the chin lift. This is a way of opening the airway in children who have not been subjected to trauma. The drawings illustrate two different positions. Figure 4 shows the position for infants, the nose pointing upwards. Figure 5 shows the position for children, the chin pointing up. In both cases, place your hand on the child’s forehead and apply a little pressure to achieve the tilt. The fingers of the other hand are used to gently lift the chin. To do this safely you must know if the child has been subjected to any trauma. In such a case, it is important not to tilt the head or move the neck. It is also important to know the child’s age because you will position an infant (under 12 months of age) differently from a child."
       },
       {
        "type": "image",
        "path": "etat/fig-04.png",
        "caption": "Figure 4 Neutral position to open airway in an infant (“nose up”)",
        "page": 15
-      },
-      {
-       "type": "paragraph",
-       "text": "to achieve the tilt. The fingers of the other hand are used to gently lift the chin. To do this safely you must know if the child has been subjected to any trauma. In such a case, it is important not to tilt the head or move the neck. It is also important to know the child’s age because you will position an infant (under 12 months of age) differently from a child."
       },
       {
        "type": "image",
@@ -1453,11 +1360,6 @@
     {
      "title": "Is trauma of the neck a possibility?",
      "read": [
-      {
-       "type": "note",
-       "text": "Check for head or neck trauma, open the airway with a jaw thrust, and stabilize the neck.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 1, 11:20 (20 minutes): the facilitator demonstrates how airway management differs with suspected head or neck trauma: jaw thrust without head tilt, stabilizing the cervical spine (IV fluid bottles or towels, tape), and the log roll.",
@@ -1526,21 +1428,12 @@
      "title": "Log roll",
      "read": [
       {
-       "type": "note",
-       "text": "Move a child with a suspected neck injury with a log roll, keeping the neck in line with the body.",
-       "label": "In this lesson"
-      },
-      {
        "type": "heading",
        "text": "Log roll"
       },
       {
        "type": "paragraph",
-       "text": "Move a patient with a suspected cervical spine injury carefully. Avoid rotation and extremes of flexion and extension. One person, usually the most senior"
-      },
-      {
-       "type": "paragraph",
-       "text": "attendant, should assume responsibility for the neck. He should stand at the top end of the patient, hold the patient’s head, and place the fingers under the angle of the mandible with the palm over the ears and parietal region and maintain gentle traction to keep the neck straight and in line with the body. When the patient is not being moved, a sandbag1 placed on each side or a cervical collar can splint the neck."
+       "text": "Move a patient with a suspected cervical spine injury carefully. Avoid rotation and extremes of flexion and extension. One person, usually the most senior attendant, should assume responsibility for the neck. He should stand at the top end of the patient, hold the patient’s head, and place the fingers under the angle of the mandible with the palm over the ears and parietal region and maintain gentle traction to keep the neck straight and in line with the body. When the patient is not being moved, a sandbag1 placed on each side or a cervical collar can splint the neck."
       },
       {
        "type": "note",
@@ -1579,11 +1472,6 @@
     {
      "title": "Is the child breathing? Central cyanosis",
      "read": [
-      {
-       "type": "note",
-       "text": "Look, listen and feel for breathing, and look for central cyanosis.",
-       "label": "In this lesson"
-      },
       {
        "type": "heading",
        "text": "Assessment of breathing"
@@ -1633,6 +1521,14 @@
        "text": "Cyanosis occurs when there is an abnormally low level of oxygen in the blood. This produces a bluish or purplish discoloration of the tongue, the inside of the mouth and the skin. This sign may be absent in a child who has severe anaemia. To assess for central cyanosis, look at the mouth and tongue. A bluish or purplish discoloration of the tongue and the inside of the mouth indicates central cyanosis."
       },
       {
+       "type": "video",
+       "url": "https://youtu.be/z5a8yLa83p8",
+       "title": "Central cyanosis",
+       "start": 0,
+       "end": 52,
+       "caption": "A silent video: look at the colour of the tongue and the inside of the mouth."
+      },
+      {
        "type": "question",
        "text": "Where do you look for central cyanosis?",
        "options": [
@@ -1651,11 +1547,6 @@
     {
      "title": "Does the child have severe respiratory distress?",
      "read": [
-      {
-       "type": "note",
-       "text": "Recognize severe respiratory distress, stridor and grunting.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 1, 14:00 (30 minutes): video sequences of cyanosis, severe respiratory distress, very fast breathing, severe lower chest wall indrawing, use of auxiliary muscles, stridor and grunting; discuss the signs and their relation to respiratory distress.",
@@ -1679,6 +1570,14 @@
        "text": "If the child is talking, drinking or feeding comfortably, or appears to be happy, there is no severe respiratory distress (or obstructed breathing). Observe whether the child has significant discomfort from not getting enough air into the lungs. Is there difficulty in breathing while talking, eating or breastfeeding? Is the child breathing very fast, have severe lower chest wall indrawing, or using the auxiliary muscles for breathing which cause the head to nod or bob with every inspiration? The latter is particularly seen in young infants. If you see this, the child has severe respiratory distress. Is the child’s breathing very laboured – i.e. needing much more effort to breathe than normal? Is the child exhausted (tired)? Are any of the signs of severe respiratory distress present?"
       },
       {
+       "type": "video",
+       "url": "https://youtu.be/z5a8yLa83p8",
+       "title": "Severe lower chest wall indrawing",
+       "start": 52,
+       "end": 126,
+       "caption": "A silent video: look at the lower chest wall when the child breathes in."
+      },
+      {
        "type": "heading",
        "text": "Abnormal respiratory noises"
       },
@@ -1688,10 +1587,11 @@
       },
       {
        "type": "video",
-       "url": "https://www.youtube.com/watch?v=z5a8yLa83p8",
-       "title": "Signs of severe respiratory distress",
-       "caption": "Watch the signs: cyanosis, very fast breathing, chest indrawing, head nodding, stridor, grunting.",
-       "script": "ET2.3"
+       "url": "https://youtu.be/z5a8yLa83p8",
+       "title": "Stridor",
+       "start": 126,
+       "end": 202,
+       "caption": "Listen for the harsh noise when the child breathes in."
       },
       {
        "type": "sort",
@@ -1729,11 +1629,6 @@
     {
      "title": "Ventilate with bag and mask",
      "read": [
-      {
-       "type": "note",
-       "text": "Check a self-inflating bag, choose the right mask and ventilate a child who is not breathing.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 1, 11:40 (20 minutes): the facilitator demonstrates bag and mask ventilation on a resuscitation doll.",
@@ -1794,11 +1689,6 @@
     {
      "title": "Insertion of an oropharyngeal (Guedel) airway",
      "read": [
-      {
-       "type": "note",
-       "text": "Choose the right size of Guedel airway and insert it in an infant and in an older child.",
-       "label": "In this lesson"
-      },
       {
        "type": "heading",
        "text": "INSERTION OF AN OROPHARYNGEAL (GUEDEL) AIRWAY"
@@ -1927,11 +1817,6 @@
      "read": [
       {
        "type": "note",
-       "text": "Explain why oxygen comes first and compare oxygen concentrators and cylinders.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "Day 1, 14:30 (15 minutes): the facilitator shows an oxygen cylinder and a concentrator: the equipment for each, how to use one source for more than one child, assembling the equipment and checking that it works. There must be no smoking in the room when oxygen is being used.",
        "label": "Course timetable"
       },
@@ -1942,6 +1827,13 @@
       {
        "type": "paragraph",
        "text": "For all children who have any problem with their airway or breathing, always give oxygen first, while you continue to assess for other problems. Central cyanosis is a sign of deficient oxygenation (desaturation) and these children need oxygen urgently; however, children who are anaemic and desaturated may not show cyanosis, but also need oxygen. Many children with severe respiratory distress and with shock are also desaturated or not delivering enough oxygen to the brain and other vital organs and will benefit from oxygen treatment."
+      },
+      {
+       "type": "video",
+       "url": "https://youtu.be/nQ4FGkblHoY",
+       "title": "Signs that a child needs oxygen",
+       "start": 0,
+       "end": 102
       },
       {
        "type": "heading",
@@ -1979,13 +1871,6 @@
        "script": "ET2.5"
       },
       {
-       "type": "video",
-       "url": "https://www.youtube.com/watch?v=nQ4FGkblHoY",
-       "title": "Signs that a child needs oxygen",
-       "caption": "WHO ETAT video: when to give oxygen, and who to give it to first if the supply is limited.",
-       "script": "ET2.6"
-      },
-      {
        "type": "sort",
        "text": "Concentrator or cylinder?",
        "groups": [
@@ -2019,11 +1904,6 @@
     {
      "title": "Oxygen delivery: nasal prongs and nasal catheter",
      "read": [
-      {
-       "type": "note",
-       "text": "Place nasal prongs or a nasal catheter and set the right oxygen flow.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 1, 14:45 (15 minutes): the facilitator demonstrates nasal prongs and the nasal catheter on a doll: position, how far to insert the catheter, taping, and checking the flow rate.",
@@ -2102,11 +1982,6 @@
      "read": [
       {
        "type": "note",
-       "text": "Review the summary and the skills to practise for airway and breathing.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "Day 1, 15:15 (90 minutes): group work. Participants practise all skills in small groups with short scenarios from the facilitators: triage for airways and breathing, management of the choking child, opening airways, opening airways in neck trauma and log roll, inserting an oropharyngeal airway, ventilating with bag and mask, and giving oxygen.",
        "label": "Course timetable"
       },
@@ -2141,11 +2016,6 @@
      "read": [
       {
        "type": "note",
-       "text": "Answer the assessment questions on airway and breathing, then compare with the model answers.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "Day 1, 16:45 (15 minutes): the facilitator summarises airway and breathing and gives the assignments: reading on all “C” signs, and the self-assessment questions on triage, A and B (answers discussed on Day 2 at 08:00).",
        "label": "Course timetable"
       },
@@ -2172,11 +2042,6 @@
     {
      "title": "Review and Drill 2: flow of triage assessment",
      "read": [
-      {
-       "type": "note",
-       "text": "Say quickly what to assess next at each finding, from breathing to consciousness.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 2, 08:00: revise the assessment questions for triage, airway and breathing (15 minutes), then the oral drill on triage (Drill 2, 15 minutes), then a clinical session in the outpatient department and on the inpatient ward to practise the flow of triage (08:30 to 10:00).",
@@ -2291,11 +2156,6 @@
      "read": [
       {
        "type": "note",
-       "text": "List the circulation signs of shock and the emergency treatments in Table 2.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "Day 2, 10:15: module 3 objectives (5 minutes) and summary of circulation (15 minutes), using Charts 7 and 8 and Tables 3 and 4.",
        "label": "Course timetable"
       },
@@ -2350,11 +2210,6 @@
     {
      "title": "Are the child’s hands warm? Capillary refill",
      "read": [
-      {
-       "type": "note",
-       "text": "Feel the hands and measure capillary refill time.",
-       "label": "In this lesson"
-      },
       {
        "type": "heading",
        "text": "Assess the circulation"
@@ -2421,11 +2276,6 @@
      "title": "Is the pulse weak and fast?",
      "read": [
       {
-       "type": "note",
-       "text": "Find the radial pulse, and a central pulse (brachial, femoral or carotid) when it is difficult to find.",
-       "label": "In this lesson"
-      },
-      {
        "type": "heading",
        "text": "IS THE PULSE WEAK AND FAST?"
       },
@@ -2478,11 +2328,6 @@
     {
      "title": "Shock and the first actions",
      "read": [
-      {
-       "type": "note",
-       "text": "Explain why shock needs fluid quickly, and start the first actions as a team.",
-       "label": "In this lesson"
-      },
       {
        "type": "heading",
        "text": "Shock"
@@ -2600,11 +2445,6 @@
      "title": "Check for severe malnutrition",
      "read": [
       {
-       "type": "note",
-       "text": "Look for visible severe wasting and oedema of both feet before you give IV fluid.",
-       "label": "In this lesson"
-      },
-      {
        "type": "paragraph",
        "text": "Firstly consider if the child also has severe malnutrition before selecting treatment as shown on Table 3. Children with severe malnutrition are difficult to assess and manage. The malnourished child may appear lethargic and have sunken eyes and a very slow skin pinch as he/she has no subcutaneous fat. Malnutrition not only affects the muscles but also the organs we cannot see. The heart can become very weak and may fail if it has to pump large volumes of fluid. When this happens fluid accumulates in the lungs (lung oedema) and makes breathing difficult with the child geting worse or even critical. Therefore, a child who is severely malnourished should not be treated by rapid IV infusion of fluids. The signs of dehydration overestimate the degree of dehydration in the severely malnourished child. It is important to involve a senior heath worker early in the management of these children. To check for severe malnutrition:"
       },
@@ -2679,11 +2519,6 @@
     {
      "title": "Exercise A: severe malnutrition",
      "read": [
-      {
-       "type": "note",
-       "text": "Look at each photograph and decide whether the child has visible severe wasting or oedema of both feet.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 2 (10 minutes): Exercise A on severe malnutrition, with the IMCI photograph booklet. Look at each child, write your answers, and discuss them after all the photographs have been reviewed. Photographs 47 to 50 are examples to discuss visible severe wasting and oedema.",
@@ -2781,11 +2616,6 @@
     {
      "title": "Treatment of shock: Table 3",
      "read": [
-      {
-       "type": "note",
-       "text": "Give fluids for shock in a child without severe malnutrition and in a child with severe malnutrition.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 2 (20 minutes): demonstration on management of shock: inserting an IV line, taking blood for emergency laboratory investigations, giving fluids rapidly (20 ml/kg as rapidly as possible; if severely malnourished, 15 ml/kg over 1 hour), and inserting an intraosseous line.",
@@ -2892,11 +2722,6 @@
      "title": "Maintenance fluids and summary: circulation",
      "read": [
       {
-       "type": "note",
-       "text": "Choose maintenance fluids after shock improves, and review the circulation summary.",
-       "label": "In this lesson"
-      },
-      {
        "type": "rich",
        "text": "<p style=\"font-weight:600;margin:0 0 6px\">Table 4 Maintenance fluids</p><div style=\"overflow-x:auto\"><table style=\"width:100%;border-collapse:collapse;font-size:14px\"><tr><th style=\"padding:6px;border:1px solid #cbd5e1;background:#f1f5f9;text-align:left;vertical-align:top\">If the child has NO severe malnutrition</th><th style=\"padding:6px;border:1px solid #cbd5e1;background:#f1f5f9;text-align:left;vertical-align:top\">If the child HAS severe malnutrition</th></tr><tr><td style=\"padding:6px;border:1px solid #cbd5e1;vertical-align:top\">See Chart 11<p>Give 70 ml/kg of Ringer's lactate solution (or, if not available, normal saline) <ul style=\"margin:0;padding-left:18px\"><li>over 5 hours in infants (aged <12 months);</li><li>over 2½ hours in children (aged 12 months to 5 years).</li></ul></p><p>Reassess the child every 1-2 hours. If the condition is not improving, give the IV fluids more rapidly.</p><p>Also give ORS solution (about 5 ml/kg/ hour) as soon as the child can drink; this is usually:</p><ul style=\"margin:0;padding-left:18px\"><li>after 3-4 hours (in infants);</li><li>after 1-2 hours (in children).</li></ul><p>Encourage breastfeeding: Reassess after 6 hours (infants) and after 3 hours (children)</p></td><td style=\"padding:6px;border:1px solid #cbd5e1;vertical-align:top\">Continue ReSoMal 5-10ml/kg/hour for the next 4-10 hours.<p>See guidelines in the \"Pocket book of hospital care for children\" or the manual \"Management of the child with a serious infection or severe malnutrition.\"</p></td></tr></table></div>"
       },
@@ -2938,11 +2763,6 @@
     {
      "title": "Annex 1: vascular access, peripheral and scalp veins",
      "read": [
-      {
-       "type": "note",
-       "text": "Choose a site for IV access and insert and secure a cannula in a peripheral or scalp vein.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 2, 11:05 (90 minutes): group work. Each group practises inserting an IV line, giving fluids rapidly for shock, and inserting an intraosseous line on a chicken thigh bone. The facilitator does not demonstrate but observes each participant and corrects mistakes.",
@@ -3040,11 +2860,6 @@
     {
      "title": "Annex 1: external jugular and intraosseous infusion",
      "read": [
-      {
-       "type": "note",
-       "text": "Insert an intraosseous needle in the proximal tibia, confirm it and watch for complications.",
-       "label": "In this lesson"
-      },
       {
        "type": "heading",
        "text": "EXTERNAL JUGULAR VEIN"
@@ -3165,11 +2980,6 @@
      "read": [
       {
        "type": "note",
-       "text": "Answer the assessment questions on circulation, then compare with the model answers.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "Day 2, 12:35 (10 minutes): wind-up: summary of the circulation section and the assignment on the circulation questions (to be completed over lunch if time allows; answers discussed at 14:00).",
        "label": "Course timetable"
       },
@@ -3196,11 +3006,6 @@
     {
      "title": "Coma and convulsion: what to assess",
      "read": [
-      {
-       "type": "note",
-       "text": "Name the two questions for the neurological status and the emergency treatments in Table 5.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 2, 14:00 (5 minutes): review of the assessment questions on circulation; compare your answers with the model answers. Then (5 minutes) the objectives of Module 4, and (15 minutes) a summary of coma and convulsion with ETAT Charts 6, 9 and 10.",
@@ -3279,11 +3084,6 @@
     {
      "title": "Is the child in coma? The AVPU scale",
      "read": [
-      {
-       "type": "note",
-       "text": "Wake the child step by step and give an AVPU score.",
-       "label": "In this lesson"
-      },
       {
        "type": "heading",
        "text": "IS THE CHILD IN COMA?"
@@ -3377,11 +3177,6 @@
      "title": "Is the child convulsing now?",
      "read": [
       {
-       "type": "note",
-       "text": "Recognize a convulsion, including the subtle signs in an infant.",
-       "label": "In this lesson"
-      },
-      {
        "type": "heading",
        "text": "IS THE CHILD CONVULSING NOW?"
       },
@@ -3418,11 +3213,6 @@
     {
      "title": "Treatment: manage the airway and position the child",
      "read": [
-      {
-       "type": "note",
-       "text": "Manage the airway and position the child who is unconscious or convulsing.",
-       "label": "In this lesson"
-      },
       {
        "type": "heading",
        "text": "Treatment of coma and convulsion"
@@ -3546,11 +3336,6 @@
      "read": [
       {
        "type": "note",
-       "text": "Check the blood glucose with a glucose stick and know when it is low.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "Day 2, 14:40 (30 minutes): demonstration on coma and convulsion: giving rectal diazepam, giving IV glucose (with the blood glucose test and the nasogastric tube), and drawing up the correct dose rapidly.",
        "label": "Course timetable"
       },
@@ -3622,11 +3407,6 @@
     {
      "title": "Give IV glucose: Table 6",
      "read": [
-      {
-       "type": "note",
-       "text": "Give 5 ml/kg of 10% glucose, make 10% glucose from 50% glucose, and feed the child.",
-       "label": "In this lesson"
-      },
       {
        "type": "heading",
        "text": "GIVE IV GLUCOSE"
@@ -3715,11 +3495,6 @@
      "title": "Annex 1: inserting a nasogastric tube",
      "read": [
       {
-       "type": "note",
-       "text": "Measure, insert and check a nasogastric tube to give glucose or feeds.",
-       "label": "In this lesson"
-      },
-      {
        "type": "heading",
        "text": "Insertion of a nasogastric tube"
       },
@@ -3790,11 +3565,6 @@
     {
      "title": "Give an anticonvulsant: diazepam",
      "read": [
-      {
-       "type": "note",
-       "text": "Give the correct dose of rectal diazepam, and know what to do if the convulsion continues.",
-       "label": "In this lesson"
-      },
       {
        "type": "heading",
        "text": "GIVE AN ANTICONVULSANT"
@@ -3889,11 +3659,6 @@
      "title": "Phenobarbital, high fever and summary",
      "read": [
       {
-       "type": "note",
-       "text": "Know the phenobarbital doses for young infants, what to do for high fever, and the summary of coma and convulsion.",
-       "label": "In this lesson"
-      },
-      {
        "type": "rich",
        "text": "<p style=\"font-weight:600;margin:0 0 6px\">Table 8. Dose of Phenobarbital for young infants</p><div style=\"overflow-x:auto\"><table style=\"width:100%;border-collapse:collapse;font-size:14px\"><tr><th style=\"padding:6px;border:1px solid #cbd5e1;background:#f1f5f9;text-align:left;vertical-align:top\">Weight of infant</th><th style=\"padding:6px;border:1px solid #cbd5e1;background:#f1f5f9;text-align:left;vertical-align:top\">2 kg or less</th><th style=\"padding:6px;border:1px solid #cbd5e1;background:#f1f5f9;text-align:left;vertical-align:top\">3 kg or less</th></tr><tr><td style=\"padding:6px;border:1px solid #cbd5e1;vertical-align:top\">Initial dose of phenobarbital, 20mg/kg, 200mg/ml solution</td><td style=\"padding:6px;border:1px solid #cbd5e1;vertical-align:top\">0.2 ml</td><td style=\"padding:6px;border:1px solid #cbd5e1;vertical-align:top\">0.3 ml</td></tr><tr><td style=\"padding:6px;border:1px solid #cbd5e1;vertical-align:top\">Repeat dose if convulsions continue</td><td style=\"padding:6px;border:1px solid #cbd5e1;vertical-align:top\">0.1 ml</td><td style=\"padding:6px;border:1px solid #cbd5e1;vertical-align:top\">0.15 ml</td></tr></table></div>"
       },
@@ -3965,11 +3730,6 @@
     {
      "title": "Drill 3: determine correct doses",
      "read": [
-      {
-       "type": "note",
-       "text": "Work out quickly the glucose, shock fluid and diazepam doses for each child.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 2, 15:25 (80 minutes): group work to practise giving diazepam rectally, giving IV glucose and drawing up the correct dose rapidly, repeated until everyone has practised several times. The facilitator does not demonstrate but observes and corrects.",
@@ -4089,11 +3849,6 @@
      "read": [
       {
        "type": "note",
-       "text": "Answer the assessment questions on coma and convulsion, then compare with the model answers.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "Day 2, 16:45 (15 minutes): wind-up: summary of the coma and convulsion section, a look ahead to Day 3, and the assignments: reading on all the “D” signs and the assessment questions on coma and convulsion (answers discussed on Day 3 at 08:00).",
        "label": "Course timetable"
       },
@@ -4120,11 +3875,6 @@
     {
      "title": "Review and Drill 4: the flow of triage",
      "read": [
-      {
-       "type": "note",
-       "text": "Say quickly what you do next at each step of the triage assessment.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 3, 08:00 (10 minutes): review of the assessment questions on coma and convulsion with the model answers. Then (20 minutes) Drill 4, an oral drill on the flow of the triage assessment. From 08:30 (90 minutes): clinical session in outpatients and on the ward.",
@@ -4368,11 +4118,6 @@
      "read": [
       {
        "type": "note",
-       "text": "Name the three signs of severe dehydration and the treatment in Table 9.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "Day 3, 10:15 (10 minutes): summary of the assessment of dehydration with ETAT Charts 1 and 10 (the triage chart and Plan C): how dehydration links with shock, the signs to assess, the technique for the skin pinch, and the treatment.",
        "label": "Course timetable"
       },
@@ -4434,11 +4179,6 @@
     {
      "title": "Lethargy, sunken eyes and the skin pinch",
      "read": [
-      {
-       "type": "note",
-       "text": "Assess each sign of severe dehydration step by step.",
-       "label": "In this lesson"
-      },
       {
        "type": "paragraph",
        "text": "Given below are step-by-step descriptions of how to assess each of these signs. If the child has diarrhoea, assess the following signs to determine if the child has severe dehydration."
@@ -4520,11 +4260,6 @@
      "read": [
       {
        "type": "note",
-       "text": "Decide from the video whether each child has sunken eyes, and how fast the skin pinch goes back.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "Day 3 (15 minutes): video exercise C: lethargy (and how it links with AVPU), sunken eyes (6 children, about 7 minutes) and the skin pinch (5 children, about 6 minutes).",
        "label": "Course timetable"
       },
@@ -4560,11 +4295,6 @@
     {
      "title": "Treatment of severe dehydration: Plan C",
      "read": [
-      {
-       "type": "note",
-       "text": "Give IV fluids according to Plan C to a child with severe dehydration without shock or severe malnutrition.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 3 (10 minutes): how to use Plan C. Your facilitator displays an enlargement of “Diarrhoea Treatment Plan C: Treat severe dehydration quickly” and reads the flowchart with you, so that you learn Plan C as you will do it in your own hospital.",
@@ -4668,11 +4398,6 @@
      "title": "Volumes and drops per minute: Tables 9 and 10",
      "read": [
       {
-       "type": "note",
-       "text": "Find the volume, the rate per hour and the drops per minute for a child with severe dehydration.",
-       "label": "In this lesson"
-      },
-      {
        "type": "paragraph",
        "text": "The above example describes the entire rehydration according to Plan C. When you give emergency treatment to a child with severe dehydration, you will begin the initial rehydration1. Determine the age and weight of the child. Determine the initial amount of fluid to give the child. Insert an IV line and start giving fluids."
       },
@@ -4737,11 +4462,6 @@
     {
      "title": "Drill 5: amounts of IV fluid on Plan C",
      "read": [
-      {
-       "type": "note",
-       "text": "Work out how much IV fluid to give, and over how long, for each child with severe dehydration.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 3 (15 minutes): Drill 5 on the amounts of IV fluid to give a child on Plan C (diarrhoea with severe dehydration, without shock or severe malnutrition). You may look at Plan C during the drill. Use pencil and paper.",
@@ -4905,11 +4625,6 @@
      "read": [
       {
        "type": "note",
-       "text": "Rehydrate a severely malnourished child slowly with ReSoMal, and follow Table 12 and Flow chart 1.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "Day 3 (10 minutes): how to give fluids to a child with severe dehydration and severe malnutrition, with Tables 11 and 12 and Flow chart 1, and sample calculations of fluid volumes.",
        "label": "Course timetable"
       },
@@ -4967,11 +4682,6 @@
      "title": "Maintenance fluids and summary: dehydration",
      "read": [
       {
-       "type": "note",
-       "text": "Choose the fluids after the first rehydration, and review the dehydration summary.",
-       "label": "In this lesson"
-      },
-      {
        "type": "paragraph",
        "text": "For maintenance fluids see Table 13."
       },
@@ -5023,11 +4733,6 @@
     {
      "title": "Giving rapid fluids: demonstration and group work",
      "read": [
-      {
-       "type": "note",
-       "text": "Set up a drip, give the right volume at the right rate, and manage children with shock or severe dehydration.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 3 (10 minutes): demonstration of giving rapid fluids. Then group work (60 minutes, until 12:45) in teams of 2, a doctor and a nurse, simulating IV fluids for children with or without malnutrition and dehydration, and with and without shock (Case scenarios table A).",
@@ -5091,11 +4796,6 @@
      "read": [
       {
        "type": "note",
-       "text": "Answer the assessment questions on dehydration, then compare with the model answers.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "Day 3, wind-up before lunch: summary of the assessment and management of severe dehydration, and the assessment questions on dehydration.",
        "label": "Course timetable"
       },
@@ -5122,11 +4822,6 @@
     {
      "title": "Case management scenarios: how they work",
      "read": [
-      {
-       "type": "note",
-       "text": "See how a whole case is managed, first badly and then well, before you manage cases yourself.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 3, 14:00 (45 minutes): demonstration. A role play of poor practice, where such cases are mismanaged, then the same scenario with good management. Then tea, and from 15:00 (105 minutes) group work on the case management scenarios.",
@@ -5207,11 +4902,6 @@
     {
      "title": "Your shift, children 1 to 4: dehydration, convulsion, airway",
      "read": [
-      {
-       "type": "note",
-       "text": "Manage each child who comes in, step by step: assess, treat as soon as you find an emergency sign, and reassess.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 3, 15:00 (105 minutes): group work. Each member of the group manages at least one clinical scenario.",
@@ -5680,11 +5370,6 @@
      "title": "Your shift, children 5 to 7: trauma, breathing and shock",
      "read": [
       {
-       "type": "note",
-       "text": "Manage each child who comes in, step by step: assess, treat as soon as you find an emergency sign, and reassess.",
-       "label": "In this lesson"
-      },
-      {
        "type": "story",
        "title": "Child 5: Ahmed",
        "stages": [
@@ -5950,11 +5635,6 @@
     {
      "title": "Your shift, children 8 to 10: shock, glucose and convulsion",
      "read": [
-      {
-       "type": "note",
-       "text": "Manage each child who comes in, step by step: assess, treat as soon as you find an emergency sign, and reassess.",
-       "label": "In this lesson"
-      },
       {
        "type": "story",
        "title": "Child 8: Khalid",
@@ -6369,11 +6049,6 @@
     {
      "title": "Your shift, children 11 to 14: putting it all together",
      "read": [
-      {
-       "type": "note",
-       "text": "Manage each child who comes in, step by step: assess, treat as soon as you find an emergency sign, and reassess.",
-       "label": "In this lesson"
-      },
       {
        "type": "story",
        "title": "Child 11: Musa",
@@ -6876,11 +6551,6 @@
      "read": [
       {
        "type": "note",
-       "text": "Explain the role of ETAT in the care of seriously ill children and why training alone is not enough.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "Day 4, 08:00 (10 minutes): review of the assessment questions on dehydration with the model answers. Then (20 minutes) Implementing ETAT: introduction and the ETAT standards.",
        "label": "Course timetable"
       },
@@ -6940,11 +6610,6 @@
     {
      "title": "ETAT standards",
      "read": [
-      {
-       "type": "note",
-       "text": "Check your hospital against the ETAT standards.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Your facilitator presents the ETAT standards from the facilitator guide. Use them later to check the recommendations you make for your hospital.",
@@ -7010,11 +6675,6 @@
     {
      "title": "Implementing ETAT in your hospital: why, who, where, when, what",
      "read": [
-      {
-       "type": "note",
-       "text": "Prepare the arguments, staff, place, patient flow and resources for ETAT in your hospital.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 4, 08:30 (30 minutes): plenary discussion, plan ETAT for your own workplace. It starts with the reasons for not implementing ETAT in peripheral health units, and covers why, who, where, when and what.",
@@ -7107,11 +6767,6 @@
      "read": [
       {
        "type": "note",
-       "text": "Check which ETAT equipment, fluids, drugs and consumables are available in your hospital.",
-       "label": "In this lesson"
-      },
-      {
-       "type": "note",
        "text": "Day 4 (60 minutes): group work in small groups (hospital or regional groups): brainstorm why, who, where, when and with what; complete the checklist of resources required to implement ETAT; prepare a summary of findings as recommendations to the hospital administration; and develop a plan of action. Your facilitator gives feedback on your priority list, using the ETAT standards.",
        "label": "Course timetable"
       },
@@ -7150,11 +6805,6 @@
      "title": "Developing your plan of action",
      "read": [
       {
-       "type": "note",
-       "text": "Write an individual plan of action to implement ETAT in your hospital.",
-       "label": "In this lesson"
-      },
-      {
        "type": "heading",
        "text": "Developing individual plans of actions"
       },
@@ -7180,11 +6830,6 @@
     {
      "title": "Post-test, course evaluation and closing",
      "read": [
-      {
-       "type": "note",
-       "text": "Take the post-test, compare it with your pre-test, and evaluate the course.",
-       "label": "In this lesson"
-      },
       {
        "type": "note",
        "text": "Day 4, 11:15 (45 minutes): main findings from the evaluation, course certificates and closing ceremony. Finish 12:00.",

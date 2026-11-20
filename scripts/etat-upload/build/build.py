@@ -34,6 +34,18 @@ for m in pkg["modules"]:
             if b["type"] == "video" and VID.get(b.get("script")):
                 b["url"] = VID[b["script"]].strip()
 
+# ---- lesson restructuring (2026-11-20): no summaries, checks after the text they test, clips next to the text they show
+sys.path.insert(0, os.path.join(HERE, "..", "..", "imnci-practice"))
+import restructure as R
+import clips
+print("dropped 'In this lesson' notes:", R.drop_goals(pkg))
+print("sentences broken by the page layout joined:", len(R.merge_broken(pkg)))
+print("checks moved after their text:", len(R.activities_after_text(pkg)))
+print("'Before you start' questions dropped:", len(R.drop_pre_questions(pkg)))
+print("repeated checks dropped:", len(R.dedupe_questions(pkg)))
+clips.apply(pkg)
+for r in R.long_runs(pkg): print("  long reading with no activity:", r)
+
 errors = []
 ids = [e["id"] for e in pkg["exercises"]]
 if len(ids) != len(set(ids)): errors.append("duplicate exercise ids")
