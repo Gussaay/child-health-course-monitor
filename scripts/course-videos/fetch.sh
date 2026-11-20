@@ -4,9 +4,9 @@
 set -u
 mkdir -p out
 : > report.tsv
-for ID in $(./collect-ids.sh); do
+for ID in $(./collect-ids.sh | head -${LIMIT:-1000}); do
   if [ ! -s "out/$ID.mp4" ]; then
-    yt-dlp -q --no-warnings --no-playlist \
+    yt-dlp --no-playlist --no-progress \
       -f "bv*[height<=480][vcodec^=avc1]+ba[ext=m4a]/b[height<=480][ext=mp4]/b[height<=480]" \
       --merge-output-format mp4 -o "out/$ID.src.%(ext)s" "https://www.youtube.com/watch?v=$ID" || { echo "FAILED $ID"; printf '%s\tFAILED\n' "$ID" >> report.tsv; continue; }
     SRC=$(ls out/$ID.src.* | head -1)
@@ -18,4 +18,4 @@ for ID in $(./collect-ids.sh); do
   printf '%s\t%s\t%s\t%s\n' "$ID" "$BYTES" "$DUR" "$H" >> report.tsv
 done
 echo; echo "id	bytes	seconds	height"; cat report.tsv
-awk -F'\t' '$2!="FAILED"{n++; b+=$2; s+=$3} END{printf "\n%d videos, %.1f MB, %.1f minutes, %.1f MB per minute\n", n, b/1048576, s/60, (b/1048576)/(s/60)}' report.tsv
+awk -F'\t' '$2!="FAILED"{n++; b+=$2; s+=$3} END{if(!n){print "\nno videos downloaded"; exit} printf "\n%d videos, %.1f MB, %.1f minutes, %.1f MB per minute\n", n, b/1048576, s/60, (b/1048576)/(s/60)}' report.tsv
