@@ -1,7 +1,7 @@
 // src/components/NotificationBell.jsx
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { db } from '../firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { Bell, Trash2, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Modal, Button, Toast } from './CommonComponents';
 import { useTranslation } from 'react-i18next';
@@ -89,16 +89,18 @@ export default function NotificationBell({ user, navigate }) {
         if (!user) return;
         try {
             const notifRef = doc(db, 'notifications', notificationId);
-            // Append to deletedBy to immediately hide from this user while keeping it for others
-            if (currentTargetUser === 'all' || currentTargetUser === 'managers_and_super_users') {
-                await updateDoc(notifRef, { 
-                    readBy: arrayUnion(user.uid),
-                    deletedBy: arrayUnion(user.uid) 
-                });
-            } else {
-                // Delete entirely if it's a direct 1-on-1 message
-                await deleteDoc(notifRef);
-            }
+            // Hide it for this user only — never delete the document from
+            // the bell. Deleting is manager-only in the rules, so the old
+            // deleteDoc path failed for every ordinary recipient of a
+            // direct notification ("Error clearing notification" in
+            // Admin → Problems). Marking seen is allowed for the reader:
+            // append their uid to readBy/deletedBy, which the list filter
+            // already honours, and the notification stays intact for the
+            // sender and everyone else.
+            await updateDoc(notifRef, {
+                readBy: arrayUnion(user.uid),
+                deletedBy: arrayUnion(user.uid)
+            });
             setSelectedNotif(null); 
         } catch (error) {
             console.error("Error clearing notification:", error);
