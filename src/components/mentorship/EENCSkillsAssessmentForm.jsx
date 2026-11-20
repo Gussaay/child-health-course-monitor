@@ -655,10 +655,17 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
     const [isSaving, setIsSaving] = useState(false);
     const [isSavingDraft, setIsSavingDraft] = useState(false);
     const [isFacilityModalOpen, setIsFacilityModalOpen] = useState(false);
-    const [scores, setScores] = useState({});
+    // Scores are derived from formData during render. They used to be state
+    // updated inside the cleanup effect below, which forced a second full
+    // re-render of this large form after every single answer - the main
+    // reason the form felt slow to respond. useMemo gives the render caused
+    // by an answer the fresh scores directly.
+    const scores = useMemo(() => calculateScores(formData), [formData]);
     const auth = getAuth();
     const user = auth.currentUser;
-    const [isFormComplete, setIsFormComplete] = useState(false);
+    // Derived from formData during render, like scores (see above), instead
+    // of being set from the cleanup effect after every answer.
+    const isFormComplete = useMemo(() => checkFormCompletion(formData), [formData]);
     // While the PDF is made, every section and item is shown (a full blank or
     // filled form), each conditional one with a note of when it appears.
     const { printAll, beforeExport: beforePdfExport } = usePrintMode();
@@ -779,8 +786,10 @@ const EENCSkillsAssessmentForm = forwardRef((props, ref) => {
             }
         }
         if (needsUpdate) setFormData(newFormData);
-        setScores(calculateScores(newFormData)); 
-        setIsFormComplete(checkFormCompletion(newFormData));
+        // Scores and the complete flag are no longer set here: both are
+        // derived from formData with useMemo during render (see their
+        // declarations). Setting them in this effect forced an extra full
+        // re-render of the form after every answer.
     }, [formData]);
 
     const silentSaveDraft = useCallback(async () => {

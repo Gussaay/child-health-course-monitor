@@ -108,7 +108,12 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
     const [isSaving, setIsSaving] = useState(false);
     const [isSavingDraft, setIsSavingDraft] = useState(false);
     const [isFacilityModalOpen, setIsFacilityModalOpen] = useState(false);
-    const [scores, setScores] = useState({});
+    // Scores are derived from formData during render. They used to be state
+    // updated inside the cleanup effect below, which forced a second full
+    // re-render of this very large form after every single answer - the main
+    // reason the form felt slow to respond. useMemo gives the render caused
+    // by an answer the fresh scores directly.
+    const scores = useMemo(() => calculateScores(formData), [formData]);
     
     // --- ADDED: State for Status Modal ---
     const [statusData, setStatusData] = useState(null); 
@@ -187,7 +192,20 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
         }
     }, [lockedVisitNumber, visitNumber, existingSessionData, currentVisitNumber]);
     
-    const [isFormFullyComplete, setIsFormFullyComplete] = useState(false);
+    // Derived from formData during render, like scores (see above), instead
+    // of being set from the cleanup effect after every answer.
+    const isFormFullyComplete = useMemo(() => (
+        isVitalSignsComplete(formData)
+        && isDangerSignsComplete(formData)
+        && isMainSymptomsComplete(formData.assessment_skills)
+        && isMalnutritionComplete(formData)
+        && isAnemiaComplete(formData)
+        && isImmunizationComplete(formData)
+        && isOtherProblemsComplete(formData)
+        && isDecisionComplete(formData)
+        && findIncompleteTreatmentSkills(formData).length === 0
+        && isRecordingComplete(formData)
+    ), [formData]);
 
     // --- Refs for Autosave ---
     const formDataRef = useRef(formData);
@@ -222,24 +240,13 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                 setFormData(rehydratedData);
                 setVisibleStep(10);
                 
-                const { assessment_skills: newAssessmentSkills } = rehydratedData;
-                const vitalSignsComplete = isVitalSignsComplete(rehydratedData);
-                const dangerSignsComplete = isDangerSignsComplete(rehydratedData);
-                const mainSymptomsComplete = isMainSymptomsComplete(newAssessmentSkills);
-                const malnutritionComplete = isMalnutritionComplete(rehydratedData);
-                const anemiaComplete = isAnemiaComplete(rehydratedData);
-                const immunizationComplete = isImmunizationComplete(rehydratedData);
-                const otherProblemsComplete = isOtherProblemsComplete(rehydratedData);
-                const decisionComplete = isDecisionComplete(rehydratedData);
-                const treatmentComplete = findIncompleteTreatmentSkills(rehydratedData).length === 0;
-                const recordingComplete = isRecordingComplete(rehydratedData);
-
-                const allComplete = vitalSignsComplete && dangerSignsComplete && mainSymptomsComplete && malnutritionComplete && anemiaComplete && immunizationComplete && otherProblemsComplete && decisionComplete && treatmentComplete && recordingComplete;
-                setIsFormFullyComplete(allComplete);
+                // isFormFullyComplete is derived from formData with useMemo,
+                // so it follows the rehydrated data automatically - no
+                // separate completeness computation is needed here.
             } else {
                 setFormData(getInitialFormData());
                 setVisibleStep(1);
-                setIsFormFullyComplete(false);
+                // isFormFullyComplete derives from the fresh formData (false).
             }
             editingIdRef.current = newId;
         }
@@ -271,10 +278,13 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
             }
         }
     
-        const targetVisibleStep = editingIdRef.current ? 10 : Math.max(visibleStep, maxStep);
-        if (targetVisibleStep !== visibleStep) {
-            setVisibleStep(targetVisibleStep);
-        }
+        // Functional update, so this effect does not need visibleStep as a
+        // dependency - having it there re-ran the whole cleanup pass a
+        // second time whenever a new step opened.
+        setVisibleStep(prev => {
+            const targetVisibleStep = editingIdRef.current ? 10 : Math.max(prev, maxStep);
+            return targetVisibleStep === prev ? prev : targetVisibleStep;
+        });
 
         // --- Cleanup Logic ---
         const resetSymptomSubquestions = (prefix, classifications, isMulti) => {
@@ -395,22 +405,12 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
             setFormData(newFormData);
         }
 
-        const vitalSignsComplete = isVitalSignsComplete(newFormData);
-        const dangerSignsComplete = isDangerSignsComplete(newFormData);
-        const mainSymptomsComplete = isMainSymptomsComplete(newAssessmentSkills);
-        const malnutritionComplete = isMalnutritionComplete(newFormData);
-        const anemiaComplete = isAnemiaComplete(newFormData);
-        const immunizationComplete = isImmunizationComplete(newFormData);
-        const otherProblemsComplete = isOtherProblemsComplete(newFormData);
-        const decisionComplete = isDecisionComplete(newFormData);
-        const treatmentComplete = findIncompleteTreatmentSkills(newFormData).length === 0;
-        const recordingComplete = isRecordingComplete(newFormData);
+        // Scores and the fully-complete flag are no longer set here: both are
+        // derived from formData with useMemo during render (see their
+        // declarations). Setting them in this effect forced an extra full
+        // re-render of the form after every answer.
 
-        const allStepsComplete = vitalSignsComplete && dangerSignsComplete && mainSymptomsComplete && malnutritionComplete && anemiaComplete && immunizationComplete && otherProblemsComplete && decisionComplete && treatmentComplete && recordingComplete;
-        setIsFormFullyComplete(allStepsComplete);
-        setScores(calculateScores(newFormData)); 
-
-    }, [formData, visibleStep]);
+    }, [formData]);
 
 
     // --- Autosave Logic ---
