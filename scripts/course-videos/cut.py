@@ -87,8 +87,9 @@ for clip, items in sorted(by_clip.items()):
         encode(src, pos, length, dest)
         got = duration(dest)
         want = x['ms'] / 1000 if x['ms'] else x['approxSeconds']
-        tol = 0.1 if x['ms'] else 1.0
-        flag = '' if abs(got - want) <= tol else '  <-- LENGTH DIFFERS'
+        # Without an exact length YouTube gives whole seconds, rounded up.
+        ok = abs(got - want) <= 0.1 if x['ms'] else (want - 1.1 <= got <= want + 0.1)
+        flag = '' if ok else '  <-- LENGTH DIFFERS'
         if flag:
             problems.append(f"{x['id']} {x['file']}: built {got:.2f}s, YouTube {want:.2f}s")
         print(f"{x['file']:>8} {x['id']}  {pos:8.2f} +{length:7.2f}  built {got:7.2f}  youtube {want:7.2f}  {os.path.getsize(dest)/1048576:5.1f} MB{flag}", flush=True)
