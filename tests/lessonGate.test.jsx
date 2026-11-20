@@ -174,16 +174,12 @@ describe('a lesson read a part at a time', () => {
         expect(host.textContent).toContain('After the question.');
     });
 
-    it('asks to continue in a long stretch of reading, and remembers it', async () => {
+    it('shows a long stretch of reading in full, with no Continue button in it', async () => {
         const long = 'This sentence is part of a very long stretch of reading. '.repeat(30);
         const reading = { ...staged, id: 's10', read: [{ type: 'paragraph', text: long }, { type: 'paragraph', text: 'Second part.' }, { type: 'paragraph', text: long }] };
         const { host } = await at({ openSection: reading, sectionsByModule: { m1: [reading, nextLesson] } });
-        expect(host.textContent).not.toContain('Second part.');
-        await click(host.querySelector('[data-testid="part-continue"] button'));
         expect(host.textContent).toContain('Second part.');
-        document.body.innerHTML = '';
-        const again = await at({ openSection: reading, sectionsByModule: { m1: [reading, nextLesson] } });
-        expect(again.host.textContent).toContain('Second part.');
+        expect(host.querySelector('[data-testid="part-continue"]')).toBeNull();
     });
 
     it('has no AI helper and keeps its bar fixed to the screen', async () => {

@@ -70,6 +70,19 @@ for m in pkg["modules"]:
                 out_blocks.append(nb)
         s_["read"] = out_blocks
 
+# ---- lesson restructuring (2026-11-20): no summaries, checks after the text they test, clips next to the text they show
+sys.path.insert(0, os.path.join(HERE, "..", "..", "imnci-practice"))
+import restructure as R
+import clips
+print("dropped 'In this lesson' notes:", R.drop_goals(pkg))
+print("sentences broken by the page layout joined:", len(R.merge_broken(pkg)))
+_mv = R.activities_after_text(pkg); print("checks moved after their text:", len(_mv))
+print("'Before you start' questions dropped:", len(R.drop_pre_questions(pkg)))
+print("repeated checks dropped:", len(R.dedupe_questions(pkg)))
+clips.apply(pkg)
+import longreads
+longreads.apply(pkg, R.place)
+
 # ---- checks
 errors = []
 ids = [e["id"] for e in pkg["exercises"]]
@@ -107,4 +120,5 @@ for m in pkg["modules"]:
     big = [(s["title"], len(s["read"])) for s in m["sections"] if len(s["read"]) > 25]
     print(f"  {m['title']}: {len(m['sections'])} lessons; long lessons: {big}")
 vids = [b for b in blocks if b["type"] == "video"]
-print("videos:", [b.get("script") for b in vids])
+print("videos:", len(vids), "of which clips:", sum(1 for b in vids if "start" in b))
+for r in R.long_runs(pkg): print("  long reading with no activity:", r)

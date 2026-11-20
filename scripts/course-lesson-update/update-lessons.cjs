@@ -19,7 +19,7 @@ const COURSES = {
   dimci: { batch: 'imnci-dimci-modules-1-2-2026-11-15', file: 'who-dimci-modules-1-9.imnci.json' },
   etat: { batch: 'sudan-etat-training-2026-11-18', file: 'sudan-etat-training.imnci.json' },
 };
-const UPDATE_TAG = 'lesson-update-2026-11-18';
+const UPDATE_TAG = 'lesson-update-2026-11-20';
 const CONTENT = ['read', 'see', 'practise'];
 // Lessons edited in the app that may still be overwritten (titles, one per line), after the author agreed.
 const FORCE = (() => { try { return fs.readFileSync(path.join(__dirname, 'force.txt'), 'utf8').split('\n').map((x) => x.trim().toLowerCase()).filter(Boolean); } catch { return []; } })();
@@ -36,6 +36,18 @@ const FILE = path.join(__dirname, '..', '..', 'course-packages', C.file);
 admin.initializeApp({ credential: admin.credential.cert(JSON.parse(fs.readFileSync(keyPath, 'utf8'))) });
 const db = admin.firestore(), now = () => admin.firestore.FieldValue.serverTimestamp();
 const byOrder = (x, y) => (x.order || 0) - (y.order || 0);
+// Same as upsertExerciseDefinition in src/data.js (and the course upload scripts).
+const exerciseRecord = (e) => ({
+  id: e.id, order: Number(e.order) || 0, title: e.title, titleAr: e.titleAr || '', subCourse: e.subCourse || '',
+  kind: e.kind || 'case', formType: e.formType || 'child', passMark: Number(e.passMark) || 80,
+  estimatedMinutes: Number(e.estimatedMinutes) || 15, draft: e.draft !== false, arabicOn: e.arabicOn === true, explain: e.explain || '',
+  learningPointsJson: JSON.stringify(e.learningPoints || []), narrativeJson: JSON.stringify(e.narrative || []),
+  narrativeArJson: JSON.stringify(e.narrativeAr || []), expectedJson: JSON.stringify(e.expected || {}),
+  questionsJson: JSON.stringify(e.questions || []), isDeleted: false,
+});
+const EX_CONTENT = ['order', 'title', 'titleAr', 'subCourse', 'kind', 'formType', 'passMark', 'estimatedMinutes', 'arabicOn', 'explain',
+  'learningPointsJson', 'narrativeJson', 'narrativeArJson', 'expectedJson', 'questionsJson'];
+// draft (published or not) is the manager's choice once an exercise is live, so an update never changes it.
 const norm = (s) => String(s || '').trim().toLowerCase();
 const plain = (b) => String(b?.text || b?.title || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -69,7 +81,18 @@ async function findCourse(pkg) {
         previousContentJson: admin.firestore.FieldValue.delete(), lastUpdatedAt: now() });
       console.log(`  restored "${d.data().title}"`);
     }
-    return console.log(`Undo done: ${tagged.length} lessons put back.`);
+    // Only this course's exercises: both courses share the update tag.
+    const ownIds = new Set((pkg.exercises || []).map((e) => e.id));
+    const exs = (await db.collection('exerciseDefinitions').where('exerciseUpdateTag', '==', UPDATE_TAG).get()).docs
+      .filter((d) => ownIds.has(d.id));
+    for (const d of exs) {
+      const prev = d.data().previousExerciseJson;
+      const back = prev === 'new' ? { isDeleted: true } : JSON.parse(prev || '{}');
+      await d.ref.update({ ...back, exerciseUpdateTag: admin.firestore.FieldValue.delete(),
+        previousExerciseJson: admin.firestore.FieldValue.delete(), lastUpdatedAt: now(), lastUpdatedAtLocal: new Date().toISOString() });
+      console.log(`  ${prev === 'new' ? 'removed added' : 'restored'} exercise ${d.id}`);
+    }
+    return console.log(`Undo done: ${tagged.length} lessons and ${exs.length} exercises put back.`);
   }
 
   const plan = [], kept = [], missing = [];
@@ -83,8 +106,11 @@ async function findCourse(pkg) {
       const cur = hit[0].data();
       const changed = CONTENT.filter((k) => JSON.stringify(cur[k] || []) !== JSON.stringify(s[k] || []));
       if (!changed.length) return;
-      const edited = cur.lastUpdatedAt && cur.createdAt && cur.lastUpdatedAt.toMillis() - cur.createdAt.toMillis() > 60000
-        && cur.contentUpdateTag !== UPDATE_TAG && !FORCE.includes(norm(s.title));
+      // Saved in the app after it was written by an upload or by this script? (The app sets only lastUpdatedAt;
+      // the script also sets lastUpdatedAtLocal at the same moment.)
+      const since = String(cur.contentUpdateTag || '').startsWith('lesson-update-') && cur.lastUpdatedAtLocal
+        ? Date.parse(cur.lastUpdatedAtLocal) : cur.createdAt?.toMillis?.();
+      const edited = cur.lastUpdatedAt && since && cur.lastUpdatedAt.toMillis() - since > 60000 && !FORCE.includes(norm(s.title));
       (edited ? kept : plan).push({ ref: hit[0].ref, mod: mi + 1, title: s.title, cur, next: s, changed });
     });
   });
@@ -104,7 +130,34 @@ async function findCourse(pkg) {
     });
   }
   if (missing.length) console.log(`\nIn the file but not matched in the app (not written): ${missing.join('; ')}`);
+
+  // Exercises of the course file: new ones are added; ones written by an upload or by this script are brought up to
+  // date; one edited in the exercise manager since then is left as it is.
+  const exPlan = [], exKept = [];
+  for (const e of pkg.exercises || []) {
+    const d = await db.collection('exerciseDefinitions').doc(e.id).get();
+    const r = exerciseRecord(e);
+    if (!d.exists || d.data().isDeleted) { exPlan.push({ e, r, ref: d.ref, isNew: true }); continue; }
+    const cur = d.data();
+    const diff = EX_CONTENT.filter((k) => JSON.stringify(cur[k] ?? '') !== JSON.stringify(r[k] ?? ''));
+    if (!diff.length) continue;
+    const since = cur.lastUpdatedAtLocal ? Date.parse(cur.lastUpdatedAtLocal) : null;
+    const edited = !since || (cur.lastUpdatedAt && cur.lastUpdatedAt.toMillis() - since > 60000);
+    (edited ? exKept : exPlan).push({ e, r, ref: d.ref, cur, diff });
+  }
+  console.log(`\nExercises to add or update (${exPlan.length}):`);
+  exPlan.forEach(({ e, isNew, diff }) => console.log(`  ${isNew ? '+' : '^'} ${e.id}  "${e.title}"${isNew ? '' : `  changes: ${diff.join(', ')}`}` +
+    `${(e.questions || []).some((q) => q.video) ? `  (${e.questions.filter((q) => q.video).length} video questions)` : ''}`));
+  if (exKept.length) console.log(`Exercises changed in the file but edited in the exercise manager, LEFT AS THEY ARE: ${exKept.map(({ e }) => e.id).join(', ')}`);
   if (!COMMIT) return console.log('\nDry run: nothing written.');
+  for (const x of exPlan) {
+    const prev = x.isNew ? null : Object.fromEntries(EX_CONTENT.map((k) => [k, x.cur[k] ?? null]));
+    const rest = { ...x.r }; delete rest.draft;
+    await x.ref.set({ ...(x.isNew ? x.r : rest), ...(x.isNew ? { importBatch: C.batch, createdAt: now() } : {}),
+      exerciseUpdateTag: UPDATE_TAG, previousExerciseJson: prev ? JSON.stringify(prev) : 'new',
+      lastUpdatedAt: now(), lastUpdatedAtLocal: new Date().toISOString() }, { merge: true });
+  }
+  console.log(`Exercises written: ${exPlan.length}.`);
 
   for (const p of plan) {
     const prev = Object.fromEntries(CONTENT.map((k) => [k, p.cur[k] || []]));

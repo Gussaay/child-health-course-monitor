@@ -13,6 +13,16 @@ import { BookImage } from '../blocks';
 import { Field, Choice, Tick, RowList, TextList, AnswersEditor, RecordEditor } from './rows';
 import { kindOf, newCase } from './elements';
 
+// A time in a video, typed as 1:05. Kept as typed while the author types, and
+// saved in seconds; an empty box removes it.
+export function ClockField({ label, hint, seconds, placeholder, onChange }) {
+    const [text, setText] = useState(seconds != null ? toClock(seconds) : '');
+    return (
+        <Field label={label} hint={hint} value={text} placeholder={placeholder}
+            onChange={(v) => { setText(v); onChange(String(v).trim() ? toSeconds(v) : undefined); }} />
+    );
+}
+
 const toggle = (list = [], id) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
 
 function Checks({ label, hint, options, value = [], onChange }) {
@@ -135,6 +145,13 @@ export function ElementForm({ block: b, onChange: set, uploadPicture }) {
                     <Field label={t('imnci_ui.courses.editor2.video_link', 'Video link')} value={b.url}
                         hint={t('imnci_ui.courses.editor2.video_link_hint', 'A YouTube link or a link to an MP4. Leave it empty while the video is still being recorded.')}
                         placeholder="https://www.youtube.com/watch?v=…" onChange={(v) => set({ url: v })} />
+                    <div className="grid grid-cols-2 gap-2">
+                        <ClockField label={t('imnci_ui.courses.editor2.clip_start', 'Play from (optional)')} seconds={b.start}
+                            hint={t('imnci_ui.courses.editor2.clip_hint', 'To show only a part of the video, e.g. 0:46 to 1:31.')} placeholder="0:46"
+                            onChange={(v) => set({ start: v })} />
+                        <ClockField label={t('imnci_ui.courses.editor2.clip_end', 'Stop at (optional)')} seconds={b.end} placeholder="1:31"
+                            onChange={(v) => set({ end: v })} />
+                    </div>
                     <Field label={t('imnci_ui.courses.editor.caption', 'Caption')} value={b.caption} onChange={(v) => set({ caption: v })} />
                     <Field label={t('imnci_ui.courses.editor2.script', 'Narration script number (in the video scripts file)')} value={b.script} onChange={(v) => set({ script: v })} />
                     <RowList label={t('imnci_ui.courses.editor.chapters', 'Chapters')} items={(b.chapters || []).map((c) => ({ ...c, at: toClock(c.at) }))}
