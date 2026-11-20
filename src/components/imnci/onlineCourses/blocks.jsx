@@ -181,7 +181,7 @@ const clock = (sec) => `${Math.floor((Number(sec) || 0) / 60)}:${String(Math.flo
 // YouTube videos play in the lesson's own player (youtubePlayer.jsx): YouTube's
 // controls, title, logo and links never show.
 export { YouTubePlayer, youtubeId, youtubeEmbed } from './youtubePlayer';
-import { YouTubePlayer, youtubeId } from './youtubePlayer';
+import { YouTubePlayer, youtubeId, OfflineVideoButton } from './youtubePlayer';
 
 export function VideoBlock({ block, activityKey }) {
     const { t } = useTranslation();
@@ -293,6 +293,7 @@ export function VideoBlock({ block, activityKey }) {
                     </div>
                 )}
             </div>
+            {ytId && <OfflineVideoButton id={ytId} />}
             {chapters.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                     {chapters.map((c, i) => (

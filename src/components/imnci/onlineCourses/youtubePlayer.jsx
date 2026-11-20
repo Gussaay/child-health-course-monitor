@@ -16,7 +16,8 @@
 // time and the seek bar count within the clip.
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Play, Pause, RotateCcw, Maximize, Minimize, Captions, LoaderCircle, VolumeX } from 'lucide-react';
+import { Play, Pause, RotateCcw, Maximize, Minimize, Captions, LoaderCircle, VolumeX, Download, CheckCircle2, Trash2 } from 'lucide-react';
+import { getVideoIndex, isVideoSaved, savedVideoUrl, saveVideo, removeVideo, onSavedVideosChange, formatMB } from './offlineVideos';
 
 export const youtubeId = (src) => (String(src || '').match(/youtube(?:-nocookie)?\.com\/embed\/([\w-]{6,})/) || [])[1] || null;
 
@@ -51,7 +52,7 @@ const savePref = (k, v) => { try { window.localStorage.setItem(`oc-video-${k}`, 
 
 const fullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
 
-export function YouTubePlayer({ id, title, startAt, onEnded, clipStart = null, clipEnd = null }) {
+function StreamPlayer({ id, title, startAt, onEnded, clipStart = null, clipEnd = null }) {
     const { t } = useTranslation();
     const root = useRef(null);
     const frame = useRef(null);
@@ -251,7 +252,7 @@ export function YouTubePlayer({ id, title, startAt, onEnded, clipStart = null, c
         return (
             <button type="button" onClick={start} aria-label={t('imnci_ui.courses.video.play', 'Play the video')}
                 className="absolute inset-0 w-full h-full group" data-testid="video-start">
-                <img src={thumb} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+                <img src={thumb} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                 <span className="absolute inset-0 bg-black/40" />
                 <span className="absolute inset-0 grid place-items-center">
                     <span className="w-16 h-16 rounded-full bg-white/95 text-sky-800 grid place-items-center shadow-lg group-hover:scale-105 transition-transform">
@@ -360,6 +361,125 @@ export function YouTubePlayer({ id, title, startAt, onEnded, clipStart = null, c
                     </div>
                 </div>
             )}
+        </div>
+    );
+}
+
+// A video saved on the device plays from there, with the phone's own player.
+// A clip starts at `clipStart` and stops at `clipEnd`.
+function SavedPlayer({ url, id, title, startAt, onEnded, clipStart = null, clipEnd = null }) {
+    const ref = useRef(null);
+    const from = clipStart != null ? Math.max(0, Number(clipStart) || 0) : 0;
+    const to = clipEnd != null && Number(clipEnd) > from ? Number(clipEnd) : null;
+    const endedRef = useRef(onEnded);
+    endedRef.current = onEnded;
+    const reported = useRef(false);
+    const end = () => { if (!reported.current) { reported.current = true; endedRef.current?.(); } };
+    useEffect(() => {
+        const v = ref.current;
+        if (v && startAt != null) { v.currentTime = Number(startAt) || 0; v.play?.().catch(() => {}); }
+    }, [startAt]);
+    return (
+        <video ref={ref} src={url} controls playsInline controlsList="nodownload" preload="metadata"
+            poster={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} title={title || undefined}
+            className="absolute inset-0 w-full h-full bg-black" data-testid="video-saved"
+            onLoadedMetadata={(e) => { if (from) e.currentTarget.currentTime = from; }}
+            onPlay={(e) => {
+                const v = e.currentTarget;
+                reported.current = false;
+                if (v.currentTime < from - 0.5 || (to != null && v.currentTime >= to - 0.3)) v.currentTime = from;
+            }}
+            onTimeUpdate={to != null ? (e) => {
+                if (e.currentTarget.currentTime >= to) { e.currentTarget.pause(); end(); }
+            } : undefined}
+            onEnded={end} />
+    );
+}
+
+/** The saved copy of a video on this device: { url } once known, url null when not saved. */
+function useSavedVideo(id) {
+    const [url, setUrl] = useState(undefined);
+    useEffect(() => {
+        let alive = true;
+        let current = null;
+        const load = () => savedVideoUrl(id).then((u) => {
+            if (!alive) { if (u) URL.revokeObjectURL(u); return; }
+            if (current) URL.revokeObjectURL(current);
+            current = u;
+            setUrl(u);
+        });
+        load();
+        const off = onSavedVideosChange((changed) => { if (changed === id) load(); });
+        return () => { alive = false; off(); if (current) URL.revokeObjectURL(current); };
+    }, [id]);
+    return url;
+}
+
+export function YouTubePlayer(props) {
+    const url = useSavedVideo(props.id);
+    if (url === undefined) return <div className="absolute inset-0 bg-black" />;
+    return url ? <SavedPlayer url={url} {...props} /> : <StreamPlayer {...props} />;
+}
+
+/**
+ * "Download for offline" under a video: shown when a copy of the video is
+ * offered for download. Saved videos can be removed to free space.
+ */
+export function OfflineVideoButton({ id }) {
+    const { t } = useTranslation();
+    const [entry, setEntry] = useState(null);
+    const [saved, setSaved] = useState(false);
+    const [progress, setProgress] = useState(null);
+    const [error, setError] = useState(null);
+    useEffect(() => {
+        let alive = true;
+        if (!id) return undefined;
+        getVideoIndex().then((index) => { if (alive) setEntry(index?.[id] || null); });
+        const check = () => isVideoSaved(id).then((s) => { if (alive) setSaved(s); });
+        check();
+        const off = onSavedVideosChange((changed) => { if (changed === id) check(); });
+        return () => { alive = false; off(); };
+    }, [id]);
+    if (!id || (!entry && !saved)) return null;
+    const download = async () => {
+        setError(null);
+        setProgress(0);
+        try { await saveVideo(id, entry, setProgress); setSaved(true); } catch (e) {
+            setError(navigator.onLine === false
+                ? t('imnci_ui.courses.video.offline_no_net', 'No internet. Try again when you are connected.')
+                : t('imnci_ui.courses.video.offline_failed', 'The download did not finish. Try again.'));
+            console.warn('[offline video]', e);
+        } finally { setProgress(null); }
+    };
+    const pill = 'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold';
+    return (
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-xs" data-testid="video-offline">
+            {saved ? (
+                <>
+                    <span className={`${pill} border-emerald-200 bg-emerald-50 text-emerald-800`}>
+                        <CheckCircle2 size={14} /> {t('imnci_ui.courses.video.offline_saved', 'Saved on this device')}
+                    </span>
+                    <button type="button" onClick={() => removeVideo(id).then(() => setSaved(false))}
+                        className={`${pill} border-slate-200 bg-white text-slate-600 hover:bg-slate-50`}>
+                        <Trash2 size={14} /> {t('imnci_ui.courses.video.offline_remove', 'Remove')}
+                    </button>
+                </>
+            ) : progress != null ? (
+                <span className={`${pill} border-sky-200 bg-sky-50 text-sky-800 min-w-[12rem]`}>
+                    <LoaderCircle size={14} className="animate-spin" />
+                    {t('imnci_ui.courses.video.offline_progress', 'Downloading {{pct}}%', { pct: Math.round(progress * 100) })}
+                    <span className="flex-1 h-1.5 rounded-full bg-sky-100 overflow-hidden">
+                        <span className="block h-full bg-sky-600" style={{ width: `${Math.round(progress * 100)}%` }} />
+                    </span>
+                </span>
+            ) : (
+                <button type="button" onClick={download}
+                    className={`${pill} border-sky-200 bg-white text-sky-800 hover:bg-sky-50`}>
+                    <Download size={14} /> {t('imnci_ui.courses.video.offline_download', 'Download for offline')}
+                    {entry?.bytes ? <span className="font-normal text-slate-500">({formatMB(entry.bytes)})</span> : null}
+                </button>
+            )}
+            {error && <span className="w-full text-center text-rose-700">{error}</span>}
         </div>
     );
 }

@@ -4,7 +4,7 @@
 // related videos); a file plays from `start` and stops at `end`.
 import React, { useRef } from 'react';
 import { videoSource } from '../book';
-import { YouTubePlayer, youtubeId } from './youtubePlayer';
+import { YouTubePlayer, youtubeId, OfflineVideoButton } from './youtubePlayer';
 
 export function QuestionVideo({ video }) {
     const src = videoSource(video?.url);
@@ -14,7 +14,8 @@ export function QuestionVideo({ video }) {
     const start = video.start != null ? Number(video.start) : null;
     const end = video.end != null ? Number(video.end) : null;
     return (
-        <div className="relative w-full max-w-xl rounded-lg overflow-hidden border border-slate-200 bg-black mb-3" style={{ aspectRatio: '16 / 9' }}>
+        <div className="max-w-xl mb-3">
+        <div className="relative w-full rounded-lg overflow-hidden border border-slate-200 bg-black" style={{ aspectRatio: '16 / 9' }}>
             {ytId ? (
                 <YouTubePlayer id={ytId} title={video.title || ''} clipStart={start} clipEnd={end} />
             ) : src.kind === 'embed' ? (
@@ -24,6 +25,8 @@ export function QuestionVideo({ video }) {
                     onLoadedMetadata={start ? (e) => { e.currentTarget.currentTime = start; } : undefined}
                     onTimeUpdate={end ? (e) => { if (e.currentTarget.currentTime >= end) e.currentTarget.pause(); } : undefined} />
             )}
+        </div>
+        {ytId && <OfflineVideoButton id={ytId} />}
         </div>
     );
 }
