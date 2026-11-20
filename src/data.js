@@ -3222,6 +3222,19 @@ export async function getOnlineProgress(uid, sourceOptions = {}) {
     return snap.exists() ? { id: snap.id, ...snap.data() } : { id: uid, completed: {} };
 }
 
+/**
+ * The learner's own progress, live: one read when the listener opens, then one
+ * per change (from this device or another). Returns the unsubscribe.
+ * Pending server times are shown as estimates so a just-ticked lesson stays ticked.
+ */
+export function subscribeOnlineProgress(uid, onChange, onError) {
+    if (!uid) return () => {};
+    return onSnapshot(doc(db, "onlineProgress", uid), (snap) => {
+        if (!snap.metadata.fromCache && !snap.metadata.hasPendingWrites) dispatchOpEvent('read', 1, 'onlineProgress', 'live');
+        onChange(snap.exists() ? { id: snap.id, ...snap.data({ serverTimestamps: 'estimate' }) } : { id: uid, completed: {} });
+    }, (error) => { if (onError) onError(error); });
+}
+
 export async function setOnlineSectionComplete(uid, sectionId, done) {
     if (!uid || !sectionId) return false;
     await fbSetDoc(doc(db, "onlineProgress", uid), {
@@ -3300,9 +3313,14 @@ export async function getIMNCIProtocolHistory() {
 
 // Returns an OBJECT keyed by form type, not an array, because every consumer
 // asks for one named protocol (protocols.child, protocols.dosages_infant).
-export async function getIMNCIProtocols(sourceOptions = {}) {
+// With `lastSync` (server time) only the protocols saved after it come back,
+// so a device that already holds them pays one read when nothing changed
+// instead of re-reading every protocol (DataContext merges the answer).
+export async function getIMNCIProtocols(sourceOptions = {}, lastSync = 0) {
     try {
-        const snapshot = await getData(collection(db, "imnciProtocols"), sourceOptions);
+        let q = collection(db, "imnciProtocols");
+        if (lastSync > 0) q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
+        const snapshot = await getData(q, sourceOptions);
         const protocols = {};
         // The change history lives in the same collection (history_YYYY_MM) so
         // it is covered by the same rules; it is read only when asked for.
@@ -4062,28 +4080,29 @@ export function bestByExercise(attempts = []) {
 // shipped exercise without touching the source file.
 // ============================================================================
 
+// `expected` and the lists are stored as JSON strings: Firestore rejects the
+// nested arrays inside classifyOptions / treatmentOptions.
+const parseJsonField = (raw, fallback) => { try { return JSON.parse(raw || JSON.stringify(fallback)); } catch { return fallback; } };
+const mapExerciseDefinition = (e) => ({
+    ...e,
+    expected: parseJsonField(e.expectedJson, {}),
+    narrative: parseJsonField(e.narrativeJson, []),
+    narrativeAr: parseJsonField(e.narrativeArJson, []),
+    questions: parseJsonField(e.questionsJson, []),
+    learningPoints: parseJsonField(e.learningPointsJson, []),
+    isCustom: true,
+});
+const isDeletedRecord = (e) => e.isDeleted === true || e.isDeleted === "true";
+const byOrder = (a, b) => (a.order || 0) - (b.order || 0);
+
 export async function listExerciseDefinitions(sourceOptions = {}) {
     try {
         const snapshot = await getData(collection(db, "exerciseDefinitions"), sourceOptions);
         return snapshot.docs
             .map(d => ({ ...d.data(), id: d.id }))
-            .filter(e => e.isDeleted !== true && e.isDeleted !== "true")
-            .map(e => {
-                // `expected` is stored as a JSON string: Firestore rejects the
-                // nested arrays inside classifyOptions / treatmentOptions.
-                let expected = {};
-                try { expected = JSON.parse(e.expectedJson || '{}'); } catch (err) { expected = {}; }
-                let narrative = [];
-                try { narrative = JSON.parse(e.narrativeJson || '[]'); } catch (err) { narrative = []; }
-                let narrativeAr = [];
-                try { narrativeAr = JSON.parse(e.narrativeArJson || '[]'); } catch (err) { narrativeAr = []; }
-                let questions = [];
-                try { questions = JSON.parse(e.questionsJson || '[]'); } catch (err) { questions = []; }
-                let learningPoints = [];
-                try { learningPoints = JSON.parse(e.learningPointsJson || '[]'); } catch (err) { learningPoints = []; }
-                return { ...e, expected, narrative, narrativeAr, questions, learningPoints, isCustom: true };
-            })
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
+            .filter(e => !isDeletedRecord(e))
+            .map(mapExerciseDefinition)
+            .sort(byOrder);
     } catch (error) {
         console.error("Error fetching exercise definitions:", error);
         throw error;
@@ -4170,6 +4189,7 @@ const exCacheWrite = (key, value) => {
 /** Clear the exercise session cache. Called by the Refresh buttons. */
 export function clearExerciseCache() {
     exMemoryCache.clear();
+    if (exdefMemory) exdefMemory = { ...exdefMemory, at: 0 }; // next load asks the server for changes
     try {
         Object.keys(sessionStorage)
             .filter(k => k.startsWith('imnci_ex_cache:'))
@@ -4203,16 +4223,112 @@ export async function getCachedParticipants(courseId, { force = false } = {}) {
     return clean;
 }
 
-/** Exercise definitions, cached for the session. */
-export async function getCachedExerciseDefinitions({ force = false } = {}) {
-    const key = 'exerciseDefinitions';
-    if (!force) {
-        const hit = exCacheRead(key);
-        if (hit) return hit;
+// ---------------------------------------------------------------------------
+// Exercise definitions, kept on the device
+//
+// Every lesson exercise is a document in exerciseDefinitions (about 200, 600 KB).
+// They used to be read whole from the server once per app session, which is a
+// full download each time a learner opens the course. Now the device keeps them
+// in IndexedDB with the newest server lastUpdatedAt it has seen, and asks the
+// server only for exercises changed after that mark (a soft delete changes
+// lastUpdatedAt, so it arrives too). An unchanged set costs one read.
+//
+// A hard delete (an upload script's undo) never shows up in a delta, so once a
+// session the device compares the server's document count with its own (one
+// read); fewer on the server means something was removed, and the set is read
+// again in full.
+// ---------------------------------------------------------------------------
+const EXDEF_DB = 'ExerciseDefinitionsCache';
+const EXDEF_KEY = 'all_v1';
+const EXDEF_FRESH_MS = 60 * 1000;     // calls this close together reuse the last answer
+const EXDEF_OVERLAP_MS = 60 * 1000;   // re-asks for a minute before the mark (same-moment writes)
+let exdefMemory = null;               // { at, mark, docs: { id: raw doc } }
+let exdefInFlight = null;
+let exdefCountChecked = false;
+
+function exdefIdb(mode, fn) {
+    return new Promise((resolve) => {
+        try {
+            const open = indexedDB.open(EXDEF_DB, 1);
+            open.onupgradeneeded = () => { if (!open.result.objectStoreNames.contains('kv')) open.result.createObjectStore('kv'); };
+            open.onerror = () => resolve(null);
+            open.onsuccess = () => {
+                try {
+                    const tx = open.result.transaction('kv', mode);
+                    const req = fn(tx.objectStore('kv'));
+                    tx.oncomplete = () => resolve(req?.result ?? true);
+                    tx.onerror = () => resolve(null);
+                    tx.onabort = () => resolve(null);
+                } catch { resolve(null); }
+            };
+        } catch { resolve(null); }
+    });
+}
+const exdefLoad = () => exdefIdb('readonly', (st) => st.get(EXDEF_KEY));
+const exdefSave = (entry) => exdefIdb('readwrite', (st) => st.put({ mark: entry.mark, docs: entry.docs }, EXDEF_KEY));
+const exdefList = (entry) => Object.values(entry?.docs || {})
+    .filter((e) => !isDeletedRecord(e)).map(mapExerciseDefinition).sort(byOrder);
+const stampOf = (v) => (v && typeof v.toMillis === 'function' ? v.toMillis()
+    : (v && typeof v.seconds === 'number' ? v.seconds * 1000 + Math.floor((v.nanoseconds || 0) / 1e6) : 0));
+// IndexedDB keeps plain data: Timestamps become { seconds, nanoseconds }.
+const plainDoc = (d) => {
+    const x = { ...d.data(), id: d.id };
+    Object.keys(x).forEach((k) => { if (x[k] && typeof x[k].toMillis === 'function') x[k] = { seconds: x[k].seconds, nanoseconds: x[k].nanoseconds }; });
+    return x;
+};
+const newestOf = (docs) => Object.values(docs).reduce((m, e) => Math.max(m, stampOf(e.lastUpdatedAt)), 0);
+
+async function exdefFull() {
+    const snap = await getData(collection(db, "exerciseDefinitions"), { source: 'server' });
+    const docs = {};
+    snap.docs.forEach((d) => { docs[d.id] = plainDoc(d); });
+    return { docs, mark: newestOf(docs) };
+}
+
+async function exdefRefresh(stored) {
+    if (!stored || !(stored.mark > 0)) return exdefFull();
+    if (!exdefCountChecked) {
+        exdefCountChecked = true;
+        try {
+            const count = (await getCountFromServer(collection(db, "exerciseDefinitions"))).data().count;
+            dispatchOpEvent('read', 1, 'exerciseDefinitions');
+            if (count < Object.keys(stored.docs || {}).length) return exdefFull();
+        } catch { exdefCountChecked = false; }
     }
-    const list = await listExerciseDefinitions({ source: navigator.onLine ? 'default' : 'cache' });
-    exCacheWrite(key, list);
-    return list;
+    const q = query(collection(db, "exerciseDefinitions"),
+        where("lastUpdatedAt", ">", Timestamp.fromMillis(Math.max(0, stored.mark - EXDEF_OVERLAP_MS))));
+    const snap = await getData(q, { source: 'server' });
+    if (snap.empty) return stored;
+    const docs = { ...stored.docs };
+    snap.docs.forEach((d) => { docs[d.id] = plainDoc(d); });
+    return { docs, mark: Math.max(stored.mark, newestOf(docs)) };
+}
+
+/**
+ * Exercise definitions: from the device, brought up to date with only what
+ * changed on the server. `force` skips the one-minute reuse (after a save).
+ */
+export async function getCachedExerciseDefinitions({ force = false } = {}) {
+    if (!force && exdefMemory && Date.now() - exdefMemory.at < EXDEF_FRESH_MS) return exdefList(exdefMemory);
+    if (exdefInFlight) return exdefInFlight;
+    exdefInFlight = (async () => {
+        const stored = exdefMemory || (await exdefLoad()) || null;
+        if (!navigator.onLine) {
+            if (stored) return exdefList(stored);
+            return listExerciseDefinitions({ source: 'cache' });
+        }
+        let next;
+        try {
+            next = await exdefRefresh(stored);
+        } catch (e) {
+            if (stored) { console.warn('Exercise definitions: could not check the server, using the device copy.', e?.code || e?.message || e); return exdefList(stored); }
+            throw e;
+        }
+        exdefMemory = { ...next, at: Date.now() };
+        if (next !== stored) exdefSave(next);
+        return exdefList(next);
+    })();
+    try { return await exdefInFlight; } finally { exdefInFlight = null; }
 }
 
 /**

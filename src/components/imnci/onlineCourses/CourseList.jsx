@@ -18,7 +18,7 @@ import { canStudy, groupName } from './enrolment';
 
 export function CourseList() {
     const { t } = useTranslation();
-    const { courses, openOtherArea, permissions, resync, setTopTab, syncing, topTab } = useCourseScreen();
+    const { courses, enrolments, openOtherArea, permissions, resync, setTopTab, syncing, topTab } = useCourseScreen();
     const shownTab = topTab === 'mine' ? 'mine' : 'courses';
     return (
         <div className="space-y-4">
@@ -27,7 +27,7 @@ export function CourseList() {
                 subtitle={t('imnci_ui.courses.main.page_subtitle', 'Self-paced training')}
                 actions={
                     <div className="flex flex-wrap gap-2 items-center">
-                        <Button variant="secondary" onClick={resync} disabled={syncing}
+                        <Button variant="secondary" onClick={() => { resync(); enrolments?.reload?.(); }} disabled={syncing}
                             title={t('imnci_ui.courses.main.refresh_title', 'Look for anything added on another device')}>
                             <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
                             <span className="hidden sm:inline">{syncing ? t('imnci_ui.courses.main.checking', 'Checking…') : t('imnci_ui.courses.main.refresh', 'Refresh')}</span>

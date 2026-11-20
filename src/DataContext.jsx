@@ -91,7 +91,11 @@ const LIVE_OVERLAP_MS = 1000;
 // A training link (src/training/) keeps its own cache, sync marks and
 // IndexedDB store, so practice data never mixes with the real copy on this device.
 const CACHE_NS = trainingCourseId() ? `training_${trainingCourseId()}_` : '';
-const syncMarkKey = (key) => `${CACHE_NS}syncMark_v${SYNC_MARK_VERSION}_${key}`;
+// A list that changed how its mark is kept starts again once, on its own:
+// imnciProtocols (an object, not an array) used to be re-read whole on every
+// sync and kept a device-clock mark; it is delta-synced from server time now.
+const LIST_MARK_VERSION = { imnciProtocols: 3 };
+const syncMarkKey = (key) => `${CACHE_NS}syncMark_v${LIST_MARK_VERSION[key] || SYNC_MARK_VERSION}_${key}`;
 const tsMillis = (v) => {
     if (!v) return 0;
     if (typeof v.toMillis === 'function') return v.toMillis();
@@ -102,9 +106,11 @@ const tsMillis = (v) => {
     return Number.isFinite(n) ? n : 0;
 };
 /** Newest server lastUpdatedAt in a list of records, or 0 when none carry one. */
-export const newestServerStamp = (items) => (Array.isArray(items)
-    ? items.reduce((max, item) => Math.max(max, tsMillis(item?.lastUpdatedAt)), 0)
-    : 0);
+export const newestServerStamp = (items) => {
+    // A list keyed by id (imnciProtocols) counts like an array of its values.
+    const list = Array.isArray(items) ? items : (items && typeof items === 'object' ? Object.values(items) : []);
+    return list.reduce((max, item) => Math.max(max, tsMillis(item?.lastUpdatedAt)), 0);
+};
 
 // --- BACKGROUND REVALIDATION ---
 // A cache hit used to be the end of the story for up to an hour (CACHE_TTL_MS),
@@ -753,7 +759,12 @@ export const DataProvider = ({ children }) => {
                         finalMergedData = Array.from(dataMap.values());
                         await setLocalData(`cache_${key}`, stripSignaturesForDisk(finalMergedData));
                     } else if (!Array.isArray(newOrUpdatedData)) {
-                        finalMergedData = newOrUpdatedData;
+                        // A delta answer for a list keyed by id (imnciProtocols)
+                        // holds only the changed entries: merge them in.
+                        const objectBase = base && typeof base === 'object' && !Array.isArray(base) ? base : null;
+                        finalMergedData = !isCompleteAnswer && objectBase && newOrUpdatedData && typeof newOrUpdatedData === 'object'
+                            ? { ...objectBase, ...newOrUpdatedData }
+                            : newOrUpdatedData;
                         await setLocalData(`cache_${key}`, stripSignaturesForDisk(finalMergedData));
                     } else if (newOrUpdatedData && newOrUpdatedData.length === 0) {
                          finalMergedData = base;
@@ -772,7 +783,7 @@ export const DataProvider = ({ children }) => {
                     // whose records carry no lastUpdatedAt cannot be delta-synced
                     // anyway; it keeps a client-clock mark so it is not re-downloaded
                     // in full on every sync.
-                    const newest = newestServerStamp(Array.isArray(newOrUpdatedData) ? newOrUpdatedData : []);
+                    const newest = newestServerStamp(newOrUpdatedData);
                     const nextMark = newest > 0
                         ? (isCompleteAnswer ? newest : Math.max(storedMark, newest))
                         : (isCompleteAnswer ? (newestServerStamp(finalMergedData) || fetchStartedAt) : storedMark);
@@ -1013,7 +1024,7 @@ export const DataProvider = ({ children }) => {
         fetchPopulationTargets: createFetcher('populationTargets', (opts, lastSync) => listPopulationTargets(opts, lastSync)),
         fetchSupervisionAssessments: createFetcher('supervisionAssessments', (opts, lastSync) => listSupervisionAssessments(opts, lastSync)),
         fetchSurveyResponses: createFetcher('surveyResponses', (opts, lastSync) => listSurveyResponses(opts, lastSync)),
-        fetchProtocols: createFetcher('imnciProtocols', (opts) => getIMNCIProtocols(opts)),
+        fetchProtocols: createFetcher('imnciProtocols', (opts, lastSync) => getIMNCIProtocols(opts, lastSync)),
         fetchOnlineCourses: createFetcher('onlineCourses', (opts, lastSync) => listOnlineCourses(opts, lastSync)),
         fetchOnlineCourseItems: createFetcher('onlineCourseItems', (opts, lastSync) => listOnlineCourseItems(opts, lastSync)),
         
