@@ -1,0 +1,31 @@
+{
+ "note": "Drive file id of each source clip (clip number = the first number in the YouTube file name, e.g. 17_3.mp4 is clip 17 part 3), and how the ETAT videos are made.",
+ "clips": {
+  "0": "1LZf1lNtXf8nVZ69p2Yk3FI9D_zBpDOq4",
+  "1": "1LjRTeZNwPrzxqjb2aKXk6Sjgh4jhOsM_",
+  "2": "1LXs4Rn24xqTJmxvNdVC8D0CA1SPostWp",
+  "3": "1Laj4q6UONP1L_Km7XjkPb3M1daDK-U-z",
+  "5": "1LhnXYS3tjlqwkLU6TGSSC9Yt8yqt8Xbf",
+  "6": "1YA5SwaBG7SaBeP8j7CuFrz_PGRlMPyQp",
+  "7": "1XIOJDsXBdlCrgYsanS5u-gNwqmWMq5W3",
+  "14": "1Y3rOlKMXR6I67-ghOUkTwfbUh1Vuc36v",
+  "15": "1XSo3y-LWECRpqTZqEYmH6uN93-BdYerJ",
+  "16": "1X88dSVn1WdF71mErFoRn1UJ-kchcS54Z",
+  "17": "1Y5zVBxyYlEpF3nx2N89vnYrv8UoTgGKz",
+  "18": "1XdPb8vkH8xS4sA5e-x_KSRDoBxz1TA1W",
+  "19": "1XsTUlbmzinuRoYk_7Hb_3C78UW3X5lru",
+  "20": "1WvjcN-KdyzszlTaSFKZczr8z-40YpIc8",
+  "21": "1Xo7AYajmOBVKyJqy5dRdvXwfVf5H3SGD",
+  "23": "1WnY46iX7hk-Pdr6mn_JxMKl0kJNEdE3B"
+ },
+ "etat": {
+  "z5a8yLa83p8": [
+   "1GaxINsh2h47psycwBCHeHKAsSDPOdbC_",
+   "1RWIPL7LtzARdREzo-xBPqvwiOd5fzJJt",
+   "1K1lNCXj8uJhLKhZ2uFP0RQJVCT_d4F8z"
+  ],
+  "nQ4FGkblHoY": [
+   "1sxtAfuLEgtEsYfx3qip5_BopLlVQOh1t"
+  ]
+ }
+}
