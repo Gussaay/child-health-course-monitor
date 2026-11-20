@@ -1,0 +1,19 @@
+name: One-off - copy course videos for offline download
+# Downloads the course's YouTube videos (our own channel) and, in commit mode,
+# puts them in Firebase Storage under course-videos/ with an index.json that
+# the app reads for its "Download for offline" button.
+# scripts/course-videos/mode.txt: dry = download and report sizes only,
+# commit = upload, undo = delete what this workflow uploaded.
+on:
+  push:
+    branches: [claude/project-thread-ioktw6]
+    paths: ['scripts/course-videos/**', '.github/workflows/course-videos.yml']
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null && pip install -q yt-dlp
+      - name: Download and measure
+        working-directory: scripts/course-videos
+        run: ./fetch.sh
