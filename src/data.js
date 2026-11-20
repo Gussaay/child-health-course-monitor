@@ -33,7 +33,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { storage } from './firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { validateUpload, safeFileName, MAX_UPLOAD_BYTES } from './utils/uploadValidation';
-import { readAllPages } from './utils/pagedRead';
+import { problemSignature } from './utils/problemGroups';
 import { CERT_APPROVAL_FIELD, certificateApprovalSnapshot } from './components/constants.js';
 import { projectAtTime, projectOfFacility, visitTimeOf, hasRecordedProject } from './utils/visitProject.js';
 import { recycleBinType, recordTitle } from './utils/recycleBin.js';
@@ -718,29 +718,8 @@ const facilityLocalFilter = (filters = {}) => (f) => {
 export async function listHealthFacilities(filters = {}, sourceOptions = {}) {
     const q = facilityQuery(filters);
     try {
-        // A full (non-delta) list is read in pages (500 at a time, readAllPages' default) and
-        // then returned whole, in the same order as the single query did.
-        // Paging only changes how the download travels: one very large query
-        // that timed out left the device with an empty or partial list, while
-        // a page that fails can be told apart from a list that has ended.
-        //
-        // The Dashboard is NOT affected by this. Its main path does not use
-        // this list at all (it reads the slim server copy made by
-        // fetchDashboardFacilities in DataContext.jsx), and its fallback path
-        // receives exactly the same complete list it received before, because
-        // readAllPages only stops at a short (last) page.
-        //
-        // A changes-only download (lastUpdatedAfter) is small by definition,
-        // so it keeps the single query it has always used.
-        const docs = filters.lastUpdatedAfter instanceof Date
-            ? (await getData(q, sourceOptions)).docs
-            : await readAllPages(async (cursor, pageSize) => {
-                const paged = cursor
-                    ? query(q, limit(pageSize), startAfter(cursor))
-                    : query(q, limit(pageSize));
-                return (await getData(paged, sourceOptions)).docs;
-            });
-        const rows = docs.map(d => ({ id: d.id, ...d.data() }));
+        const querySnapshot = await getData(q, sourceOptions);
+        const rows = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         // A changes-only download (lastUpdatedAfter) must also return deleted
         // facilities: DataContext uses them to remove the facility from the
         // device's saved list. A plain list never shows them.
@@ -3050,6 +3029,12 @@ export async function submitProblemReport(report) {
         ...report,
         id: ref.id,
         kind: report.kind || 'report',
+        // The group this report belongs to (utils/problemGroups.js), so
+        // Admin → Problems — and anything querying these reports — can
+        // count occurrences of one problem instead of reading every
+        // repeat as a new bug. Older reports have no stamp; the tab
+        // groups them with the same function.
+        signature: problemSignature(report),
         status: 'new',
         reporterUid: firebaseAuth.currentUser?.uid || null,
         createdAt: serverTimestamp(),
