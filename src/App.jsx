@@ -7,7 +7,7 @@ import ThemeToggle from './components/ThemeToggle';
 import mainLogoUrl from './assets/logo-160.webp';
 import { useTheme } from './utils/theme';
 import './i18n'; 
-import React, { useEffect, useMemo, useState, useRef, lazy, Suspense, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useRef, Suspense, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from 'react-i18next'; 
 
@@ -32,6 +32,13 @@ import { usePushNotifications, usePushEvents } from './hooks/usePushNotification
 import { toggleLanguage, setPreferredLanguage, normalizeLanguage, currentLanguage, addressForcesLanguage } from './utils/languagePreference';
 import LanguagePickerModal from './components/LanguagePickerModal';
 import { isWorkProfileComplete, describeJob, describeWorkplace, optionLabel, HR_GROUPS } from './utils/workProfile';
+import { lazyWithRetry } from './utils/lazyWithRetry';
+// Every screen below loads through lazyWithRetry, not React.lazy: a screen's
+// code file that fails to download (a dropped connection, the largest family
+// in Admin → Problems) is retried before the error boundary is involved.
+// Genuinely missing files still reach the boundary, whose stale-build
+// recovery reloads onto the current release. See utils/lazyWithRetry.js.
+const lazy = (factory) => lazyWithRetry(factory);
 const WorkProfileModal = lazy(() => import('./components/WorkProfileModal'));
 
 // --- PRE-FLIGHT LANGUAGE CHECK ---
