@@ -152,7 +152,7 @@ async function findCourse(pkg) {
   if (!COMMIT) return console.log('\nDry run: nothing written.');
   for (const x of exPlan) {
     const prev = x.isNew ? null : Object.fromEntries(EX_CONTENT.map((k) => [k, x.cur[k] ?? null]));
-    const { draft: _draft, ...rest } = x.r;
+    const rest = { ...x.r }; delete rest.draft;
     await x.ref.set({ ...(x.isNew ? x.r : rest), ...(x.isNew ? { importBatch: C.batch, createdAt: now() } : {}),
       exerciseUpdateTag: UPDATE_TAG, previousExerciseJson: prev ? JSON.stringify(prev) : 'new',
       lastUpdatedAt: now(), lastUpdatedAtLocal: new Date().toISOString() }, { merge: true });
