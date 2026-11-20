@@ -32,7 +32,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useImnci } from './shared';
 import { listBooks } from '../aiLibrary/aiLibraryData';
 import {
-    deleteOnlineCourse, deleteOnlineCourseItem, getOnlineProgress, setOnlineSectionComplete, setOnlineSectionActivities,
+    deleteOnlineCourse, deleteOnlineCourseItem, getOnlineProgress, subscribeOnlineProgress, setOnlineSectionComplete, setOnlineSectionActivities,
 } from '../../data';
 // The pieces of the course, one file each.
 import { useCoursePlace, placeDepth } from './onlineCourses/place';
@@ -153,12 +153,16 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
         if (!onlineCourseItems) fetchOnlineCourseItems(false);
     }, [onlineCourses, onlineCourseItems, fetchOnlineCourses, fetchOnlineCourseItems]);
 
+    // The learner's own progress is the one thing read live: it opens with one
+    // read and then brings only changes (a lesson finished on another phone).
+    // If the listener is refused, one plain read as before.
     useEffect(() => {
+        if (!user?.uid) return undefined;
         let alive = true;
-        if (user?.uid) {
+        const stop = subscribeOnlineProgress(user.uid, (p) => { if (alive && p) setProgress(p); }, () => {
             getOnlineProgress(user.uid).then((p) => { if (alive && p) setProgress(p); }).catch(() => {});
-        }
-        return () => { alive = false; };
+        });
+        return () => { alive = false; stop(); };
     }, [user?.uid]);
 
     const reload = useCallback(() => {

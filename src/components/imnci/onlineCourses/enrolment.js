@@ -49,14 +49,26 @@ function writeCache(uid, value) {
     try { localStorage.setItem(cacheKey(uid), JSON.stringify(value)); } catch { /* private mode */ }
 }
 
+const ENROL_FRESH_MS = 6 * 60 * 60 * 1000;
+const ENROL_WAITING_MS = 2 * 60 * 1000;
+
 /** The signed-in learner's enrolments, by course, and the groups they are in. */
 export function useMyEnrolments(uid) {
     const [state, setState] = useState(() => readCache(uid) || { enrolments: [], groups: [], loaded: false });
-    const load = useCallback(async () => {
+    const load = useCallback(async ({ ifStale = false } = {}) => {
         if (!uid) return;
+        // Opening the course page reuses the saved answer while it is recent:
+        // each check is a server call plus reads. A request still waiting for a
+        // manager is checked more often, so an approval shows soon.
+        if (ifStale) {
+            const saved = readCache(uid);
+            const waiting = (saved?.enrolments || []).some((e) => e.status === 'requested');
+            const age = Date.now() - (saved?.fetchedAt || 0);
+            if (saved?.loaded && !saved.failed && age < (waiting ? ENROL_WAITING_MS : ENROL_FRESH_MS)) return;
+        }
         try {
             const res = await callEnrolment('mine');
-            const next = { enrolments: res.enrolments || [], groups: res.groups || [], loaded: true };
+            const next = { enrolments: res.enrolments || [], groups: res.groups || [], loaded: true, fetchedAt: Date.now() };
             setState(next);
             writeCache(uid, next);
         } catch (e) {
@@ -64,7 +76,7 @@ export function useMyEnrolments(uid) {
             setState((s) => ({ ...s, loaded: true, failed: true }));
         }
     }, [uid]);
-    useEffect(() => { load(); }, [load]);
+    useEffect(() => { load({ ifStale: true }); }, [load]);
     const byCourse = Object.fromEntries((state.enrolments || []).map((e) => [e.courseId, e]));
     const groupById = Object.fromEntries((state.groups || []).map((g) => [g.id, g]));
     const request = useCallback(async (courseId) => {
