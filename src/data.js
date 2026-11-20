@@ -3325,6 +3325,11 @@ export async function getIMNCIProtocols(sourceOptions = {}, lastSync = 0) {
         // The change history lives in the same collection (history_YYYY_MM) so
         // it is covered by the same rules; it is read only when asked for.
         snapshot.docs.forEach(d => { if (!d.id.startsWith(PROTOCOL_HISTORY_PREFIX)) protocols[d.id] = d.data(); });
+        // The newest server time of every document read, history included, so
+        // the delta mark moves past a history entry instead of re-reading it on
+        // each sync. Not enumerable: it never reaches the protocol list itself.
+        const newest = snapshot.docs.reduce((m, d) => Math.max(m, d.data()?.lastUpdatedAt?.toMillis?.() || 0), 0);
+        Object.defineProperty(protocols, 'newestReadStamp', { value: newest, enumerable: false });
         return protocols;
     } catch (error) {
         console.error("Error fetching IMNCI protocols:", error);

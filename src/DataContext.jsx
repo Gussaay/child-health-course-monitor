@@ -109,7 +109,9 @@ const tsMillis = (v) => {
 export const newestServerStamp = (items) => {
     // A list keyed by id (imnciProtocols) counts like an array of its values.
     const list = Array.isArray(items) ? items : (items && typeof items === 'object' ? Object.values(items) : []);
-    return list.reduce((max, item) => Math.max(max, tsMillis(item?.lastUpdatedAt)), 0);
+    // getIMNCIProtocols also reports documents it read but left out (history).
+    const read = Number(items?.newestReadStamp) || 0;
+    return list.reduce((max, item) => Math.max(max, tsMillis(item?.lastUpdatedAt)), read);
 };
 
 // --- BACKGROUND REVALIDATION ---
