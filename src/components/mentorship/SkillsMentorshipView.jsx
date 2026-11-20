@@ -2093,6 +2093,11 @@ const SkillsMentorshipView = ({
     const [selectedLocality, setSelectedLocality] = useState('');
     const [selectedFacilityId, setSelectedFacilityId] = useState('');
     const [selectedHealthWorkerName, setSelectedHealthWorkerName] = useState('');
+    // Entry selection: state, locality, facility and health worker are chosen
+    // once when entering the forms page (confirmed in handleProceedToForm).
+    // Every form then starts from that same selection instead of each form
+    // asking for it again in its own setup.
+    const [entrySelection, setEntrySelection] = useState(null);
 
     const [activeTab, setActiveTab] = useState(() => {
         return publicDashboardMode ? 'dashboard' : 'skills_list';
@@ -3703,6 +3708,18 @@ const SkillsMentorshipView = ({
     // Every new form is gated behind the visit popup, which stamps the visit start
     // time and freezes the auto-calculated visit number before anything opens.
     const handleProceedToForm = () => {
+        // Confirm this as the page's entry selection, so the next form the
+        // mentor opens starts from the same state/locality/facility/worker
+        // instead of asking for them again.
+        if (!editingSubmission && selectedFacilityId) {
+            setEntrySelection({
+                state: selectedState,
+                locality: selectedLocality,
+                facilityId: selectedFacilityId,
+                healthWorkerName: selectedHealthWorkerName || '',
+                service: activeService,
+            });
+        }
         setVisitNumberOverride(null);
         setIsVisitSessionModalOpen(true);
     };
@@ -5142,6 +5159,21 @@ const SkillsMentorshipView = ({
             ? "الرجاء اختيار الولاية والمحلية والمنشأة والعامل الصحي للمتابعة." 
             : "الرجاء اختيار الولاية والمحلية والمنشأة للمتابعة.";
 
+        // Entry selection: when a selection was already confirmed on this
+        // page and still matches, this form's setup shows it as a summary
+        // and starts straight from it - the pickers below are only for the
+        // first form opened, or after tapping "change selection".
+        const needsWorkerSelection = isSkillsAssessmentSetup && activeService !== 'IPC';
+        const entrySelectionMatches = !!entrySelection
+            && entrySelection.state === selectedState
+            && entrySelection.locality === selectedLocality
+            && entrySelection.facilityId === selectedFacilityId
+            && entrySelection.service === activeService;
+        const entrySelectionUsable = !editingSubmission && entrySelectionMatches && !!selectedFacilityId
+            && (!needsWorkerSelection || !!selectedHealthWorkerName);
+        const entryStateLabel = availableStates.find(s => s.key === selectedState)?.label || selectedState;
+        const entryLocalityLabel = STATE_LOCALITIES[selectedState]?.localities.find(l => l.en === selectedLocality)?.ar || selectedLocality;
+
         return (
             <>
                 <Modal isOpen={true} onClose={handleBackToMainMenu} title={setupTitle} size="xl">
@@ -5149,6 +5181,23 @@ const SkillsMentorshipView = ({
                         <p className="text-sm text-gray-500 mb-6">{setupSubtitle}</p>
 
                         <div className="space-y-6">
+                            {entrySelectionUsable ? (
+                                <div className="border p-4 rounded-lg bg-sky-50 space-y-2">
+                                    <p className="text-sm font-bold text-sky-900">الاختيار الحالي — يُستخدم لجميع النماذج في هذه الصفحة:</p>
+                                    <p className="text-sm text-gray-700">
+                                        الولاية: {entryStateLabel} • المحلية: {entryLocalityLabel} • المنشأة: {selectedFacility ? selectedFacility['اسم_المؤسسة'] : ''}
+                                    </p>
+                                    {needsWorkerSelection && (
+                                        <p className="text-sm text-gray-700">العامل الصحي: {selectedHealthWorkerName}</p>
+                                    )}
+                                    <div>
+                                        <Button type="button" variant="secondary" size="sm" onClick={() => setEntrySelection(null)}>
+                                            تغيير الاختيار
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border p-4 rounded-lg bg-gray-50 flex flex-row-reverse">
                                 <FormGroup label="الولاية" className="text-right">
                                     <Select value={selectedState} onChange={handleStateChange} disabled={isStateFilterDisabled || !!editingSubmission}>
@@ -5258,6 +5307,8 @@ const SkillsMentorshipView = ({
                                     </FormGroup>
                                     
                                 </div>
+                            )}
+                                </>
                             )}
 
                             {/* --- Training priority summary (bottom field) --- */}
