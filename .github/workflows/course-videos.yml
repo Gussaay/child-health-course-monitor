@@ -1,9 +1,10 @@
 name: One-off - copy course videos for offline download
-# Downloads the course's YouTube videos (our own channel) and, in commit mode,
-# puts them in Firebase Storage under course-videos/ with an index.json that
-# the app reads for its "Download for offline" button.
-# scripts/course-videos/mode.txt: dry = download and report sizes only,
-# commit = upload, undo = delete what this workflow uploaded.
+# Rebuilds the course's YouTube parts from the Drive source clips (YouTube
+# refuses downloads from GitHub's servers), checks each against the length
+# YouTube reports, and in commit mode puts them in Firebase Storage under
+# course-videos/ with the index.json the app reads for "Download for offline".
+# scripts/course-videos/mode.txt: list = list the Drive folders only,
+# dry = build and check, commit = build, check and upload, undo = delete course-videos/.
 on:
   push:
     branches: [claude/project-thread-ioktw6]
@@ -13,7 +14,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null && pip install -q yt-dlp
-      - name: List and download the Drive clips
+      - name: ffmpeg
+        run: |
+          curl -sL https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz | tar xJ -C "$RUNNER_TEMP"
+          echo "$(ls -d $RUNNER_TEMP/ffmpeg-*-static)" >> "$GITHUB_PATH"
+      - name: Drive clips
         working-directory: scripts/course-videos
-        run: python3 drive-list.py 1LWM1bslWxGzs2bALJnD3mTEM0gP3hgBH drive
+        run: |
+          ffmpeg -version | head -1
+          python3 drive-list.py 1LWM1bslWxGzs2bALJnD3mTEM0gP3hgBH drive-imci
+          python3 drive-list.py 162gprhWh3fLRisyikysR2dTIeyDXPPqe drive-etat
+      - name: Build and check
+        if: ${{ hashFiles('scripts/course-videos/sources.json') != '' }}
+        working-directory: scripts/course-videos
+        run: |
+          MODE=$(tr -d '[:space:]' < mode.txt)
+          if [ "$MODE" != list ] && [ "$MODE" != undo ]; then python3 cut.py; fi
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Upload
+        working-directory: scripts/course-videos
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}
+        run: |
+          MODE=$(tr -d '[:space:]' < mode.txt)
+          if [ "$MODE" = commit ] || [ "$MODE" = undo ] || [ "$MODE" = dry ]; then
+            npm install --no-save --ignore-scripts firebase-admin@13 >/dev/null
+            printf '%s' "$SA" > "$RUNNER_TEMP/key.json"
+            KEY_FILE="$RUNNER_TEMP/key.json" node upload.cjs "$MODE"
+          fi
