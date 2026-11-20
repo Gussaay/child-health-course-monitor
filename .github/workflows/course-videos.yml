@@ -14,6 +14,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null && pip install -q yt-dlp
-      - name: Download and measure
+      - name: List and download the Drive clips
         working-directory: scripts/course-videos
-        run: LIMIT=2 ./fetch.sh
+        run: python3 drive-list.py 1LWM1bslWxGzs2bALJnD3mTEM0gP3hgBH drive
