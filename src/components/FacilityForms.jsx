@@ -22,6 +22,7 @@ import {
 import { notify } from './dialogs';
 import StandardNameSelect from './StandardNameSelect';
 import { useLeaveGuard, leaveForm } from '../utils/leaveGuard';
+import { textIncludes } from '../utils/textSearch';
 import FormPdfButton from './FormPdfButton';
 import { PrintModeProvider, usePrintMode, usePrintAll, ConditionNote } from './pdfPrint';
 
@@ -114,7 +115,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "اختر م
     const filteredOptions = useMemo(() => {
         if (!searchTerm) return options;
         return options.filter(option =>
-            (option.label && option.label.toLowerCase().includes(searchTerm.toLowerCase()))
+            textIncludes(option.label, searchTerm)
         );
     }, [searchTerm, options]);
 

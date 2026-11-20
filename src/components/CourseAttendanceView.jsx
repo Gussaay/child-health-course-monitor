@@ -17,6 +17,7 @@ import { amiriFontBase64 } from './AmiriFont.js';
 import { notify, confirmDialog, promptDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
 import { findLinkedParticipant } from '../utils/linkedParticipant';
+import { textIncludes } from '../utils/textSearch';
 
 // --- Helper Functions ---
 
@@ -283,7 +284,7 @@ export function AttendanceManagerView({ course, onClose }) {
 
     const filteredParticipants = useMemo(() => {
         return participants
-            .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+            .filter(p => textIncludes(p.name, searchTerm))
             .sort((a, b) => {
                 // Sort by attendance count descending, then alphabetically
                 const countA = a.attendance ? a.attendance.length : 0;
@@ -637,7 +638,7 @@ export function PublicAttendanceView({ courseId, user = null }) {
     const ownId = useMemo(() => findLinkedParticipant(participants, courseId, user)?.id || null, [participants, courseId, user]);
     const filteredParticipants = useMemo(() => {
         return participants
-            .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+            .filter(p => textIncludes(p.name, searchTerm))
             // Alphabetical order for the public link, the signed-in person's own name first
             .sort((a,b) => (b.id === ownId) - (a.id === ownId) || a.name.localeCompare(b.name));
     }, [participants, searchTerm, ownId]);

@@ -71,6 +71,7 @@ import { canonicalOptions } from '../utils/nameRegistry';
 import { publicBaseUrl } from '../utils/publicLink';
 import { useRememberedState } from '../utils/rememberedState';
 import { countsForCoverage } from '../utils/coverageEligibility';
+import { textIncludes, lowerText } from '../utils/textSearch';
 import { IS_EMONC_SITE } from '../siteMode';
 import { usePageAddButton } from '../utils/pageChrome';
 
@@ -2739,10 +2740,10 @@ const SearchableSelect = ({ label, options, value, onChange, onOpenNewForm, plac
 
     const filteredOptions = useMemo(() => {
         if (!inputValue) return options;
-        return options.filter(opt => opt.name.toLowerCase().includes(inputValue.toLowerCase()));
+        return options.filter(opt => textIncludes(opt.name, inputValue));
     }, [options, inputValue]);
 
-    const isNewEntry = inputValue && !options.some(opt => opt.name.toLowerCase() === inputValue.toLowerCase());
+    const isNewEntry = inputValue && !options.some(opt => lowerText(opt.name) === lowerText(inputValue));
 
     const handleSelect = (option) => {
         onChange(option.name);
