@@ -45,8 +45,9 @@ const exerciseRecord = (e) => ({
   narrativeArJson: JSON.stringify(e.narrativeAr || []), expectedJson: JSON.stringify(e.expected || {}),
   questionsJson: JSON.stringify(e.questions || []), isDeleted: false,
 });
-const EX_CONTENT = ['order', 'title', 'titleAr', 'subCourse', 'kind', 'formType', 'passMark', 'estimatedMinutes', 'explain',
+const EX_CONTENT = ['order', 'title', 'titleAr', 'subCourse', 'kind', 'formType', 'passMark', 'estimatedMinutes', 'arabicOn', 'explain',
   'learningPointsJson', 'narrativeJson', 'narrativeArJson', 'expectedJson', 'questionsJson'];
+// draft (published or not) is the manager's choice once an exercise is live, so an update never changes it.
 const norm = (s) => String(s || '').trim().toLowerCase();
 const plain = (b) => String(b?.text || b?.title || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -80,7 +81,10 @@ async function findCourse(pkg) {
         previousContentJson: admin.firestore.FieldValue.delete(), lastUpdatedAt: now() });
       console.log(`  restored "${d.data().title}"`);
     }
-    const exs = (await db.collection('exerciseDefinitions').where('exerciseUpdateTag', '==', UPDATE_TAG).get()).docs;
+    // Only this course's exercises: both courses share the update tag.
+    const ownIds = new Set((pkg.exercises || []).map((e) => e.id));
+    const exs = (await db.collection('exerciseDefinitions').where('exerciseUpdateTag', '==', UPDATE_TAG).get()).docs
+      .filter((d) => ownIds.has(d.id));
     for (const d of exs) {
       const prev = d.data().previousExerciseJson;
       const back = prev === 'new' ? { isDeleted: true } : JSON.parse(prev || '{}');
@@ -148,7 +152,8 @@ async function findCourse(pkg) {
   if (!COMMIT) return console.log('\nDry run: nothing written.');
   for (const x of exPlan) {
     const prev = x.isNew ? null : Object.fromEntries(EX_CONTENT.map((k) => [k, x.cur[k] ?? null]));
-    await x.ref.set({ ...x.r, ...(x.isNew ? { importBatch: C.batch, createdAt: now() } : {}),
+    const { draft, ...rest } = x.r;
+    await x.ref.set({ ...(x.isNew ? x.r : rest), ...(x.isNew ? { importBatch: C.batch, createdAt: now() } : {}),
       exerciseUpdateTag: UPDATE_TAG, previousExerciseJson: prev ? JSON.stringify(prev) : 'new',
       lastUpdatedAt: now(), lastUpdatedAtLocal: new Date().toISOString() }, { merge: true });
   }
