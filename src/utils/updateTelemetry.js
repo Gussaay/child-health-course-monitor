@@ -19,6 +19,9 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
+import {
+  shouldReportUpdate, markUpdateReported, loadUpdateReportMap, saveUpdateReportMap,
+} from './updateReportThrottle';
 
 const IS_NATIVE = Capacitor.isNativePlatform();
 
@@ -92,6 +95,13 @@ export async function reportUpdateError(what, detail = {}) {
   const key = `${detail.stage || ''}|${what}`;
   if (reported.has(key)) return;
   reported.add(key);
+  // Across launches too: a phone that cannot download an update relaunches
+  // many times a day, and each launch used to file the same failure again.
+  // The same error is now reported at most once a day per phone
+  // (utils/updateReportThrottle.js); a different error is never delayed.
+  const storage = typeof localStorage !== 'undefined' ? localStorage : null;
+  const reportMap = loadUpdateReportMap(storage);
+  if (!shouldReportUpdate(reportMap, key, Date.now())) return;
   try {
     const user = await signedInUser();
     const info = await getApkInfo();
@@ -115,6 +125,7 @@ export async function reportUpdateError(what, detail = {}) {
       online: typeof navigator !== 'undefined' ? navigator.onLine : null,
       reporterEmail: user?.email || null,
     });
+    saveUpdateReportMap(storage, markUpdateReported(reportMap, key, Date.now()));
   } catch (e) {
     reported.delete(key); // try again next time it happens
     console.warn('[Update telemetry] Could not report:', e?.code || e?.message);
