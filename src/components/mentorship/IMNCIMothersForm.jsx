@@ -517,7 +517,9 @@ const MothersForm = ({
                     <Button type="submit" disabled={isSaving}> {isSaving ? 'جاري الحفظ...' : 'حفظ وإكمال الاستبيان'} </Button>
                  </div>
 
-                 <div className="flex sm:hidden fixed bottom-[var(--bottom-nav,4rem)] left-0 right-0 z-20 p-2 bg-gray-50 border-t border-gray-200 shadow-lg justify-around items-center" dir="rtl">
+                 {/* Mobile bar: --bottom-nav + 4rem, stacked above the view's
+                     MobileFormNavBar (h-16, z-40) — see SkillsAssessmentForm. */}
+                 <div className="flex sm:hidden fixed bottom-[calc(var(--bottom-nav,0px)+4rem)] left-0 right-0 z-20 p-2 bg-gray-50 border-t border-gray-200 shadow-lg justify-around items-center" dir="rtl">
                     <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving} size="sm">
                         إلغاء
                     </Button>

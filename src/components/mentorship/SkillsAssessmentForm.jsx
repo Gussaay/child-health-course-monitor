@@ -926,7 +926,12 @@ const SkillsAssessmentForm = forwardRef((props, ref) => {
                  </div>
 
                 {/* --- Mobile Bar --- */}
-                <div className="flex sm:hidden fixed bottom-[var(--bottom-nav,4rem)] left-0 right-0 z-20 h-16 justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
+                {/* Offset = --bottom-nav + 4rem: the view's MobileFormNavBar
+                    (h-16, z-40) sits on --bottom-nav, and this bar must stack
+                    above it. The old var(--bottom-nav,4rem) never used its
+                    fallback — index.css always defines --bottom-nav — so the
+                    bar landed exactly under the nav bar and Save was hidden. */}
+                <div className="flex sm:hidden fixed bottom-[calc(var(--bottom-nav,0px)+4rem)] left-0 right-0 z-20 h-16 justify-around items-center bg-gray-900 text-white border-t border-gray-700 shadow-lg" dir="rtl">
                     <Button type="button" variant="secondary" onClick={onExit} disabled={isSaving || isSavingDraft} size="sm">
                         إلغاء
                     </Button>
