@@ -24,6 +24,7 @@ import {
     submitProblemReport, listProblemReports, setProblemReportStatus, deleteProblemReport,
 } from '../data';
 import { subscribeNewProblemReports } from '../hooks/liveCourseCore.js';
+import { groupProblemReports } from '../utils/problemGroups';
 import { useTranslation } from 'react-i18next';
 import { askDataAssistant } from '../utils/askDataAssistant';
 
@@ -287,6 +288,10 @@ export function ProblemReportsTab() {
 
     if (reports === null) return <SkeletonTable />;
 
+    // The same problem, counted once: the list below is one row per
+    // occurrence, which made ~4 problems look like 214 bugs.
+    const topGroups = groupProblemReports(reports || []).filter((g) => g.count > 1).slice(0, 8);
+
     const counts = {
         open: (reports || []).filter((r) => r.status !== 'resolved').length,
         crashes: (reports || []).filter((r) => r.kind === 'crash').length,
@@ -318,6 +323,27 @@ export function ProblemReportsTab() {
                     {t('admin_pages.problem_reports.analyse_ai', 'Analyse with AI')}
                 </button>
             </div>
+
+            {topGroups.length > 0 && (
+                <Card><CardBody className="py-3">
+                    <div className="text-sm font-semibold text-slate-700 mb-2">
+                        {t('admin_pages.problem_reports.most_frequent', 'Most frequent problems')}
+                    </div>
+                    <div className="space-y-1.5">
+                        {topGroups.map((g) => (
+                            <div key={g.key} className="flex items-baseline gap-2 text-sm">
+                                <span className="shrink-0 font-bold text-slate-800">×{g.count}</span>
+                                <span className="min-w-0 flex-1 truncate text-slate-600" title={g.title}>{g.title}</span>
+                                {g.lastAt > 0 && (
+                                    <span className="shrink-0 text-xs text-slate-400">
+                                        {new Date(g.firstAt).toLocaleDateString()} – {new Date(g.lastAt).toLocaleDateString()}
+                                    </span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </CardBody></Card>
+            )}
 
             {shown.length === 0 ? (
                 <Card><CardBody className="text-center py-12 text-slate-500">
