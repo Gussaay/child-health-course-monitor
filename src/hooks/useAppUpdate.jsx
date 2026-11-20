@@ -43,6 +43,7 @@ import {
   reportRequestFailure,
 } from '../firebase';
 import { downloadAndOpenFile } from '../utils/fileDownloader';
+import { checkBundleReachable } from '../utils/otaPreflight';
 import { buildNumberOf, versionLabel } from '../utils/appVersionLabel';
 import { onAuthStateChanged } from 'firebase/auth';
 import {
@@ -240,6 +241,18 @@ async function runOtaCheck(reason, { force = false } = {}) {
       // The network may have changed since the check above.
       const blockedNow = whyNotNow();
       if (blockedNow) return { status: 'blocked', message: blockedNow };
+
+      // Before downloading: is the file really there, and really a zip?
+      // A missing zip is answered by the hosting rewrite with index.html
+      // and a 200, and the phone only found out when the updater tried to
+      // open the "bundle" — the ID1ID2 corrupt-download reports in
+      // Admin → Problems (utils/otaPreflight.js).
+      const preflight = await checkBundleReachable(latest.url);
+      if (!preflight.ok) {
+        const err = new Error(`The update file is not ready on the server (${preflight.reason}). It will be tried again later.`);
+        err.code = 'preflight';
+        throw err;
+      }
 
       console.log(`[OTA] Downloading ${latest.version} in the background (${reason})...`);
       setOta({ downloading: true, progress: 0 });
