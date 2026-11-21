@@ -1740,6 +1740,7 @@ export function CourseManagementView({
         stateCoordinators, fetchStateCoordinators,
         localityCoordinators, fetchLocalityCoordinators,
         funders, fetchFunders,
+        fetchFacilitators,
         fetchCourses,
         participants: globalParticipants, 
         fetchParticipants,
@@ -1766,7 +1767,12 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         fetchStateCoordinators();
         fetchLocalityCoordinators();
         fetchFunders();
-    }, [fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators, fetchFunders]); 
+        // The course form (add / edit) picks its director, clinical instructor
+        // and facilitators from this list. It used to load only on the Human
+        // Resources screens, so opening Courses straight away gave an empty
+        // search ("No results found") for every package.
+        if (fetchFacilitators) fetchFacilitators();
+    }, [fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators, fetchFunders, fetchFacilitators]); 
 
     // Courses first, participants after. Both used to start together, and the
     // participant list (many times larger) took the connection the course list
@@ -3170,7 +3176,9 @@ export function CourseForm({
             const groupAssignments = facilitatorGroups[group].map(assignment => ({
                 ...assignment,
                 group: group
-            })).filter(assignment => assignment.name && (assignment.imci_sub_type || isIccm || isCpcm));
+            // Keep every named facilitator: those without a sub-course used to
+            // be dropped silently on save.
+            })).filter(assignment => assignment.name);
             
             if (isIccm) {
                 groupAssignments.forEach(a => a.imci_sub_type = ICCM_SUBCOURSE_TYPES[0]);
@@ -3190,7 +3198,8 @@ export function CourseForm({
             facilitators: L('تعيين ميسر واحد على الأقل', 'At least one facilitator'),
         };
         const missingFields = Object.keys(missing).filter(k => missing[k]);
-        if (missingFields.length > 0) {
+        // A super user may save with required fields still empty.
+        if (missingFields.length > 0 && !canUseSuperUserAdvancedFeatures) {
             setShowErrors(true);
             const firstMissing = Object.keys(SECTION_FIELDS).find(sec => STEP_IDS.includes(sec) && missingIn(sec) > 0);
             if (firstMissing) setStepId(firstMissing);
@@ -3570,6 +3579,11 @@ export function CourseForm({
                 {stepId === 'review' && (
                     <section className="mb-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                         <h3 className="mb-3 text-base font-bold text-slate-900">{L('راجع الدورة قبل الحفظ', 'Check the course before saving')}</h3>
+                        {canUseSuperUserAdvancedFeatures && Object.values(missing).some(Boolean) && (
+                            <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                                {L('بعض الحقول الإلزامية فارغة. يمكنك الحفظ لأنك مستخدم خارق.', 'Some required fields are empty. You can still save because you are a super user.')}
+                            </p>
+                        )}
                     <div dir={isAr ? 'rtl' : 'ltr'} className="space-y-2">
                         {[
                             ['basics', L('الأساسيات', 'Basics'), [
