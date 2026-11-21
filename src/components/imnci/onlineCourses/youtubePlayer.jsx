@@ -52,7 +52,9 @@ const savePref = (k, v) => { try { window.localStorage.setItem(`oc-video-${k}`, 
 
 const fullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
 
-function StreamPlayer({ id, title, startAt, onEnded, clipStart = null, clipEnd = null }) {
+function StreamPlayer({ id, title, startAt, onEnded, onTime = null, clipStart = null, clipEnd = null }) {
+    const onTimeRef = useRef(onTime);
+    onTimeRef.current = onTime;
     const { t } = useTranslation();
     const root = useRef(null);
     const frame = useRef(null);
@@ -111,7 +113,7 @@ function StreamPlayer({ id, title, startAt, onEnded, clipStart = null, clipEnd =
             if (data?.event === 'onReady' || data?.event === 'initialDelivery') listen();
             const ps = info && typeof info === 'object' ? info.playerState : (data?.event === 'onStateChange' ? info : undefined);
             if (info && typeof info === 'object') {
-                if (typeof info.currentTime === 'number') { timeRef.current = info.currentTime; setTime(info.currentTime); }
+                if (typeof info.currentTime === 'number') { timeRef.current = info.currentTime; setTime(info.currentTime); onTimeRef.current?.(info.currentTime); }
                 if (typeof info.duration === 'number' && info.duration > 0) setDuration(info.duration);
                 if (typeof info.muted === 'boolean' && phaseRef.current !== 'loading') setMuted(info.muted);
                 if (to != null && typeof info.currentTime === 'number' && info.currentTime >= to - 0.15
@@ -367,7 +369,7 @@ function StreamPlayer({ id, title, startAt, onEnded, clipStart = null, clipEnd =
 
 // A video saved on the device plays from there, with the phone's own player.
 // A clip starts at `clipStart` and stops at `clipEnd`.
-function SavedPlayer({ url, id, title, startAt, onEnded, clipStart = null, clipEnd = null }) {
+function SavedPlayer({ url, id, title, startAt, onEnded, onTime = null, clipStart = null, clipEnd = null }) {
     const ref = useRef(null);
     const from = clipStart != null ? Math.max(0, Number(clipStart) || 0) : 0;
     const to = clipEnd != null && Number(clipEnd) > from ? Number(clipEnd) : null;
@@ -389,8 +391,9 @@ function SavedPlayer({ url, id, title, startAt, onEnded, clipStart = null, clipE
                 reported.current = false;
                 if (v.currentTime < from - 0.5 || (to != null && v.currentTime >= to - 0.3)) v.currentTime = from;
             }}
-            onTimeUpdate={to != null ? (e) => {
-                if (e.currentTarget.currentTime >= to) { e.currentTarget.pause(); end(); }
+            onTimeUpdate={(to != null || onTime) ? (e) => {
+                onTime?.(e.currentTarget.currentTime);
+                if (to != null && e.currentTarget.currentTime >= to) { e.currentTarget.pause(); end(); }
             } : undefined}
             onEnded={end} />
     );

@@ -8043,7 +8043,15 @@
       },
       "video": {
         "no_address": "A video with no address.",
-        "video": "Video"
+        "video": "Video",
+        "chapter_not_found": "Could not find this video in the lesson. Reload and try again.",
+        "chapter_saved": "Saved.",
+        "chapter_failed": "Could not save.",
+        "chapter_label": "What starts at {{time}}? (shown on the button learners press to jump there)",
+        "chapter_default": "The skill",
+        "chapter_title": "Mark the skill start",
+        "chapter_remove": "Remove",
+        "chapter_mark": "Mark the skill start here"
       },
       "look": {
         "module_n": "Module {{n}}",

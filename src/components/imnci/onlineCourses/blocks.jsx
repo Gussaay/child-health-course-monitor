@@ -182,6 +182,9 @@ const clock = (sec) => `${Math.floor((Number(sec) || 0) / 60)}:${String(Math.flo
 // controls, title, logo and links never show.
 export { YouTubePlayer, youtubeId, youtubeEmbed } from './youtubePlayer';
 import { YouTubePlayer, youtubeId, OfflineVideoButton } from './youtubePlayer';
+import { sectionWithChapters } from './videoChapters';
+import { upsertOnlineCourseItem } from '../../../data';
+import { notify, promptDialog } from '../../dialogs';
 
 export function VideoBlock({ block, activityKey }) {
     const { t } = useTranslation();
@@ -193,7 +196,31 @@ export function VideoBlock({ block, activityKey }) {
     const [passed, setPassed] = useState(() => new Set());
     const [picked, setPicked] = useState(null);
     const videoRef = React.useRef(null);
+    const nowRef = React.useRef(null);
+    const [now, setNow] = useState(null);
     const chapters = (block.chapters || []).filter((c) => c && c.label);
+    // Manage mode: a manager watching the video marks where the skill starts.
+    const canMark = !!screen?.isAdmin && !!screen?.openSection;
+    const reportTime = canMark ? (sec) => { nowRef.current = sec; if (Math.floor(sec) !== Math.floor(now ?? -1)) setNow(sec); } : null;
+    const saveChapters = async (next) => {
+        const patch = sectionWithChapters(screen.openSection, block, next);
+        if (!patch) { notify(t('imnci_ui.courses.video.chapter_not_found', 'Could not find this video in the lesson. Reload and try again.'), 'error'); return; }
+        try {
+            await upsertOnlineCourseItem(patch);
+            notify(t('imnci_ui.courses.video.chapter_saved', 'Saved.'), 'success');
+            screen.reload?.();
+        } catch (e) {
+            console.error(e);
+            notify(t('imnci_ui.courses.video.chapter_failed', 'Could not save.'), 'error');
+        }
+    };
+    const markHere = async () => {
+        const at = Math.floor(nowRef.current ?? 0);
+        const label = await promptDialog(t('imnci_ui.courses.video.chapter_label', 'What starts at {{time}}? (shown on the button learners press to jump there)', { time: clock(at) }),
+            { defaultValue: t('imnci_ui.courses.video.chapter_default', 'The skill'), title: t('imnci_ui.courses.video.chapter_title', 'Mark the skill start') });
+        if (label && label.trim()) await saveChapters([...chapters, { at, label: label.trim() }]);
+    };
+    const removeChapter = async (c) => saveChapters(chapters.filter((x) => x !== c));
     const stops = (block.stops || []).filter((q) => q && q.text);
     const title = block.title || block.caption;
 
@@ -251,7 +278,7 @@ export function VideoBlock({ block, activityKey }) {
             <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 bg-black shadow-sm"
                 style={{ aspectRatio: '16 / 9' }}>
                 {ytId ? (
-                    <YouTubePlayer id={ytId} title={title} startAt={startAt} onEnded={markDone} clipStart={block.start ?? null} clipEnd={block.end ?? null} />
+                    <YouTubePlayer id={ytId} title={title} startAt={startAt} onEnded={markDone} onTime={reportTime} clipStart={block.start ?? null} clipEnd={block.end ?? null} />
                 ) : src.kind === 'embed' ? (
                     <iframe key={embedSrc} src={embedSrc} title={title || t('imnci_ui.courses.video.video', 'Video')} allowFullScreen
                         className="absolute inset-0 w-full h-full"
@@ -294,14 +321,26 @@ export function VideoBlock({ block, activityKey }) {
                 )}
             </div>
             {ytId && <OfflineVideoButton id={ytId} />}
-            {chapters.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
+            {(chapters.length > 0 || (canMark && ytId)) && (
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
                     {chapters.map((c, i) => (
-                        <button key={i} onClick={() => seek(c.at)}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-200 bg-white text-xs text-slate-700 hover:border-sky-400 hover:text-sky-700">
-                            <span className="font-mono text-slate-400">{clock(c.at)}</span> {c.label}
-                        </button>
+                        <span key={i} className="inline-flex items-center">
+                            <button onClick={() => seek(c.at)} data-testid="video-chapter"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-200 bg-white text-xs text-slate-700 hover:border-sky-400 hover:text-sky-700">
+                                <span className="font-mono text-slate-400">{clock(c.at)}</span> {c.label}
+                            </button>
+                            {canMark && (
+                                <button onClick={() => removeChapter(c)} aria-label={t('imnci_ui.courses.video.chapter_remove', 'Remove')}
+                                    className="ms-0.5 w-6 h-6 rounded-full text-slate-400 hover:text-rose-600 hover:bg-rose-50 text-sm">×</button>
+                            )}
+                        </span>
                     ))}
+                    {canMark && ytId && (
+                        <button onClick={markHere} disabled={now == null} data-testid="video-mark-chapter"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-dashed border-amber-400 bg-amber-50 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-50">
+                            + {t('imnci_ui.courses.video.chapter_mark', 'Mark the skill start here')}{now != null ? ` (${clock(Math.floor(now))})` : ''}
+                        </button>
+                    )}
                 </div>
             )}
             {block.caption && block.caption !== title && <figcaption className="text-xs text-slate-500 text-center mt-1">{block.caption}</figcaption>}
