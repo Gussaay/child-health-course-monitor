@@ -122,6 +122,7 @@ export function CoursePage() {
                         ? t('imnci_ui.courses.time.left', 'about {{time}} left', { time: duration(timeLeft) })
                         : t('imnci_ui.courses.time.about', 'about {{time}}', { time: duration(timeLeft) })}</span></>)}
                     {!inOrder && (<><span>·</span><span>{t('imnci_ui.courses.main.any_order', 'Open in any order')}</span></>)}
+                    {inOrder && openCourse.modulesAnyOrder === true && (<><span>·</span><span>{t('imnci_ui.courses.main.modules_any_order', 'Each module on its own')}</span></>)}
                 </div>
                 {myGroup && (
                     <div className="mt-2 text-xs sm:text-sm text-slate-600" data-testid="my-group">

@@ -5,12 +5,13 @@
 import { IS_EMONC_SITE } from '../siteMode';
 import { publicBaseUrl, CH_LIVE_SITE } from './publicLink';
 
-/** The address to share for a course. */
-export function courseShareUrl(courseId) {
+/** The address to share for a course, or for one module or lesson of it. */
+export function courseShareUrl(courseId, moduleId = null, sectionId = null) {
     // The EmONC site does not show Online Courses, so its links use ch-sudan,
     // the online-course site.
     const base = IS_EMONC_SITE ? CH_LIVE_SITE : publicBaseUrl();
-    return `${base}/learn/${encodeURIComponent(courseId)}`;
+    const parts = [courseId, moduleId, moduleId && sectionId].filter(Boolean).map(encodeURIComponent);
+    return `${base}/learn/${parts.join('/')}`;
 }
 
 /**
@@ -18,9 +19,9 @@ export function courseShareUrl(courseId) {
  * or copies it where nothing can share. Returns 'shared', 'copied',
  * 'cancelled' or 'failed'.
  */
-export async function shareCourseLink(course, { text = '' } = {}) {
-    const url = courseShareUrl(course.id);
-    const title = course.title || '';
+export async function shareCourseLink(course, { text = '', moduleId = null, sectionId = null, title: name = '' } = {}) {
+    const url = courseShareUrl(course.id, moduleId, sectionId);
+    const title = name || course.title || '';
     const message = text || title;
     const isCancel = (e) => e?.name === 'AbortError' || /cancel/i.test(e?.message || '');
     try {

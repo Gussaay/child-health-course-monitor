@@ -4,7 +4,7 @@
 // it takes. A locked lesson keeps its normal row, with a red "Locked" badge.
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, ArrowLeft, CheckCircle2, Wand2, ChevronRight, Clock, RefreshCw, FileDown, Award } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, CheckCircle2, Wand2, ChevronRight, Clock, RefreshCw, FileDown, Award, Share2 } from 'lucide-react';
 import { Button } from '../../CommonComponents';
 import { learnerContent } from '../book';
 import { activityKeys } from './activityKeys';
@@ -17,6 +17,7 @@ import { useImnci } from '../shared';
 import { notify } from '../../dialogs';
 import { shareFile } from '../../../utils/sharePdf';
 import { buildPackage, packageFileName } from './coursePackage';
+import { shareCourseLink } from '../../../utils/courseShare';
 
 export function ModulePage() {
     const { t } = useTranslation();
@@ -43,6 +44,15 @@ export function ModulePage() {
             notify(t('imnci_ui.courses.export.failed', 'Could not make the file. {{msg}}', { msg: e?.message || '' }), 'error');
         }
     };
+    // A link that opens this module alone, to share on WhatsApp, SMS or e-mail.
+    const shareModule = async () => {
+        const res = await shareCourseLink(openCourse, {
+            moduleId: openModule.id, title: openModule.title,
+            text: t('imnci_ui.courses.share.module_message', 'Online course module: {{title}} ({{course}})', { title: openModule.title, course: openCourse.title }),
+        });
+        if (res === 'copied') notify(t('imnci_ui.courses.share.module_copied', 'Module link copied. Paste it in WhatsApp, SMS or e-mail.'), 'success');
+        else if (res === 'failed') notify(t('imnci_ui.courses.share.failed', 'Could not share the link.'), 'error');
+    };
     const doneHere = secs.filter((s) => progress.completed?.[s.id]).length;
     const moduleNo = modules.findIndex((m) => m.id === openModule.id) + 1;
     // A module opened by its link before the one before it is finished.
@@ -57,8 +67,15 @@ export function ModulePage() {
                     className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-sky-700">
                     <ArrowLeft size={15} className="rtl:rotate-180" /> {openCourse.title}
                 </button>
+                <div className="flex flex-wrap gap-2">
+                    {/* A draft course is not shown to learners, so its link would open nothing. */}
+                    {openCourse.isPublished && (
+                        <Button variant="secondary" onClick={shareModule} data-testid="share-module">
+                            <Share2 size={16} /> {t('imnci_ui.courses.share.button', 'Share link')}
+                        </Button>
+                    )}
                 {isAdmin && (
-                    <div className="flex flex-wrap gap-2">
+                    <>
                         <Button variant="secondary" onClick={downloadFile}
                             title={t('imnci_ui.courses.export.title', 'Save this module, its sections and its exercises as a course file that can be imported again')}>
                             <FileDown size={16} /> {t('imnci_ui.courses.export.download', 'Download file')}
@@ -72,8 +89,9 @@ export function ModulePage() {
                         <Button onClick={() => setItemModal({ kind: 'section' })}>
                             <Plus size={16} /> {t('imnci_ui.courses.item_modal.add_section', 'Add section')}
                         </Button>
-                    </div>
+                    </>
                 )}
+                </div>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">

@@ -57,4 +57,13 @@ describe('learner progress summary', () => {
         expect(all.weeks.reduce((n, w) => n + w, 0)).toBe(4);
         expect(all.lastActive).toBe(NOW);
     });
+
+    it('opens every module of a modular course, keeping lessons in order, and every lesson of a reference module', () => {
+        const modular = learnerSummary({ courses: [{ ...courses[0], modulesAnyOrder: true }], items, progress: {}, now: NOW });
+        expect(modular.courses[0].modules.map((m) => m.lessons.map((l) => l.status))).toEqual([['open', 'locked', 'locked'], ['open']]);
+        const ref = items.map((i) => (i.id === 'm1' ? { ...i, anyOrder: true } : i));
+        const reference = learnerSummary({ courses, items: ref, progress: {}, now: NOW });
+        expect(reference.courses[0].modules[0].lessons.map((l) => l.status)).toEqual(['open', 'open', 'open']);
+        expect(reference.courses[0].modules[1].status).toBe('locked');
+    });
 });

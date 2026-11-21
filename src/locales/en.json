@@ -7852,7 +7852,9 @@
         "lock_order": "Learners open sections in order",
         "lock_order_help": "Each section opens once the one before it is marked complete. Turn off to let learners open any section.",
         "save_failed": "Could not save the course.",
-        "saved": "Course saved."
+        "saved": "Course saved.",
+        "modules_any_order": "Each module can be taken on its own",
+        "modules_any_order_help": "Every module opens without finishing the one before it. The lessons inside a module are still read in order."
       },
       "editor": {
         "add_answer": "+ add answer",
@@ -7942,7 +7944,9 @@
         "module": "Module",
         "none": "— none —",
         "order": "Order",
-        "published": "Published"
+        "published": "Published",
+        "any_order": "Reference module: its lessons open in any order",
+        "any_order_help": "For procedures or equipment that other lessons link to."
       },
       "main": {
         "tab_courses": "Courses",
@@ -8019,7 +8023,8 @@
         "use_edit_tab": "Use Edit {{tab}}, above, to write it.",
         "use_import": "Use Import to bring in the IMNCI course from the Android app.",
         "smaller_text": "Smaller text",
-        "larger_text": "Larger text"
+        "larger_text": "Larger text",
+        "modules_any_order": "Each module on its own"
       },
       "question": {
         "correct": "Correct.",
@@ -8101,7 +8106,21 @@
         "button": "Share link",
         "message": "Online course: {{title}}",
         "copied": "Course link copied. Paste it in WhatsApp, SMS or e-mail.",
-        "failed": "Could not share the link."
+        "failed": "Could not share the link.",
+        "module_message": "Online course module: {{title}} ({{course}})",
+        "module_copied": "Module link copied. Paste it in WhatsApp, SMS or e-mail.",
+        "lesson_message": "Online course lesson: {{title}} ({{course}})",
+        "lesson_copied": "Lesson link copied. Paste it in WhatsApp, SMS or e-mail.",
+        "lesson": "Share a link to this lesson"
+      },
+      "copy": {
+        "choose": "Choose the course and the module.",
+        "done": "Lesson copied.",
+        "failed": "Could not copy the lesson.",
+        "title": "Copy this lesson to another module",
+        "help": "The copy is added at the end of the module you choose. The original lesson stays where it is.",
+        "course": "Course",
+        "button": "Copy"
       }
     },
     "exercises": {

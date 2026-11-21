@@ -44,7 +44,10 @@ export function learnerSummary({ courses = [], items = [], progress = {}, now = 
         let prevModuleDone = true;
         let next = null;
         const modules = mods.map((m, mi) => {
-            const moduleLocked = inOrder && mi > 0 && !prevModuleDone;
+            // modulesAnyOrder: each module is taken on its own; anyOrder: a
+            // reference module whose lessons all open (see courses.jsx).
+            const moduleLocked = inOrder && c.modulesAnyOrder !== true && mi > 0 && !prevModuleDone;
+            const lessonsInOrder = inOrder && m.anyOrder !== true;
             let prevDone = true;
             const lessons = secsOf(m.id).map((s, si) => {
                 const doneAt = completed[s.id];
@@ -53,7 +56,7 @@ export function learnerSummary({ courses = [], items = [], progress = {}, now = 
                 const keys = activityKeys(learnerContent(s));
                 const saved = savedActs[s.id] || [];
                 const activitiesDone = done ? keys.length : keys.filter((k) => saved.includes(k)).length;
-                const locked = !done && (moduleLocked || (inOrder && si > 0 && !prevDone));
+                const locked = !done && (moduleLocked || (lessonsInOrder && si > 0 && !prevDone));
                 const status = done ? 'done' : locked ? 'locked' : activitiesDone > 0 ? 'started' : 'open';
                 prevDone = done;
                 const lesson = {

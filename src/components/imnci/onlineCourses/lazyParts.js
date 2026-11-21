@@ -20,3 +20,4 @@ export const ExerciseManagerView = lazy(() => import('../exercises.jsx').then((m
 export const ProtocolEditor = lazy(() => import('../protocol'));
 export const ProgressDashboard = lazy(() => import('./ProgressDashboard').then((m) => ({ default: m.ProgressDashboard })));
 export const MyProgress = lazy(() => import('./MyProgress').then((m) => ({ default: m.MyProgress })));
+export const CopyLessonModal = lazy(() => import('./CopyLessonModal'));

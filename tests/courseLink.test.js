@@ -20,6 +20,16 @@ describe('shared course link', () => {
         expect(m.focusedCourseId()).toBeNull();
     });
 
+    it('opens one module or one lesson from a module or lesson link', async () => {
+        const m = await load('/learn/c1/m2');
+        const q = new URLSearchParams(window.location.search);
+        expect([q.get('oc'), q.get('mod'), q.get('sec')]).toEqual(['c1', 'm2', null]);
+        expect(m.focusedCourseId()).toBe('c1');
+        await load('/learn/c1/m2/s3/');
+        const r = new URLSearchParams(window.location.search);
+        expect([r.get('oc'), r.get('mod'), r.get('sec')]).toEqual(['c1', 'm2', 's3']);
+    });
+
     it('leaves any other address alone', async () => {
         const m = await load('/online-courses?oc=x');
         expect(window.location.pathname).toBe('/online-courses');
@@ -30,5 +40,8 @@ describe('shared course link', () => {
         await load('/');
         const { courseShareUrl } = await import('../src/utils/courseShare.js');
         expect(courseShareUrl('abc')).toBe('https://imnci-courses-monitor.web.app/learn/abc');
+        expect(courseShareUrl('abc', 'm1')).toBe('https://imnci-courses-monitor.web.app/learn/abc/m1');
+        expect(courseShareUrl('abc', 'm1', 's1')).toBe('https://imnci-courses-monitor.web.app/learn/abc/m1/s1');
+        expect(courseShareUrl('abc', null, 's1')).toBe('https://imnci-courses-monitor.web.app/learn/abc');
     });
 });

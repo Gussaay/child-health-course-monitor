@@ -73,6 +73,20 @@ export function CourseModal({ isOpen, onClose, course, onSaved }) {
                         </span>
                     </span>
                 </label>
+                {/* A modular course (Small & Sick Newborn): each module is a
+                    unit of its own that can be shared and finished alone. */}
+                {form.lockOrder !== false && (
+                    <label className="flex items-start gap-2 text-sm ms-6">
+                        <input type="checkbox" className="mt-1" checked={form.modulesAnyOrder === true} data-testid="modules-any-order"
+                            onChange={(e) => setForm({ ...form, modulesAnyOrder: e.target.checked })} />
+                        <span>
+                            {t('imnci_ui.courses.course_modal.modules_any_order', 'Each module can be taken on its own')}
+                            <span className="block text-xs text-slate-500">
+                                {t('imnci_ui.courses.course_modal.modules_any_order_help', 'Every module opens without finishing the one before it. The lessons inside a module are still read in order.')}
+                            </span>
+                        </span>
+                    </label>
+                )}
                 <div className="flex justify-end gap-2 pt-2 border-t">
                     <Button variant="secondary" onClick={onClose} disabled={saving}>{t('imnci_ui.courses.common.cancel', 'Cancel')}</Button>
                     <Button onClick={save} disabled={saving}>{saving ? t('imnci_ui.courses.common.saving', 'Saving…') : t('imnci_ui.courses.common.save', 'Save')}</Button>
@@ -122,6 +136,21 @@ export function ItemModal({ isOpen, onClose, item, courseId, kind, modules, onSa
                             {modules.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
                         </Select>
                     </>
+                )}
+
+                {!isSection && (
+                    // A reference module (procedures, equipment): other
+                    // modules link to the lesson they need, so all open.
+                    <label className="flex items-start gap-2 text-sm">
+                        <input type="checkbox" className="mt-1" checked={form.anyOrder === true} data-testid="module-any-order"
+                            onChange={(e) => set('anyOrder', e.target.checked)} />
+                        <span>
+                            {t('imnci_ui.courses.item_modal.any_order', 'Reference module: its lessons open in any order')}
+                            <span className="block text-xs text-slate-500">
+                                {t('imnci_ui.courses.item_modal.any_order_help', 'For procedures or equipment that other lessons link to.')}
+                            </span>
+                        </span>
+                    </label>
                 )}
 
                 <label className="flex items-center gap-2 text-sm">

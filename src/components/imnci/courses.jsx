@@ -307,17 +307,25 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
         if (mayFollowGuide) setGuidePass(target ? { moduleId: target.moduleId || null, sectionId: target.sectionId || null } : null);
     }, [mayFollowGuide]);
 
+    // A course can also let each module be taken on its own
+    // (modulesAnyOrder): every module opens, and the lessons inside it are
+    // still read in order. A reference module (a module's anyOrder: the
+    // procedures, the equipment) opens all its lessons, so other modules can
+    // link to the one they need.
+    const modulesAnyOrder = openCourse?.modulesAnyOrder === true;
     const moduleLocked = useCallback((index) => {
-        if (isAdmin || !inOrder || index <= 0) return false;
+        if (isAdmin || !inOrder || modulesAnyOrder || index <= 0) return false;
         if (guidePass?.moduleId && guidePass.moduleId === modules[index]?.id) return false;
         return !moduleComplete(modules[index - 1]);
-    }, [isAdmin, inOrder, modules, moduleComplete, guidePass]);
+    }, [isAdmin, inOrder, modulesAnyOrder, modules, moduleComplete, guidePass]);
 
     const sectionLocked = useCallback((secs, index) => {
         if (isAdmin || !inOrder || index <= 0) return false;
+        const mod = modules.find((m) => m.id === secs[index]?.moduleId);
+        if (mod?.anyOrder === true) return false;
         if (guidePass?.sectionId && guidePass.sectionId === secs[index]?.id) return false;
         return !sectionDone(secs[index - 1]);
-    }, [isAdmin, inOrder, sectionDone, guidePass]);
+    }, [isAdmin, inOrder, modules, sectionDone, guidePass]);
 
     // Where "Continue" goes: the first section the learner has not finished, in
     // the first module they have not finished.

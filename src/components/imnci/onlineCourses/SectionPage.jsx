@@ -3,10 +3,10 @@
 // One section, on one page: its text, charts, videos and activities in the
 // order they were written, and Previous / Next within the module. There are no tabs to step through: a learner reads, watches and
 // practises in one pass and then moves on to the next section.
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Pencil, ArrowLeft, ArrowRight, Columns2, CheckCircle2, ZoomIn, ZoomOut, Trophy,
+    Pencil, Copy, Share2, ArrowLeft, ArrowRight, Columns2, CheckCircle2, ZoomIn, ZoomOut, Trophy,
     ListChecks, ChevronDown, Circle,
 } from 'lucide-react';
 import { learnerContent } from '../book';
@@ -16,6 +16,9 @@ import { SectionTabEditor } from './SectionTabEditor';
 import { useCourseScreen } from './screen';
 import { LockedBanner } from './ui';
 import { useFocusPage } from '../../../utils/pageChrome';
+import { shareCourseLink } from '../../../utils/courseShare';
+import { notify } from '../../dialogs';
+import { CopyLessonModal } from './lazyParts';
 
 
 // Which activities of a section this learner has done, kept on the device: it
@@ -128,12 +131,23 @@ function LessonChecklist({ outline, doneKeys }) {
 export function SectionPage() {
     const { t } = useTranslation();
     const {
-        back, compare, duration, editingTab, fontScale, go, inOrder, isAdmin,
+        allCourses, allItems, back, compare, duration, editingTab, fontScale, go, inOrder, isAdmin, openCourse,
         minutesById, moduleLocked, modules, nextUp, openSection, progress, reload, sectionLocked, sectionsByModule,
         saveActivities, setCompare, setEditingTab, setScale, toggleComplete, user,
     } = useCourseScreen();
 
     const isDone = !!progress.completed?.[openSection.id];
+    const [copyOpen, setCopyOpen] = useState(false);
+    // A link that opens this lesson in its course (still locked until the
+    // lessons before it in its module are done, unless it is a reference module).
+    const shareLesson = async () => {
+        const res = await shareCourseLink(openCourse, {
+            moduleId: openSection.moduleId, sectionId: openSection.id, title: openSection.title,
+            text: t('imnci_ui.courses.share.lesson_message', 'Online course lesson: {{title}} ({{course}})', { title: openSection.title, course: openCourse?.title || '' }),
+        });
+        if (res === 'copied') notify(t('imnci_ui.courses.share.lesson_copied', 'Lesson link copied. Paste it in WhatsApp, SMS or e-mail.'), 'success');
+        else if (res === 'failed') notify(t('imnci_ui.courses.share.failed', 'Could not share the link.'), 'error');
+    };
     const [resumeShown, setResumeShown] = useState(null);
     const content = learnerContent(openSection);
     const [doneKeys, activityValue] = useSectionActivities(user?.uid, openSection.id, progress.activities?.[openSection.id], saveActivities);
@@ -238,6 +252,18 @@ export function SectionPage() {
                             {isAdmin && (
                                 <button className={iconBtn} onClick={() => setEditingTab('all')} title={t('imnci_ui.courses.main.edit_section', 'Edit section')}>
                                     <Pencil size={14} />
+                                </button>
+                            )}
+                            {isAdmin && (
+                                <button className={iconBtn} onClick={() => setCopyOpen(true)} data-testid="copy-lesson"
+                                    title={t('imnci_ui.courses.copy.title', 'Copy this lesson to another module')}>
+                                    <Copy size={14} />
+                                </button>
+                            )}
+                            {openCourse?.isPublished && openSection.moduleId && (
+                                <button className={iconBtn} onClick={shareLesson} data-testid="share-lesson"
+                                    title={t('imnci_ui.courses.share.lesson', 'Share a link to this lesson')}>
+                                    <Share2 size={14} />
                                 </button>
                             )}
                             {canCompare && (
@@ -415,6 +441,12 @@ export function SectionPage() {
                     </div>
                 </div>
                 </div>
+            )}
+            {copyOpen && (
+                <Suspense fallback={null}>
+                    <CopyLessonModal isOpen onClose={() => setCopyOpen(false)} section={openSection}
+                        courses={allCourses} items={allItems} defaultCourseId={openSection.courseId} onCopied={reload} />
+                </Suspense>
             )}
         </div>
     );
