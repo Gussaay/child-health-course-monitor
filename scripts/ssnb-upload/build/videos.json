@@ -1,5 +1,5 @@
 {
- "note": "Video slot code -> YouTube video. Global Health Media Project (GHMP) videos, from their own YouTube channel (UCLxFqUTzhUVC-_F_pd4Yvkg), each checked on 2026-11-21 to be GHMP's and embeddable. Whole videos only (GHMP terms: not clipped or altered). A code not listed keeps its being-recorded placeholder and its script in the Word file.",
+ "note": "Video slot code -> YouTube video. Global Health Media Project (GHMP) videos, from their own YouTube channel (UCLxFqUTzhUVC-_F_pd4Yvkg), each checked on 2026-11-21 to be GHMP's and embeddable. Whole videos only (GHMP terms: not clipped or altered). Optional "chapters": [[seconds, "label"], ...] adds buttons that start the whole video at the skill (GHMP terms forbid clipping). A code not listed keeps its being-recorded placeholder and its script in the Word file.",
  "videos": {
   "SN1.1.2": {"id": "WZz8Yysq5mo", "title": "Preparing the Birth Room - Childbirth Series"},
   "SN1.1.3": {"id": "0clo9Lvpv7Y", "title": "Helping Babies Breathe at Birth - Newborn Care Series"},

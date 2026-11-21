@@ -241,6 +241,9 @@ def finish(cfg, out_mods, exercises):
                     b['url'] = f"https://www.youtube.com/watch?v={v['id']}"
                     b['title'] = v['title']
                     b['caption'] = 'Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.'
+                    # "chapters": [[seconds, "label"], ...] — buttons that jump to the skill inside the whole video
+                    # (GHMP's terms do not allow clipping, so the video is never cut; it can be started at the skill).
+                    if v.get('chapters'): b['chapters'] = [{'at': int(at), 'label': lab} for at, lab in v['chapters']]
                 read.append(b)
             where = f"{cfg.SHORT} · {mm['title']} · {L['title']}"
             # a video placeholder (no link yet) is not an activity in the app (activityKeys.js)
