@@ -1,0 +1,9693 @@
+[
+{
+"k": "para",
+"t": "Module (1)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 0
+},
+{
+"k": "para",
+"t": "Essential and Emergency Newborn Care",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 1
+},
+{
+"k": "para",
+"t": "Section 1: The Golden Minute of L",
+"style": "Heading 1",
+"head": 1,
+"b": false,
+"i": 2
+},
+{
+"k": "para",
+"t": "Contents:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 3
+},
+{
+"k": "para",
+"t": "Goals",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 4
+},
+{
+"k": "para",
+"t": "Introduction: Background and Definitions",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 5
+},
+{
+"k": "para",
+"t": "Importance",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 6
+},
+{
+"k": "para",
+"t": "Before the Golden Minute of life",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 7
+},
+{
+"k": "para",
+"t": "Delayed Cord Clamping (DCC)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "5.",
+"i": 8
+},
+{
+"k": "para",
+"t": "Thermoregulation and Prevention of Hypothermia",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "6.",
+"i": 9
+},
+{
+"k": "para",
+"t": "Neonatal Resuscitation Initial steps",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "7.",
+"i": 10
+},
+{
+"k": "para",
+"t": "Support of Respiration",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "8.",
+"i": 11
+},
+{
+"k": "para",
+"t": "Support of the Cardiovascular System",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "9.",
+"i": 12
+},
+{
+"k": "para",
+"t": "Goals",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 13
+},
+{
+"k": "para",
+"t": "To understand the concept of the Golden Minute",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 14
+},
+{
+"k": "para",
+"t": "To know the significance of Golden Minute interventions",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 15
+},
+{
+"k": "para",
+"t": "To develop a timely managed approach",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 16
+},
+{
+"k": "para",
+"t": "To be prepared for the sequence of Neonatal resucucition and minimize staff distress",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 17
+},
+{
+"k": "para",
+"t": "To actively participate in minimizing morbidity and mortality associated with delayed resuscitation",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "5.",
+"i": 18
+},
+{
+"k": "para",
+"t": "Introduction to Golden Minute:",
+"style": "Heading 2",
+"head": 2,
+"b": false,
+"lvl": 1,
+"marker": "1.1",
+"i": 19
+},
+{
+"k": "para",
+"t": "Background and Definitions of Golden Minutes",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 20
+},
+{
+"k": "para",
+"t": "The first Golden Minute after birth has been identified as a critical window for establishing ventilation in a newborn. That is, if ventilations or chest compressions are required, they are initiated within one minute following delivery; however, do not wait one minute to calculate the APGAR score and then determine that there is a need for resuscitation.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 21
+},
+{
+"k": "para",
+"t": "The Golden Minute timeframe starts when the whole body is delivered. The Golden Minute approach focuses on the active intervention during the first minute of life.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 22
+},
+{
+"k": "para",
+"t": "Neonatal resuscitators in a variety of settings use the International Liaison Committee on Resuscitation (ILCOR) algorithm to guide delivery room management, including countries implementing the Helping Babies Breathe (HBB) program, which provides resuscitation training and standardized guidelines to medical teams in low-resource settings.  Algorithms such as the Neonatal Resuscitation Program apply the same timeline.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 23
+},
+{
+"k": "para",
+"t": "Of note, the Golden Minute concept is not restricted to establishing ventilation. It would also involve:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 24
+},
+{
+"k": "para",
+"t": "Readiness for resuscitation",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 25
+},
+{
+"k": "para",
+"t": "Proper initial assessment",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 26
+},
+{
+"k": "para",
+"t": "Thermoregulation and prevention of hypothermia",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 27
+},
+{
+"k": "para",
+"t": "Management of the umbilical cord",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 28
+},
+{
+"k": "para",
+"t": "Importance of golden minutes:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 29
+},
+{
+"k": "para",
+"t": "Well-arranged Golden Minute interventions facilitate the smooth transition from the cocooned fetal life to the independent neonatal and later adult life",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 30
+},
+{
+"k": "para",
+"t": "Timely planned intervention, as recommended in the first minute of life, would help to minimize serious morbidity such as CP and poor neurodevelopmental outcomes, as well as mortality",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 31
+},
+{
+"k": "para",
+"t": "Lack of knowledge and skills that may be needed or indicated in the first minute of life may affect further resuscitation and outcomes",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 32
+},
+{
+"k": "para",
+"t": "Prepare for the golden minutes",
+"style": "Heading 2",
+"head": 2,
+"b": false,
+"lvl": 1,
+"marker": "1.2",
+"i": 33
+},
+{
+"k": "para",
+"t": "Effective Communication",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 34
+},
+{
+"k": "para",
+"t": "Communication with parents ( antenatal counseling",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 35
+},
+{
+"k": "para",
+"t": "Communication with labour and delivery room team.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 36
+},
+{
+"k": "para",
+"t": "Antenatal counseling and team briefing",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 37
+},
+{
+"k": "para",
+"t": "Background:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 38
+},
+{
+"k": "para",
+"t": "The importance of antenatal counseling has been emphasized in neonatal resuscitation program (NRP). The parents should be counseled antenatally, answering all the question asked by them about the newborn thus allaying there anxiety. This hold true for both pre-term and term neonate. If the newborn is going to be shifted to mother side then parents need to be counseled regarding breast feeding and general newborn care",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 39
+},
+{
+"k": "para",
+"t": "The parents should be given appropriate time for making decision over the neonatal management.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 40
+},
+{
+"k": "para",
+"t": "Evidence shows that rational, consensus peri- viability ( see section 7) guidelines are well accepted and can be used for antenatal counseling  by neonatologists, obstetricians, and nurses who provide care to pregnant women and infants at extremely low gestational ages.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 41
+},
+{
+"k": "para",
+"t": "Ideally both obstetrics team and neonatal team should do counseling together and present a consistent approach for the newborn as this leads to better rapport between neonatologist, obstetrician and parents.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 42
+},
+{
+"k": "para",
+"t": "Why should the parents be counseled?",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 43
+},
+{
+"k": "para",
+"t": "Infants born at an extremely low gestational age have a high mortality rate and are at risk of having neurodevelopmental disabilities ranging from subtle to severe in grade",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"i": 44
+},
+{
+"k": "para",
+"t": "What is the goal of antenatal counselling?",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 45
+},
+{
+"k": "para",
+"t": "The goal of antenatal counseling is 1. to inform parents and assist them in decision- making over either providing resuscitation or giving only comfort care to the neonate.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"i": 46
+},
+{
+"k": "para",
+"t": "2. To prepare parents fir the hospital course and outline management plan if full support was the decision.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"i": 47
+},
+{
+"k": "para",
+"t": "What is the basis for antenatal counseling?",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 48
+},
+{
+"k": "para",
+"t": "Estimated gestational age of delivery has shown strong association with neurodevelopmental outcome and it serves as the basis for antenatal counseling.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 49
+},
+{
+"k": "para",
+"t": "The decision to provide comfort care will also depend upon other variables such as",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 50
+},
+{
+"k": "para",
+"t": "the presence or absence of chorioamnionitis, and",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "a)",
+"i": 51
+},
+{
+"k": "para",
+"t": "the level of care available for location of delivery ( unite level, presence of specific guidelines. DNR policy ).",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "b)",
+"i": 52
+},
+{
+"k": "para",
+"t": "Presence of other complications such as  major congenital anomalies.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "c)",
+"i": 53
+},
+{
+"k": "para",
+"t": "What are the three components of effective counseling?",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 54
+},
+{
+"k": "para",
+"t": "The three components of effective counseling are",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 55
+},
+{
+"k": "para",
+"t": "assessment of risks,",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 56
+},
+{
+"k": "para",
+"t": "2. communication of those risks,",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 57
+},
+{
+"k": "para",
+"t": "3. ongoing support.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 58
+},
+{
+"k": "para",
+"t": "What are the benefits of parental counseling?",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 59
+},
+{
+"k": "para",
+"t": "Antenatal counseling especially before a preterm delivery has many benefits for parent’s like",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 60
+},
+{
+"k": "para",
+"t": "1. reducing parental anxiety,",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 61
+},
+{
+"k": "para",
+"t": "2. increasing knowledge,",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 62
+},
+{
+"k": "para",
+"t": "3. facilitating informed decision-making and",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 63
+},
+{
+"k": "para",
+"t": "4. making rapport with the neonatal clinicians",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 64
+},
+{
+"k": "para",
+"t": "What are the most important points or issues need to be told and discussed with parents antenatal?",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 65
+},
+{
+"k": "para",
+"t": "parents should be told about most accurate prognostic morbidity and mortality data available for their infant based on hospital-specific database or regional or national data. .",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 66
+},
+{
+"k": "para",
+"t": "Parents also need to be informed that inspite to the best efforts, both things namely the exact prognosis or outcome for a specific infant either antenatally or immediately after delivery and prediction of long-term neurologic outcome remains limited.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 67
+},
+{
+"k": "para",
+"t": "The parents should also be told about expected duration of neonatal intensive care unit (NICU) stay and morbidities which the newborn is likely to face in the postnatal life depending upon the gestational age and birth weight. (The prediction of hospital stay duration will depend upon the gestational age at birth, expected morbidities and previous database of the hospital for the same gestational age neonate.).",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 68
+},
+{
+"k": "para",
+"t": "Documentation:",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 69
+},
+{
+"k": "para",
+"t": "What are the factors to be considered during counseling parents antenatally for extreme preterm delivery?",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 70
+},
+{
+"k": "para",
+"t": "The pregnancy outcome will depend upon the birth weight, gestational age, gender, use of prenatal steroids, singleton pregnancy, maternal age, maternal health, maternal nutrition, substance use, genetics, and complications during pregnancy.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 71
+},
+{
+"k": "para",
+"t": "Communication with labour and delivery team: high risk deliveries",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 72
+},
+{
+"k": "para",
+"t": "Labour ward staff have primary responsibility for assessing the degree of risk anticipated and communicating their concerns effectively to the neonatal team.  The earlier the neonatal team is given notice of a potential problem the better, allowing decisions to be made around the appropriate staffing and management at delivery.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 73
+},
+{
+"k": "para",
+"t": "If in doubt, call and discuss",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 74
+},
+{
+"k": "para",
+"t": "In turn the neonatal team should make every effort to attend promptly and ensure that they have adequate information to make management decisions",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 75
+},
+{
+"k": "para",
+"t": "Communication around an emerging situation where there may be both neonatal and maternal concerns is a challenge, however every effort should be made to ensure that adequate information is accurately passed to the neonatal team when they are called for resuscitation.  Ideally the call should be made by a member of staff with a good working knowledge of the situation- if the midwife looking after the mother or midwife in charge is not able to make the call to the neonatal team, they should ensure that when delegating this adequate information is passed on",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 76
+},
+{
+"k": "para",
+"t": "SBAR format",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 77
+},
+{
+"k": "para",
+"t": "When calling for neonatal assistance, the SBAR format should be used:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 78
+},
+{
+"k": "table",
+"rows": [
+[
+"S",
+"Situation\ne.g. -  I’ve got a baby about to deliver with meconium and a non reassuring CTG"
+],
+[
+"B",
+"Background\ne.g.  - The baby is at term, mum has gestational diabetes, and there have been no other concerns in pregnancy.  The   obstetric registar is setting up for a vacuum extraction in the room"
+],
+[
+"A",
+"Assessment\ne.g. The CTG trace is concerning, with late dips ( late decelerations )"
+],
+[
+"R",
+"Recommendation\ne.g. I need you to come to room 4 straight away- will you need the registrar too?"
+]
+],
+"i": 79
+},
+{
+"k": "table",
+"rows": [
+[
+"Response",
+"e.g. I’ll come straight down, my registrar is with me- I’ll bring them along"
+]
+],
+"i": 80
+},
+{
+"k": "para",
+"t": "High risk deliveries:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 81
+},
+{
+"k": "para",
+"t": "The following are intended as guidance, judgement should be exercised in individual cases",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 82
+},
+{
+"k": "para",
+"t": "Pediatricians will be notified immediately of all high-risk indications listed below when they occur in an expecting mother. OB providers may call for any additional concerns as well. These high risk deliveries will be attended by NRP team.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 83
+},
+{
+"k": "para",
+"t": "Preterm infants < 37 weeks gestation",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 84
+},
+{
+"k": "para",
+"t": "Multiple births",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 85
+},
+{
+"k": "para",
+"t": "Breech vaginal delivery, or other abnormal presentations",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 86
+},
+{
+"k": "para",
+"t": "Infants with significant congenital malformation diagnosed antenatally",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 87
+},
+{
+"k": "para",
+"t": "Any meconium-stained amniotic fluid",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "5.",
+"i": 88
+},
+{
+"k": "para",
+"t": "Emergency cesarean section",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "6.",
+"i": 89
+},
+{
+"k": "para",
+"t": "Prolapsed cord",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "7.",
+"i": 90
+},
+{
+"k": "para",
+"t": "Abruptio placentae",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "8.",
+"i": 91
+},
+{
+"k": "para",
+"t": "Placenta previa",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "9.",
+"i": 92
+},
+{
+"k": "para",
+"t": "Non-reassuring fetal heart rate patterns",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "10.",
+"i": 93
+},
+{
+"k": "para",
+"t": "Oligohydramnios",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "11.",
+"i": 94
+},
+{
+"k": "para",
+"t": "Resuscitation team should be notified for the following conditions. Call for attending the delivery should be considered:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 95
+},
+{
+"k": "para",
+"t": "PEC (pre-eclampsia )",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 96
+},
+{
+"k": "para",
+"t": "Polyhydramnios",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 97
+},
+{
+"k": "para",
+"t": "Maternal cardiac, renal, pulmonary, thyroid, or neurologic disease",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 98
+},
+{
+"k": "para",
+"t": "PROM",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 99
+},
+{
+"k": "para",
+"t": "Post-term gestation",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "5.",
+"i": 100
+},
+{
+"k": "para",
+"t": "Maternal substance abuse",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "6.",
+"i": 101
+},
+{
+"k": "para",
+"t": "Prolonged labor (>18 hours)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "7.",
+"i": 102
+},
+{
+"k": "para",
+"t": "Prolonged second stage of labor (>2 hours)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "8.",
+"i": 103
+},
+{
+"k": "para",
+"t": "GBS (institute protocol)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "9.",
+"i": 104
+},
+{
+"k": "para",
+"t": "Maternal drug therapy: opiates,  magnesium, adrenergic-blocking drugs",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "10.",
+"i": 105
+},
+{
+"k": "para",
+"t": "Maternal diabetes if insulin dependent and poorly controlled",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "11.",
+"i": 106
+},
+{
+"k": "para",
+"t": "High risk deliveries and their expected effect on the newborn",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 107
+},
+{
+"k": "table",
+"rows": [
+[
+"Prenatal risk",
+"Effect on the newborn"
+],
+[
+"Maternal diabetes",
+"Hypoglycemia, hypocalcemia, macrosomia, cardiomyopathy"
+],
+[
+"Rh incompatibility",
+"Anemic, hydropic birth"
+],
+[
+"Decreased intrauterine movements",
+"Hypotonic baby"
+],
+[
+"Preeclampsia-eclampsia",
+"Premature delivery, hypoxic birth"
+],
+[
+"Multiple pregnancy",
+"Premature delivery, IUGR, hypoxic birth"
+],
+[
+"Postterm delivery",
+"Birth trauma, hypoxic birth, MAS"
+],
+[
+"Polyhydramnios",
+"Esophageal atresia"
+],
+[
+"Oligohydramnios",
+"Renal anomalies, lung hypoplasia"
+],
+[
+"Premature rupture of membranes",
+"Early sepsis"
+],
+[
+"Maternal age <19 or >35 years",
+"Intrauterine growth retardation, chromosomal disorders, hypoxic birth"
+],
+[
+"Presence of significant fetal malformation or",
+"Hypoxic birth, apneic, dyspneic or hypotonic baby,"
+],
+[
+"congenital heart anomaly on fetal ultrasonography",
+"baby born arrhythmic"
+],
+[
+"Unmonitored pregnancy",
+"Anything can happen"
+],
+[
+"Fetal bradycardia",
+"Hypoxic birth"
+],
+[
+"Observation of meconium on fetal ultrasonography",
+"Hypoxic birth, MAS"
+],
+[
+"Maternal chorioamnionitis",
+"Premature delivery, early sepsis, fetal inflammatory response"
+],
+[
+"Intrapartum risks",
+"Effect on the newborn"
+],
+[
+"Rapid labor",
+"Intracranial hemorrhage"
+],
+[
+"Prolapsus/entanglement of the umbilical cord",
+"Hypoxic birth"
+],
+[
+"Premature separation of the placenta",
+"Hypoxic birth, premature delivery"
+],
+[
+"Suddenly developing fetal bradycardia (<60/min)",
+"Hypoxic birth"
+],
+[
+"Forceps/vacuum delivery",
+"Birth trauma, cephalic hematoma, caput succedaneum"
+],
+[
+"Maternal fever",
+"Fetal tachycardia, respiratory depression at birth"
+],
+[
+"Administration of narcotic analgesic 4 hours before delivery",
+"Baby born depressed with no respiratory effort"
+]
+],
+"i": 108
+},
+{
+"k": "para",
+"t": "IUGR: intrauterine growth retardation; MAS: meconium aspiration syndrome",
+"style": "p1",
+"head": 0,
+"b": false,
+"i": 109
+},
+{
+"k": "para",
+"t": "Communication with obstetrical team",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 110
+},
+{
+"k": "para",
+"t": "Identification of maternal, fetal and intrapartum factors.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 111
+},
+{
+"k": "para",
+"t": "The NRP guidelines recommend that resuscitation team to ask the obstetrician 4 questions to identify maternal, fetal risk that may predict the need for resuscitation: (see box below)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"i": 112
+},
+{
+"k": "para",
+"t": "Q (1) What is the expected gestational age?",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 113
+},
+{
+"k": "para",
+"t": "Q (2) Is the amniotic fluid clear?",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 114
+},
+{
+"k": "para",
+"t": "Q (3) Are there any additional risk factors?",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 115
+},
+{
+"k": "para",
+"t": "Q (4) What is our umbilical cord management plan?",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 116
+},
+{
+"k": "img",
+"name": "m1-001.jpeg",
+"i": 117
+},
+{
+"k": "para",
+"t": "The 3 rapid questions:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 118
+},
+{
+"k": "para",
+"t": "Those neonates who do not require resuscitation can generally be identified by a rapid assessment using 3 questions.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 119
+},
+{
+"k": "para",
+"t": "Is this a term gestation?",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 120
+},
+{
+"k": "para",
+"t": "Does the neonate have good muscle tone?",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 121
+},
+{
+"k": "para",
+"t": "Is the neonate crying or breathing?",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 122
+},
+{
+"k": "para",
+"t": "If the answer to all 3 of these questions is “yes,” the neonate does not need resuscitation and can stay with the mother for routine care.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 123
+},
+{
+"k": "para",
+"t": "Equipment checks and preparation:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 124
+},
+{
+"k": "para",
+"t": "NRP recommends prior preparation of standardized equipment kits to save time in an emergency.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 125
+},
+{
+"k": "para",
+"t": "Each unit should have its standard equipment list (see below) and standard checklist (see below).",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 126
+},
+{
+"k": "para",
+"t": "The equipment list may vary according to unit facility and level; however, NRP equipment should be standardized.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 127
+},
+{
+"k": "para",
+"t": "Newborn resuscitation equipment should be checked routinely and frequently on a daily basis or periodically during the day and after use.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 128
+},
+{
+"k": "para",
+"t": "A team member should be assigned for a routine check-up.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 129
+},
+{
+"k": "para",
+"t": "The prior resuscitation equipment check should be done with each call, even if the routine checkup has been done.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 130
+},
+{
+"k": "para",
+"t": "The prior resuscitation equipment check must be done quickly and in a systematic way.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 131
+},
+{
+"k": "para",
+"t": "Double-check or confirmation by a senior member of the team is recommended if there is enough time.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 132
+},
+{
+"k": "para",
+"t": "Appropriate area for resuscitation of the newborn",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 133
+},
+{
+"k": "para",
+"t": "Infant resuscitator with in-built heater and light, or a firm, padded resuscitation surface and an overhead warmer.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 134
+},
+{
+"k": "para",
+"t": "Clock with a timer in seconds",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 135
+},
+{
+"k": "para",
+"t": "Good light in the resuscitation area.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 136
+},
+{
+"k": "para",
+"t": "Appropriate personal protective equipment (PPE) according to the level of risk",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 137
+},
+{
+"k": "para",
+"t": "Temperature maintenance:",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 138
+},
+{
+"k": "para",
+"t": "Warmed towels or warm wraps",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 139
+},
+{
+"k": "para",
+"t": "Polyethylene bag or sheet for infants less than 32 weeks’ gestation or less than 1500 grams’ birth weight",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 140
+},
+{
+"k": "para",
+"t": "Woolen hats (various sizes)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 141
+},
+{
+"k": "img",
+"name": "m1-002.jpeg",
+"i": 142
+},
+{
+"k": "table",
+"rows": [
+[
+"PRACTISE THIS SKILL   Preparation for specific neonatal conditions"
+],
+[
+"Preterm infant <32 weeks’ gestation or less than 1500 grams:\n• Prepare a polyethylene bag or sheet/wrap.\n• If using a polyethylene bag: cut a square  hole (large enough for the infant’s head)  into the end opposite the zip lock.\n• At birth, the infant’s body (but not the head) should be placed immediately into the bag or wrap (wet and warm) and directly under a radiant heat source.\n• The infant’s head should be dried, and a woolen hat placed onto the infant’s head"
+]
+],
+"i": 143
+},
+{
+"k": "img",
+"name": "m1-003.png",
+"i": 144
+},
+{
+"k": "para",
+"t": "The infant born through meconium-stained amniotic fluid:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 145
+},
+{
+"k": "para",
+"t": "Do not perform routine suctioning of the mouth, nose, or trachea.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 146
+},
+{
+"k": "para",
+"t": "Assess the newborn immediately and initiate standard resuscitation steps.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 147
+},
+{
+"k": "para",
+"t": "Focus on establishing effective ventilation as the priority intervention.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 148
+},
+{
+"k": "para",
+"t": "Suction the airway only when there is obvious obstruction or when ventilation is ineffective due to meconium.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 149
+},
+{
+"k": "para",
+"t": "Ensure intubation equipment is available if advanced airway intervention is required.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 150
+},
+{
+"k": "para",
+"t": "Multiple births",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 151
+},
+{
+"k": "para",
+"t": "Provide a fully equipped resuscitator for each infant if  possible",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 152
+},
+{
+"k": "para",
+"t": "At least one person with advanced resuscitation skills must be  available for  each infant",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 153
+},
+{
+"k": "img",
+"name": "m1-004.jpeg",
+"i": 154
+},
+{
+"k": "para",
+"t": "NRP: quick equipment check",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 155
+},
+{
+"k": "table",
+"rows": [
+[
+"Warm",
+"• Preheated warmer\n• Warm towels or blankets\n• Temperature sensor and sensor cover for prolonged resuscitation\n• Plastic bag or plastic wrap (<32 weeks’ gestation)\n• Thermal mattress (<32 weeks’ gestation)\n• Hat"
+],
+[
+"Clear airway",
+"• Bulb syringe\n• 10F or 12F suction catheter attached to wall suction set at (80 to 100 mm Hg)\n• Tracheal aspirator"
+],
+[
+"Auscultate",
+"• Stethoscope"
+],
+[
+"Ventilate",
+"• Flowmeter set to 10 L/min\n• Positive-pressure ventilation (PPV) device\n• Oxygen blender set to 21% (21% - 30% if <35 weeks’ gestation)\n• Term- and preterm-sized masks\n• 8F orogastric tube and 20-mL syringe\n• Laryngeal mask (size 1) and 5-mL syringe (if needed for inflation)\n• 5F or 6F orogastric tube if insertion port present on laryngeal mask\n• Access to cardiac monitor and leads"
+],
+[
+"Oxygenate",
+"• Pulse oximeter with sensor and cover\n• Newborn Oxygen Saturation Table"
+],
+[
+"Intubate",
+"• Laryngoscope with size-0 and size-1 straight blades (size 00, optional) Extra bulbs\n• Endotracheal tubes (sizes 2.5, 3.0, 3.5)\n• Stylet\n• End-tidal CO₂ detector\n• Adhesive tape and/or endotracheal tube insertion depth table"
+],
+[
+"medicate",
+"• Access to epinephrine (0.1 mg/mL; 1 mg/10 mL)\n• Normal saline (100 mL or 250 mL bag) or prefilled syringes\n• Supplies for placing emergency umbilical venous catheter and administering medications\n• Table of pre-calculated emergency medication dosages for babies weighing 0.5 to 4 kg"
+]
+],
+"i": 156
+},
+{
+"k": "table",
+"rows": [
+[
+"PRACTISE THIS SKILL Equipment & Team Readiness"
+],
+[
+"• Checklist of resuscitation equipment.\nRapid equipment function check."
+]
+],
+"i": 157
+},
+{
+"k": "img",
+"name": "m1-005.png",
+"i": 158
+},
+{
+"k": "table",
+"rows": [
+[
+"",
+"Step Action",
+"Done",
+"Partially",
+"Not Done"
+],
+[
+"1",
+"Verify the availability of all essential resuscitation equipment according to the standard check list",
+"",
+"",
+""
+],
+[
+"2",
+"Check the functionality of each device before delivery",
+"",
+"",
+""
+],
+[
+"3",
+"Assign team roles clearly",
+"",
+"",
+""
+],
+[
+"4",
+"Ensure a warm environment is prepared",
+"",
+"",
+""
+],
+[
+"5",
+"Confirm readiness verbally to the team",
+"",
+"",
+""
+]
+],
+"i": 159
+},
+{
+"k": "para",
+"t": "Essential Newborn Care (EENC)",
+"style": "Heading 2",
+"head": 2,
+"b": false,
+"lvl": 1,
+"marker": "1.3",
+"i": 160
+},
+{
+"k": "para",
+"t": "Early Essential Newborn Care EENC is a package of evidence-based interventions aimed at improving the health and survival of newborns, particularly in the first few minutes and hours after birth. These interventions focus on preventing newborn deaths due to common issues like hypothermia, infection, and breathing problems.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 161
+},
+{
+"k": "para",
+"t": "Immediate care at birth",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 162
+},
+{
+"k": "para",
+"t": "thorough drying",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "a.",
+"i": 163
+},
+{
+"k": "para",
+"t": "stimulation",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "b.",
+"i": 164
+},
+{
+"k": "para",
+"t": "suction if needed",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 165
+},
+{
+"k": "para",
+"t": "delayed cord clamping (after 1-3 minutes)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 166
+},
+{
+"k": "para",
+"t": "Thermal care through immediate uninterrupted skin-to-skin contact",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 167
+},
+{
+"k": "para",
+"t": "Support early breastfeeding within (within first hour)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "5.",
+"i": 168
+},
+{
+"k": "para",
+"t": "Resuscitation when needed",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "6.",
+"i": 169
+},
+{
+"k": "para",
+"t": "Keep the baby warm all the time",
+"style": "List Paragraph",
+"head": 0,
+"b": true,
+"i": 170
+},
+{
+"k": "img",
+"name": "m1-006.png",
+"i": 171
+},
+{
+"k": "para",
+"t": "Initial Steps for Vigorous, Term Newborns",
+"style": "List Paragraph",
+"head": 0,
+"b": true,
+"lvl": 2,
+"marker": "1.3.1",
+"i": 172
+},
+{
+"k": "para",
+"t": "All 3 rapid evaluation questions must be “Yes”: Term? Tone good? Breathing/crying?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 173
+},
+{
+"k": "para",
+"t": "When vigorous, the newborn stays with the mother (skin-to-skin).",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 174
+},
+{
+"k": "para",
+"t": "Provide Warmth",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 175
+},
+{
+"k": "para",
+"t": "Maintain skin-to-skin contact on the mother’s chest/abdomen.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 176
+},
+{
+"k": "para",
+"t": "Cover with a warm towel/blanket.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 177
+},
+{
+"k": "para",
+"t": "Dry and Stimulate",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 178
+},
+{
+"k": "para",
+"t": "Dry thoroughly to reduce heat loss.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 179
+},
+{
+"k": "para",
+"t": "Gentle stimulation (rubbing back or extremities) to encourage effective breathing.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 180
+},
+{
+"k": "para",
+"t": "Open the Airway",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 181
+},
+{
+"k": "para",
+"t": "Position on mother’s chest with neutral head position",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 182
+},
+{
+"k": "para",
+"t": "Clear Secretions (if needed only)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 183
+},
+{
+"k": "para",
+"t": "Wipe mouth and nose with cloth.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 184
+},
+{
+"k": "para",
+"t": "Bulb suction only if secretions obstruct breathing or the newborn struggles to clear them.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 185
+},
+{
+"k": "para",
+"t": "Ongoing Monitoring",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "5.",
+"i": 186
+},
+{
+"k": "para",
+"t": "Continue assessing breathing, tone, activity, color, and temperature.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 187
+},
+{
+"k": "para",
+"t": "Initiate additional interventions if status changes.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 188
+},
+{
+"k": "img",
+"name": "m1-007.jpg",
+"i": 189
+},
+{
+"k": "para",
+"t": "Umbilical Cord Management: Delayed Cord Clamping (DCC)",
+"style": "List Paragraph",
+"head": 0,
+"b": true,
+"lvl": 2,
+"marker": "1.3.2",
+"i": 190
+},
+{
+"k": "para",
+"t": "Definition",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 191
+},
+{
+"k": "para",
+"t": "Physiologically, early cord clamping (ECC) has been defined as clamping of the cord when there is still circulation of blood from the placenta to the newborn, and delayed cord clamping (DCC) has been defined as clamping of the cord after the stoppage of placental circulation.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 192
+},
+{
+"k": "para",
+"t": "Physiological background:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 193
+},
+{
+"k": "para",
+"t": "At the time of birth, a large volume of the baby's blood remains in the placenta.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 194
+},
+{
+"k": "para",
+"t": "If maternal blood is still flowing to the placenta and the umbilical cord has not been clamped, placenta! Gas exchange will continue, and additional oxygenated blood will be returned to the baby through the umbilical vein.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 195
+},
+{
+"k": "para",
+"t": "This blood may play an important role in the newborn baby's transition from fetal to neonatal circulation.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 196
+},
+{
+"k": "para",
+"t": "In term newborns, DCC for one-minute leads to the transfer of 80 ml of extra blood, and a delay of three minutes leads to the total transfer of 100 ml of blood to the neonate.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 197
+},
+{
+"k": "para",
+"t": "Evidence:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 198
+},
+{
+"k": "para",
+"t": "The present studies that compared ECC and DCC have defined ECC as cord clamping immediately or within 15 seconds of birth and DCC as cord clamping after 30 seconds to 3 minutes after neonatal birth.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 199
+},
+{
+"k": "para",
+"t": "Cochrane meta-analysis included fifteen studies and showed that DCC was associated",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 200
+},
+{
+"k": "para",
+"t": "Fewer infants requiring transfusions for anaemia (RR 0.61)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 201
+},
+{
+"k": "para",
+"t": "The hemoglobin concentration in infants at 24 to 48 hours was significantly higher in the DCC group.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 202
+},
+{
+"k": "para",
+"t": "less intraventricular hemorrhages (IVH) (ultrasound diagnosis all grades) (RR 0.59)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 203
+},
+{
+"k": "para",
+"t": "lower risk for necrotizing enterocolitis (NEC) (RR 0.62) compared with ECC.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 204
+},
+{
+"k": "para",
+"t": "There was a significant increase in mean birth weight in DCC (101 grams)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 205
+},
+{
+"k": "para",
+"t": "The peak bilirubin concentration was significantly higher in neonates allocated to DCC compared with ECC (mean difference 15.01 mmol/L)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 206
+},
+{
+"k": "para",
+"t": "The Cochrane meta-analysis that sought the effect of DCC in term neonates reported no significant differences in :",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 207
+},
+{
+"k": "para",
+"t": "neonatal mortality",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 208
+},
+{
+"k": "para",
+"t": "Apgar score < 7 at five minutes",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 209
+},
+{
+"k": "para",
+"t": "neonatal admission.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 210
+},
+{
+"k": "para",
+"t": "NRP recommendations regarding delayed cord clamping (DCC):",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 211
+},
+{
+"k": "para",
+"t": "The 2023 NRP recommendations for delayed cord clamping decision have depended on several factors:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 212
+},
+{
+"k": "para",
+"t": "The most beneficial action for the newborn",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 213
+},
+{
+"k": "para",
+"t": "The gestational age (term or near term, preterm, less than 34 weeks, or between 28 to 34 weeks of gestation)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 214
+},
+{
+"k": "para",
+"t": "Whether Resuscitation is required or not",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 215
+},
+{
+"k": "para",
+"t": "The need for positive pressure ventilation.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 216
+},
+{
+"k": "para",
+"t": "The NRP recommendations regarding delayed umbilical cord clamping DCC are:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 217
+},
+{
+"k": "para",
+"t": "For term and late preterm newborn infants ≥34 weeks’ gestation who do not require resuscitation",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 218
+},
+{
+"k": "para",
+"t": "delayed cord clamping (≥30 seconds) can be beneficial compared with early cord clamping (<30 seconds).",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 219
+},
+{
+"k": "para",
+"t": "Intact cord milking is not known to be beneficial compared with delayed cord clamping (≥30 seconds).",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 220
+},
+{
+"k": "para",
+"t": "For non-vigorous term and late preterm newborn infants (35–42 weeks’ gestation),",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 221
+},
+{
+"k": "para",
+"t": "intact cord milking may be reasonable compared with early cord clamping (<30 seconds).",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 222
+},
+{
+"k": "para",
+"t": "For preterm newborn infants <34 weeks’ gestation who do not require resuscitation",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 223
+},
+{
+"k": "para",
+"t": "delaying cord clamping (≥30 seconds) can be beneficial compared with early cord clamping (<30 seconds).",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 224
+},
+{
+"k": "para",
+"t": "For preterm newborn infants between 28 and 34 weeks’ gestation who do not require resuscitation and in whom delayed cord clamping cannot be performed",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 225
+},
+{
+"k": "para",
+"t": "intact cord milking may be reasonable.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 226
+},
+{
+"k": "para",
+"t": "For preterm newborn infants <28 weeks’ gestation",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 227
+},
+{
+"k": "para",
+"t": "intact cord milking is not recommended.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 228
+},
+{
+"k": "para",
+"t": "Effective positive-pressure ventilation is the priority in newborn infants who need support after birth.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 229
+},
+{
+"k": "para",
+"t": "Contraindications to Delayed Cord Clamping (DCC)",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 230
+},
+{
+"k": "para",
+"t": "Delayed cord clamping is the standard of care for most newborns. Immediate cord clamping should be performed only in the presence of the following absolute contraindications:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 231
+},
+{
+"k": "para",
+"t": "Severe maternal hemorrhage requiring immediate life-saving intervention",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 232
+},
+{
+"k": "para",
+"t": "Placental abruption with active bleeding",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 233
+},
+{
+"k": "para",
+"t": "Uterine rupture",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 234
+},
+{
+"k": "para",
+"t": "Maternal cardiac arrest or profound hemodynamic instability",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 235
+},
+{
+"k": "para",
+"t": "Newborn requiring immediate resuscitation that cannot be provided with the cord intact",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 236
+},
+{
+"k": "para",
+"t": "Apnea or gasping respirations with heart rate <100 beats per minute",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 237
+},
+{
+"k": "para",
+"t": "Umbilical cord avulsion or complete placental separation preventing placental transfusion",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 238
+},
+{
+"k": "table",
+"rows": [
+[
+"IMPORTANT   Remember:"
+],
+[
+"Resuscitation with the umbilical cord intact should be considered whenever feasible\nMaternal safety always takes precedence over neonatal benefit"
+]
+],
+"i": 239
+},
+{
+"k": "img",
+"name": "m1-008.png",
+"i": 240
+},
+{
+"k": "para",
+"t": "Thermoregulation and Prevention of Hypothermia",
+"style": "List Paragraph",
+"head": 0,
+"b": true,
+"lvl": 2,
+"marker": "1.3.3",
+"i": 241
+},
+{
+"k": "para",
+"t": "Introduction",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 242
+},
+{
+"k": "para",
+"t": "Thermoregulation is the ability to maintain a balance between heat production and heat loss.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 243
+},
+{
+"k": "para",
+"t": "The maintenance of body temperature within a normal range will minimize both metabolic and oxygen consumption (neutral thermal zone).",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 244
+},
+{
+"k": "para",
+"t": "Current recommendations are to maintain core temperature between 36.5 and 37.5 °C at all times except in the context of therapeutic hypothermia.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 245
+},
+{
+"k": "para",
+"t": "Definition of hypothermia",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 246
+},
+{
+"k": "para",
+"t": "Hypothermia is defined as a temperature < 36.5 °C.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 247
+},
+{
+"k": "para",
+"t": "Measuring temperature",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 248
+},
+{
+"k": "para",
+"t": "Whilst an axillary digital thermometer temperature approximates rectal temperature in otherwise healthy infants, for very preterm infants on admission, it has been reported that axillary temperature has a sensitivity of 65% when used to detect rectal hyperthermia and 100% sensitivity for hypothermia",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 249
+},
+{
+"k": "para",
+"t": "Importance",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 250
+},
+{
+"k": "para",
+"t": "Extremely preterm infants who are hypothermic on admission have an increased risk of death and neurodevelopmental impairment",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 251
+},
+{
+"k": "para",
+"t": "Hypothermia leads to a significant increase in Apgar score less than 7, IVH, late onset sepsis, hypoglycemia, and respiratory distress ( see figure ..)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 252
+},
+{
+"k": "para",
+"t": "Very preterm infants, as well as infants born in low-resource settings who are hyperthermic on admission, are also at increased risk of mortality.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 253
+},
+{
+"k": "para",
+"t": "Admission temperature in the NICU is a strong predictor of neonatal mortality. The highest risk of neonatal hypothermia is within the first minutes to hours after birth, as there is a  wide difference between in-utero and environmental temperature",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 254
+},
+{
+"k": "para",
+"t": "Thermal care interventions in the delivery room for preterm neonates are associated with improved core body temperature.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 255
+},
+{
+"k": "img",
+"name": "m1-009.jpeg",
+"i": 256
+},
+{
+"k": "para",
+"t": "Risk Factors for Hypothermia",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 257
+},
+{
+"k": "para",
+"t": "Newborn infants, especially those born premature, low birth weight, and/or sick. The reported incidence of hypothermia at the time of admission to the NICU in VLBW newborns ranges from 31% to 78%",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 258
+},
+{
+"k": "para",
+"t": "Infants exposed to maternal chorioamnionitis,",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 259
+},
+{
+"k": "para",
+"t": "Advanced neonatal resuscitation,",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 260
+},
+{
+"k": "para",
+"t": "Delivery room temperature < 25 degree C, There is a 28% increase in neonatal mortality with each 1 °C fall in axillary temperature while admitted in NICU",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 261
+},
+{
+"k": "para",
+"t": "Cold or un-humidified gases in the delivery room and during transport.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 262
+},
+{
+"k": "para",
+"t": "The following characteristics put newborns at a greater risk of heat loss:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 263
+},
+{
+"k": "para",
+"t": "A large surface area-to-body mass ratio",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 264
+},
+{
+"k": "para",
+"t": "Decreased subcutaneous fat",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 265
+},
+{
+"k": "para",
+"t": "Greater body water content",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 266
+},
+{
+"k": "para",
+"t": "Immature skin leading to increased evaporative water and heat losses",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 267
+},
+{
+"k": "para",
+"t": "Poorly developed metabolic mechanism for responding to thermal stress (e.g., no shivering)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 268
+},
+{
+"k": "para",
+"t": "Altered skin blood-flow (e.g., peripheral cyanosis)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 269
+},
+{
+"k": "para",
+"t": "Classification of abnormal temperature and Hypothermia",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 270
+},
+{
+"k": "img",
+"name": "m1-010.png",
+"i": 271
+},
+{
+"k": "img",
+"name": "m1-011.jpeg",
+"i": 272
+},
+{
+"k": "para",
+"t": "Sources of heat loss",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 273
+},
+{
+"k": "para",
+"t": "There are four ways in which a newborn loses body heat:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 274
+},
+{
+"k": "para",
+"t": "Conduction: when the newborn is placed naked on a cooler surface, such as a table, a scale, a cold bed. The transfer of heat between two solid objects that are touching is influenced by the size of the surface area in contact and the temperature gradient between surfaces.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1",
+"i": 275
+},
+{
+"k": "para",
+"t": "Convection: when the newborn is exposed to cool surrounding air or to a draft from open doors, windows, or fans, the transfer of heat from the newborn to air or liquid is affected by the newborn’s large surface area, air flow (drafts, ventilation system, etc), and temperature gradient.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2",
+"i": 276
+},
+{
+"k": "para",
+"t": "Evaporation: when amniotic fluid evaporates from the skin. Evaporative losses may be insensible (from skin and breathing) or sensible (sweating). Other factors that contribute to evaporative loss are the newborn’s surface area, vapor pressure, and air velocity. This is the greatest source of heat loss at birth.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3",
+"i": 277
+},
+{
+"k": "para",
+"t": "Radiation: when the newborn is near cool objects, walls, tables, and cabinets, without actually being in contact with them. The transfer of heat between solid surfaces that are not touching. Factors that affect heat change due to radiation are the temperature gradient between the two surfaces, the surface area of the solid surfaces, and the distance between the  solid surfaces. This is the greatest source of heat loss after birth.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4",
+"i": 278
+},
+{
+"k": "para",
+"t": "Heat Loss in the Newborn. (The-Crankshaft Publishing, n.d)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 279
+},
+{
+"k": "img",
+"name": "m1-012.jpeg",
+"i": 280
+},
+{
+"k": "para",
+"t": "Signs and symptoms of hypothermia",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 281
+},
+{
+"k": "para",
+"t": "Acrocyanosis and cool, mottled, or pale skin",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 282
+},
+{
+"k": "para",
+"t": "Hypoglycemia",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 283
+},
+{
+"k": "para",
+"t": "Transient hyperglycemia",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 284
+},
+{
+"k": "para",
+"t": "Bradycardia",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 285
+},
+{
+"k": "para",
+"t": "Tachypnea, restlessness, shallow and irregular respirations",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "5.",
+"i": 286
+},
+{
+"k": "para",
+"t": "Respiratory distress, apnea, hypoxemia, metabolic acidosis",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "6.",
+"i": 287
+},
+{
+"k": "para",
+"t": "Decreased activity, lethargy, hypotonia",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "7.",
+"i": 288
+},
+{
+"k": "para",
+"t": "Feeble cry, poor feeding",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "8.",
+"i": 289
+},
+{
+"k": "para",
+"t": "Decreased weight gain",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "9.",
+"i": 290
+},
+{
+"k": "table",
+"rows": [
+[
+"IMPORTANT\nAll these signs are non-specific and may indicate other significant conditions, such as bacterial infection in the newborn."
+]
+],
+"i": 291
+},
+{
+"k": "img",
+"name": "m1-013.png",
+"i": 292
+},
+{
+"k": "para",
+"t": "Prevention and management of hypothermia",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 293
+},
+{
+"k": "para",
+"t": "Thermal care interventions in the delivery room for preterm neonates are associated with improved core body temperature. Specifically, use of a plastic bag or wrap with a plastic cap or with heated, humidified gas was associated with a  lower risk of major brain injury and mortality.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 294
+},
+{
+"k": "para",
+"t": "Care should be taken when using multiple interventions to avoid hyperthermia",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 295
+},
+{
+"k": "para",
+"t": "The “warm chain” (WHO, 1997). And the updated NRP guidelines for the prevention and management of hypothermia are used as the main reference in this module.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 296
+},
+{
+"k": "para",
+"t": "The warm chain is a set of interlinked procedures to be performed at birth and during the next few hours and days after birth in order to minimize heat loss in all newborns",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 297
+},
+{
+"k": "para",
+"t": "Delivery room prevention and management of hypothermia",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 298
+},
+{
+"k": "para",
+"t": "For otherwise healthy infants, including vigorous late preterm infants, early skin-to-skin contact after delivery increased infant temperature +0.3OC and promoted breastfeeding without complications. Routine monitoring of otherwise healthy infants to detect hypothermia can be done with an axillary digital thermometer.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 299
+},
+{
+"k": "para",
+"t": "The following interventions are targeted at minimizing heat loss, optimizing heat gain, and preventing hypothermia (also called the ‘warm chain’): see table below",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 300
+},
+{
+"k": "para",
+"t": "The birth environment should be ≥ 25-degree C.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 301
+},
+{
+"k": "para",
+"t": "For infants born < 32 weeks and /or <1500 g – place in plastic wrap/polyethylene bag (Neohelp™)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 302
+},
+{
+"k": "para",
+"t": "Immediately drying for infants and put into skin-to-skin contact if not immediately placed in a plastic wrap/polyethylene bag.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 303
+},
+{
+"k": "img",
+"name": "m1-014.png",
+"i": 304
+},
+{
+"k": "para",
+"t": "In lower and middle-income countries, NRP 2015 recommends the use of clean food-grade plastic bags up to the level of the neck and skin-to-skin contact to prevent hypothermia",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 305
+},
+{
+"k": "para",
+"t": "Uninterrupted skin-to-skin contact for at least 60 minutes.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "5.",
+"i": 306
+},
+{
+"k": "para",
+"t": "Breastfeeding within the first hour, where appropriate",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "6.",
+"i": 307
+},
+{
+"k": "para",
+"t": "If on radiant heater resuscitator, ensure radiant heater on and correct heating setting (note that different systems have different heat outputs so familiarize yourself to the system). Rephrasing (If using a radiant warmer during resuscitation, ensure it is switched on and set to the appropriate heat level. Be aware that different devices have varying heat outputs, so always familiarize yourself with the specific system in use. )",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "7.",
+"i": 308
+},
+{
+"k": "para",
+"t": "If placed in a transport incubator, a pre-warm incubator.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "8.",
+"i": 309
+},
+{
+"k": "para",
+"t": "Ensure all linen and resuscitation equipment, including surfactant pre-warmed, and use warm, humidified gases when possible",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "9.",
+"i": 310
+},
+{
+"k": "para",
+"t": "Uninterrupted skin-to-skin contact for 60-90 minutes",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 311
+},
+{
+"k": "para",
+"t": "The World Health Organization (WHO) strongly recommends uninterrupted skin-to-skin contact (SSC) for all mothers and newborns immediately after birth. The WHO advises that  this initial contact should be prolonged and uninterrupted for at least 90 minutes, or ideally longer.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 312
+},
+{
+"k": "para",
+"t": "Immediate “skin-to-skin” after delivery is when a newborn is dried and placed naked on the mother’s bare abdomen, and the two are covered with a blanket for warmth. Skin-to-skin care is critical for achieving newborn homeostasis and thermoregulation in the first hours of life.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 313
+},
+{
+"k": "para",
+"t": "It is the best practice available to facilitate a smooth transition to life outside of the uterus and get breastfeeding off to a great start.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 314
+},
+{
+"k": "para",
+"t": "Benefits of Skin-to-skin Care",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 315
+},
+{
+"k": "para",
+"t": "Thermoregulation: Higher axillary temperatures – lowered risk for hypothermia Higher blood glucose levels – lowered risk for hypoglycemia",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 316
+},
+{
+"k": "para",
+"t": "Cardio-respiratory stability: Lower, more stable respiratory rates",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 317
+},
+{
+"k": "para",
+"t": "Faster return to physiologically normal heart rate",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 318
+},
+{
+"k": "para",
+"t": "Decreased crying",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 319
+},
+{
+"k": "para",
+"t": "Facilitates self-attachment for breastfeeding, the warmth, smell, and closeness to the breast are associated with easier and longer breastfeeding",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "5.",
+"i": 320
+},
+{
+"k": "para",
+"t": "Lower cortisol levels in both mother and infant",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "6.",
+"i": 321
+},
+{
+"k": "para",
+"t": "Decreased anxiety for birthing parent",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "7.",
+"i": 322
+},
+{
+"k": "para",
+"t": "Initiates the development of a healthy newborn microbiome",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "8.",
+"i": 323
+},
+{
+"k": "para",
+"t": "Increased self-confidence in the mother’s parenting ability",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "9.",
+"i": 324
+},
+{
+"k": "para",
+"t": "Stimulation of maternal oxytocin to enhance uterine contractions, access to colostrum, and mother-baby bonding – allows mother and baby to smell and feel each other",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "10.",
+"i": 325
+},
+{
+"k": "img",
+"name": "m1-015.jpeg",
+"i": 326
+},
+{
+"k": "para",
+"t": "Ten Steps of the Warm Chain (WHO)",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 327
+},
+{
+"k": "table",
+"rows": [
+[
+"1. Warm delivery room",
+"• Temperature ≥ 25°C, free from drafts from open windows, doors, or fans.\n• Prepare supplies in advance to keep the newborn warm.\nAdults should not determine temperature based on their comfort."
+],
+[
+"2. Immediate drying",
+"Immediately dry the newborn after birth with a warm towel/cloth to prevent evaporation heat loss (for <29 wks. GA refers to NRP guidelines)."
+],
+[
+"3. Skin-to-skin  contact",
+"• Place the newborn on the mother's chest/abdomen while drying to prevent heat loss (if the mother is unable, the partner may do so).\n• Cover with a second towel and put a cap on the head to prevent convective heat loss.  Keep newborn skin-to-skin with mother and covered.\n• Minimize uncovering during assessments/interventions.\n• Maintain skin-to-skin during:\n• Placenta delivery/suturing\n• Transfer to the postnatal unit/recovery room\n• Assessments/interventions\nFirst hours after birth"
+],
+[
+"4. Breastfeeding",
+"Initiate as soon as possible, preferably within 1 hour of birth."
+],
+[
+"5. Postpone\nweighing and\nbathing",
+"• Weigh after uninterrupted skin-to-skin contact and first feed; use a warm blanket on  a scale.\n• Bathing soon after birth causes a temperature drop → risk of hypothermia/hypoglycemia.\n• Delay bathing until 6–8 hrs or when stable.\n• If hypothermic with thick wet hair → wash/dry hair only, then cover the head. Bathe quickly in a warm room with warm water (tub bathing preferred for stable newborns; water should cover shoulders).\n• After bath → dry thoroughly, place skin-to-skin (or double wrap with warm blankets and cover head).\nAfter skin-to-skin → dress, cap, and wrap the newborn in a dry ,warm blanket."
+],
+[
+"6. Appropriate\nclothing/blanket",
+"Dress in loose clothing and a blanket."
+],
+[
+"7. Mother and\nnewborn\ntogether",
+"• Keep together 24 hrs/day (rooming-in) in a warm room (≥ 25°C).\n• Feed on demand.\nSkin-to-skin can rewarm mild–moderate hypothermia (see table 3)."
+],
+[
+"Warm\ntransportation",
+"• Keep warm while waiting for transport.\nDress and wrap in blankets if a transport device is used."
+],
+[
+"Warm\nassessment (if  not skin-to-skin)",
+"• Place the newborn on a warm surface in a warm room.\n• Add extra heat source if needed (radiant warmer).\nUse servo-control if the radiant warmer is >10 minutes."
+]
+],
+"i": 328
+},
+{
+"k": "img",
+"name": "m1-016.jpeg",
+"i": 329
+},
+{
+"k": "para",
+"t": "provides Early essential newborn care to Breathing Baby Checklist",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 330
+},
+{
+"k": "table",
+"rows": [
+[
+"Pre-birth preparations",
+"Yes",
+"Partial",
+"No"
+],
+[
+"1.",
+"Check the room temperature and turn off the fans",
+"",
+"",
+""
+],
+[
+"2.",
+"Tell the mother (and her support person) what is going to be done and provide continuous emotional support and reassurance, as feasible.",
+"",
+"",
+""
+],
+[
+"3.",
+"Handwashing (first of two hand washings)",
+"",
+"",
+""
+],
+[
+"4.",
+"Place a dry cloth on the mother's abdomen",
+"",
+"",
+""
+],
+[
+"5.",
+"Prepare the newborn resuscitation area",
+"",
+"",
+""
+],
+[
+"6.",
+"Check that bag and mask are functioning",
+"",
+"",
+""
+],
+[
+"7.",
+"Handwashing (second of two hand washings)",
+"",
+"",
+""
+],
+[
+"8.",
+"Put on two pairs of clean gloves",
+"",
+"",
+""
+],
+[
+"9.",
+"Put the forceps, cord clamp in an easy-to-use order",
+"",
+"",
+""
+],
+[
+"Dry, stimulate, suction if needed, and warm the baby",
+"",
+"",
+""
+],
+[
+"10.",
+"Call out time of birth: hour__, minute__, second__",
+"",
+"",
+""
+],
+[
+"11",
+"Start drying within 5 seconds of birth",
+"< 5 s",
+"5–10 s",
+"> 10 s"
+],
+[
+"12.",
+"Dry the baby thoroughly (wipe the eyes, face, head, front, back, arms, and legs)",
+"",
+"",
+""
+],
+[
+"13.",
+"Stimulate the baby by gently rubbing the head, body, arm,s and legs",
+"",
+"",
+""
+],
+[
+"14.",
+"Suction only if the airway is blocked and the baby completely not breathing",
+"",
+"",
+""
+],
+[
+"15.",
+"Remove the wet cloth",
+"",
+"",
+""
+],
+[
+"16.",
+"Put the baby in direct skin-to-skin contact with mother's abdomen",
+"",
+"",
+""
+],
+[
+"17.",
+"Cover the baby’s body with a dry cloth and the head with a hat",
+"",
+"",
+""
+],
+[
+"Give Oxytocin to the mother",
+"",
+"",
+""
+],
+[
+"18.",
+"Check for a second baby",
+"",
+"",
+""
+],
+[
+"19",
+"Give oxytocin to the mother within 1 minute of delivery",
+"",
+"",
+""
+],
+[
+"Clamp the cord",
+"",
+"",
+""
+],
+[
+"20.",
+"Remove the outer pair of gloves",
+"",
+"",
+""
+],
+[
+"21.",
+"Check cord pulsations, clamp after cord pulsations stopped (usually 1–3 minutes)",
+"",
+"",
+""
+],
+[
+"22.",
+"Place the clamp at 2 cm, the forceps at 5 cm, from the umbilical base",
+"",
+"",
+""
+],
+[
+"Deliver the placenta and counsel the mother",
+"",
+"",
+""
+],
+[
+"23.",
+"Deliver placenta",
+"",
+"",
+""
+],
+[
+"24.",
+"Counsel mother on feeding cues (drooling, mouth opening, tonguing/licking, rooting, biting hand, crawling)",
+"> 2 mentioned",
+"1–2 mentioned",
+""
+],
+[
+"TOTAL SCORE (maximum possible score = 48)",
+"",
+"",
+""
+],
+[
+"(# “Yes” x 2) + (# “Partial”) =",
+"",
+"",
+""
+]
+],
+"i": 331
+},
+{
+"k": "img",
+"name": "m1-017.jpeg",
+"i": 332
+},
+{
+"k": "para",
+"t": "References:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 333
+},
+{
+"k": "para",
+"t": "The Golden Minute after Birth – Beyond Resuscitation, Girish, Meenakshi; Subramaniam, Girish1, International Journal of Advanced Medical and Health Research 6(2):p 41-45, Jul–Dec 2019. | DOI: 10.4103/IJAMR.IJAMR_89_19",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 334
+},
+{
+"k": "para",
+"t": "J Multidiscip Healthc. 2020; 13: 943–952.Published online 2020 Sep 17. doi: 10.2147/JMDH.S268959",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 335
+},
+{
+"k": "para",
+"t": "The first golden minute — Is it relevant?, Tonia Branche,a,b Marta Perez,a,b and Ola D. Saugstadb,c,*.  John Madar, Charles C.Roehr, Sean Ainsworth  Berndt Urlesberger  Dominic Wilkinson  Jonathan P. Wyllie Published:March 24, 2021 BJA Educ. 2021 Dec; 21(12): 479–485. Published online 2021 Sep 15. doi: 10.1016/j.bjae.2021.07.008 PMCID: PMC8606598 PMID: 34840820",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 336
+},
+{
+"k": "para",
+"t": "Textbook of Neonatal Resuscitation (8th Edition) Edited by Gary M. Weiner, MD, FAAP;  Jeanette Zaichkin, RN, MN, NNP-BC American Academy of Pediatrics  DOI: https://doi.org/10.1542/9781610025256 ISBN electronic: 978-1-61002-525-6 ISBN print: 978-1-61002-524-9 Publication date: June 2021",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 337
+},
+{
+"k": "para",
+"t": "Matern Health Neonatol Perinatol. 2016; 2: 4. Published online 2016 Jun 13. doi: 10.1186/s40748-016-0032-y PMCID: PMC4904360 PMID: 27298730, The timing of umbilical cord clamping at birth: physiological considerations",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 338
+},
+{
+"k": "para",
+"t": "NRP 9th Edition NRP 9th Edition Updates",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 339
+},
+{
+"k": "para",
+"t": "2023 American Heart Association and American Academy of Pediatrics Focused Update on Neonatal Resuscitation: An Update to the American Heart Association Guidelines for Cardiopulmonary Resuscitation and Emergency Cardiovascular Care https://doi.org/10.1161/CIR.0000000000001181Circulation. 2024;149:e157–e166",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 340
+},
+{
+"k": "para",
+"t": "Sudomotor function, thermoregulation and electrodermal control in the human brain Laura Crucianelli, ... Hugo Critchley, in Reference Module in Neuroscience and Biobehavioral Psychology, 2024 BMC Pediatr. 2022; 22: 447.  Published online 2022 Jul 25. doi: 10.1186/s12887-022-03512-x PMCID: PMC9316355 PMID: 35879708 Factors associated with hypothermia within the first 6 hours of life in infants born at ≥340 weeks’ gestation: a multivariable analysis",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 341
+},
+{
+"k": "para",
+"t": "Delivery Room Interventions for Hypothermia in Preterm Neonates: A Systematic Review and Network Meta-analysis Thangaraj Abiramalatha et al. JAMA Pediatr.2021.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 342
+},
+{
+"k": "para",
+"t": "Section (2) selected Neonatal Emergency Emergencies",
+"style": "Heading 1",
+"head": 1,
+"b": false,
+"i": 343
+},
+{
+"k": "para",
+"t": "Shock in Neonates",
+"style": "Heading 2",
+"head": 2,
+"b": false,
+"lvl": 1,
+"marker": "1.4",
+"i": 344
+},
+{
+"k": "para",
+"t": "Definition:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 345
+},
+{
+"k": "para",
+"t": "Shock, or circulatory failure, is defined as a physiologic state characterized by tissue hypoxia due to reduced oxygen delivery and/or increased oxygen consumption or inadequate oxygen utilization.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 346
+},
+{
+"k": "para",
+"t": "Shock is often initially reversible, but must be recognized and treated immediately to prevent progression to irreversible organ dysfunction.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 347
+},
+{
+"k": "para",
+"t": "Hypotension is a late sign",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 348
+},
+{
+"k": "para",
+"t": "It's a major cause of neonatal death, with early recognition crucial for survival, involving fluid resuscitation, cardiovascular support(vasopressors),  and addressing underlying infection.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 349
+},
+{
+"k": "para",
+"t": "Causes & Risk Factors",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 350
+},
+{
+"k": "para",
+"t": "Maternal Factors: GBS infection, chorioamnionitis, prolonged rupture of membranes.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 351
+},
+{
+"k": "para",
+"t": "Infant Factors: Prematurity, low birth weight, male gender, indwelling lines (catheters, tubes).",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 352
+},
+{
+"k": "para",
+"t": "Pathogens: Bacteria from the mother's genital tract (early-onset), hospital-acquired (late-onset).",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 353
+},
+{
+"k": "para",
+"t": "Signs & Symptoms (Can be subtle)",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 354
+},
+{
+"k": "para",
+"t": "General: Fever or low temperature, lethargy, irritability, poor feeding, vomiting, diarrhea, jaundice, pale/clammy skin, swelling.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 355
+},
+{
+"k": "para",
+"t": "Respiratory: Fast/slow breathing, apnea, grunting, nasal flaring.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 356
+},
+{
+"k": "para",
+"t": "Cardiovascular (Shock): Fast/slow heart rate, cold extremities, poor capillary refill, mottling, hypotension, warm extremities (early warm shock).",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 357
+},
+{
+"k": "para",
+"t": "Metabolic: Hypo/hyperglycemia, acidosis, electrolyte imbalance.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 358
+},
+{
+"k": "para",
+"t": "Management Priorities (Emergency Care)",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 359
+},
+{
+"k": "para",
+"t": "Antibiotics: Immediate, broad-spectrum antibiotics.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 360
+},
+{
+"k": "para",
+"t": "Fluid Resuscitation: Volume expanders to improve circulation.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 361
+},
+{
+"k": "para",
+"t": "Cardiovascular Support: Vasopressors (like dopamine, epinephrine) for persistent hypotension, possibly inhaled nitric oxide for high pulmonary pressures (PPHN).",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 362
+},
+{
+"k": "para",
+"t": "Ventilation: Support for respiratory distress.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 363
+},
+{
+"k": "para",
+"t": "Monitoring: Close hemodynamic monitoring metabolic support, (echocardiography), & managing complications like PPHN.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "5.",
+"i": 364
+},
+{
+"k": "para",
+"t": "Treatment Details:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 365
+},
+{
+"k": "para",
+"t": "Stabilization: Airway + O2 if hypoxemic, mechanical ventilation/respiratory support if needed.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 366
+},
+{
+"k": "para",
+"t": "Circulation: IV access, initial lab samples, central line (if possible: for frequent blood samples and Arterial line: for central BP measurement).",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 367
+},
+{
+"k": "para",
+"t": "Ongoing evaluation: continues evaluation is necessary, management may change frequently.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 368
+},
+{
+"k": "para",
+"t": "Fluids:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 369
+},
+{
+"k": "para",
+"t": "Normal Saline or Ringer’s lactate can be used",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 2,
+"marker": "•",
+"i": 370
+},
+{
+"k": "para",
+"t": "Amount of fluids different according to the shock type: start with  20 ml/ kg, over 15-30 minutes.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 2,
+"marker": "•",
+"i": 371
+},
+{
+"k": "para",
+"t": "Indicators of Clinical Improvement:",
+"style": "List Paragraph",
+"head": 0,
+"b": true,
+"i": 372
+},
+{
+"k": "para",
+"t": "Improved heart rate and blood pressure.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 2,
+"marker": "•",
+"i": 373
+},
+{
+"k": "para",
+"t": "Stronger central and peripheral pulses with better skin perfusion.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 2,
+"marker": "•",
+"i": 374
+},
+{
+"k": "para",
+"t": "Correction of metabolic acidosis and reduced lactate levels.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 2,
+"marker": "•",
+"i": 375
+},
+{
+"k": "para",
+"t": "Enhanced neurological responsiveness and normal reflexes. A.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 2,
+"marker": "•",
+"i": 376
+},
+{
+"k": "para",
+"t": "Cardiogenic shock: fluids may not improve the shock and may deteriorate the condition so, cautious fluid bolus (10 mL/kg), and use inotropes.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 377
+},
+{
+"k": "para",
+"t": "Patency of Ductus arteriosus may be life saving in obstructive heart lesions",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 378
+},
+{
+"k": "para",
+"t": "Antibiotics: imperial antibiotics is needed for types of shock, better after Blood culture, consider acyclovir if herpes is suspected. Local antibiotic guidelines can be used initially",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 379
+},
+{
+"k": "img",
+"name": "m1-018.jpeg",
+"i": 380
+},
+{
+"k": "para",
+"t": "ntil blood culture results obtained.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 381
+},
+{
+"k": "img",
+"name": "m1-019.jpeg",
+"i": 382
+},
+{
+"k": "para",
+"t": "Neonatal Hypoglycemia",
+"style": "Heading 2",
+"head": 2,
+"b": false,
+"lvl": 1,
+"marker": "1.5",
+"i": 383
+},
+{
+"k": "para",
+"t": "INTRODUCTION",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 384
+},
+{
+"k": "para",
+"t": "Neonatal hypoglycemia is one of the most common metabolic emergencies in the newborn period. If not promptly recognized and treated, it can lead to irreversible neurological injury, seizures, developmental delay, and death. In Sudan, where resource limitations may affect screening and monitoring, a high index of suspicion and a systematic approach are essential.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 385
+},
+{
+"k": "para",
+"t": "This section provides a standardized, evidence-based, and context-adapted protocol for the identification, investigation, and management of neonatal hypoglycemia in Sudanese NICUs and newborn care units.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 386
+},
+{
+"k": "para",
+"t": "DEFINITION",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 387
+},
+{
+"k": "para",
+"t": "Hypoglycemia is defined as a plasma glucose level below the following thresholds:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 388
+},
+{
+"k": "table",
+"rows": [
+[
+"Population",
+"Threshold (mmol/L)",
+"Threshold (mg/dL)"
+],
+[
+"Term newborn (≥37 weeks)",
+"< 2 mmol/L",
+"< 36 mg/dL"
+],
+[
+"Preterm newborn (<37 weeks)",
+"< 2.6 mmol/L",
+"< 46.8 mg/dL"
+]
+],
+"i": 389
+},
+{
+"k": "para",
+"t": "Severity classification:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 390
+},
+{
+"k": "para",
+"t": "Moderate hypoglycemia: 1 – 2.6 mmol/L (18 – 46 mg/dL)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 391
+},
+{
+"k": "para",
+"t": "Severe hypoglycemia: < 1 mmol/L (< 18 mg/dL)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 392
+},
+{
+"k": "table",
+"rows": [
+[
+"IMPORTANT\nIn the first 48 hours of life, transitional low glucose levels are common. However, treatment thresholds should be followed to prevent harm."
+]
+],
+"i": 393
+},
+{
+"k": "img",
+"name": "m1-020.png",
+"i": 394
+},
+{
+"k": "para",
+"t": "RISK FACTORS (SCREENING INDICATIONS)",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 395
+},
+{
+"k": "para",
+"t": "Screen for hypoglycemia in all newborns with risk factors, even if asymptomatic:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 396
+},
+{
+"k": "para",
+"t": "High-Risk Categories:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 397
+},
+{
+"k": "para",
+"t": "Prematurity (<37 weeks) or low birth weight (<2500 g)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 398
+},
+{
+"k": "para",
+"t": "Infant of a diabetic mother (gestational or pre-existing diabetes)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 399
+},
+{
+"k": "para",
+"t": "Large for gestational age (LGA) or macrosomia (birth weight >4 kg)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 400
+},
+{
+"k": "para",
+"t": "Small for gestational age (SGA) / intrauterine growth restriction (IUGR)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 401
+},
+{
+"k": "para",
+"t": "Perinatal asphyxia (Apgar score ≤5 at 5 min, needed resuscitation)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 402
+},
+{
+"k": "para",
+"t": "Hypothermia (temperature <36.5°C)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 403
+},
+{
+"k": "para",
+"t": "Respiratory distress (requiring oxygen or respiratory support)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 404
+},
+{
+"k": "para",
+"t": "Suspected sepsis",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 405
+},
+{
+"k": "para",
+"t": "Poor feeding or delayed initiation of breastfeeding",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 406
+},
+{
+"k": "para",
+"t": "Family history of hypoglycemia or metabolic disorders",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 407
+},
+{
+"k": "para",
+"t": "Congenital syndromes (e.g., Beckwith-Wiedemann syndrome)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 408
+},
+{
+"k": "para",
+"t": "Polycythemia (hematocrit >65%)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 409
+},
+{
+"k": "para",
+"t": "Erythroblastosis fetalis",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 410
+},
+{
+"k": "para",
+"t": "Sudan-specific consideration: In settings with high rates of maternal malnutrition, low birth weight, and limited antenatal care, a lower threshold for screening is recommended.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 411
+},
+{
+"k": "para",
+"t": "CLINICAL PRESENTATION",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 412
+},
+{
+"k": "para",
+"t": "Symptoms may be nonspecific. Assume hypoglycemia in any neonate with altered behavior.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 413
+},
+{
+"k": "para",
+"t": "Neurogenic (Autonomic) Symptoms:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 414
+},
+{
+"k": "para",
+"t": "Jitteriness, tremors",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 415
+},
+{
+"k": "para",
+"t": "Irritability, high-pitched cry",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 416
+},
+{
+"k": "para",
+"t": "Sweating",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 417
+},
+{
+"k": "para",
+"t": "Tachycardia, tachypnea",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 418
+},
+{
+"k": "para",
+"t": "Pallor",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 419
+},
+{
+"k": "para",
+"t": "Neuroglycopenic Symptoms (Brain dysfunction):",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 420
+},
+{
+"k": "para",
+"t": "Lethargy, hypotonia",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 421
+},
+{
+"k": "para",
+"t": "Poor feeding, weak suck",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 422
+},
+{
+"k": "para",
+"t": "Apnea, bradycardia",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 423
+},
+{
+"k": "para",
+"t": "Hypothermia",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 424
+},
+{
+"k": "para",
+"t": "Seizures",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 425
+},
+{
+"k": "para",
+"t": "Coma",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 426
+},
+{
+"k": "table",
+"rows": [
+[
+"IMPORTANT\nIn preterm infants, symptoms may be subtle or absent. Routine screening is essential."
+]
+],
+"i": 427
+},
+{
+"k": "img",
+"name": "m1-021.png",
+"i": 428
+},
+{
+"k": "para",
+"t": "DIAGNOSIS AND MONITORING",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 429
+},
+{
+"k": "para",
+"t": "Glucose Measurement",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 430
+},
+{
+"k": "para",
+"t": "Preferred sample: Plasma glucose (laboratory) – most accurate.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 431
+},
+{
+"k": "para",
+"t": "Point-of-care (glucometer): Use for screening, but confirm low values with laboratory glucose if available.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 432
+},
+{
+"k": "para",
+"t": "Heel-prick capillary sample: Ensure warm heel, wipe away first drop, collect second drop.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 433
+},
+{
+"k": "para",
+"t": "Timing of screening:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 434
+},
+{
+"k": "para",
+"t": "First screen: At 1–2 hours of age (or before first feed if symptomatic).",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 435
+},
+{
+"k": "para",
+"t": "Repeat before feeds every 3–6 hours in at-risk infants until stable for 12–24 hours.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 436
+},
+{
+"k": "para",
+"t": "In symptomatic infants, check glucose immediately",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 437
+},
+{
+"k": "para",
+"t": "When to Suspect Persistent Hypoglycemia Disorder",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 438
+},
+{
+"k": "para",
+"t": "Hypoglycemia recurring beyond 48 hours of life.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 439
+},
+{
+"k": "para",
+"t": "Requiring intravenous dextrose infusion >8 mg/kg/min.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 440
+},
+{
+"k": "para",
+"t": "No obvious risk factors.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 441
+},
+{
+"k": "para",
+"t": "Family history of hypoglycemia or consanguinity.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 442
+},
+{
+"k": "para",
+"t": "Dysmorphic features (e.g., macroglossia, midline defects).",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 443
+},
+{
+"k": "para",
+"t": "If suspected, collect critical sample during hypoglycemia.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 444
+},
+{
+"k": "para",
+"t": "MANAGEMENT algorithm of Asymptomatic Hypoglycaemia",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 445
+},
+{
+"k": "para",
+"t": "Dry baby and keep warm immediately after birth and Skin-to-skin contact for at least 1 hour.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 446
+},
+{
+"k": "para",
+"t": "Ensure baby offered feed within first hour after birth, then offer breast in response to feeding cues as often as possible",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 447
+},
+{
+"k": "para",
+"t": "If mother has breast feeding difficulties because of her condition, her breasts or the baby, nurses should teach her on proper attachment and positioning and the other problems.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 448
+},
+{
+"k": "para",
+"t": "If breast feeding has failed mother should be encouraged to express milk and give by cup, spoon or syringe and ensure 2-3 hrly feeds.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 449
+},
+{
+"k": "para",
+"t": "If there is contraindication to breast milk, or it is  insufficient,  give 40–60 mL/kg/day 3-hrly over first 24 hr after birth, increasing to 70–90 mL/kg/day in 24–48 hr after birth, and 100–120 mL/kg/day in first 48–72 hr after birth.Baby may require NGT feeding to maintain adequate blood glucose levels",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 450
+},
+{
+"k": "para",
+"t": "Blood glucose monitoring",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 451
+},
+{
+"k": "para",
+"t": "check first blood glucose 30 minutes after completion of first feed, which should be initiated within first hour after birth.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 452
+},
+{
+"k": "para",
+"t": "If feeding is delayed beyond the first hour, check the blood glucose at one hour, then 30 minutes after first feed.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 453
+},
+{
+"k": "para",
+"t": "Check blood glucose level before 3rd feed.",
+"style": "List Paragraph",
+"head": 0,
+"b": true,
+"lvl": 1,
+"marker": "•",
+"i": 454
+},
+{
+"k": "para",
+"t": "If ≥2.0 mmol/L (in ≥37 weeks), or ≥2.6 mmol/L(in <37 weeks) : Continue to support responsive breastfeeding",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 455
+},
+{
+"k": "para",
+"t": "Observe for clinical signs of hypoglycaemia and continue monitoring blood glucose as required.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 456
+},
+{
+"k": "para",
+"t": "Do not allow >3 hr between feeds until 2 consecutive blood glucose measurements ≥2.0 mmol/L (in ≥37 weeks) or ≥2.6 mmol/L(in <37 weeks),  and at least 24-48 hr of successful feeding to be demonstrated before discharge",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 457
+},
+{
+"k": "para",
+"t": "If baby shows clinical signs suggestive of hypoglycaemia, measure blood glucose immediately and Administer 40% oral glucose gel",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 458
+},
+{
+"k": "para",
+"t": "0.5 ml/kg of 40% glucose gel",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 459
+},
+{
+"k": "para",
+"t": "Max 2 doses per episode, 6 doses in 48 hours",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 460
+},
+{
+"k": "para",
+"t": "Administer via oral syringe, massage into cheek, follow with feed",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 461
+},
+{
+"k": "para",
+"t": "Recheck glucose 30 minutes post-feed",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 462
+},
+{
+"k": "img",
+"name": "m1-022.jpeg",
+"i": 463
+},
+{
+"k": "para",
+"t": "Symptomatic or Severe Hypoglycaemia (BG <1.0mmol/l or there are abnormal clinical signs)",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 464
+},
+{
+"k": "para",
+"t": "If blood glucose <1.0 mmol/L at any gestation and/or clinical signs consistent with hypoglycaemia, treat as a CLINICAL EMERGENCY.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 465
+},
+{
+"k": "para",
+"t": "Admit to NICU",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 466
+},
+{
+"k": "para",
+"t": "obtain IV access",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 467
+},
+{
+"k": "para",
+"t": "collect blood sample for Lab confirmation of blood glucose + Hypoglycaemia screening tests and Review needs to screen for/treat sepsis",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 468
+},
+{
+"k": "para",
+"t": "Give bolus 2.5 ml/kg of 10% dextrose.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 469
+},
+{
+"k": "para",
+"t": "Follow with continuous infusion (10% dextrose at 60 mL/kg/day).",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 470
+},
+{
+"k": "para",
+"t": "increase GIR by 2mg/kg/min (by increasing volume and/or concentration of glucose infusion) and recheck blood glucose after 30 min",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 471
+},
+{
+"k": "para",
+"t": "Repeat cycle if blood glucose still <1 mmol/L or their abnormal clinical signs",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 472
+},
+{
+"k": "para",
+"t": "If BG 1.0-2.5 mmol/l and no abnormal clinical signs:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 473
+},
+{
+"k": "para",
+"t": "Increase glucose delivery (GIR) by 2mg/kg/min",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 474
+},
+{
+"k": "para",
+"t": "continue oral feeds and recheck blood glucose after 30 min.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 475
+},
+{
+"k": "para",
+"t": "IV 10% dextrose bolus is not indicated here.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 476
+},
+{
+"k": "para",
+"t": "If BG >2.5 mmol/l:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 477
+},
+{
+"k": "para",
+"t": "Continue enteral feeds and slow wean IV infusion.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 478
+},
+{
+"k": "para",
+"t": "Continue to monitor blood glucose until infant is on full enteral feeds and blood glucose values are >2.5mmol/l , or 3.0mmol/l in cases of hyperinsulinism over several fast feed cycles for at least 24 hours.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 479
+},
+{
+"k": "para",
+"t": "If IV access unavailable and unable to feed orally/NG:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 480
+},
+{
+"k": "para",
+"t": "Give buccal dextrose gel 40% (0.5 mL/kg = 200 mg/kg) if available, then feed.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 481
+},
+{
+"k": "para",
+"t": "If no gel available: Give 2 mL/kg of 10% dextrose orally/NG as a temporary measure.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 482
+},
+{
+"k": "img",
+"name": "m1-023.jpeg",
+"i": 483
+},
+{
+"k": "para",
+"t": "WHEN BLOOD GLUCOSE MONITORING IS UNAVAILABLE In resource-limited settings without glucometers/labs:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 484
+},
+{
+"k": "para",
+"t": "Asymptomatic high-risk infant: Assume moderate hypoglycemia and start early frequent breastfeeding ± NG feeds. Monitor clinically.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 485
+},
+{
+"k": "para",
+"t": "Symptomatic infant (jittery, lethargic, seizures): Assume severe hypoglycemia. Give 2 mL/kg 10% dextrose IV/NG/orally and start IV fluids if possible. Treat as severe hypoglycemia.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 486
+},
+{
+"k": "para",
+"t": "MAINTENANCE AND WEANING OF IV DEXTROSE",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 487
+},
+{
+"k": "para",
+"t": "Target glucose range: 2.5–5.0 mmol/L (45–90 mg/dL).",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 488
+},
+{
+"k": "para",
+"t": "Monitor glucose every 1–2 hours until stable, then every 3–6 hours.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 489
+},
+{
+"k": "para",
+"t": "Weaning:",
+"style": "List Paragraph",
+"head": 0,
+"b": true,
+"lvl": 0,
+"marker": "•",
+"i": 490
+},
+{
+"k": "para",
+"t": "When glucose stable >3.0 mmol/L for 12 hours, start to reduce IV rate by 10–20% every 6 hours while increasing enteral feeds.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 491
+},
+{
+"k": "para",
+"t": "Ensure infant tolerates full enteral feeds before stopping IV.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 492
+},
+{
+"k": "para",
+"t": "Discharge criteria:",
+"style": "List Paragraph",
+"head": 0,
+"b": true,
+"lvl": 0,
+"marker": "•",
+"i": 493
+},
+{
+"k": "para",
+"t": "Glucose >2.5 mmol/L for 24 hours on enteral feeds alone.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 494
+},
+{
+"k": "para",
+"t": "Feeding well, weight gaining.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 495
+},
+{
+"k": "para",
+"t": "Persistently Low Blood Glucose Measurement",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 496
+},
+{
+"k": "para",
+"t": "Defined as >2 measurements <2.0 mmol/L ≥37 weeks’ gestation or <2.6 mmol/L <37 weeks’ gestation within the first 48 hr of life",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 497
+},
+{
+"k": "para",
+"t": "CRITICAL SAMPLE FOR PERSISTENT HYPOGLYCEMIA",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 498
+},
+{
+"k": "para",
+"t": "Collect during hypoglycemia (glucose <2.5 mmol/L) before treatment:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 499
+},
+{
+"k": "para",
+"t": "Plasma glucose (confirmatory)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 500
+},
+{
+"k": "para",
+"t": "Insulin",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 501
+},
+{
+"k": "para",
+"t": "C-peptide",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 502
+},
+{
+"k": "para",
+"t": "Beta-hydroxybutyrate",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 503
+},
+{
+"k": "para",
+"t": "Free fatty acids",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 504
+},
+{
+"k": "para",
+"t": "Cortisol",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 505
+},
+{
+"k": "para",
+"t": "Growth hormone",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 506
+},
+{
+"k": "para",
+"t": "Lactate",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 507
+},
+{
+"k": "para",
+"t": "Ammonia",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 508
+},
+{
+"k": "para",
+"t": "Urine ketones",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 509
+},
+{
+"k": "para",
+"t": "Interpretation:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 510
+},
+{
+"k": "para",
+"t": "High insulin + low ketones/FFA = Hyperinsulinism",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 511
+},
+{
+"k": "para",
+"t": "Low cortisol/GH = Pituitary/adrenal insufficiency",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 512
+},
+{
+"k": "para",
+"t": "High lactate = Gluconeogenesis disorder",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 513
+},
+{
+"k": "para",
+"t": "High ketones + low FFA = Fatty acid oxidation disorder",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 514
+},
+{
+"k": "para",
+"t": "REFRACTORY HYPOGLYCEMIA",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 515
+},
+{
+"k": "para",
+"t": "If glucose remains low despite >12 mg/kg/min of dextrose:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 516
+},
+{
+"k": "para",
+"t": "Rule out hyperinsulinism:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"lvl": 0,
+"marker": "•",
+"i": 517
+},
+{
+"k": "para",
+"t": "Check critical sample (see below).",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 518
+},
+{
+"k": "para",
+"t": "Consider glucagon 0.02 mg/kg IM/IV (may give diagnostic and therapeutic benefit).",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 519
+},
+{
+"k": "para",
+"t": "Consider hydrocortisone 2.5 mg/kg IV twice daily if adrenal insufficiency suspected.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 520
+},
+{
+"k": "para",
+"t": "Consult pediatric endocrinology if available (telemedicine if needed).",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 521
+},
+{
+"k": "para",
+"t": "If hyperinsulinism confirmed: Diazoxide (starting 5 mg/kg/day in divided doses) may be used under specialist guidance (monitor for fluid retention, pulmonary hypertension).",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 522
+},
+{
+"k": "para",
+"t": "PREVENTION",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 523
+},
+{
+"k": "para",
+"t": "Early breastfeeding within 1 hour of birth.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 524
+},
+{
+"k": "para",
+"t": "Kangaroo Mother Care for preterm/LBW infants to maintain temperature.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 525
+},
+{
+"k": "para",
+"t": "Monitor at-risk infants proactively.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 526
+},
+{
+"k": "para",
+"t": "Educate mothers on feeding cues and hypoglycemia signs.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 527
+},
+{
+"k": "para",
+"t": "SPECIAL CONSIDERATIONS FOR SUDAN",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 528
+},
+{
+"k": "para",
+"t": "Human resource: Train nurses and midwives to recognize and manage hypoglycemia.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 529
+},
+{
+"k": "para",
+"t": "Equipment: Ensure glucometers and test strips are available; calibrate regularly.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 530
+},
+{
+"k": "para",
+"t": "Supply chain: Maintain stock of IV dextrose, feeding tubes, dextrose gel.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 531
+},
+{
+"k": "para",
+"t": "Community awareness: Integrate hypoglycemia education into antenatal and postnatal counseling.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 532
+},
+{
+"k": "para",
+"t": "Record keeping: Use simple bedside charts for glucose monitoring.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 533
+},
+{
+"k": "img",
+"name": "m1-024.jpeg",
+"i": 534
+},
+{
+"k": "para",
+"t": "REFERENCES",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 535
+},
+{
+"k": "para",
+"t": "UpToDate. Management and outcome of neonatal hypoglycemia. 2023.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 536
+},
+{
+"k": "para",
+"t": "Pediatric Endocrine Society. Guidelines for Evaluation and Management of Hypoglycemia in Neonates, Infants, and Children. 2015.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 537
+},
+{
+"k": "para",
+"t": "American Academy of Pediatrics. Postnatal Glucose Homeostasis in Late-Preterm and Term Infants. Pediatrics, 2011.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 538
+},
+{
+"k": "para",
+"t": "Rwanda Ministry of Health. National Neonatal Care Protocol, Third Edition, 2020.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 539
+},
+{
+"k": "para",
+"t": "WHO. Guidelines on Basic Newborn Resuscitation. 2012.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 540
+},
+{
+"k": "para",
+"t": "Neonatal Seizure",
+"style": "Heading 2",
+"head": 2,
+"b": false,
+"lvl": 1,
+"marker": "1.6",
+"i": 541
+},
+{
+"k": "para",
+"t": "Critical Paradigms",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 542
+},
+{
+"k": "para",
+"t": "\"Treat the EEG, Not Just the Baby\" – 80% of neonatal seizures are electrographic-only.",
+"style": "No Spacing",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 543
+},
+{
+"k": "para",
+"t": "\"In neonatal neurology, time is measured in minutes, outcomes in lifetimes.\"\n– International Consortium on Neonatal Brain Protection, 2024",
+"style": "No Spacing",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 544
+},
+{
+"k": "para",
+"t": "\"Minutes Matter\" – Seizure duration correlates with neuronal injury.",
+"style": "No Spacing",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 545
+},
+{
+"k": "para",
+"t": "\"Etiology Dictates Destiny\" – Underlying cause determines 90% of outcome variance.",
+"style": "No Spacing",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 546
+},
+{
+"k": "para",
+"t": "\"Stop Before Discharge\" – Acute provoked seizures rarely require chronic therapy.",
+"style": "No Spacing",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 547
+},
+{
+"k": "para",
+"t": "Time-Sensitive Targets:",
+"style": "No Spacing",
+"head": 0,
+"b": true,
+"i": 548
+},
+{
+"k": "table",
+"rows": [
+[
+"Milestone",
+"Target Time",
+"Quality Indicator"
+],
+[
+"Recognition → EEG initiation",
+"≤30 minutes",
+"Gold standard"
+],
+[
+"Seizure onset → 1st ASM dose",
+"≤10 minutes",
+"Critical"
+],
+[
+"Complete etiologic workup",
+"≤2 hours",
+"Standard"
+],
+[
+"Seizure freedom",
+"≤60 minutes",
+"Optimal"
+]
+],
+"i": 549
+},
+{
+"k": "para",
+"t": "RAPID DIAGNOSTIC PATHWAY",
+"style": "No Spacing",
+"head": 0,
+"b": true,
+"i": 550
+},
+{
+"k": "para",
+"t": "The 5-Minute Clinical Assessment",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 551
+},
+{
+"k": "para",
+"t": "ESSENTIAL DIFFERENTIAL: Seizure vs. Mimic",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 552
+},
+{
+"k": "table",
+"rows": [
+[
+"Feature",
+"Seizure (e.g., Focal Clonic)",
+"Non-Seizure Event (e.g., Jitteriness, Benign Myoclonus)"
+],
+[
+"Stimulus Sensitivity",
+"Not provoked by stimulus.",
+"Often provoked or enhanced by handling/stimulation."
+],
+[
+"Movement Pattern",
+"Rhythmic, slow (<4 jerks/sec), localized.",
+"Tremor-like, rapid, oscillatory, generalized."
+],
+[
+"Effect of Restraint",
+"Persists (you can feel the muscle contracting).",
+"Stops immediately with gentle restraint."
+],
+[
+"Consciousness",
+"Often altered.",
+"Normal (infant is awake or asleep but arousable)."
+],
+[
+"Eye Signs",
+"May have nystagmus or tonic deviation.",
+"Normal."
+]
+],
+"i": 553
+},
+{
+"k": "para",
+"t": "Step 1: Stabilization (ABCs)",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 554
+},
+{
+"k": "para",
+"t": "Airway & Breathing: Ensure patency, provide oxygen, prepare for ventilation if apneic.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 555
+},
+{
+"k": "para",
+"t": "Circulation: Secure IV/IO access, monitor heart rate and blood pressure.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 556
+},
+{
+"k": "para",
+"t": "Step 2: Rapid Etiologic Evaluation (\"SHOT\" Mnemonic)",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 557
+},
+{
+"k": "para",
+"t": "S - Sugar & Sepsis:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"lvl": 0,
+"marker": "•",
+"i": 558
+},
+{
+"k": "para",
+"t": "Bedside Glucose: IMMEDIATELY check and treat hypoglycemia (<2.6 mmol/L or <45 mg/dL) with 10% Dextrose (2-5 mL/kg IV bolus, then maintenance infusion).",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 559
+},
+{
+"k": "para",
+"t": "Infection Screen: Assume sepsis/meningitis until proven otherwise. Draw blood culture, start broad-spectrum antibiotics PLUS acyclovir (if HSV encephalitis is a possibility).",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 560
+},
+{
+"k": "para",
+"t": "H - Hypoxia & History:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"lvl": 0,
+"marker": "•",
+"i": 561
+},
+{
+"k": "para",
+"t": "Assess for perinatal asphyxia (low Apgars, need for resuscitation). Consider Hypoxic-Ischemic Encephalopathy (HIE) as the leading cause.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 562
+},
+{
+"k": "para",
+"t": "Take a quick history: maternal fever, diabetes, drug use, difficult delivery, family history of neonatal seizures.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 563
+},
+{
+"k": "para",
+"t": "O - Osmolality & Electrolytes:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"lvl": 0,
+"marker": "•",
+"i": 564
+},
+{
+"k": "para",
+"t": "Check serum electrolytes, calcium, magnesium. Correct imbalances urgently.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 565
+},
+{
+"k": "para",
+"t": "Hypocalcemia: 10% Calcium Gluconate, 1-2 mL/kg (100-200 mg/kg) IV over 10 mins with cardiac monitoring.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 566
+},
+{
+"k": "para",
+"t": "Hypomagnesemia: 50% Magnesium Sulfate, 0.2 mL/kg (100 mg/kg) IM/IV slowly.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 567
+},
+{
+"k": "para",
+"t": "T - Trauma & Toxins/Treatable Metabolic:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"lvl": 0,
+"marker": "•",
+"i": 568
+},
+{
+"k": "para",
+"t": "Consider intracranial hemorrhage (especially in traumatic delivery).",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 569
+},
+{
+"k": "para",
+"t": "Consider pyridoxine-dependent seizures in refractory cases. Empiric trial: Pyridoxine 100mg IV while monitoring EEG/respiration (risk of apnea).",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 570
+},
+{
+"k": "para",
+"t": "Step 3: Systematic Diagnostic Workup",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 571
+},
+{
+"k": "table",
+"rows": [
+[
+"Investigation",
+"Priority & Rationale",
+"Resource-Adapted Note"
+],
+[
+"Blood Tests",
+"Glucose, Electrolytes (Ca, Mg, Na), CBC, CRP, Blood Culture, Arterial Blood Gas.",
+"Minimum essential panel. Must be done for every infant."
+],
+[
+"Lumbar Puncture",
+"Mandatory if infection is suspected. CSF for cell count, protein, glucose, culture, HSV PCR.",
+"Do not delay antibiotics for LP. Perform as soon as infant is stable."
+],
+[
+"Neuroimaging",
+"1. Cranial Ultrasound (Bedside): Excellent for detecting major IVH, hydrocephalus.\n2. Brain MRI (Optimal): Gold standard for HIE patterns, stroke, malformations.",
+"Ultrasound is a high-yield, accessible first step. MRI should be obtained when feasible for definitive diagnosis and prognosis."
+],
+[
+"EEG Monitoring",
+"cEEG is ideal. aEEG is a good screening alternative to guide therapy and detect subclinical (electrographic-only) seizures.",
+"If neither is available, treat based on strong clinical suspicion (focal clonic/tonic) and monitor clinical response closely."
+],
+[
+"Metabolic/Genetic",
+"Consider if initial workup is negative, seizures are refractory, or there is family history/consanguinity. Tests: ammonia, lactate, amino acids, urine organic acids, genetic epilepsy panel.",
+"Pyridoxine trial is a critical, low-cost therapeutic test. Collaboration with a referral center for advanced testing is key."
+]
+],
+"i": 572
+},
+{
+"k": "para",
+"t": "Neurodiagnostic Strategy",
+"style": "No Spacing",
+"head": 0,
+"b": true,
+"i": 573
+},
+{
+"k": "para",
+"t": "TIER 1: EEG MONITORING",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 574
+},
+{
+"k": "para",
+"t": "Continuous video-EEG (cEEG) for:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 575
+},
+{
+"k": "para",
+"t": "Therapeutic hypothermia",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 576
+},
+{
+"k": "para",
+"t": "Unexplained encephalopathy",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 577
+},
+{
+"k": "para",
+"t": "Clinical seizures",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 578
+},
+{
+"k": "para",
+"t": "Paralysis/sedation",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 579
+},
+{
+"k": "para",
+"t": "Screen: 24 hours minimum",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 580
+},
+{
+"k": "para",
+"t": "• If seizures: Continue +24 hours after last seizure",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 581
+},
+{
+"k": "para",
+"t": "• HIE: Throughout cooling + rewarming + 24h post",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 582
+},
+{
+"k": "para",
+"t": "Amplitude-Integrated EEG (aEEG) when cEEG unavailable",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 583
+},
+{
+"k": "para",
+"t": "MUST include raw EEG tracing",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 584
+},
+{
+"k": "para",
+"t": "Sensitivity 70-80% (shell-like, 2007)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 585
+},
+{
+"k": "para",
+"t": "Limitations: Misses focal, low-amplitude seizures",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 586
+},
+{
+"k": "para",
+"t": "TIER 2: NEUROIMAGING",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 587
+},
+{
+"k": "para",
+"t": "24 HOURS: Cranial ultrasound (bedside)",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 588
+},
+{
+"k": "para",
+"t": "• Rule out hemorrhage/hydrocephalus",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 589
+},
+{
+"k": "para",
+"t": "• Serial exams if abnormal",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 590
+},
+{
+"k": "para",
+"t": "24-72 HOURS: MRI brain (when stable)",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 591
+},
+{
+"k": "para",
+"t": "• 1.5T or 3T preferred",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 592
+},
+{
+"k": "para",
+"t": "• Sequences: T1, T2, DWI, SWI, MRV",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 593
+},
+{
+"k": "para",
+"t": "• Spectroscopy if metabolic disorder suspected",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 594
+},
+{
+"k": "para",
+"t": "Other",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 595
+},
+{
+"k": "para",
+"t": "LUMBAR PUNCTURE (STAT, unless contraindicated):",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 596
+},
+{
+"k": "para",
+"t": "• Cell count, glucose, protein",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 597
+},
+{
+"k": "para",
+"t": "• Culture, HSV PCR, enterovirus PCR",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 598
+},
+{
+"k": "para",
+"t": "• Save aliquots: amino acids, neurotransmitters",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 599
+},
+{
+"k": "para",
+"t": "GENETIC TESTING (if no acute cause):",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 600
+},
+{
+"k": "para",
+"t": "• Epilepsy gene panel (KCNQ2, SCN2A, etc.)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 601
+},
+{
+"k": "para",
+"t": "• Chromosomal microarray",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 602
+},
+{
+"k": "para",
+"t": "• Whole exome sequencing (refractory cases)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 603
+},
+{
+"k": "para",
+"t": "TREATMENT of Neonatal Seizer ALGORITHM",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 604
+},
+{
+"k": "para",
+"t": "Phase 1: Immediate Intervention (0-15 minutes)",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 605
+},
+{
+"k": "para",
+"t": "STEP 1: Correct Reversible Causes FIRST",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 606
+},
+{
+"k": "para",
+"t": "HYPOGLYCEMIA (<2.6 mmol/L):",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 607
+},
+{
+"k": "para",
+"t": "• D10% 2 mL/kg IV bolus",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 608
+},
+{
+"k": "para",
+"t": "• Start infusion 6-8 mg/kg/min",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 609
+},
+{
+"k": "para",
+"t": "• Monitor glucose q1h until stable",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 610
+},
+{
+"k": "para",
+"t": "HYPOCALCEMIA (ionized Ca <0.8 mmol/L):",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 611
+},
+{
+"k": "para",
+"t": "• Calcium gluconate 10%: 1 mL/kg IV over 10 min",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 612
+},
+{
+"k": "para",
+"t": "• CARDIAC MONITOR required",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 613
+},
+{
+"k": "para",
+"t": "• Avoid extravasation (tissue necrosis risk)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 614
+},
+{
+"k": "para",
+"t": "HYPOMAGNESEMIA (<0.7 mmol/L):",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 615
+},
+{
+"k": "para",
+"t": "• MgSO₄ 50%: 0.1 mL/kg IM or slow IV",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 616
+},
+{
+"k": "para",
+"t": "• Often accompanies hypocalcemia",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 617
+},
+{
+"k": "para",
+"t": "INFECTION SUSPECTED:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 618
+},
+{
+"k": "para",
+"t": "• Ampicillin 50 mg/kg IV + Gentamicin 5 mg/kg IV",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 619
+},
+{
+"k": "para",
+"t": "• PLUS, Acyclovir 20 mg/kg IV q8h if HSV possible",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 620
+},
+{
+"k": "para",
+"t": "• Meningitis doses if CSF suggestive",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 621
+},
+{
+"k": "para",
+"t": "STEP 2: First-Line Antiseizure Medication",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 622
+},
+{
+"k": "para",
+"t": "PHENOBARBITAL (First-Line Recommendation):",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 623
+},
+{
+"k": "para",
+"t": "Loading: 20 mg/kg IV over 20 minutes",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 2,
+"marker": "•",
+"i": 624
+},
+{
+"k": "para",
+"t": "Therapeutic target: Serum 10-40 μg/mL",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 2,
+"marker": "•",
+"i": 625
+},
+{
+"k": "para",
+"t": "Maintenance dose: 3 to 5 mg/kg/day orally (PO) or IV every 12 hours; should be started 12 to 24 hours after the loading dose.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 2,
+"marker": "•",
+"i": 626
+},
+{
+"k": "para",
+"t": "Monitor: Respiratory depression, hypotension",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 2,
+"marker": "•",
+"i": 627
+},
+{
+"k": "para",
+"t": "WHY PHENOBARBITAL:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 628
+},
+{
+"k": "para",
+"t": "• Superior to levetiracetam (80% vs 28% seizure freedom)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 629
+},
+{
+"k": "para",
+"t": "• Familiar safety profile",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 630
+},
+{
+"k": "para",
+"t": "• IV/IM options available",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 631
+},
+{
+"k": "para",
+"t": "ALTERNATIVE IF NO IV ACCESS:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 632
+},
+{
+"k": "para",
+"t": "• Phenobarbital IM (same dose) OR",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 633
+},
+{
+"k": "para",
+"t": "• Midazolam 0.3 mg/kg buccal/nasal (monitor respiration)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 634
+},
+{
+"k": "para",
+"t": "Phase 2: Escalation (15-60 minutes)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 635
+},
+{
+"k": "para",
+"t": "IF SEIZURES PERSIST after 20 mg/kg Phenobarbital:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 636
+},
+{
+"k": "para",
+"t": "10 mg/kg IV in ten minutes may be  given",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 637
+},
+{
+"k": "para",
+"t": "Maximum loading: 40 mg/kg in first 24h",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 638
+},
+{
+"k": "para",
+"t": "Check serum level if available (>40 μg/mL = toxicity risk)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 639
+},
+{
+"k": "para",
+"t": "IF STILL SEIZING after 40 mg/kg Phenobarbital:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 640
+},
+{
+"k": "para",
+"t": "CHOOSE ONE based on availability/context:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 641
+},
+{
+"k": "para",
+"t": "OPTION A: LEVETIRACETAM",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 642
+},
+{
+"k": "para",
+"t": "LOAD: 20-40 mg/kg IV over 15 min",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 643
+},
+{
+"k": "para",
+"t": "MAINTENANCE5-10 mg/kg/day every 12 hours; should be started 24 hours after loading dose. Maximum 60mg/kg",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 644
+},
+{
+"k": "para",
+"t": "Preferred in cardiac/liver disease",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 645
+},
+{
+"k": "para",
+"t": "OPTION B: FOSPHENYTOIN/PHENYTOIN",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 646
+},
+{
+"k": "para",
+"t": "15- 20 mg/kg PE IV over 20 min (phenytoin equivalents)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 647
+},
+{
+"k": "para",
+"t": "Maintenance dose: 4 to 8 mg/kg/day every 8 hours",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 648
+},
+{
+"k": "para",
+"t": "CARDIAC MONITOR mandatory",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 649
+},
+{
+"k": "para",
+"t": "Avoid with lidocaine (arrhythmia risk)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 650
+},
+{
+"k": "para",
+"t": "First choice for suspected channelopathies",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 651
+},
+{
+"k": "para",
+"t": "OPTION C: MIDAZOLAM INFUSION",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 652
+},
+{
+"k": "para",
+"t": "BOLUS: 0.15 mg/kg IV over 5 min",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 653
+},
+{
+"k": "para",
+"t": "INFUSION: Start 0.06 mg/kg/hr, titrate to 0.4 mg/kg/hr max",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 654
+},
+{
+"k": "para",
+"t": "PREPARE TO INTUBATE",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 655
+},
+{
+"k": "para",
+"t": "Wean slowly after 24h seizure-free",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 656
+},
+{
+"k": "para",
+"t": "OPTION D: LIDOCAINE INFUSION (Highly effective)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 657
+},
+{
+"k": "para",
+"t": "LOAD: 2 mg/kg IV over 10 min",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 658
+},
+{
+"k": "para",
+"t": "INFUSION: 6 mg/kg/hr × 4h → 3.5 × 12h → 1.75 × 12h",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 659
+},
+{
+"k": "para",
+"t": "to be discontinued within 48 hours to avoid cardiotoxicity",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 660
+},
+{
+"k": "para",
+"t": "keep serum lidocaine level below 9 mg/L",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 661
+},
+{
+"k": "para",
+"t": "CONTRAINDICATIONS:",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 662
+},
+{
+"k": "para",
+"t": "Congenital heart disease",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 663
+},
+{
+"k": "para",
+"t": "Concurrent phenytoin",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 664
+},
+{
+"k": "para",
+"t": "Hepatic impairment",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 665
+},
+{
+"k": "para",
+"t": "Phase 3: Refractory Status Epilepticus (>60 minutes)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 666
+},
+{
+"k": "para",
+"t": "CONSIDER COMATOSE THERAPY:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 667
+},
+{
+"k": "para",
+"t": "Midazolam infusion to burst-suppression on EEG",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 668
+},
+{
+"k": "para",
+"t": "Consider thiopental/pentobarbital if available",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 669
+},
+{
+"k": "para",
+"t": "ICU setting with ventilator support",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 670
+},
+{
+"k": "para",
+"t": "METABOLIC TRIALS (CRITICAL STEP):",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 671
+},
+{
+"k": "para",
+"t": "Perform sequential trials UNDER EEG MONITORING:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 672
+},
+{
+"k": "para",
+"t": "Pyridoxine 100 mg IV q5min × 3 doses (max 500mg)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 673
+},
+{
+"k": "para",
+"t": "Pyridoxal-5'-phosphate 30 mg/kg/day if no B6 response",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 674
+},
+{
+"k": "para",
+"t": "Biotin 10 mg IV",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 675
+},
+{
+"k": "para",
+"t": "Folinic acid 2.5 mg IV",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 676
+},
+{
+"k": "para",
+"t": "POSITIVE RESPONSE: EEG normalization within minutes",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 677
+},
+{
+"k": "img",
+"name": "m1-025.jpeg",
+"i": 678
+},
+{
+"k": "para",
+"t": "Exercises",
+"style": "Heading 2",
+"head": 2,
+"b": false,
+"lvl": 1,
+"marker": "1.7",
+"i": 679
+},
+{
+"k": "para",
+"t": "Work through each exercise on your own or in your small group and write your answers on the lines provided. The answers are not printed here — your facilitator will go through them with you after you have tried.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 680
+},
+{
+"k": "table",
+"rows": [
+[
+"CASE EXERCISE   Exercise 1 — Case Study: Neonatal Shock Management"
+],
+[
+"A 5-day-old newborn is brought into the emergency unit.\nSystem\nFindings\nWeight\n3 kg\nHistory\nPoor feeding, vomiting"
+]
+],
+"i": 681
+},
+{
+"k": "img",
+"name": "m1-026.png",
+"i": 682
+},
+{
+"k": "para",
+"t": "Answer in the space provided:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 683
+},
+{
+"k": "para",
+"t": "Q1. What is your assessment of this baby? Classify the problem.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 684
+},
+{
+"k": "para",
+"t": "Q2. What are your immediate actions, in order of priority?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 685
+},
+{
+"k": "para",
+"t": "Q3. What will you monitor, and when would you refer or escalate?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 686
+},
+{
+"k": "table",
+"rows": [
+[
+"CASE EXERCISE   Exercise 2 — Case 2 — The Preterm with Cold Shock"
+],
+[
+"A preterm baby is lethargic and feeding poorly. On assessment:\nParameter\nValue\nHeart rate\n180 / min\nCapillary refill time\n5 seconds"
+]
+],
+"i": 687
+},
+{
+"k": "img",
+"name": "m1-027.png",
+"i": 688
+},
+{
+"k": "para",
+"t": "Answer in the space provided:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 689
+},
+{
+"k": "para",
+"t": "Q1. What is your assessment of this baby? Classify the problem.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 690
+},
+{
+"k": "para",
+"t": "Q2. What are your immediate actions, in order of priority?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 691
+},
+{
+"k": "para",
+"t": "Q3. What will you monitor, and when would you refer or escalate?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 692
+},
+{
+"k": "table",
+"rows": [
+[
+"CASE EXERCISE   Exercise 3 — Case Study: Neonatal Convulsions"
+],
+[
+"A premature newborn weighing 1.5 kg begins to exhibit clinical convulsions in the NICU.\nVitals & access: the infant has secure IV access and is currently stable on respiratory support.\nStat labs: a point-of-care test reveals an ionized calcium level of 0.7 mmol/L. Blood glucose and magnesium are normal."
+]
+],
+"i": 693
+},
+{
+"k": "img",
+"name": "m1-028.png",
+"i": 694
+},
+{
+"k": "para",
+"t": "Answer in the space provided:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 695
+},
+{
+"k": "para",
+"t": "Q1. What is your assessment of this baby? Classify the problem.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 696
+},
+{
+"k": "para",
+"t": "Q2. What are your immediate actions, in order of priority?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 697
+},
+{
+"k": "para",
+"t": "Q3. What will you monitor, and when would you refer or escalate?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 698
+},
+{
+"k": "table",
+"rows": [
+[
+"CASE EXERCISE   Exercise 4 — Case 2 — The Baby Who Was Never Seizing"
+],
+[
+"A 2-day-old term baby, 3 kg, is referred for “fits”. The midwife describes shaking of both arms. On your examination the baby is awake, looking at you, and the arms are trembling rapidly. When you gently hold the wrist, the trembling stops. Blood glucose is 3.4 mmol/L. Temperature 36.9°C.\nAsk the group:"
+]
+],
+"i": 699
+},
+{
+"k": "img",
+"name": "m1-029.png",
+"i": 700
+},
+{
+"k": "para",
+"t": "Answer in the space provided:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 701
+},
+{
+"k": "para",
+"t": "Q1. Apply STOP out loud. What do you find?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 702
+},
+{
+"k": "para",
+"t": "Q2. Does this baby get phenobarbital?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 703
+},
+{
+"k": "para",
+"t": "Q3. What would you tell the referring midwife?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 704
+},
+{
+"k": "para",
+"t": "Section (3) assess, Identify and refer Small and Sick Newborn",
+"style": "Heading 1",
+"head": 1,
+"b": false,
+"i": 705
+},
+{
+"k": "para",
+"t": "Essential care at 60-90 minute",
+"style": "Heading 2",
+"head": 2,
+"b": false,
+"lvl": 1,
+"marker": "1.8",
+"i": 706
+},
+{
+"k": "para",
+"t": "Eye Care",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 707
+},
+{
+"k": "para",
+"t": "Applying medicine to the inside of the lower lid of both eyes soon after birth can prevent eye infections",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 708
+},
+{
+"k": "para",
+"t": "Eye treatment can be delayed until the baby has breastfed, but provide eye to help prevent serious eye infections",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 709
+},
+{
+"k": "para",
+"t": "Cord care: Proper care of the cord may prevent infection",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 710
+},
+{
+"k": "img",
+"name": "m1-030.jpeg",
+"i": 711
+},
+{
+"k": "para",
+"t": "Keep the cord exposed and dry.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 712
+},
+{
+"k": "para",
+"t": "Do not apply anything to the cord, including herbs, animal dung or other substances, unless a treatment is recommended by your health authority.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 713
+},
+{
+"k": "para",
+"t": "Do not bandage or cover the cord.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 714
+},
+{
+"k": "para",
+"t": "If soiled, wash the cord with clean water.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 715
+},
+{
+"k": "para",
+"t": "If there is blood from the cord, place a new tie tightly around the cord.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 716
+},
+{
+"k": "para",
+"t": "Give vitamin K:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 717
+},
+{
+"k": "para",
+"t": "For every newborn around 90 minutes of age.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 718
+},
+{
+"k": "img",
+"name": "m1-031.jpeg",
+"i": 719
+},
+{
+"k": "para",
+"t": "Because this treatment is painful, it should not be given during the first",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 720
+},
+{
+"k": "para",
+"t": "hour after birth",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 721
+},
+{
+"k": "para",
+"t": "The dose of vitamin K is 1 mg (0.5 mg for babies <1500 grams), and it is given intramuscularly (IM) in the front, outside of the mid-thigh.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 722
+},
+{
+"k": "para",
+"t": "Providers must wash their hands",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 723
+},
+{
+"k": "para",
+"t": "Place used needles in a solid container with a lid to avoid injury and infection",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 724
+},
+{
+"k": "para",
+"t": "Assess and classify the baby",
+"style": "Heading 2",
+"head": 2,
+"b": false,
+"lvl": 1,
+"marker": "1.9",
+"i": 725
+},
+{
+"k": "para",
+"t": "Classify babies by 90 minutes of birth based on their temperature, weight, exam, feeding, and risk factors to define further care.",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 726
+},
+{
+"k": "table",
+"rows": [
+[
+"assess",
+"Action"
+],
+[
+"• Breathing >60\n• Chest indrawing\n• Temp 38 0C\n• Not feeding\n• No movement\n• Convulsions",
+"• Give antibiotics\n• Stabilize for referral as needed"
+],
+[
+"• Weight <1500g\n• Severe malformation\n• Birth injury\n• Severe jaundice\n• Poor weight gain",
+"• Stabilize for referral as needed"
+],
+[
+"• Weight 1500 – <2500g\n• Temp 35.5 – 38 0C\n• Feeding difficulty\n• Risk of infection",
+"• Maintain skin-to-skin Support breastfeeding\n• Treat risk of infection\n• For Feeding difficulty\n• Express breast milk\n• Feed with cup or tube\n• Transition to exclusive breastfeeding\n• Low weight or low temperature\n• Provide continuous skin-to-skin\n• Improve thermal care\n• If not improved or had danger sign, stabilize for referral\n• If improved immunize and advice about home care"
+],
+[
+"• Weight ≥2500g\n• Temp 36.5 – 37.5 0C\n• Feeding well\n• Normal exam",
+"• Maintain normal temperature\n• Support breastfeeding\n• Advise about breast feeding problems\n• Reassess for discharge\n• Immunize\n• Advise about home care"
+]
+],
+"i": 727
+},
+{
+"k": "para",
+"t": "Assess and Manage temperature problem",
+"style": "Heading 2",
+"head": 2,
+"b": false,
+"lvl": 1,
+"marker": "1.10",
+"i": 728
+},
+{
+"k": "para",
+"t": "Assess neonate temperature",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 729
+},
+{
+"k": "img",
+"name": "m1-032.png",
+"i": 730
+},
+{
+"k": "para",
+"t": "Manage abnormal neonatal temperature",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 731
+},
+{
+"k": "para",
+"t": "Prevent heat loss",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 732
+},
+{
+"k": "para",
+"t": "Continue initial skin-to-skin care for at least one hour after birth whenever possible",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 733
+},
+{
+"k": "para",
+"t": "Delay bathing for 24 hours after birth.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 734
+},
+{
+"k": "para",
+"t": "Avoid drafts and contact with wet or cold surfaces",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 735
+},
+{
+"k": "para",
+"t": "Replace wet clothing or wraps",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 736
+},
+{
+"k": "para",
+"t": "Maintain normal temperature when skin-to-skin care is no longer being used",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 737
+},
+{
+"k": "para",
+"t": "Clothe and wrap in a clean, dry",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 738
+},
+{
+"k": "para",
+"t": "blanket and cover the head",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 739
+},
+{
+"k": "para",
+"t": "Wrap securely but not tightly",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 740
+},
+{
+"k": "para",
+"t": "Use 1–2 more layers than for an adult",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 741
+},
+{
+"k": "para",
+"t": "Prevent over-heating",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 742
+},
+{
+"k": "para",
+"t": "Do not place a baby close to heat sources or in direct sunlight",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 743
+},
+{
+"k": "para",
+"t": "Do not over-wrap a baby in blankets",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 744
+},
+{
+"k": "para",
+"t": "Assess temperature every four hours during routine care by touching the foot or forehead If the skin feels too cool or too hot, measure a temperature",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 745
+},
+{
+"k": "para",
+"t": "Assess and management of Birth weight",
+"style": "Heading 2",
+"head": 2,
+"b": false,
+"lvl": 1,
+"marker": "1.11",
+"i": 746
+},
+{
+"k": "para",
+"t": "Weighing helps identify babies who may need special care.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 747
+},
+{
+"k": "para",
+"t": "2000 <2500 grams",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 748
+},
+{
+"k": "para",
+"t": "require care to prevent low body temperature and may benefit",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 749
+},
+{
+"k": "para",
+"t": "from prolonged skin-to-skin care",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 750
+},
+{
+"k": "para",
+"t": "1500 - 2000 grams",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 751
+},
+{
+"k": "para",
+"t": "should receive prolonged skin-to-skin (kangaroo mother care)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 752
+},
+{
+"k": "para",
+"t": "<1500 grams",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 753
+},
+{
+"k": "para",
+"t": "should receive advanced care and prolonged skin-to-skin (kangaroo mother care)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 754
+},
+{
+"k": "img",
+"name": "m1-033.jpeg",
+"i": 755
+},
+{
+"k": "para",
+"t": "Support breastfeeding",
+"style": "Heading 2",
+"head": 2,
+"b": false,
+"lvl": 1,
+"marker": "1.12",
+"i": 756
+},
+{
+"k": "para",
+"t": "Support of breastfeeding after birth will improve the chances of success.",
+"style": "List Paragraph",
+"head": 0,
+"b": true,
+"lvl": 0,
+"marker": "•",
+"i": 757
+},
+{
+"k": "para",
+"t": "Keep mother and baby together unless it is absolutely necessary to separate them.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 758
+},
+{
+"k": "para",
+"t": "Encourage breastfeeding whenever the baby shows signs of readiness",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 759
+},
+{
+"k": "para",
+"t": "Help mother to be comfortable semi-reclined with baby",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 760
+},
+{
+"k": "para",
+"t": "held close to mother",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 761
+},
+{
+"k": "para",
+"t": "supported along whole body",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 762
+},
+{
+"k": "para",
+"t": "head and body in line",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 763
+},
+{
+"k": "para",
+"t": "facing the breast, nose opposite nipple",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 764
+},
+{
+"k": "para",
+"t": "Advise mother about:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 765
+},
+{
+"k": "para",
+"t": "Signs of good attachment",
+"style": "List Paragraph",
+"head": 0,
+"b": true,
+"lvl": 0,
+"marker": "1.",
+"i": 766
+},
+{
+"k": "para",
+"t": "more areola seen above lips than below",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 767
+},
+{
+"k": "para",
+"t": "mouth wide open",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 768
+},
+{
+"k": "para",
+"t": "lower lip turned outward",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 769
+},
+{
+"k": "para",
+"t": "chin touching breast",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 770
+},
+{
+"k": "para",
+"t": "Signs of poor attachment",
+"style": "List Paragraph",
+"head": 0,
+"b": true,
+"lvl": 0,
+"marker": "2.",
+"i": 771
+},
+{
+"k": "para",
+"t": "only nipple in mouth",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 772
+},
+{
+"k": "para",
+"t": "pain",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 773
+},
+{
+"k": "para",
+"t": "Alternating the breast on which the baby feeds first",
+"style": "List Paragraph",
+"head": 0,
+"b": true,
+"lvl": 0,
+"marker": "3.",
+"i": 774
+},
+{
+"k": "para",
+"t": "Provide advice about signs that a baby is adquately fed",
+"style": "List Paragraph",
+"head": 0,
+"b": true,
+"lvl": 0,
+"marker": "4.",
+"i": 775
+},
+{
+"k": "para",
+"t": "Swallowing sounds heard during feeding",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 776
+},
+{
+"k": "para",
+"t": "Softening of the breast with feeding",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 777
+},
+{
+"k": "para",
+"t": "Feeding every 2–4 hours (8–12 times per day)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 778
+},
+{
+"k": "para",
+"t": "Baby sleeps well between feedings",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 779
+},
+{
+"k": "para",
+"t": "Advise about breastfeeding problems",
+"style": "Heading 2",
+"head": 2,
+"b": false,
+"lvl": 1,
+"marker": "1.13",
+"i": 780
+},
+{
+"k": "para",
+"t": "Advise mothers how to prevent, recognize, and manage common problems.",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 781
+},
+{
+"k": "para",
+"t": "Flat or inverted nipples",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 782
+},
+{
+"k": "para",
+"t": "Stimulate nipple before feeding",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 783
+},
+{
+"k": "para",
+"t": "Shape breast by supporting underneath the base with the fingers and pressing above with the thumb",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 784
+},
+{
+"k": "para",
+"t": "The baby attaches to the breast, not the nipple.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 785
+},
+{
+"k": "para",
+"t": "Reassure mother to build her confidence.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 786
+},
+{
+"k": "para",
+"t": "Breast engorgement",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 787
+},
+{
+"k": "para",
+"t": "Swelling and shininess of both breasts, No tenderness or redness",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 788
+},
+{
+"k": "para",
+"t": "Feed often and express milk",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 789
+},
+{
+"k": "para",
+"t": "ensure good attachment.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 790
+},
+{
+"k": "para",
+"t": "Sore or cracked nipples",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 791
+},
+{
+"k": "para",
+"t": "Nipple tenderness and pain during feeding",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 792
+},
+{
+"k": "para",
+"t": "Pinched appearance after feeding",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 793
+},
+{
+"k": "para",
+"t": "cracks or fissures",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 794
+},
+{
+"k": "para",
+"t": "Ensure good attachment and break",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 795
+},
+{
+"k": "para",
+"t": "suction before detachment",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 796
+},
+{
+"k": "para",
+"t": "avoid irritation from clothing",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 797
+},
+{
+"k": "para",
+"t": "apply drops of milk.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 798
+},
+{
+"k": "para",
+"t": "Mastitis",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 799
+},
+{
+"k": "para",
+"t": "Painful, red and firm area, usually in one breast only",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 800
+},
+{
+"k": "para",
+"t": "Ill feeling often with fever",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 801
+},
+{
+"k": "para",
+"t": "Feed frequently, express milk or change feeding position to ensure emptying",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 802
+},
+{
+"k": "para",
+"t": "seek medical attention.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 803
+},
+{
+"k": "para",
+"t": "Advise mothers about how to: Improve flow of milk",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 804
+},
+{
+"k": "para",
+"t": "Apply warm compresses",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 805
+},
+{
+"k": "para",
+"t": "Massage the back and neck",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 806
+},
+{
+"k": "para",
+"t": "Massage the breasts and nipples",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 807
+},
+{
+"k": "para",
+"t": "Improve supply of milk",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 808
+},
+{
+"k": "para",
+"t": "Increase maternal fluid intake",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 809
+},
+{
+"k": "para",
+"t": "Increase frequency of feeds",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 810
+},
+{
+"k": "para",
+"t": "Discharge and Home Care",
+"style": "Heading 2",
+"head": 2,
+"b": false,
+"lvl": 1,
+"marker": "1.14",
+"i": 811
+},
+{
+"k": "para",
+"t": "All babies must be reassessed before discharge. Discharge can occur when baby and mother show their readiness on assessment.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 812
+},
+{
+"k": "para",
+"t": "When possible, discharge from the birth facility should not occur for at least 24 hours.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 813
+},
+{
+"k": "para",
+"t": "Assess breastfeeding",
+"style": "List Paragraph",
+"head": 0,
+"b": true,
+"lvl": 0,
+"marker": "1.",
+"i": 814
+},
+{
+"k": "para",
+"t": "Baby feeds every 2–4 hours and feeds at least 8 times per day",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 815
+},
+{
+"k": "para",
+"t": "Baby suckles effectively",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 816
+},
+{
+"k": "para",
+"t": "Baby settles with each feeding",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 817
+},
+{
+"k": "para",
+"t": "Mother has little breast or nipple pain",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 818
+},
+{
+"k": "para",
+"t": "Perform a complete examination of the baby and review records for",
+"style": "List Paragraph",
+"head": 0,
+"b": true,
+"lvl": 0,
+"marker": "2.",
+"i": 819
+},
+{
+"k": "para",
+"t": "stable vital signs",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 820
+},
+{
+"k": "para",
+"t": "temperature 36.5– 37.5 ˚C",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 821
+},
+{
+"k": "para",
+"t": "breathing <60 breaths/ minute)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "•",
+"i": 822
+},
+{
+"k": "para",
+"t": "minimal jaundice",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 823
+},
+{
+"k": "para",
+"t": "no signs of local infection (skin, cord, eyes)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 824
+},
+{
+"k": "para",
+"t": "passage of urine and stool",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 825
+},
+{
+"k": "para",
+"t": "care at home",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 826
+},
+{
+"k": "para",
+"t": "Prevent infection with handwashing and clean surroundings",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 827
+},
+{
+"k": "para",
+"t": "Keep the baby warm",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 828
+},
+{
+"k": "para",
+"t": "Breastfeed every 2–4 hours",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 829
+},
+{
+"k": "para",
+"t": "Assess the baby for changes or Danger",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 830
+},
+{
+"k": "para",
+"t": "Signs and seek care if necessary",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 831
+},
+{
+"k": "para",
+"t": "Return to the clinic for weighing and immunizations",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 832
+},
+{
+"k": "para",
+"t": "Hand express milk",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 833
+},
+{
+"k": "img",
+"name": "m1-034.jpeg",
+"i": 834
+},
+{
+"k": "para",
+"t": "Referring Neonate",
+"style": "Heading 2",
+"head": 2,
+"b": false,
+"lvl": 1,
+"marker": "1.15",
+"i": 835
+},
+{
+"k": "para",
+"t": "INTRODUCTION:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 836
+},
+{
+"k": "para",
+"t": "Neonatal transport is a critical phase of perinatal care, with specific needs for a specialized team and equipment to ensure maximal safety and efficiency.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 837
+},
+{
+"k": "para",
+"t": "Transferring a newborn from the labor room/ delivery facility to the Neonatal Intensive Care Unit (NICU) involves a series of steps to ensure the baby's safety and well-being.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 838
+},
+{
+"k": "para",
+"t": "A simple, timely, efficient approach without any panic is required.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 839
+},
+{
+"k": "para",
+"t": "IMPORTANCE",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 840
+},
+{
+"k": "para",
+"t": "Unplanned or non-organized newborn transfer from the labour room/  delivery facility to NICU may increase the mortality and morbidity leading to worse outcomes.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 841
+},
+{
+"k": "para",
+"t": "PROCESS OF TRANSPORT",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 842
+},
+{
+"k": "para",
+"t": "The process of transferring a newborn to NICU can be arranged in the following steps",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 843
+},
+{
+"k": "para",
+"t": "Assessment and decision",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 844
+},
+{
+"k": "para",
+"t": "Preparation before transfer",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 845
+},
+{
+"k": "para",
+"t": "Communication",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 846
+},
+{
+"k": "para",
+"t": "Transfer process.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 847
+},
+{
+"k": "para",
+"t": "Assessment and decision",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 848
+},
+{
+"k": "para",
+"t": "As stated by NRP ‘Every delivery should be attended by at least one skilled health professional, such as a doctor, nurse, or midwife, who can provide essential medical care during labor and delivery, including identifying and managing potential complications’, the responsibility of the attending professional or team is to decide whether the newborn need further intensive care and admission to NICU.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 849
+},
+{
+"k": "para",
+"t": "In hospital settings a pediatrician or neonatologist assesses the newborn immediately after birth to determine if they need NICU care. However, if delivery was in a primary level of care or outside hospital, a trained health worker or midwife is responsible for the assessment.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 850
+},
+{
+"k": "para",
+"t": "The attending health worker/midwife should carefully assess the baby to determine:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 851
+},
+{
+"k": "para",
+"t": "vital signs",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 852
+},
+{
+"k": "para",
+"t": "severity of distress",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 853
+},
+{
+"k": "para",
+"t": "degree of maturity",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 854
+},
+{
+"k": "para",
+"t": "presence of congenital anomalies or other complications",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 855
+},
+{
+"k": "para",
+"t": "and consequently, decide for",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 856
+},
+{
+"k": "para",
+"t": "reason or indication for admission",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 857
+},
+{
+"k": "para",
+"t": "level of care needed: this can be intensive care, HDU or SCBU.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 858
+},
+{
+"k": "para",
+"t": "type of respiratory support needed: such as nasal cannula, HHFNC, CPAP or ventilator.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 859
+},
+{
+"k": "para",
+"t": "Whenever possible the transport team shouldd communicate and discuss their assessment and decision to transfer the baby with the SCBU/NICU medical staff",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 860
+},
+{
+"k": "para",
+"t": "Preparation before transfer",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 861
+},
+{
+"k": "para",
+"t": "Once assessment done and decision to transfer the baby to NICU was taken, the team should work simultaneously to prepare for safe transport. By",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 862
+},
+{
+"k": "para",
+"t": "Stabilization",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 863
+},
+{
+"k": "para",
+"t": "Checking equipment",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 864
+},
+{
+"k": "para",
+"t": "Organizing team",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 865
+},
+{
+"k": "para",
+"t": "Documentation",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 866
+},
+{
+"k": "para",
+"t": "Stabilization",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 867
+},
+{
+"k": "para",
+"t": "The assessment finding will lead the team to decide whether the baby is stable or needs to be stabilized before shifting. The team need to",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 868
+},
+{
+"k": "para",
+"t": "Maintain normal body temperature by treating and preventing hypothermia. This may involve increasing incubator temperature, covering, kangaroo care or use of plastic or polyethylene bags.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 869
+},
+{
+"k": "para",
+"t": "Maintain airway: head position or endotracheal tube stabilization",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 870
+},
+{
+"k": "para",
+"t": "Maintain circulation: pulses, CRT. May need emergency vascular access and Providing fluids and nutrition (nasogastric feeds or intravenous fluids if unable to feed)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 871
+},
+{
+"k": "para",
+"t": "Giving antibiotics if indicated",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 872
+},
+{
+"k": "para",
+"t": "Placing nasogastric tube for distended abdomen",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 873
+},
+{
+"k": "para",
+"t": "Continue necessary support during transport.",
+"style": "List Paragraph",
+"head": 0,
+"b": true,
+"lvl": 0,
+"marker": "•",
+"i": 874
+},
+{
+"k": "para",
+"t": "Check equipment:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 875
+},
+{
+"k": "para",
+"t": "Transport equipment needs to be checked by assigned staff before moving.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 876
+},
+{
+"k": "para",
+"t": "This equipment may include",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 877
+},
+{
+"k": "para",
+"t": "oxygen source (cylinder or concentrator)",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 878
+},
+{
+"k": "para",
+"t": "CPAP",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 879
+},
+{
+"k": "para",
+"t": "T-piece",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 880
+},
+{
+"k": "para",
+"t": "PPV bag",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 881
+},
+{
+"k": "para",
+"t": "transport ventilator",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 882
+},
+{
+"k": "para",
+"t": "transport incubator",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 883
+},
+{
+"k": "para",
+"t": "monitors",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 884
+},
+{
+"k": "para",
+"t": "infection control equipment.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 885
+},
+{
+"k": "para",
+"t": "Whenever a high risk delivery is anticipated and transfer of baby is expected, all equipment should be checked early and the transport incubator prewarmed.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 886
+},
+{
+"k": "para",
+"t": "The team leader should always confirm that equipment check was done and assure readiness for transport before moving.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 887
+},
+{
+"k": "para",
+"t": "Equipment failure during transport may lead to deterioration of the babyś situation and loss of valuable time.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 888
+},
+{
+"k": "para",
+"t": "Organizing transport team",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 889
+},
+{
+"k": "para",
+"t": "A qualified and experienced transport team should be assembled including nurses and medical staff or a trained community midwife.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 890
+},
+{
+"k": "para",
+"t": "A team leader decides the number of staff needed for transport, distributes the duties between members and supervises them.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 891
+},
+{
+"k": "para",
+"t": "A stable newborn may be transferred on a cot with a nurse. However, sick intubated preterm needs 2 or more medical and nursing staff.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 892
+},
+{
+"k": "para",
+"t": "Team duties would include preparation actions like assessing and taking decisions (usually by the most senior or team leader), stabilization and duties during transport like maintaining the airway or head position, ventilating or bagging, monitoring as well as maintaining safe transport.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 893
+},
+{
+"k": "para",
+"t": "Documentation",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 894
+},
+{
+"k": "para",
+"t": "A team member should be assigned to document and record various steps of transport. These would include:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 895
+},
+{
+"k": "para",
+"t": "Newborn data like GA, weight and diagnosis ABGAR Score at I, 5, and 10 min, Serial recording of vital signs and temperature before and after transfer,",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 896
+},
+{
+"k": "para",
+"t": "equipment check, parental and staff communication, timing of moving to NICU and any event during transport.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 897
+},
+{
+"k": "para",
+"t": "Communication",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 898
+},
+{
+"k": "para",
+"t": "Communication between neonatal unit and obstetric department or primary facility staff",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 899
+},
+{
+"k": "para",
+"t": "Communication with parents",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 900
+},
+{
+"k": "para",
+"t": "Communication with receiving team in NICU",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 901
+},
+{
+"k": "para",
+"t": "Communication between team members.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 902
+},
+{
+"k": "para",
+"t": "Communication with ambulance for outborn cases.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 903
+},
+{
+"k": "para",
+"t": "Communication with parents: The parents are informed about the need for transfer and the reasons for it. The initial plan may be outlined if there is enough time.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 904
+},
+{
+"k": "para",
+"t": "Communication with NICU team: Establish clear communication channels, usually through phone call, between the transport team, and the receiving NICU.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 905
+},
+{
+"k": "para",
+"t": "The aim is to guide and assist the NICU team prepare and ensure its readiness to receive and welcome the baby.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 906
+},
+{
+"k": "para",
+"t": "The GA, diagnosis, level of care and type of respiratory support needed should be relayed clearly and should be re-read by the receiving team. E.g. ‘we are going to transfer an ex preterm, 28 weeks, RDS, intubated by size 3 ETT with stable vitals, to level 3 NICU for ventilatory support’",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 907
+},
+{
+"k": "para",
+"t": "Communication between transport teams: The transport team should work in harmony. The orders or instructions by the team leader should be clear and address the specific team member, the team member should give clear feedback accordingly. E.G. ‘what is the baby’s temperature now, Ms. Mona’ ‘baby’s temperature now is 36.8-degree Dr’",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 908
+},
+{
+"k": "para",
+"t": "Ensure that the ambulance is ready and equipped to transfer in the stated time.",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 909
+},
+{
+"k": "para",
+"t": "Transfer process The aim is to achieve a",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 910
+},
+{
+"k": "para",
+"t": "●   Simple, comfortable",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 911
+},
+{
+"k": "para",
+"t": "●   Safe",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 912
+},
+{
+"k": "para",
+"t": "●   Stable",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 913
+},
+{
+"k": "para",
+"t": "●   Closely monitored transfer",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 914
+},
+{
+"k": "para",
+"t": "Referral Form from Delivery Room or Theater to Special Care Newborn Unit",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 915
+},
+{
+"k": "img",
+"name": "m1-035.png",
+"i": 916
+},
+{
+"k": "para",
+"t": "Neonatal transfer form from labor room/OR or primary care facility",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 917
+},
+{
+"k": "para",
+"t": "Following assessment, stabilization, equipment check and team organization and effective communication:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 918
+},
+{
+"k": "para",
+"t": "The team leader gives orders to move for transfer.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 919
+},
+{
+"k": "para",
+"t": "The transport team should inform the NICU receiving team providing updates on the baby's condition and anticipated arrival time.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 920
+},
+{
+"k": "para",
+"t": "The method of transport will depend on the available equipment",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 921
+},
+{
+"k": "para",
+"t": "Portable Warmer (Infant warming matress)",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 922
+},
+{
+"k": "para",
+"t": "This portable, non-electric mattress provides controlled, safe and effective thermal support to premature and low birthweight infants, who are at a higher risk of hypothermia and require gentle thermoregulation support.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 923
+},
+{
+"k": "img",
+"name": "m1-036.jpeg",
+"i": 924
+},
+{
+"k": "img",
+"name": "m1-037.jpeg",
+"i": 925
+},
+{
+"k": "img",
+"name": "m1-038.png",
+"i": 926
+},
+{
+"k": "para",
+"t": "Trotter portable incubator",
+"style": "Normal",
+"head": 0,
+"b": true,
+"lvl": 0,
+"marker": "3.",
+"i": 927
+},
+{
+"k": "para",
+"t": "The incubator has a working battery, and the dual temperature control mode allows alteration of the environment by either the air temperature or the baby’s skin temperature.it has failure alarms and a double walled acrylic glass cabinet. It is also height adjustable, providing ease of use for staff and carers. It has an oxygen supply system and observation lamp.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 928
+},
+{
+"k": "img",
+"name": "m1-039.png",
+"i": 929
+},
+{
+"k": "img",
+"name": "m1-040.jpg",
+"i": 930
+},
+{
+"k": "para",
+"t": "Baby pod transport device or incubator",
+"style": "Normal",
+"head": 0,
+"b": true,
+"lvl": 0,
+"marker": "4.",
+"i": 931
+},
+{
+"k": "para",
+"t": "The Baby Pod range provides security and warmth, lesser cost than a standard infant transport incubator. It is light, easy to handle and can attach to any transport stretcher. Can be used for inter/intra-hospital transport of neonates,",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 932
+},
+{
+"k": "para",
+"t": "Kangaroo Fix Neonatal Restrain System",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 933
+},
+{
+"k": "para",
+"t": "The baby is secured to its mother, ensuring that close contact is always maintained. The ‘face-up’ mode enables staff to monitor the baby, while the quick release system allows fast access. Maintains warmth.  The system is lightweight and easy to store, as well as being easy to clean.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 934
+},
+{
+"k": "img",
+"name": "m1-041.png",
+"i": 935
+},
+{
+"k": "para",
+"t": "The most advanced method of transport currently is called transport shuttle which can be attached to an incubator or warmer and provides it with electrical power, oxygen supply and other equipment.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 936
+},
+{
+"k": "para",
+"t": "Whatever was the method available:",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 937
+},
+{
+"k": "para",
+"t": "Each neonatal unit should use the most safe available method",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 938
+},
+{
+"k": "para",
+"t": "The delivery/ operation room and neonatal unit are preferably on the same level or there should be a safe access between them.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 939
+},
+{
+"k": "para",
+"t": "Avoid delays and interruptions during transport.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 940
+},
+{
+"k": "para",
+"t": "Keep monitoring and observing the baby during transport.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 941
+},
+{
+"k": "para",
+"t": "Upon arrival, the baby is transferred to a SPECIAL CARE NEWBORN UNIT (SCNU) bed and the team provides a detailed handover to the SPECIAL CARE NEWBORN UNIT (SCNU) staff",
+"style": "Normal",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "5.",
+"i": 942
+},
+{
+"k": "para",
+"t": "Summary",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 943
+},
+{
+"k": "para",
+"t": "Transferring a newborn is a complex process that needs to be safe and well organized.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 944
+},
+{
+"k": "para",
+"t": "Assess: vital signs, severity of distress, degree of maturity, presence of congenital anomalies or other complications",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "1.",
+"i": 945
+},
+{
+"k": "para",
+"t": "Decide reason for admission, level of care needed, type of respiratory support needed.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "2.",
+"i": 946
+},
+{
+"k": "para",
+"t": "Stabilize and Maintain warmth A, B, Cs",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "3.",
+"i": 947
+},
+{
+"k": "para",
+"t": "Check equipment:   oxygen source (cylinder or concentrator), CPAP, T-piece, PPV bag, or transport ventilator, transport incubator, monitors and infection control equipment.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "4.",
+"i": 948
+},
+{
+"k": "para",
+"t": "Organize transport team and Assign duties",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "5.",
+"i": 949
+},
+{
+"k": "para",
+"t": "Documentation:   GA, weight and diagnosis. Serial recording of vital signs and temperature before and after transfer, equipment check, parental and staff communication, timing of moving to SPECIAL CARE NEWBORN UNIT (SCNU) and any event during transport.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "6.",
+"i": 950
+},
+{
+"k": "para",
+"t": "Communication with parents, with SPECIAL CARE NEWBORN UNIT (SCNU) team, between team members",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "7.",
+"i": 951
+},
+{
+"k": "para",
+"t": "transfer",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "8.",
+"i": 952
+},
+{
+"k": "para",
+"t": "Inform SPECIAL CARE NEWBORN UNIT (SCNU) to anticipate time of arrival",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "a.",
+"i": 953
+},
+{
+"k": "para",
+"t": "use the safest available methods",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "b.",
+"i": 954
+},
+{
+"k": "para",
+"t": "Avoid delays and interruptions.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "c.",
+"i": 955
+},
+{
+"k": "para",
+"t": "Keep monitoring and observing the baby during transport.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "d.",
+"i": 956
+},
+{
+"k": "para",
+"t": "Upon arrival, provides a detailed handover to the special care newborn unit (SCNU) staff",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 1,
+"marker": "e.",
+"i": 957
+},
+{
+"k": "img",
+"name": "m1-042.jpeg",
+"i": 958
+},
+{
+"k": "para",
+"t": "References",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 959
+},
+{
+"k": "para",
+"t": "Transfer of Babies to Neonatal Unit from Home or Community Hospital UHL Obstetric and Neonatal",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 960
+},
+{
+"k": "para",
+"t": "Guideline Version:5 Approved by: UHL Women’s Quality & Safety Board: April 2024. Trust Ref No: C118/200",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 961
+},
+{
+"k": "para",
+"t": "BMJ .2004 Oct 16;329(7471):904–906. doi: 10.1136/bmj.329.7471.904",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 962
+},
+{
+"k": "para",
+"t": "Health SA . 2022 Jan 10;27:1617. doi: 10.4102/hsag.v27i0.1617",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 963
+},
+{
+"k": "para",
+"t": "Peter Reynolds et al. Arch Dis Child Fetal Neonatal Ed. 2016 Jul.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 964
+},
+{
+"k": "para",
+"t": "Front Pediatr . 2024 Mar 20;12:1379763. doi: 10.3389/fped.2024.1379763",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 965
+},
+{
+"k": "para",
+"t": "https://www.bliss.org.uk/parents/in-hospital/about-neonatal-care/transferring-your-baby-to-another-hospital",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 966
+},
+{
+"k": "para",
+"t": "Pediatrics (2022) 149 (6): e2021054866. https://doi.org/10.1542/peds.2021-054866",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 967
+},
+{
+"k": "para",
+"t": "Moving the preterm infant.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 968
+},
+{
+"k": "para",
+"t": "BMJ 2004; 329 doi: https://doi.org/10.1136/bmj.329.7471.904",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 969
+},
+{
+"k": "para",
+"t": "CenTre Neonatal Transport and the University of Nottingham. Improving inter-hospital transports for sick newborn infants.",
+"style": "List Paragraph",
+"head": 0,
+"b": false,
+"lvl": 0,
+"marker": "•",
+"i": 970
+},
+{
+"k": "para",
+"t": "Exercises",
+"style": "Heading 2",
+"head": 2,
+"b": false,
+"lvl": 1,
+"marker": "1.16",
+"i": 971
+},
+{
+"k": "para",
+"t": "Work through each exercise on your own or in your small group and write your answers on the lines provided. The answers are not printed here — your facilitator will go through them with you after you have tried.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 972
+},
+{
+"k": "table",
+"rows": [
+[
+"CASE EXERCISE   Exercise 1 — Case 1 — Temperature Problem"
+],
+[
+"Baby Nour — female, born at term, 39 weeks gestation\n90 minutes of age\nBaby Nour is 90 minutes old. She cried at birth and breastfed within the first hour. On examination she is active, breathing 44 breaths per minute with no chest indrawing, and pink. Her weight is 2900 g. Axillary temperature is 36.2°C."
+]
+],
+"i": 973
+},
+{
+"k": "img",
+"name": "m1-043.png",
+"i": 974
+},
+{
+"k": "para",
+"t": "Answer in the space provided:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 975
+},
+{
+"k": "para",
+"t": "Q1. What is your assessment of this baby? Classify the problem.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 976
+},
+{
+"k": "para",
+"t": "Q2. What are your immediate actions, in order of priority?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 977
+},
+{
+"k": "para",
+"t": "Q3. What will you monitor, and when would you refer or escalate?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 978
+},
+{
+"k": "table",
+"rows": [
+[
+"CASE EXERCISE   Exercise 2 — Case 2 — Birth Weight Problem"
+],
+[
+"Baby Yasin — male, born at 32 weeks gestation\nBaby Yasin was born at 32 weeks gestation by spontaneous vaginal delivery at a health centre. He cried weakly at birth. At 90 minutes of age he is weighed: 1350 g. Temperature is 36.6°C. He is breathing 48 breaths per minute with no chest indrawing. He has not yet attempted to breastfeed."
+]
+],
+"i": 979
+},
+{
+"k": "img",
+"name": "m1-044.png",
+"i": 980
+},
+{
+"k": "para",
+"t": "Answer in the space provided:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 981
+},
+{
+"k": "para",
+"t": "Q1. What is your assessment of this baby? Classify the problem.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 982
+},
+{
+"k": "para",
+"t": "Q2. What are your immediate actions, in order of priority?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 983
+},
+{
+"k": "para",
+"t": "Q3. What will you monitor, and when would you refer or escalate?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 984
+},
+{
+"k": "table",
+"rows": [
+[
+"CASE EXERCISE   Exercise 3 — Case 3 — Feeding Problem"
+],
+[
+"Baby Salma — female, born at 35 weeks gestation\nBaby Salma is 4 hours old, born at 35 weeks, weighing 1950 g. Temperature is 36.8°C and breathing is normal. She attempted to breastfeed at 1 hour of age but has not latched. She licks at the nipple but falls asleep after a few minutes without sucking."
+]
+],
+"i": 985
+},
+{
+"k": "img",
+"name": "m1-045.png",
+"i": 986
+},
+{
+"k": "para",
+"t": "Answer in the space provided:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 987
+},
+{
+"k": "para",
+"t": "Q1. What is your assessment of this baby? Classify the problem.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 988
+},
+{
+"k": "para",
+"t": "Q2. What are your immediate actions, in order of priority?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 989
+},
+{
+"k": "para",
+"t": "Q3. What will you monitor, and when would you refer or escalate?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 990
+},
+{
+"k": "table",
+"rows": [
+[
+"CASE EXERCISE   Exercise 4 — Case 4 — Putting It All Together"
+],
+[
+"Baby Mohammed — male, born at 33 weeks gestation\n90 minutes of age\nBaby Mohammed was born at 33 weeks by vaginal delivery, birth weight 2700 g. At 90 minutes of age his temperature is 36.7°C, breathing is 40 breaths per minute with no chest indrawing, and he well attached to the breast."
+]
+],
+"i": 991
+},
+{
+"k": "img",
+"name": "m1-046.png",
+"i": 992
+},
+{
+"k": "para",
+"t": "Answer in the space provided:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 993
+},
+{
+"k": "para",
+"t": "Q1. What is your assessment of this baby? Classify the problem.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 994
+},
+{
+"k": "para",
+"t": "Q2. What are your immediate actions, in order of priority?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 995
+},
+{
+"k": "para",
+"t": "Q3. What will you monitor, and when would you refer or escalate?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 996
+},
+{
+"k": "table",
+"rows": [
+[
+"CASE EXERCISE   Exercise 5 — Case study – Transport Sick and small newborn"
+],
+[
+"Purpose: the purpose of a clinical drill is to help participants practise responding to clinical situations that require immediate action.\nHow to Run It\nAssign a team of four: team leader, nurse (airway and warmth), nurse (monitoring and documentation), and one who makes the phone calls.\nAnnounce the case. The team has 10 minutes to prepare the baby and “leave”.\nThe other participants observe using the Transfer Checklist.\nRotate roles so that every participant leads once."
+]
+],
+"i": 997
+},
+{
+"k": "img",
+"name": "m1-047.png",
+"i": 998
+},
+{
+"k": "para",
+"t": "Answer in the space provided:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 999
+},
+{
+"k": "para",
+"t": "Q1. What is your assessment of this baby? Classify the problem.",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 1000
+},
+{
+"k": "para",
+"t": "Q2. What are your immediate actions, in order of priority?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 1001
+},
+{
+"k": "para",
+"t": "Q3. What will you monitor, and when would you refer or escalate?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 1002
+},
+{
+"k": "table",
+"rows": [
+[
+"CASE EXERCISE   Exercise 6 — Case 1 — The Preterm Needing Ventilation"
+],
+[
+"A baby born at 28 weeks, 1.1 kg, in a facility with no ventilator. Grunting, chest indrawing, SpO₂ 84% on nasal cannula. Temperature 35.8°C. The nearest level 3 NICU is 45 minutes away.\nAsk the team:"
+]
+],
+"i": 1003
+},
+{
+"k": "img",
+"name": "m1-048.png",
+"i": 1004
+},
+{
+"k": "para",
+"t": "Answer in the space provided:",
+"style": "Normal",
+"head": 0,
+"b": true,
+"i": 1005
+},
+{
+"k": "para",
+"t": "Q1. Is there a genuine indication for referral? What level of care and what respiratory support?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 1006
+},
+{
+"k": "para",
+"t": "Q2. What must be corrected before you leave?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 1007
+},
+{
+"k": "para",
+"t": "Q3. How much oxygen do you need for the journey?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 1008
+},
+{
+"k": "para",
+"t": "Q4. Who accompanies the baby?",
+"style": "Normal",
+"head": 0,
+"b": false,
+"i": 1009
+}
+]
