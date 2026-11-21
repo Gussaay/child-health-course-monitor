@@ -1,6 +1,8 @@
 # Manual Module (2) Special Newborn Care: how the manual becomes the online course. One app module per manual Section.
 from lib import *
 from fg import fg_lines
+from books import m2_s1_3, m2_s4, m2_s5
+from books.titles import M2_S7, M2_S8
 CATEGORY = "Small & Sick Newborn"
 SUB = "Online course: Management of Sick and Small Newborns (2026)"
 
@@ -30,11 +32,11 @@ ANSWERS = {
 }
 
 MODULES = [
-    dict(title='Neonatal Health System', add=[]),
-    dict(title='Triage and Assessment of the Sick Newborn', add=[]),
-    dict(title='Welcoming and Admitting a Newborn to the Special Care Newborn Unit', add=[]),
-    dict(title='The Golden Hour of Life', add=[]),
-    dict(title='Care of the Premature Baby and Prevention of Major Complications', add=[]),
+    dict(title='Neonatal Health System', rename=m2_s1_3.S1_TITLES, add=m2_s1_3.S1),
+    dict(title='Triage and Assessment of the Sick Newborn', rename=m2_s1_3.S2_TITLES, add=m2_s1_3.S2),
+    dict(title='Welcoming and Admitting a Newborn to the Special Care Newborn Unit', rename=m2_s1_3.S3_TITLES, add=m2_s1_3.S3),
+    dict(title='The Golden Hour of Life', rename=m2_s4.TITLES, add=m2_s4.ADD),
+    dict(title='Care of the Premature Baby and Prevention of Major Complications', rename=m2_s5.TITLES, split=m2_s5.SPLIT, add=m2_s5.ADD),
     dict(title='Kangaroo Mother Care', add=[]),
     dict(title='Neonatal Procedures', anyOrder=True, add=[]),
     dict(title='Equipment Required for Newborn Care', anyOrder=True, add=[]),

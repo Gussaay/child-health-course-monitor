@@ -183,6 +183,15 @@ def build_book(key):
             hit = [L for L in lessons if L['title'] == old]
             if not hit: ERRORS.append(f"{key} S{si}: no lesson titled {old!r} to rename")
             for L in hit: L['title'] = new
+        # splits: (anchor, new title): a lesson is cut just before the block holding the anchor
+        for anchor, new_title in mc.get('split', []):
+            hits = find_block(lessons, anchor)
+            if len(hits) != 1:
+                ERRORS.append(f"{key} S{si}: split anchor {'not found' if not hits else 'found %d times' % len(hits)}: {anchor!r}"); continue
+            L, bi = hits[0]
+            k = lessons.index(L)
+            lessons.insert(k + 1, {'title': new_title, 'blocks': L['blocks'][bi:], 'extra_ids': []})
+            L['blocks'] = L['blocks'][:bi]
         # inserts: activities, videos, links, after the block holding the anchor text
         for ins in mc.get('add', []):
             anchor, blocks = ins[0], ins[1] if isinstance(ins[1], list) else [ins[1]]

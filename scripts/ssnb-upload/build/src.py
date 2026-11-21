@@ -123,7 +123,9 @@ def pdf_items(els, lvl_base=72, step=18):
                 new = new or (cur['allbold'] and not e['b'] and len(cur['text']) < 160)   # a heading, then its text
                 if cur['type'] == 'li' and e['x'] <= cur['mx']: new = new or False
             elif e['gap'] >= 14:
-                new = True
+                # a wider gap usually starts a paragraph; but a sentence that runs on in lower case
+                # across a wider line space (a double-spaced passage) is the same paragraph
+                new = not (END.search(cur['text']) is None and t[:1].islower() and e['gap'] < 30)
             elif cur['type'] == 'li' and e['x'] <= cur['mx'] - 2:
                 new = True
             elif cur['type'] == 'p' and cur['bold'] != e['b'] and cur['bold'] and END.search(cur['text']) is None and len(cur['text']) < 160:
