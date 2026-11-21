@@ -10,7 +10,7 @@ import { Button, Modal, Input, Select, Textarea, Card, CardBody, EmptyState } fr
 import { notify, confirmDialog } from '../../dialogs';
 import { useDataCache } from '../../../DataContext';
 import { useCourseScreen } from './screen';
-import { callEnrolment, groupName, isOpenCourse } from './enrolment';
+import { callEnrolment, groupName, isOpenCourse, useEnrolmentLive } from './enrolment';
 import { facilitatorMatches } from './courseForm';
 
 /** The enrolment records, the groups and the people a manager may enrol. */
@@ -18,17 +18,23 @@ export function useEnrolmentAdmin() {
     const [data, setData] = useState({ enrolments: [], groups: [], people: [] });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const reload = useCallback(async () => {
-        setLoading(true);
-        setError('');
+    const reload = useCallback(async ({ quiet = false } = {}) => {
+        if (!quiet) { setLoading(true); setError(''); }
         try {
             const res = await callEnrolment('list');
             setData({ enrolments: res.enrolments || [], groups: res.groups || [], people: res.people || [] });
+            if (quiet) setError('');
         } catch (e) {
-            setError(e?.message || 'Could not load enrolment.');
-        } finally { setLoading(false); }
+            // A failed background refresh keeps the list already on screen.
+            if (!quiet) setError(e?.message || 'Could not load enrolment.');
+        } finally { if (!quiet) setLoading(false); }
     }, []);
     useEffect(() => { reload(); }, [reload]);
+    // Join requests arrive on their own while this page stays open: a
+    // learner who has just asked appears in the list within seconds, with
+    // no reload. The refresh is quiet, so the list never flashes.
+    const quietReload = useCallback(() => reload({ quiet: true }), [reload]);
+    useEnrolmentLive(quietReload);
     const act = useCallback(async (action, payload) => {
         const res = await callEnrolment(action, payload);
         await reload();
