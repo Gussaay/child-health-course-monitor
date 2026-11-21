@@ -11,6 +11,7 @@ import { notify, confirmDialog } from '../../dialogs';
 import { useDataCache } from '../../../DataContext';
 import { useCourseScreen } from './screen';
 import { callEnrolment, groupName, isOpenCourse } from './enrolment';
+import { facilitatorMatches } from './courseForm';
 
 /** The enrolment records, the groups and the people a manager may enrol. */
 export function useEnrolmentAdmin() {
@@ -331,12 +332,16 @@ function GroupModal({ group, onClose, admin }) {
         if (!isOpen) return;
         setForm({ id: group.id, name: group.name || '', description: group.description || '', facilitatorId: group.facilitatorId || '' });
         setQuery('');
-        if (!facilitators) fetchFacilitators?.(false);
+        // The picker works from the whole facilitator list, so always take a
+        // full download when the form opens — a cached or delta-only list
+        // could be missing facilitators from other states.
+        fetchFacilitators?.('full');
     }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
     const list = (facilitators || []).filter((f) => f && f.isDeleted !== true);
     const chosen = list.find((f) => f.id === form.facilitatorId);
     const q = query.trim().toLowerCase();
-    const matches = q ? list.filter((f) => `${f.name} ${f.arabicName || ''} ${f.phone || ''} ${f.email || ''} ${f.currentState || ''} ${(f.courses || []).join(' ')}`.toLowerCase().includes(q)).slice(0, 30) : [];
+    // No search text yet: the whole list, so it can be browsed, not only found.
+    const matches = facilitatorMatches(facilitators, q);
     const save = async () => {
         if (!form.name.trim()) { notify(t('imnci_ui.groups.enter_name', 'Enter the group\'s name.'), 'error'); return; }
         setBusy(true);
@@ -367,6 +372,9 @@ function GroupModal({ group, onClose, admin }) {
                                     placeholder={facilitators ? t('imnci_ui.groups.search_facilitator', 'Search the facilitator list by name, phone or state') : t('imnci_ui.enrol.loading', 'Loading…')}
                                     className="w-full rounded-md border border-slate-300 ps-9 p-2 text-sm" />
                             </div>
+                            {facilitators && !q && list.length > 0 && (
+                                <div className="text-xs text-slate-500">{t('imnci_ui.groups.all_facilitators', 'The full facilitator list ({{n}}) — scroll, or type to search.', { n: list.length })}</div>
+                            )}
                             {matches.length > 0 && (
                                 <ul className="max-h-60 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100">
                                     {matches.map((f) => (
