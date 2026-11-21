@@ -154,6 +154,7 @@ import {
 import { isTrainingMode } from './training/trainingSession.js';
 import { recordTrainingView } from './training/trainingProgress.js';
 import TrainingInvite from './training/TrainingInvite.jsx';
+import { courseDetailsWithoutPractice } from './utils/practiceParticipants.js';
 
 import {
     listAllDataForCourse, deleteFacilitator,
@@ -166,6 +167,7 @@ import {
     getPublicTeamMemberProfileData,
     initializeUsageTracking,
     listAllParticipantsForCourse,
+    ensurePracticeParticipants,
     listParticipantTestsForCourse, 
     upsertParticipantTest,
     getUnitMeetingById,
@@ -1131,6 +1133,9 @@ export default function App() {
 
     const [courseDetailsCache, setCourseDetailsCache] = useState({});
     const courseDetails = courseDetailsCache[selectedCourseId] || { participants: null, allObs: null, allCases: null, finalReport: null, participantTests: null };
+    // The course screens show facilitators' practice entries (so they can try
+    // every form); the course report and final report never count them.
+    const reportDetails = useMemo(() => courseDetailsWithoutPractice(courseDetails), [courseDetails]);
     
     const [courseDetailsLoading, setCourseDetailsLoading] = useState(false);
     
@@ -1519,7 +1524,7 @@ export default function App() {
                         // The course and roster come from the session cache; the tests do
                         // not, because a participant sitting a test needs to see whether
                         // their own result has already been recorded.
-                        const [courseData, participantData, testData] = await Promise.all([ getCachedCourse(courseId), getCachedParticipants(courseId), listParticipantTestsForCourse(courseId, { source: 'server' }) ]);
+                        const [courseData, participantData, testData] = await Promise.all([ getCachedCourse(courseId), getCachedParticipants(courseId), listParticipantTestsForCourse(courseId, { source: 'server', includePractice: true }) ]);
                         if (!courseData) throw new Error('Course not found.'); if (!participantData) throw new Error('Participants not found.');
                         if (!['ICCM', 'EENC', 'EmONC', 'Small & Sick Newborn', 'IMNCI', 'ETAT', 'Program Management', 'Comprehensive Package For Community Midwives'].includes(courseData.course_type)) { throw new Error('Test forms are only available for selected courses.'); }
                         const activeParticipants = (participantData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
@@ -2015,10 +2020,10 @@ export default function App() {
                 setCourseDetailsLoading(true);
                 try {
                     const [participantsData, allCourseData, finalReport, testData] = await Promise.all([
-                        listAllParticipantsForCourse(selectedCourseId, { source: 'cache' }).catch(()=>null),
-                        listAllDataForCourse(selectedCourseId, { source: 'cache' }).catch(()=>null),
+                        listAllParticipantsForCourse(selectedCourseId, { source: 'cache', includePractice: true }).catch(()=>null),
+                        listAllDataForCourse(selectedCourseId, { source: 'cache', includePractice: true }).catch(()=>null),
                         getFinalReportByCourseId(selectedCourseId, { source: 'cache' }).catch(()=>null),
-                        listParticipantTestsForCourse(selectedCourseId, { source: 'cache' }).catch(()=>null)
+                        listParticipantTestsForCourse(selectedCourseId, { source: 'cache', includePractice: true }).catch(()=>null)
                     ]);
 
                     const processAndSet = (pData, cData, fData, tData) => {
@@ -2040,10 +2045,10 @@ export default function App() {
                         processAndSet(participantsData, allCourseData, finalReport, testData);
                     } else {
                         const [serverParticipants, serverAllCourse, serverFinalReport, serverTestData] = await Promise.all([
-                            listAllParticipantsForCourse(selectedCourseId, { source: 'server' }).catch(()=>[]),
-                            listAllDataForCourse(selectedCourseId, { source: 'server' }).catch(()=>({allObs:[], allCases:[]})),
+                            listAllParticipantsForCourse(selectedCourseId, { source: 'server', includePractice: true }).catch(()=>[]),
+                            listAllDataForCourse(selectedCourseId, { source: 'server', includePractice: true }).catch(()=>({allObs:[], allCases:[]})),
                             getFinalReportByCourseId(selectedCourseId, { source: 'server' }).catch(()=>null),
-                            listParticipantTestsForCourse(selectedCourseId, { source: 'server' }).catch(()=>[])
+                            listParticipantTestsForCourse(selectedCourseId, { source: 'server', includePractice: true }).catch(()=>[])
                         ]);
                         processAndSet(serverParticipants, serverAllCourse, serverFinalReport, serverTestData);
                     }
@@ -2116,6 +2121,28 @@ export default function App() {
     useEffect(() => { if (view === 'humanResources' && activeHRTab === 'facilitators' && permissions.canApproveSubmissions) fetchPendingSubmissions(); }, [view, activeHRTab, permissions.canApproveSubmissions, fetchPendingSubmissions]);
 
     const selectedCourse = useMemo(() => (IS_EMONC_SITE ? filteredCourses : (allCourses || [])).find(c => c.id === selectedCourseId) || null, [allCourses, filteredCourses, selectedCourseId]);
+
+    // Facilitators' practice entries: the course's director, clinical
+    // instructor and facilitators are added to its participant list the first
+    // time the course is opened by staff (and again when someone new is
+    // assigned). They are put straight into the open course's list too.
+    const practiceRosterKey = selectedCourse ? JSON.stringify([selectedCourse.id, selectedCourse.director, selectedCourse.clinical_instructor, (selectedCourse.facilitatorAssignments || []).map(a => [a?.name, a?.group])]) : '';
+    useEffect(() => {
+        if (!user || !selectedCourse || !permissions.canManageCourse) return;
+        let cancelled = false;
+        ensurePracticeParticipants(selectedCourse).then((created) => {
+            if (cancelled || !created?.length) return;
+            setCourseDetailsCache(prev => {
+                const cur = prev[selectedCourse.id];
+                if (!cur || !Array.isArray(cur.participants)) return prev;
+                const have = new Set(cur.participants.map(p => p.id));
+                const add = created.filter(p => !have.has(p.id));
+                return add.length ? { ...prev, [selectedCourse.id]: { ...cur, participants: [...cur.participants, ...add] } } : prev;
+            });
+        }).catch((e) => console.warn('[practice] could not add facilitator practice entries:', e?.message || e));
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user, practiceRosterKey, permissions.canManageCourse]);
     // The main menu's numbers. The last ones worked out are kept on the
     // device, so the menu shows them at once and refreshes them as data loads.
     const homeStatsKey = user?.uid ? `home_stats_${user.uid}` : null;
@@ -2433,10 +2460,10 @@ export default function App() {
         setLoading(true); setCourseDetailsLoading(true); 
         try {
             const [participantsData, allCourseData, finalReport, testData] = await Promise.all([
-                listAllParticipantsForCourse(courseId, { source: 'cache' }).catch(()=>null), 
-                listAllDataForCourse(courseId, { source: 'cache' }).catch(()=>null), 
+                listAllParticipantsForCourse(courseId, { source: 'cache', includePractice: true }).catch(()=>null), 
+                listAllDataForCourse(courseId, { source: 'cache', includePractice: true }).catch(()=>null), 
                 getFinalReportByCourseId(courseId, { source: 'cache' }).catch(()=>null), 
-                listParticipantTestsForCourse(courseId, { source: 'cache' }).catch(()=>null) 
+                listParticipantTestsForCourse(courseId, { source: 'cache', includePractice: true }).catch(()=>null) 
             ]);
             
             let finalParticipants = participantsData;
@@ -2448,10 +2475,10 @@ export default function App() {
 
             if (isCacheMiss) {
                  const [serverParticipants, serverAllCourse, serverFinalReport, serverTestData] = await Promise.all([
-                    listAllParticipantsForCourse(courseId, { source: 'server' }).catch(()=>[]), 
-                    listAllDataForCourse(courseId, { source: 'server' }).catch(()=>({allObs:[], allCases:[]})), 
+                    listAllParticipantsForCourse(courseId, { source: 'server', includePractice: true }).catch(()=>[]), 
+                    listAllDataForCourse(courseId, { source: 'server', includePractice: true }).catch(()=>({allObs:[], allCases:[]})), 
                     getFinalReportByCourseId(courseId, { source: 'server' }).catch(()=>null), 
-                    listParticipantTestsForCourse(courseId, { source: 'server' }).catch(()=>[]) 
+                    listParticipantTestsForCourse(courseId, { source: 'server', includePractice: true }).catch(()=>[]) 
                 ]);
                 finalParticipants = serverParticipants;
                 finalAllCourse = serverAllCourse;
@@ -2483,14 +2510,14 @@ export default function App() {
     const handleOpenCourseForTestForm = useCallback(async (courseId) => {
         setLoading(true); setSelectedCourseId(courseId); setSelectedParticipantId(null); 
         try {
-            let participantsData = await listAllParticipantsForCourse(courseId, { source: 'cache' }).catch(()=>null);
-            let testData = await listParticipantTestsForCourse(courseId, { source: 'cache' }).catch(()=>null);
+            let participantsData = await listAllParticipantsForCourse(courseId, { source: 'cache', includePractice: true }).catch(()=>null);
+            let testData = await listParticipantTestsForCourse(courseId, { source: 'cache', includePractice: true }).catch(()=>null);
             const servedFromCache = participantsData !== null && testData !== null;
 
             if (!servedFromCache) {
                  [participantsData, testData] = await Promise.all([ 
-                     listAllParticipantsForCourse(courseId, { source: 'server' }), 
-                     listParticipantTestsForCourse(courseId, { source: 'server' }) 
+                     listAllParticipantsForCourse(courseId, { source: 'server', includePractice: true }), 
+                     listParticipantTestsForCourse(courseId, { source: 'server', includePractice: true }) 
                  ]);
             }
 
@@ -2552,12 +2579,12 @@ export default function App() {
         if (!courseToReport) return;
         setFinalReportCourse(courseToReport); setSelectedCourseId(courseId); setLoading(true);
         try {
-            let participantsData = await listAllParticipantsForCourse(courseId, { source: 'cache' }).catch(()=>null);
+            let participantsData = await listAllParticipantsForCourse(courseId, { source: 'cache', includePractice: true }).catch(()=>null);
             let existingReport = await getFinalReportByCourseId(courseId, { source: 'cache' }).catch(()=>null);
 
             if (participantsData === null) {
                 [participantsData, existingReport] = await Promise.all([ 
-                    listAllParticipantsForCourse(courseId, { source: 'server' }), 
+                    listAllParticipantsForCourse(courseId, { source: 'server', includePractice: true }), 
                     getFinalReportByCourseId(courseId, { source: 'server' }) 
                 ]);
             }
@@ -2602,12 +2629,12 @@ export default function App() {
         if (!courseToEditReport) { setToast({ show: true, message: t('app_extra.toast.course_not_found', 'Course not found.'), type: 'error' }); return; }
         setFinalReportCourse(courseToEditReport); setSelectedCourseId(courseId); setLoading(true);
         try {
-            let participantsData = await listAllParticipantsForCourse(courseId, { source: 'cache' }).catch(()=>null);
+            let participantsData = await listAllParticipantsForCourse(courseId, { source: 'cache', includePractice: true }).catch(()=>null);
             let existingReport = await getFinalReportByCourseId(courseId, { source: 'cache' }).catch(()=>null);
 
             if (participantsData === null) {
                 [participantsData, existingReport] = await Promise.all([ 
-                    listAllParticipantsForCourse(courseId, { source: 'server' }), 
+                    listAllParticipantsForCourse(courseId, { source: 'server', includePractice: true }), 
                     getFinalReportByCourseId(courseId, { source: 'server' }) 
                 ]);
             }
@@ -2765,7 +2792,7 @@ case 'meetings':
                 />
             ) : null;
 
-            case 'courseReport': return permissions.canViewCourse ? (selectedCourse && <CourseReportView course={selectedCourse} onSaveFinalReport={permissions.canUseFederalManagerAdvancedFeatures ? handleSaveFinalReport : undefined} onFinalReportChanged={(saved) => setCourseDetailsCache(prev => ({ ...prev, [selectedCourse.id]: { ...prev[selectedCourse.id], finalReport: saved } }))} isLoadingData={courseDetails.participants === null || courseDetails.allObs === null} loadFailed={!!courseDetails.loadFailed} onRetry={() => { setCourseDetailsCache(prev => { const next = { ...prev }; delete next[selectedCourse.id]; return next; }); handleOpenCourseReport(selectedCourse.id); }} participants={courseDetails.participants} allObs={courseDetails.allObs} allCases={courseDetails.allCases} participantTests={courseDetails.participantTests || undefined} finalReportData={courseDetails.finalReport} onBack={goBack} onEditFinalReport={handleEditFinalReport} onDeletePdf={handleDeletePdf} onViewParticipantReport={(pid) => { setSelectedParticipantId(pid); navigate('participantReport'); }} onShare={(course) => handleShare(course, 'course')} setToast={setToast} allHealthFacilities={healthFacilities} />) : null;
+            case 'courseReport': return permissions.canViewCourse ? (selectedCourse && <CourseReportView course={selectedCourse} onSaveFinalReport={permissions.canUseFederalManagerAdvancedFeatures ? handleSaveFinalReport : undefined} onFinalReportChanged={(saved) => setCourseDetailsCache(prev => ({ ...prev, [selectedCourse.id]: { ...prev[selectedCourse.id], finalReport: saved } }))} isLoadingData={courseDetails.participants === null || courseDetails.allObs === null} loadFailed={!!courseDetails.loadFailed} onRetry={() => { setCourseDetailsCache(prev => { const next = { ...prev }; delete next[selectedCourse.id]; return next; }); handleOpenCourseReport(selectedCourse.id); }} participants={reportDetails.participants} allObs={reportDetails.allObs} allCases={reportDetails.allCases} participantTests={reportDetails.participantTests || undefined} finalReportData={courseDetails.finalReport} onBack={goBack} onEditFinalReport={handleEditFinalReport} onDeletePdf={handleDeletePdf} onViewParticipantReport={(pid) => { setSelectedParticipantId(pid); navigate('participantReport'); }} onShare={(course) => handleShare(course, 'course')} setToast={setToast} allHealthFacilities={healthFacilities} />) : null;
 
             case 'facilitatorForm':
                 return permissions.canManageHumanResource ? (<FacilitatorForm 
@@ -2781,7 +2808,7 @@ case 'meetings':
             case 'finalReport':
                 return (
                     <FinalReportManager
-                        course={finalReportCourse || selectedCourse} participants={courseDetails.participants} initialData={courseDetails.finalReport}
+                        course={finalReportCourse || selectedCourse} participants={reportDetails.participants} initialData={courseDetails.finalReport}
                         onSave={handleSaveFinalReport} onCancel={goBack} canUseFederalManagerAdvancedFeatures={permissions.canUseFederalManagerAdvancedFeatures}
                     />
                 );
@@ -3071,7 +3098,7 @@ case 'meetings':
                             const refetchData = async () => {
                                 setPublicTestLoading(true);
                                 try {
-                                    const [testData, participantData] = await Promise.all([ listParticipantTestsForCourse(publicTestData.course.id, 'server'), listAllParticipantsForCourse(publicTestData.course.id, 'server') ]);
+                                    const [testData, participantData] = await Promise.all([ listParticipantTestsForCourse(publicTestData.course.id, { source: 'server', includePractice: true }), listAllParticipantsForCourse(publicTestData.course.id, { source: 'server', includePractice: true }) ]);
                                     const activeParticipants = (participantData || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
                                     const activeTests = (testData || []).filter(t => t.isDeleted !== true && t.isDeleted !== "true");
                                     setPublicTestData(prev => ({ ...prev, tests: activeTests, participants: activeParticipants }));

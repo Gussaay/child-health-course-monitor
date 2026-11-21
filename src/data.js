@@ -37,6 +37,7 @@ import { problemSignature } from './utils/problemGroups';
 import { CERT_APPROVAL_FIELD, certificateApprovalSnapshot } from './components/constants.js';
 import { projectAtTime, projectOfFacility, visitTimeOf, hasRecordedProject } from './utils/visitProject.js';
 import { recycleBinType, recordTitle } from './utils/recycleBin.js';
+import { withoutPractice, wantsPractice, missingPracticeParticipants } from './utils/practiceParticipants.js';
 import { DuplicatePhoneError, findPhoneConflict, duplicatePhoneMessage, normalizePhone, isSoftDeleted, validateReaddRequest } from './utils/participantDuplicates.js';
 
 import {
@@ -1650,14 +1651,15 @@ export async function listParticipants(courseId, lastVisible = null, sourceOptio
 
 export async function listAllParticipants(sourceOptions = {}, lastSync = 0, scope = null) {
     try {
-        if (!(lastSync > 0) && scope) return await getScopedDocs("participants", scope, sourceOptions);
+        if (!(lastSync > 0) && scope) return withoutPractice(await getScopedDocs("participants", scope, sourceOptions));
         let q = collection(db, "participants");
         if (lastSync > 0) {
             q = query(q, where("lastUpdatedAt", ">", Timestamp.fromMillis(lastSync)));
         }
         const querySnapshot = await getData(q, sourceOptions);
         const participants = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        return participants;
+        // Facilitators' practice entries never reach the app-wide lists.
+        return withoutPractice(participants);
     } catch (error) {
         console.error("Error in listAllParticipants:", error);
         throw error;
@@ -1669,11 +1671,31 @@ export async function listAllParticipantsForCourse(courseId, sourceOptions = {})
     try {
         const q = query(collection(db, "participants"), where("courseId", "==", courseId));
         const documentSnapshots = await getDocs(q, sourceOptions);
-        return documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const list = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Facilitators' practice entries only for the screens that ask for
+        // them ({ includePractice: true }); never for reports or certificates.
+        return wantsPractice(sourceOptions) ? list : withoutPractice(list);
     } catch (error) {
         console.error("Error fetching participants for course:", error);
         throw error;
     }
+}
+
+// Facilitators can try every course form. Each course's director, clinical
+// instructor and facilitators get a practice participant entry (fixed id
+// starting practice_, see utils/practiceParticipants.js), created here the
+// first time the course is opened. An entry someone deleted is not brought
+// back. Returns the entries created.
+export async function ensurePracticeParticipants(course) {
+    if (!course?.id) return [];
+    const q = query(collection(db, "participants"), where("courseId", "==", course.id));
+    const snap = await getDocs(q, navigator.onLine ? {} : { source: 'cache' });
+    const missing = missingPracticeParticipants(course, snap.docs.map(d => d.id));
+    if (!missing.length) return [];
+    const batch = writeBatch(db);
+    missing.forEach(({ id, ...data }) => batch.set(doc(db, "participants", id), { ...data, lastUpdatedAt: serverTimestamp() }, { merge: true }));
+    await executeOfflineSafeWrite(batch.commit(), 'Facilitator practice entries');
+    return missing;
 }
 
 export async function deleteParticipant(participantId) {
@@ -2048,8 +2070,9 @@ export async function listAllDataForCourse(courseId, sourceOptions = {}) {
         getDocs(casesQuery, sourceOptions) 
     ]);
 
-    const allObs = obsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const allCases = casesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const keep = (list) => (wantsPractice(sourceOptions) ? list : withoutPractice(list));
+    const allObs = keep(obsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const allCases = keep(casesSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
     const allCasesWithCorrectness = allCases.map(caseItem => {
         const caseObservations = allObs.filter(obs => obs.caseId === caseItem.id);
@@ -2688,7 +2711,8 @@ export async function listParticipantTestsForCourse(courseId, sourceOptions = {}
     try {
         const q = query(collection(db, "participantTests"), where("courseId", "==", courseId));
         const snapshot = await getData(q, sourceOptions);
-        return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        return wantsPractice(sourceOptions) ? list : withoutPractice(list);
     } catch (error) {
         console.error("Error fetching participant tests for course:", error);
         throw error;
@@ -4229,7 +4253,9 @@ export async function getCachedParticipants(courseId, { force = false } = {}) {
         const hit = exCacheRead(key);
         if (hit) return hit;
     }
-    const list = await listAllParticipantsForCourse(courseId, { source: navigator.onLine ? 'server' : 'cache' });
+    // The public test, monitoring and exercise links pick from this list, so
+    // facilitators' practice entries are kept.
+    const list = await listAllParticipantsForCourse(courseId, { source: navigator.onLine ? 'server' : 'cache', includePractice: true });
     const clean = (list || []).filter(p => p.isDeleted !== true && p.isDeleted !== "true");
     exCacheWrite(key, clean);
     return clean;
@@ -4479,7 +4505,8 @@ export function subscribeFacilityDelta(filters, sinceMs, onChange, onError) {
 export async function listCasesForCourse(courseId, sourceOptions = {}) {
     const q = query(collection(db, "cases"), where("courseId", "==", courseId));
     const snapshot = await getDocs(q, sourceOptions);
-    return snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.isDeleted !== true);
+    const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.isDeleted !== true);
+    return wantsPractice(sourceOptions) ? list : withoutPractice(list);
 }
 
 export async function getDailyEvalForm(formId) {
@@ -4505,7 +4532,8 @@ export async function submitDailyEvalResponse(response) {
 export async function listDailyEvalResponses(courseId) {
     const q = query(collection(db, "dailyEvalResponses"), where("courseId", "==", courseId));
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => !r.isDeleted);
+    // A facilitator trying the form ticks "practice": those answers are left out.
+    return withoutPractice(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => !r.isDeleted));
 }
 
 // Every day set up for one course's daily evaluation (Share dialog list).

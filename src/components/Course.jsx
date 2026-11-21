@@ -74,6 +74,7 @@ import { countsForCoverage } from '../utils/coverageEligibility';
 import { textIncludes, lowerText } from '../utils/textSearch';
 import { facilitatorOptionsFor } from '../utils/facilitatorOptions';
 import { participantPlace } from '../utils/participantAffiliation';
+import { withoutPractice } from '../utils/practiceParticipants';
 import { IS_EMONC_SITE } from '../siteMode';
 import { usePageAddButton } from '../utils/pageChrome';
 
@@ -2646,7 +2647,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
 
 
 
-        {activeCoursesTab === 'reports' && selectedCourse && <Suspense fallback={<PageSkeleton />}><ReportsView course={selectedCourse} participants={participants} allObs={liveAllObs || undefined} allCases={liveAllCases || undefined} allTests={participantTests} /></Suspense>}
+        {activeCoursesTab === 'reports' && selectedCourse && <Suspense fallback={<PageSkeleton />}><ReportsView course={selectedCourse} participants={withoutPractice(participants)} allObs={withoutPractice(liveAllObs) || undefined} allCases={withoutPractice(liveAllCases) || undefined} allTests={withoutPractice(participantTests)} /></Suspense>}
         
         {activeCoursesTab === 'enter-test-scores' && selectedCourse && (
             <CourseTestForm

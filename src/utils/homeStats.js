@@ -6,6 +6,7 @@
 // all of it. Each number is for the current year.
 
 import { countsForCoverage } from './coverageEligibility';
+import { isPracticeRecord } from './practiceParticipants';
 
 const isLive = (x) => x && x.isDeleted !== true && x.isDeleted !== 'true';
 
@@ -57,7 +58,8 @@ export function computeHomeStats({ level, unit, states = [], localities = [], co
     let averageScore = null;
     if (courseList && participants) {
         const ids = new Set(courseList.map((c) => c.id));
-        const trained = participants.filter((p) => isLive(p) && ids.has(p.courseId));
+        // Facilitators' practice entries are never counted.
+        const trained = participants.filter((p) => isLive(p) && !isPracticeRecord(p) && ids.has(p.courseId));
         participantCount = trained.length;
         const scores = trained.map((p) => Number(p.post_test_score)).filter((n) => Number.isFinite(n) && n > 0);
         averageScore = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;

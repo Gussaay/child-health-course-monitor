@@ -20,6 +20,7 @@ import { publicBaseUrl } from '../utils/publicLink';
 import { useLeaveGuard, leaveForm } from '../utils/leaveGuard';
 import { textIncludes } from '../utils/textSearch';
 import { participantPlace } from '../utils/participantAffiliation';
+import { isPracticeParticipant } from '../utils/practiceParticipants';
 import FormPdfButton from './FormPdfButton';
 
 export const EENC_TEST_QUESTIONS = [
@@ -1319,13 +1320,13 @@ const TestScoresDashboard = ({
                          const moduleColumns = columns.filter(c => c.module === module);
                          const moduleHeaders = [t('course_tests.tests.table.name', 'Name'), t('course_tests.tests.table.group', 'Group'), ...moduleColumns.map(c => t('course_tests.tests.table.result', '{{label}} Result', { label: testTypeLabel(c.type, t) }))];
                          const statsFor = (type) => {
-                             const tests = participants.map(p => getTest(p, type, module)).filter(Boolean);
+                             const tests = participants.filter(p => !isPracticeParticipant(p)).map(p => getTest(p, type, module)).filter(Boolean);
                              const avg = tests.length ? tests.reduce((acc, t) => acc + Number(t.percentage || 0), 0) / tests.length : null;
                              return { count: tests.length, avg };
                          };
                          const moduleParticipants = participantsByModule[module] || [];
                          const statsForModule = (type) => {
-                             const tests = moduleParticipants.map(p => getTest(p, type, module)).filter(Boolean);
+                             const tests = moduleParticipants.filter(p => !isPracticeParticipant(p)).map(p => getTest(p, type, module)).filter(Boolean);
                              const avg = tests.length ? tests.reduce((acc, t) => acc + Number(t.percentage || 0), 0) / tests.length : null;
                              return { count: tests.length, avg };
                          };
@@ -1350,7 +1351,7 @@ const TestScoresDashboard = ({
                                         ) : (
                                             moduleParticipants.map(p => (
                                                 <tr key={p.id} className="hover:bg-gray-50">
-                                                    <td className="p-4 border font-medium">{p.name}</td>
+                                                    <td className="p-4 border font-medium">{p.name}{isPracticeParticipant(p) && <span className="ms-2 px-1.5 py-0.5 rounded bg-violet-100 text-violet-800 text-xs font-bold">{t('course_tests.tests.practice', 'Practice')}</span>}</td>
                                                     <td className="p-4 border">{p.group || '-'}</td>
                                                     {moduleColumns.map(col => (
                                                         <td key={col.type} className="p-4 border">
@@ -1382,7 +1383,7 @@ const TestScoresDashboard = ({
                                          const expected = getParticipantAssignedModule(p, course);
                                          return (
                                              <tr key={p.id} className="hover:bg-gray-50">
-                                                 <td className="p-4 border font-medium">{p.name}</td>
+                                                 <td className="p-4 border font-medium">{p.name}{isPracticeParticipant(p) && <span className="ms-2 px-1.5 py-0.5 rounded bg-violet-100 text-violet-800 text-xs font-bold">{t('course_tests.tests.practice', 'Practice')}</span>}</td>
                                                  <td className="p-4 border">{p.group || '-'}</td>
                                                  <td className="p-4 border">
                                                      {canManageTests && onAssignModule ? (
@@ -1427,7 +1428,7 @@ const TestScoresDashboard = ({
                 ) : (
                     participants.map(p => (
                         <tr key={p.id} className="hover:bg-gray-50">
-                            <td className="p-4 border font-medium">{p.name}</td>
+                            <td className="p-4 border font-medium">{p.name}{isPracticeParticipant(p) && <span className="ms-2 px-1.5 py-0.5 rounded bg-violet-100 text-violet-800 text-xs font-bold">{t('course_tests.tests.practice', 'Practice')}</span>}</td>
                             <td className="p-4 border">{p.group || '-'}</td>
                             {columns.map(col => (
                                 <td key={`${col.type}-${col.module || 'default'}`} className="p-4 border">
@@ -2499,7 +2500,7 @@ export function CourseTestForm({
                                             </option>
                                         )}
                                         {filteredSetupParticipants.map(p => (
-                                            <option key={p.id} value={p.id}>{p.name} ({p.group})</option>
+                                            <option key={p.id} value={p.id}>{p.name} ({p.group}){isPracticeParticipant(p) ? ` · ${t('course_tests.tests.practice', 'Practice')}` : ''}</option>
                                         ))}
                                     </Select>
                                 </FormGroup>

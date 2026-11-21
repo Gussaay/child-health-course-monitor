@@ -2482,7 +2482,9 @@
       "group_value": "المجموعة: {{group}}",
       "cert_needs_reapproval": "الشهادة تحتاج إلى إعادة اعتماد",
       "created": "تاريخ الإنشاء:",
-      "last_edit": "آخر تعديل:"
+      "last_edit": "آخر تعديل:",
+      "practice": "تجريبي",
+      "practice_tooltip": "ميسر يجرّب النماذج: لا يُحسب في أي نتيجة أو تقرير أو شهادة"
     },
     "cert_mgmt": {
       "download_title": "تنزيل الشهادات",
@@ -2802,7 +2804,8 @@
       "from_facility": "مؤسسة صحية",
       "from_program": "برنامج (مثل البرنامج القومي لصحة الطفل)",
       "program_name": "اسم البرنامج",
-      "program_placeholder": "مثال: البرنامج القومي لصحة الطفل"
+      "program_placeholder": "مثال: البرنامج القومي لصحة الطفل",
+      "practice": "تجريبي"
     }
   },
   "facilitators_page": {

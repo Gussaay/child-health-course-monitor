@@ -2486,7 +2486,9 @@
       "group_value": "Group: {{group}}",
       "cert_needs_reapproval": "Certificate needs re-approval",
       "created": "Created:",
-      "last_edit": "Last Edit:"
+      "last_edit": "Last Edit:",
+      "practice": "Practice",
+      "practice_tooltip": "Facilitator practice entry: not counted in any score, report or certificate"
     },
     "cert_mgmt": {
       "download_title": "Download Certificates",
@@ -2806,7 +2808,8 @@
       "from_facility": "Health facility",
       "from_program": "A programme (e.g. National Child Health Program)",
       "program_name": "Program name",
-      "program_placeholder": "e.g. National Child Health Program"
+      "program_placeholder": "e.g. National Child Health Program",
+      "practice": "Practice"
     }
   },
   "facilitators_page": {

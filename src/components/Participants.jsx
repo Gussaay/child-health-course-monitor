@@ -44,6 +44,7 @@ import { publicBaseUrl } from '../utils/publicLink';
 import { whatsappLink } from '../utils/whatsapp';
 import { textIncludes } from '../utils/textSearch';
 import { participantPlace, participantPlaceLabel } from '../utils/participantAffiliation';
+import { withoutPractice, isPracticeParticipant } from '../utils/practiceParticipants';
 import { sharePdf, certificateFileName } from '../utils/sharePdf';
 import { Capacitor } from '@capacitor/core';
 import { useRememberedState } from '../utils/rememberedState';
@@ -2018,7 +2019,7 @@ export function ParticipantsView({
 
     // Whose certificates are held because their details moved after sign-off.
     const heldCertificates = useMemo(
-        () => staleCertificateParticipants(participants, localCourseData),
+        () => staleCertificateParticipants(withoutPractice(participants), localCourseData),
         [participants, localCourseData]
     );
 
@@ -2133,7 +2134,7 @@ export function ParticipantsView({
                            (courseType === 'EENC' || courseType === 'EmONC') ? 'eenc_staff' : 
                            'imnci_staff';
 
-        const validParticipants = participants.filter(p => p.facilityId || p.center_name);
+        const validParticipants = withoutPractice(participants).filter(p => p.facilityId || p.center_name);
 
         validParticipants.forEach(p => {
             const facilityKey = p.facilityId || `${p.state}-${p.locality}-${p.center_name}`;
@@ -2243,6 +2244,10 @@ export function ParticipantsView({
             return matchGroup && matchJob && matchFacility && matchLocality && matchSubType;
         });
     }, [participants, groupFilter, jobTitleFilter, facilityFilter, localityFilter, subTypeFilter, course.facilitatorAssignments]);
+    // The real participants among those shown: facilitators' practice entries
+    // are listed (so they can try every form) but get no certificate or email.
+    const certificatePool = useMemo(() => withoutPractice(filtered), [filtered]);
+    const realParticipantCount = useMemo(() => withoutPractice(participants || []).length, [participants]);
 
     const toggleExpandParticipant = (id) => {
         setExpandedParticipantId(prev => (prev === id ? null : id));
@@ -2500,6 +2505,8 @@ export function ParticipantsView({
     };
 
     const handleBulkCertificateDownload = async (language) => {
+        // Facilitators' practice entries never get a certificate.
+        const filtered = certificatePool;
         if (filtered.length === 0) {
             setToast({ show: true, message: t('participants_page.cert.no_bulk', 'No participants available for bulk certificate download.'), type: 'warning' });
             return;
@@ -2575,7 +2582,7 @@ export function ParticipantsView({
     };
 
     const handleOpenBulkEmail = () => {
-        setEmailTargets(filtered);
+        setEmailTargets(certificatePool);
         setIsBulkEmail(true);
         setEmailModalOpen(true);
     };
@@ -2854,7 +2861,7 @@ export function ParticipantsView({
             {finalFederalPerm && (
                 <div className="flex gap-2 border-b border-gray-200 mb-4">
                     {[
-                        { id: 'active', label: `${t('participants_page.list.tab_participants', 'Participants')} (${participants?.length || 0})` },
+                        { id: 'active', label: `${t('participants_page.list.tab_participants', 'Participants')} (${realParticipantCount})` },
                         { id: 'deleted', label: t('participants_page.list.deleted_participants', 'Deleted Participants'), count: pendingReaddCount },
                     ].map(({ id, label, count }) => (
                         <button key={id} type="button" onClick={() => setListTab(id)} disabled={isProcessing} className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px flex items-center gap-2 ${listTab === id ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
@@ -2949,6 +2956,11 @@ export function ParticipantsView({
                                         <div className="flex flex-col gap-0.5">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-bold text-gray-900 text-[13px] break-words">{p.name}</span>
+                                                {isPracticeParticipant(p) && (
+                                                    <span className="px-1.5 py-0.5 rounded bg-violet-100 text-violet-800 text-xs font-bold" title={t('participants_page.list.practice_tooltip', 'Facilitator practice entry: not counted in any score, report or certificate')}>
+                                                        {t('participants_page.list.practice', 'Practice')}
+                                                    </span>
+                                                )}
                                                 {certAwaiting && (
                                                     <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-xs font-bold "
                                                         title={t('participants_page.list.stale_tooltip', 'Name or sub-course changed after this course was approved')}>
@@ -2995,7 +3007,7 @@ export function ParticipantsView({
                                                 </Button>
                                             )}
 
-                                            {isCertApproved && finalCertPerm && (
+                                            {isCertApproved && finalCertPerm && !isPracticeParticipant(p) && (
                                                 <Button 
                                                     variant="secondary" 
                                                     className="px-2.5 py-1 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50" 
@@ -3049,7 +3061,7 @@ export function ParticipantsView({
                                 onClick={() => toggleExpandParticipant(p.id)}
                             >
                                 <div>
-                                    <h3 className="font-bold text-lg text-gray-800">{p.name}</h3>
+                                    <h3 className="font-bold text-lg text-gray-800">{p.name}{isPracticeParticipant(p) && <span className="ms-2 align-middle px-1.5 py-0.5 rounded bg-violet-100 text-violet-800 text-xs font-bold">{t('participants_page.list.practice', 'Practice')}</span>}</h3>
                                     <p className="text-gray-600 text-sm">{p.job_title} • {course.course_type === 'Program Management' ? (p.department || t('participants_page.common.na', 'N/A')) : participantPlaceLabel(p)}</p>
                                     <div className="flex flex-wrap items-center gap-2 mt-2">
                                         <span className="text-xs font-medium px-2 py-1 bg-gray-100 rounded text-gray-600">{t('participants_page.list.group_value', 'Group: {{group}}', { group: p.group })}</span>
@@ -3080,7 +3092,7 @@ export function ParticipantsView({
                                             <Button variant="secondary" className="w-full justify-center" onClick={() => setExerciseModalParticipant(p)} disabled={isProcessing}>{t('participants_page.actions.exercises', 'Exercises')}</Button>
                                         )}
                                         
-                                        {isCertApproved && finalCertPerm && (
+                                        {isCertApproved && finalCertPerm && !isPracticeParticipant(p) && (
                                             <Button variant="secondary" className="w-full justify-center border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => setCertActionModal({ isOpen: true, data: { p, participantSubCourse } })} disabled={isCacheLoading || isProcessing || processingRowId === p.id}>
                                                 {processingRowId === p.id ? <Spinner size="sm" /> : t('participants_page.actions.certificate', 'Certificate')}
                                             </Button>
