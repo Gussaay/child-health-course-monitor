@@ -1,0 +1,234 @@
+[
+ {
+  "id": "sep_q1",
+  "text": "1. Rupture of membranes is considered prolonged if it occurs before labor by:",
+  "type": "mc",
+  "options": [
+   {
+    "id": "a",
+    "text": "12 hours"
+   },
+   {
+    "id": "b",
+    "text": "18 hours"
+   },
+   {
+    "id": "c",
+    "text": "24 hours"
+   },
+   {
+    "id": "d",
+    "text": "36 hours"
+   }
+  ],
+  "correctAnswer": "b"
+ },
+ {
+  "id": "sep_q2",
+  "text": "2. The most common source of postnatal infections in hospitalized newborns?",
+  "type": "mc",
+  "options": [
+   {
+    "id": "a",
+    "text": "Contaminated I.V sets and cannulas"
+   },
+   {
+    "id": "b",
+    "text": "Hand contamination by staff"
+   },
+   {
+    "id": "c",
+    "text": "Incubators"
+   }
+  ],
+  "correctAnswer": "b"
+ },
+ {
+  "id": "sep_q3",
+  "text": "3. What is the most common source for neonatal tetanus infection?",
+  "type": "mc",
+  "options": [
+   {
+    "id": "a",
+    "text": "Birth canal colonization with bacteria"
+   },
+   {
+    "id": "b",
+    "text": "Septic umbilical cord care measures"
+   },
+   {
+    "id": "c",
+    "text": "Transmission through the placenta"
+   }
+  ],
+  "correctAnswer": "b"
+ },
+ {
+  "id": "sep_q4",
+  "text": "4. The commonest bacteria that causes early neonatal sepsis is?",
+  "type": "mc",
+  "options": [
+   {
+    "id": "a",
+    "text": "Staph aureus"
+   },
+   {
+    "id": "b",
+    "text": "E. coli"
+   },
+   {
+    "id": "c",
+    "text": "Listeria"
+   },
+   {
+    "id": "d",
+    "text": "None of the above"
+   }
+  ],
+  "correctAnswer": "b"
+ },
+ {
+  "id": "sep_q5",
+  "text": "5. A primigravida presents in labor at 38 weeks. She has temperature of 38.5°C. What is the best management?",
+  "type": "mc",
+  "options": [
+   {
+    "id": "a",
+    "text": "Observe only"
+   },
+   {
+    "id": "b",
+    "text": "Start intrapartum antibiotics"
+   },
+   {
+    "id": "c",
+    "text": "Antibiotics after delivery only"
+   },
+   {
+    "id": "d",
+    "text": "Immediate cesarean section"
+   }
+  ],
+  "correctAnswer": "b"
+ },
+ {
+  "id": "sep_q6",
+  "text": "6. What is the best preventive measure to reduce hospital-acquired infections?",
+  "type": "mc",
+  "options": [
+   {
+    "id": "a",
+    "text": "1. Hand hygiene"
+   },
+   {
+    "id": "b",
+    "text": "2. Use of antibiotics"
+   },
+   {
+    "id": "c",
+    "text": "3. Environmental cleaning and hygiene"
+   },
+   {
+    "id": "d",
+    "text": "4. Safe injection practices"
+   }
+  ],
+  "correctAnswer": "a"
+ },
+ {
+  "id": "sep_q7",
+  "text": "7. Signs of neonatal sepsis suspicion include:",
+  "type": "mc",
+  "options": [
+   {
+    "id": "a",
+    "text": "Poor feeding, lethargy, or decreased activity"
+   },
+   {
+    "id": "b",
+    "text": "Temperature instability and respiratory distress"
+   },
+   {
+    "id": "c",
+    "text": "Irritability, severe jaundice, or poor perfusion"
+   },
+   {
+    "id": "d",
+    "text": "All of the above"
+   }
+  ],
+  "correctAnswer": "d"
+ },
+ {
+  "id": "sep_q8",
+  "text": "8. Use of antibiotics in suspected neonatal sepsis should be:",
+  "type": "mc",
+  "options": [
+   {
+    "id": "a",
+    "text": "1. Started only after culture results are available"
+   },
+   {
+    "id": "b",
+    "text": "2. Take culture and started empirically until culture results are reported"
+   },
+   {
+    "id": "c",
+    "text": "3. Given blindly according to previous experience"
+   },
+   {
+    "id": "d",
+    "text": "4. Initiated with broad-spectrum antibiotics regardless of results"
+   }
+  ],
+  "correctAnswer": "b"
+ },
+ {
+  "id": "sep_q9",
+  "text": "9. Regarding negative blood culture:",
+  "type": "mc",
+  "options": [
+   {
+    "id": "a",
+    "text": "1. It excludes the diagnosis of sepsis"
+   },
+   {
+    "id": "b",
+    "text": "2. It is not a specific investigation"
+   },
+   {
+    "id": "c",
+    "text": "3. It must be correlated with clinical condition to diagnose sepsis"
+   },
+   {
+    "id": "d",
+    "text": "4. Stop antibiotics temporarily and collect another sample"
+   }
+  ],
+  "correctAnswer": "c"
+ },
+ {
+  "id": "sep_q10",
+  "text": "10. Control measures when MDR (multidrug-resistant) bacteria are isolated:",
+  "type": "mc",
+  "options": [
+   {
+    "id": "a",
+    "text": "1. Isolate the patient, assign dedicated nurse and equipment, and ensure strict hand hygiene"
+   },
+   {
+    "id": "b",
+    "text": "2. Use gloves and disinfect the environment regularly"
+   },
+   {
+    "id": "c",
+    "text": "3. Discharge to the ward beside the mother"
+   },
+   {
+    "id": "d",
+    "text": "4. Report the case to the Ministry of Health"
+   }
+  ],
+  "correctAnswer": "a"
+ }
+]

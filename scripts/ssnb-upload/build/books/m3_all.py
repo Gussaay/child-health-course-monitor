@@ -29,7 +29,7 @@ S1 = [
     ('it can even lead to brain damage', [
         q('On low-flow oxygen with a blender, what SpO₂ does the manual aim for?', ['Above 88%, with the lowest oxygen concentration possible', '100%', 'Above 98%', 'Exactly 90%'], 0,
           'Breathing pure oxygen can harm the lungs (BPD) and the eyes (retinopathy of prematurity).'),
-        equipment('Oxygen blender'), equipment('Oxygen concentrator')]),
+        equipment('Oxygen concentrator and oxygen blender')]),
 ]
 
 S2_TITLES = {

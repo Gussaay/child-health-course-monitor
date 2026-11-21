@@ -96,6 +96,8 @@ ADD = [
             ('Lasting more than 2 weeks (unconjugated)', 'Red flag: pathological'),
             ('Conjugated bilirubin more than 20% of total', 'Red flag: pathological')], 'From "Red Flags for Pathological Jaundice".')),
     ('Visible jaundice anywhere on the body on day 1', [
+        q('A jaundiced baby\'s stools are pale and urine dark. Which cause in the manual\'s list does this suggest?', ['Liver disease such as hepatitis or biliary atresia', 'Physiological jaundice', 'G6PD deficiency', 'Breastfeeding'], 0,
+          'From "Causes of neonatal jaundice". Investigations include a full blood count, blood groups of baby and mother with a Coombs test, G6PD screening, thyroid function and liver ultrasound.'),
         video('Phototherapy: setting it up and caring for the baby', 'Baby undressed except the nappy, eyes covered, lights at the right distance, turning, feeding and checking the bilirubin.', 'SN2.5.2'),
         equipment('Phototherapy machine')]),
     ('avoid blood transfusion (consult neonatologist)', q(

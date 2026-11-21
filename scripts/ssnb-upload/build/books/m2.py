@@ -1,7 +1,7 @@
 # Manual Module (2) Special Newborn Care: how the manual becomes the online course. One app module per manual Section.
 from lib import *
 from fg import fg_lines
-from books import m2_s1_3, m2_s4, m2_s5
+from books import m2_s1_3, m2_s4, m2_s5, m2_s6_9, m2_s7, m2_s8, m2_s10
 from books.titles import M2_S7, M2_S8
 CATEGORY = "Small & Sick Newborn"
 SUB = "Online course: Management of Sick and Small Newborns (2026)"
@@ -29,6 +29,7 @@ ANSWERS = {
     "Exercise 1 — Scenario: over three weeks, eight babies in your": fg_lines(5182, 5199),
     "Exercise 6 — Practical Exercise — Documentation Drill": fg_lines(5637, 5649),
     "Exercise 10 — Station 4 — Decontamination of Reusable": fg_lines(5723, 5731),
+    "Exercise 1 — Case Scenario": fg_lines(7165, 7170),
 }
 
 MODULES = [
@@ -37,9 +38,9 @@ MODULES = [
     dict(title='Welcoming and Admitting a Newborn to the Special Care Newborn Unit', rename=m2_s1_3.S3_TITLES, add=m2_s1_3.S3),
     dict(title='The Golden Hour of Life', rename=m2_s4.TITLES, add=m2_s4.ADD),
     dict(title='Care of the Premature Baby and Prevention of Major Complications', rename=m2_s5.TITLES, split=m2_s5.SPLIT, add=m2_s5.ADD),
-    dict(title='Kangaroo Mother Care', add=[]),
-    dict(title='Neonatal Procedures', anyOrder=True, add=[]),
-    dict(title='Equipment Required for Newborn Care', anyOrder=True, add=[]),
-    dict(title='Patient Safety', add=[]),
-    dict(title='Neonatal Sepsis: Surveillance, Management and Prevention', add=[]),
+    dict(title='Kangaroo Mother Care', merge=m2_s6_9.S6_MERGE, rename=m2_s6_9.S6_TITLES, add=m2_s6_9.S6),
+    dict(title='Neonatal Procedures', anyOrder=True, rename=M2_S7, add=m2_s7.ADD),
+    dict(title='Equipment Required for Newborn Care', anyOrder=True, merge=m2_s8.MERGE, rename=M2_S8, add=m2_s8.ADD),
+    dict(title='Patient Safety', rename=m2_s6_9.S9_TITLES, add=m2_s6_9.S9),
+    dict(title='Neonatal Sepsis: Surveillance, Management and Prevention', merge=m2_s10.MERGE, merge_titles=m2_s10.MERGE_TITLES, rename=m2_s10.TITLES, split=m2_s10.SPLIT, add=m2_s10.ADD, exercises=m2_s10.EXERCISES),
 ]

@@ -36,8 +36,7 @@ M2_S8 = {
     'SUCTION MACHINE': 'Suction machine',
     'Suction Bulb': 'Suction bulb',
     'Bag And Mask': 'Bag and mask',
-    'Oxygen concentrators': 'Oxygen concentrator',
-    'Oxygen Blender': 'Oxygen blender',
+    'Oxygen concentrators': 'Oxygen concentrator and oxygen blender',
 }
 
 def procedure(lesson, text=''):

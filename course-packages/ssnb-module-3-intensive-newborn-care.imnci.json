@@ -1,0 +1,2645 @@
+{
+ "format": "imnci-course-package",
+ "version": 1,
+ "about": "Manual Module (3) Intensive Newborn Care: Sudan Training Manual for Sick and Small Newborn (2026). Built by scripts/ssnb-upload/build. One module per manual section; every line of the manual is placed in the book's words and order.",
+ "course": {
+  "title": "Sick & Small Newborn · Module 3: Intensive Newborn Care",
+  "description": "Sudan Training Course on Management of Sick and Small Newborns (2026), Module 3. Oxygen therapy, non-invasive ventilation (HFNC, CPAP and others) and mechanical ventilation. Each section is a module you can take, share and finish on its own.",
+  "category": "Small & Sick Newborn",
+  "subcategory": "Online course: Management of Sick and Small Newborns (2026)",
+  "lockOrder": true,
+  "modulesAnyOrder": true,
+  "enrolment": "approval"
+ },
+ "modules": [
+  {
+   "title": "Oxygen Therapy",
+   "order": 1,
+   "sections": [
+    {
+     "title": "Hypoxaemia and when to give oxygen",
+     "order": 1,
+     "read": [
+      {
+       "type": "paragraph",
+       "text": "Hypoxaemia means low levels of oxygen in the blood (low blood oxygen saturation or content)."
+      },
+      {
+       "type": "paragraph",
+       "text": "Hypoxia is inadequate oxygen in tissues for normal cell and organ function, and hypoxia results from hypoxaemia."
+      },
+      {
+       "type": "paragraph",
+       "text": "hypoxaemia is a life-threatening condition that requires early detection and treatment, As all the functions of the human body require oxygen, oxygen deprivation can have severe adverse effects on the cells that perform important biological processes. Lack of oxygen leads very quickly to dysfunction of the organ systems, and death."
+      },
+      {
+       "type": "paragraph",
+       "text": "partial oxygen pressure (PaO2) is a measure only of oxygen molecules dissolved in plasma and not of those bound to haemoglobin. however, as there is a dynamic equilibrium between freely dissolved and haemoglobin-bound oxygen molecules, oxygen saturation can be calculated from the PaO2 Arterial oxygen saturation is referred to as SaO2 when measured by gas analysis and as SpO2 when measured by pulse oximetry."
+      },
+      {
+       "type": "paragraph",
+       "text": "The normal range of SpO2 at sea level is 97–99%, with a lower limit (mean minus 2 standard deviations) of 94%."
+      },
+      {
+       "type": "paragraph",
+       "text": "The “gold standard” for measuring arterial oxygen tension (PaO2) and for calculating oxygen saturation is blood gas analysis."
+      },
+      {
+       "type": "paragraph",
+       "text": "When to Give Oxygen?"
+      },
+      {
+       "type": "paragraph",
+       "text": "In practice, the threshold at which oxygen is given is often SpO2 < 90%, which corresponds to the flat part of the haemoglobin–oxygen dissociation curve, and represents a safe margin of error where there are sufficient oxygen supplies. Small reductions in SpO2 below 90% may represent a dangerous fall in PaO2 (steep part of the curve)."
+      },
+      {
+       "type": "question",
+       "text": "In practice, below what SpO₂ is oxygen usually given, and why that number?",
+       "options": [
+        "Below 90%: it is on the flat part of the dissociation curve; small falls below 90% may be a dangerous fall in PaO₂",
+        "Below 97%: the normal range",
+        "Below 80%: only severe hypoxaemia needs oxygen",
+        "Below 94%: the lower limit of normal"
+       ],
+       "answer": 0,
+       "explanation": "The manual: the threshold is often SpO₂ < 90%, the flat part of the haemoglobin–oxygen dissociation curve."
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p004-1.jpg",
+       "caption": "",
+       "page": 4
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Detecting hypoxaemia",
+     "order": 2,
+     "read": [
+      {
+       "type": "heading",
+       "text": "clinical signs"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>central cyanosis</li><li>nasal flaring</li><li>grunting with every breath</li><li>depressed mental state (i.e. drowsy, lethargic).</li><li>less specific signs for hypoxaemia:<ul><ul><li>fast breathing (respiratory rate of 70/min or more)</li><li>severe lower chest wall indrawing</li><li>head nodding</li></ul></li></ul></li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Pulse oximetry is the most accurate non-invasive method for detecting hypoxaemia. It is used to measure the percentage of oxygenated haemoglobin in arterial blood (SpO2 ) Blood gas analysis is another very accurate method for detecting hypoxaemia. It is used to measure the partial pressure of oxygen (PaO2 )"
+      },
+      {
+       "type": "question",
+       "text": "Which is the most accurate non-invasive way to detect hypoxaemia?",
+       "options": [
+        "Pulse oximetry",
+        "Looking for cyanosis",
+        "Counting the respiratory rate",
+        "Blood gas analysis"
+       ],
+       "answer": 0,
+       "explanation": "Pulse oximetry is the most accurate non-invasive method (SpO₂). Blood gas analysis is also very accurate (PaO₂), but invasive."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Pulse oximetry: detecting hypoxaemia in a newborn",
+       "caption": "Choosing and placing the neonatal probe, waiting for a steady trace, and reading SpO₂ and heart rate; the clinical signs of hypoxaemia.",
+       "script": "SN3.1.1"
+      },
+      {
+       "type": "courselink",
+       "course": "Sick & Small Newborn · Module 2: Special Newborn Care",
+       "module": 8,
+       "lesson": "Pulse oximeter",
+       "label": "Equipment · Module 2, Equipment for Newborn Care",
+       "text": "The device, its parts and its standard operating procedure."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Giving oxygen: nasal prongs and catheters",
+     "order": 3,
+     "read": [
+      {
+       "type": "heading",
+       "text": "Nasal prongs"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Standard flow rates through nasal prongs are 0.5–1 L/min for neonates,</li><li>Humidification is not required with standard oxygen flow rates, as the natural nasal mechanisms heat and humidify the inspired oxygen</li><li>There is a slight risk that the airway will become obstructed by mucus (35), especially if a high flow with no humidification is used.</li><li>The fraction of inspired oxygen (FiO2 ) 2 depends on the oxygen flow rate, the relation between prong and nasal diameters and the patient’s body weight,</li><li>In infants weighing up to 10 kg, oxygen flows of 0.5 L/min, 1 L/min and 2 L/min result in FiO2 values of about 35% 45% and 55%, respectivel</li><li>Achievement of PEEP depends on the distal prong diameter, the oxygen flow and body weight. Whereas 1 L/min of oxygen may produce a PEEP of about 5 cm H2 O in premature infants, there is no significant PEEP production with the same flow in infants weighing up to 10 kg</li></ul>"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• The distal prong should fit well into the nostril (premature infants: 1 mm, infants weighing up to 10 kg: 2 mm). The prongs should be secured with a piece of tape on the cheeks near the nose</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">A nasal catheter</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• is a thin, flexible tube that is passed into the nose and ends with its tip in the nasal cavity<br>• The oxygen does not have to be humidified because the tip of the catheter lies in the nasal cavity. Catheters can become blocked with mucus, which can cause upper airway obstruction.<br>• There is little risk of displacement into the oesophagus, with a consequent risk of gastric distension. Ideally, a nasogastric tube should be in place to decompress the stomach if distension occurs<br>• In neonates and infants, 8-French (F) size catheters should be used<br>• A catheter passed for a distance equal to the distance from the side of the nostril to the inner margin of the eyebrow usually reaches the posterior part of the nasal cavity.<br>• The tip of the catheter should not be visible below the uvula.</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Nasopharyngeal catheters</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• passed to the pharynx just below the level of the uvula, better oxygenation is achieved with a lower oxygen flow than with nasal prongs<br>• Nasopharyngeal catheters are inserted into the nose to a depth 1 cm less than the distance from the side of the nose to the front of the ear (tragus)</td></tr></table>"
+      },
+      {
+       "type": "calc",
+       "question": "Using nasal prongs in an infant up to 10 kg, about what FiO₂ does a flow of 1 L/min give?",
+       "answer": 45,
+       "unit": "%",
+       "explanation": "The manual: 0.5, 1 and 2 L/min give FiO₂ values of about 35%, 45% and 55%. Standard neonatal flow through nasal prongs is 0.5–1 L/min, without humidification."
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p006-1.jpg",
+       "caption": "",
+       "page": 6
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>because of the relatively high FiO2 in the trachea and significant PEEP production: in infants, 1 L/min of nasopharyngeal oxygen given through an 8-F catheter produces a PEEP of 2.8 cm H2 O</li><li>in most settings where frequent monitoring is difficult, nasal prongs or nasal catheters are the preferred method</li><li>Nasopharyngeal catheters are prone to blockage with mucus, and accumulation of mucus can cause upper airway obstruction</li><li>As oxygen given through a nasopharyngeal catheter bypasses the humidifying and warming properties of the nose, effective external humidification is essential to avoid drying of the pharyngeal mucosa and to reduce the likelihood of thickened secretions blocking the catheter</li><li>Nasopharyngeal catheters can be displaced downwards into the oesophagus and cause gagging, vomiting and gastric distension. Their use should therefore be limited to situations in which nasal prongs are unavailable</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "When should a nasopharyngeal catheter be used?",
+       "options": [
+        "Only when nasal prongs are unavailable",
+        "As the first choice for every neonate",
+        "Whenever monitoring is difficult",
+        "Only without humidification"
+       ],
+       "answer": 0,
+       "explanation": "It can be displaced into the oesophagus and cause gagging, vomiting and gastric distension, and it needs effective humidification. In most settings where frequent monitoring is difficult, nasal prongs or nasal catheters are preferred."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Giving oxygen by nasal prongs and nasal catheter",
+       "caption": "Choosing the prong size, securing prongs with tape on the cheeks; measuring and inserting an 8F nasal catheter (side of the nostril to the inner margin of the eyebrow).",
+       "script": "SN3.1.2"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p007-1.jpg",
+       "caption": "",
+       "page": 7
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Giving oxygen: the oxygen blender system",
+     "order": 4,
+     "read": [
+      {
+       "type": "heading",
+       "text": "Oxygen Blender System"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>System that delivers low flow oxygen therapy</li><li>Administration of a controlled and continuous flow of oxygen</li><li>Flow is less than the patient’s peak inspiratory flow</li><li>Usually administered using a nasal cannula</li><li>Indicated for mild hypoxemia with mild respiratory distress</li><li>Allows you to optimize tissue oxygenation while minimizing oxygen toxicity</li><li>Achieved by the Vayu blender</li><li>Allows titration of oxygen concentration</li><li>Treatment with low-flow oxygen therapy is monitored using pulse oximetry. The goal is to achieve and maintain an oxygen saturation of above 88% while using the lowest oxygen concentration possible.</li><li>Breathing pure oxygen can harm the lungs, leading to bronchopulmonary dysplasia.</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "It can also harm the eyes, causing retinopathy of prematurity, and in severe cases, it can even lead to brain damage."
+      },
+      {
+       "type": "question",
+       "text": "On low-flow oxygen with a blender, what SpO₂ does the manual aim for?",
+       "options": [
+        "Above 88%, with the lowest oxygen concentration possible",
+        "100%",
+        "Above 98%",
+        "Exactly 90%"
+       ],
+       "answer": 0,
+       "explanation": "Breathing pure oxygen can harm the lungs (BPD) and the eyes (retinopathy of prematurity)."
+      },
+      {
+       "type": "courselink",
+       "course": "Sick & Small Newborn · Module 2: Special Newborn Care",
+       "module": 8,
+       "lesson": "Oxygen concentrator and oxygen blender",
+       "label": "Equipment · Module 2, Equipment for Newborn Care"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p008-1.jpg",
+       "caption": "",
+       "page": 8
+      }
+     ],
+     "see": [],
+     "practise": []
+    }
+   ]
+  },
+  {
+   "title": "Non-Invasive Ventilation",
+   "order": 2,
+   "sections": [
+    {
+     "title": "Non-invasive ventilation: what it is",
+     "order": 1,
+     "read": [
+      {
+       "type": "heading",
+       "text": "objectives"
+      },
+      {
+       "type": "paragraph",
+       "text": "1- Identify respiratory disorders requiring non-invasive ventilation NIV."
+      },
+      {
+       "type": "paragraph",
+       "text": "2- Explore non-invasive ventilation options and consider the pros and cons."
+      },
+      {
+       "type": "paragraph",
+       "text": "3- Explore monitoring and assessment strategies for neonates on NIV."
+      },
+      {
+       "type": "heading",
+       "text": "2.1 Introduction for NIV"
+      },
+      {
+       "type": "paragraph",
+       "text": "Moving from an era of invasive ventilation to that of non-invasive respiratory support, various modalities have emerged resulting in improved neonatal outcome."
+      },
+      {
+       "type": "paragraph",
+       "text": "Over the past few decades, invasive mechanical ventilation (IMV) has been replaced by non-invasive ventilation (NIV) as IMV has been shown to be associated with major morbidities e.g.: bronchopulmonary dysplasia (BPD) which is adversely related to pulmonary hypertension, increased susceptibility to respiratory infection, neurodevelopmental impairment and cerebral palsy."
+      },
+      {
+       "type": "heading",
+       "text": "Definition and concept of NIV"
+      },
+      {
+       "type": "paragraph",
+       "text": "Non-invasive respiratory ventilation is the standard respiratory support for preterm and term infants. The type of NIV used is based on the severity of respiratory distress, risk of treatment failure, gestational age, and timing of application. HFNC, CPAP, NIPPV (synchronized or non-synchronized) are the most used NIV in the newborn. BiPAP, Nasal HFOV and NAVA are infrequently used and need further evaluation before routine application. Early initiation, adequate and aggressive use of surfactant/caffeine, optimum warm idification, appropriate nasal interface, and nursing care are crucial in the success of NIV."
+      },
+      {
+       "type": "paragraph",
+       "text": "NIV refers to any method of providing respiratory support, where an endotracheal tube is not used. The various methods include oxygen administration through a hood box or nasal cannula, heated, humidified high-flow nasal cannula (HFNC or HFNC), nasal CPAP (nCPAP), nasal intermittent positive-pressure ventilation (NIPPV), nasal bilevel positive airway pressure (nBiPAP), nasal high-frequency oscillatory ventilation (nHFOV), and nasal neurally adjusted ventilator assist (nNAVA). All these devices are driven by a gas flow, which can be with or without a pressure generator (HFNC); pressure generated at a single level (CPAP) or at two levels (NIPPV and BiPAP)."
+      },
+      {
+       "type": "question",
+       "text": "Which of these is NOT non-invasive ventilation?",
+       "options": [
+        "Ventilation through an endotracheal tube",
+        "Nasal CPAP",
+        "High-flow nasal cannula",
+        "NIPPV"
+       ],
+       "answer": 0,
+       "explanation": "The manual: NIV refers to any method of providing respiratory support where an endotracheal tube is not used."
+      },
+      {
+       "type": "paragraph",
+       "text": "Modalities of NIV are commonly used in neonates"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p011-1.jpg",
+       "caption": "",
+       "page": 11
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Non-invasive ventilation: advantages",
+     "order": 2,
+     "read": [
+      {
+       "type": "heading",
+       "text": "Advantages of NIV:"
+      },
+      {
+       "type": "paragraph",
+       "text": "1- Preservation of airway integrity: (NIV flow stents the airway and prevents collapse) NIV avoids the need for invasive ventilation and reduces the risk of complications associated with it."
+      },
+      {
+       "type": "paragraph",
+       "text": "2- Reduced risk of ventilator-associated complications: such as ventilator-associated pneumonia and lung injury.( by avoiding endotracheal intubation and retention of tracheal secretion )"
+      },
+      {
+       "type": "paragraph",
+       "text": "3- Enhanced parental involvement: NIV allowing neonates to be accessible and fostering bonding. ( such as kangaroo care )"
+      },
+      {
+       "type": "paragraph",
+       "text": "4- Improved respiratory muscle’s function: NIV supports the neonate’s respiratory effort and potentially preserves respiratory muscle function. ( by minimising work of breathing)"
+      },
+      {
+       "type": "paragraph",
+       "text": "5- Enhance gas exchange: NIV specially CPAP, can improve oxygenation and carbon dioxide elimination by ( creating and maintaining a PEEP, ) maintaining open airways and promoting alveolar recruitment."
+      },
+      {
+       "type": "paragraph",
+       "text": "6- Decreased risk of chronic lung disease: use of NIV may reduce the risk of chronic lung in premature infants by minimising lung injury associated with invasive ventilation."
+      },
+      {
+       "type": "paragraph",
+       "text": "7- Better tolerance in preterm infants."
+      },
+      {
+       "type": "paragraph",
+       "text": "8- Decreased need for intubation: NIV can help to avoid or reduce the duration of invasive ventilation and its associated complications."
+      },
+      {
+       "type": "paragraph",
+       "text": "( can be put or mentioned before adv. 2. )"
+      },
+      {
+       "type": "paragraph",
+       "text": "9- Flexibility in management: NIV provides flexibility in adjusting respiratory support according to the neonate’s respiratory needs."
+      },
+      {
+       "type": "paragraph",
+       "text": "10- Potential for earlier weaning: NIV facilitates the transition to spontaneous breathing and reduces the duration of ventilatory support."
+      },
+      {
+       "type": "reveal",
+       "text": "Name three advantages of NIV over invasive ventilation.",
+       "answer": "Any three of the manual's ten: preservation of airway integrity; less ventilator-associated pneumonia and lung injury; parents can be involved (kangaroo care); respiratory muscle function preserved; better gas exchange (PEEP, open airways, alveolar recruitment); less chronic lung disease; better tolerance in preterms; less need for intubation; flexibility; earlier weaning."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Non-invasive ventilation: disadvantages and indications",
+     "order": 3,
+     "read": [
+      {
+       "type": "heading",
+       "text": "Disadvantages of NIV"
+      },
+      {
+       "type": "paragraph",
+       "text": "1- Mask interface challenges: neonate may experience difficulty tolerating the mask interface , leading to leak or skin breakdown ( interface care and prevention of trauma )"
+      },
+      {
+       "type": "paragraph",
+       "text": "2- Gastric distention can result in regurgitation and aspiration."
+      },
+      {
+       "type": "paragraph",
+       "text": "3- Nasal injury: use of nasal prongs can cause nasal trauma, irritation or septal necrosis, particularly with prolonged use."
+      },
+      {
+       "type": "paragraph",
+       "text": "4- Discomfort and agitation."
+      },
+      {
+       "type": "paragraph",
+       "text": "5- Difficulty in synchrony. ( No flow sensor as in IMV)"
+      },
+      {
+       "type": "paragraph",
+       "text": "6- Limited ventilatory support. ( NIV failure can occur"
+      },
+      {
+       "type": "paragraph",
+       "text": "7- Risk of air leak. ( the pressure that reach the lungs cannot be measured, some babies may have auto-PEEP that increase the risk of air leaks)"
+      },
+      {
+       "type": "paragraph",
+       "text": "8- Need for skilled monitoring. ( Bed side nurses should be trained for NIV care and monitoring )"
+      },
+      {
+       "type": "question",
+       "text": "A baby on nasal prongs develops redness of the septum. Which disadvantage of NIV is this?",
+       "options": [
+        "Nasal injury",
+        "Gastric distention",
+        "Difficulty in synchrony",
+        "Limited ventilatory support"
+       ],
+       "answer": 0,
+       "explanation": "Nasal prongs can cause nasal trauma, irritation or septal necrosis, particularly with prolonged use."
+      },
+      {
+       "type": "heading",
+       "text": "Indication of NIV in neonates"
+      },
+      {
+       "type": "paragraph",
+       "text": "1- Respiratory Distress Syndrome (RDS): NIV is often used to support premature infants with RDS, providing respiratory assistance and maintaining adequate oxygenation."
+      },
+      {
+       "type": "paragraph",
+       "text": "2- Transient Tachypnoea of Newborn (TTN): NIV can be employed to assist neonates with TTN, a condition characterised by rapid breathing due to delayed clearance of lung fluid."
+      },
+      {
+       "type": "paragraph",
+       "text": "3- Meconium Aspiration Syndrome (MAS): neonates with MAS may require NIV to support breathing and improve oxygenation."
+      },
+      {
+       "type": "paragraph",
+       "text": "4- Persistent Pulmonary Hypertension of the Newborn (PPHN): NIV may be used in the management of PPHN to enhance oxygenation and reduce pulmonary vascular resistance."
+      },
+      {
+       "type": "paragraph",
+       "text": "5- Bronchiolitis: infants with bronchiolitis, often caused by Respiratory Syncytial Virus (RSV), may benefit from NIV to alleviate respiratory distress."
+      },
+      {
+       "type": "paragraph",
+       "text": "6- Apnoea of Prematurity: Continuous Positive Airway Pressure CPAP is commonly used to manage apnoea of prematurity and maintain respiratory stability in preterm infants."
+      },
+      {
+       "type": "paragraph",
+       "text": "7- Congenital Diaphragmatic Hernia (CDH): NIV can be part of respiratory support strategy for neonates with CDH, helping to manage respiratory distress associated with this anomaly."
+      },
+      {
+       "type": "paragraph",
+       "text": "8- Post-operative support: following certain surgical procedures, neonates may require NIV to assist with respiratory support during the recovery period."
+      },
+      {
+       "type": "paragraph",
+       "text": "9- Neuromuscular disorders: infant with neuromuscular conditions affecting respiratory muscles may benefit from NIV to support breathing."
+      },
+      {
+       "type": "sort",
+       "text": "Is NIV used for this condition (an indication)?",
+       "groups": [
+        "Indication for NIV",
+        "Not in the manual's list"
+       ],
+       "items": [
+        {
+         "text": "Respiratory distress syndrome",
+         "group": 0
+        },
+        {
+         "text": "Transient tachypnoea of the newborn",
+         "group": 0
+        },
+        {
+         "text": "Apnoea of prematurity",
+         "group": 0
+        },
+        {
+         "text": "Meconium aspiration syndrome",
+         "group": 0
+        },
+        {
+         "text": "Neonatal jaundice",
+         "group": 1
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "10- It’s important to tailor the choice of NIV methods and settings based on the clinical needs of the neonates. Regular monitoring and adjustments are crucial to ensure effective respiratory support and over all well-being."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Non-invasive ventilation: contraindications",
+     "order": 4,
+     "read": [
+      {
+       "type": "heading",
+       "text": "Contraindication of NIV:"
+      },
+      {
+       "type": "paragraph",
+       "text": "1- Severe respiratory distress: if a neonate is in severe respiratory distress, especially when accompanied by cardiovascular instability, NIV may not be appropriate, and invasive ventilation might be required."
+      },
+      {
+       "type": "paragraph",
+       "text": "2- Haemodynamic instability: neonates with unstable cardiovascular status or severe haemodynamic compromise may be contraindicated for NIV, as positive pressure ventilation can affect cardiac function."
+      },
+      {
+       "type": "paragraph",
+       "text": "3- Severe air leak syndrome: neonates with significant air leaks, such as pneumothorax or pneumomediastinum, may require invasive ventilation, as positive pressure from NIV could worsen these conditions."
+      },
+      {
+       "type": "paragraph",
+       "text": "4- Facial abnormalities or anomalies: facial anomalies that prevent proper mask seal or interface placement may hinder the effectiveness of NIV."
+      },
+      {
+       "type": "paragraph",
+       "text": "5- Unstable neurological status: in neonates with unstable neurological conditions, cautious evaluation is necessary, as NIV may not be suitable for those unable to tolerate the treatment."
+      },
+      {
+       "type": "paragraph",
+       "text": "6- Upper airway obstruction: conditions causing significant airway obstruction may limit the effectiveness of the NIV or pose risks, and alternative strategies may need consideration."
+      },
+      {
+       "type": "paragraph",
+       "text": "7- Gastrointestinal conditions: neonates with abdominal wall anomalies or massive abdominal distention may experience increased risk of complications with NIV."
+      },
+      {
+       "type": "paragraph",
+       "text": "8- Inability to protect airway: if a neonate cannot protect their airway, NIV may not be suitable, and consideration for invasive ventilation might be necessary."
+      },
+      {
+       "type": "paragraph",
+       "text": "9- Uncooperative neonate: NIV requires the neonate’s cooperation and tolerance, and in cases of extreme agitation or non-compliance, alternative strategies may be needed."
+      },
+      {
+       "type": "question",
+       "text": "A baby on CPAP develops a pneumothorax. What does the manual say?",
+       "options": [
+        "Severe air leak is a contraindication: invasive ventilation may be needed, as NIV pressure could worsen it",
+        "Increase the CPAP pressure",
+        "Air leak does not affect NIV",
+        "Change to nasal catheter oxygen"
+       ],
+       "answer": 0,
+       "explanation": "Contraindication 3: severe air leak syndrome (pneumothorax or pneumomediastinum)."
+      },
+      {
+       "type": "paragraph",
+       "text": "Always consult with neonatal specialist/ senior and consider the individual patient’s clinical status, as contraindications can vary based on specific circumstances. Regular assessment and monitoring are essential when employing NIV in neonatal care."
+      },
+      {
+       "type": "paragraph",
+       "text": "Reference:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Noninvasive Respiratory Support in Neonates: A Review of Current Evidence and Practices https://link.springer.com/article/10.1007/s12098-021-03755-z#Sec1</li><li>Noninvasive Respiratory Support in Neonates: A Review of Current Evidence and Practices https://link.springer.com/article/10.1007/s12098-021-03755-z#Sec1</li></ul>"
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "High-flow nasal cannula (HFNC)",
+     "order": 5,
+     "read": [
+      {
+       "type": "paragraph",
+       "text": "HFNC works by providing inhaled gases at flows higher than the inspiratory demand flow. This leads to wash out of upper airways, reduces physiological dead space, and decreases nasopharyngeal airway resistance. It also provides variable positive end expiratory pressure and decreases work of breathing. But, as delivering HFNC requires a loose-fitting nasal prong, the pressure delivery is not reliable. The three important components of HFNC include"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>a flow generator,</li><li>an air-oxygen blender, and</li><li>a heater-humidifier.</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "HFNC has gained popularity because of the ease of use, lesser nasal trauma, and more comfort to the neonate."
+      },
+      {
+       "type": "flip",
+       "title": "HFNC: the three components",
+       "cards": [
+        {
+         "front": "1",
+         "back": "A flow generator"
+        },
+        {
+         "front": "2",
+         "back": "An air-oxygen blender"
+        },
+        {
+         "front": "3",
+         "back": "A heater-humidifier"
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "text": "HFNC can be used effectively for different purposes (different modalities):"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p015-1.jpg",
+       "caption": "",
+       "page": 15
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>as primary respiratory support (immediately after birth)</li><li>Post extubation from IMV: weaning modality)</li><li>as a weaning modality from other types of NIV</li><li>During endotracheal intubation</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "HFNC for primary respiratory support"
+      },
+      {
+       "type": "paragraph",
+       "text": "HFNC has been compared with CPAP as a primary respiratory support modality for preterm infants diagnosed with respiratory distress soon after birth. The Cochrane review reported on the outcomes of risk of mortality or BPD, mortality, BPD, treatment failure within the first 72 h and the need for IMV. The authors found that the use of HFNC as a primary respiratory support did not result in any significant difference in most of the outcomes except for a higher treatment failure rate in the HFNC group when compared to the CPAP group. Also, HFNC was associated with a decreased risk of nasal injury when compared to CPAP. In conclusion, the use of HFNC as primary support in infants with ≥28 weeks GA may not result in any difference in the combined outcome of mortality or BPD when compared to CPAP. However, HFNC might be associated with an increased risk of need for upgradation of respiratory support within 72 h of initiation. There is no robust evidence for the use of HFNC as primary respiratory support in extreme low gestational age newborns. HFNC for post extubation support HFNC has also been used as a weaning modality after extubation from IMV and its efficacy has been compared with other modes of NIV. The recently published meta-analysis by Martins et al. (7 studies, 1,044 infants) compared HFNC vs. CPAP. The primary outcomes were extubation failure rates at 72 h and 7 days. They reported no significant difference in the primary outcomes. The other outcomes of mortality, BPD, air leak syndrome, pneumothorax and abdominal distension were also similar between the groups. As observed in the other systematic reviews on primary respiratory support, HFNC was associated with a decreased risk of nasal injury. Likewise for primary respiratory support, the use of HFNC as a post-extubation modality requires further trials in the sub-group of ELGANs. HFNC as a weaning mode from other NIV modalities"
+      },
+      {
+       "type": "paragraph",
+       "text": "There is no consensus on the timing or method of weaning from various NIV respiratory support modalities. Various methods like abrupt stoppage of CPAP, gradual lowering of PEEP, intermediate stoppage of CPAP for some time followed by re-application, weaning to HFNC, weaning to low flow nasal cannula or head box oxygen have been tried. But none of the strategies have been conclusively shown to be better."
+      },
+      {
+       "type": "question",
+       "text": "Compared with CPAP as primary support, what did the Cochrane review find for HFNC?",
+       "options": [
+        "A higher treatment failure rate, but less nasal injury",
+        "Lower mortality",
+        "Less BPD",
+        "No difference in anything"
+       ],
+       "answer": 0,
+       "explanation": "The manual: no significant difference in most outcomes except a higher treatment failure rate with HFNC; HFNC was associated with a decreased risk of nasal injury."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "HFNC during endotracheal intubation",
+     "order": 6,
+     "read": [
+      {
+       "type": "heading",
+       "text": "HFNC during endotracheal intubation"
+      },
+      {
+       "type": "paragraph",
+       "text": "Intubation of a hypoxemic neonate is often associated with adverse life-threatening events. The use of HFNC during endotracheal intubation has been compared to standard care (no nasal high flow or use of supplemental oxygen) in a recently published RCTs"
+      },
+      {
+       "type": "paragraph",
+       "text": "● Improved success rate: The use of HFNC during the procedure improved the likelihood of a successful first-attempt intubation. ● Reduced physiological instability: Neonates in the HFNC group were more likely to remain stable during the procedure compared to those receiving standard care."
+      },
+      {
+       "type": "question",
+       "text": "What did the trials show when HFNC was used during endotracheal intubation?",
+       "options": [
+        "More successful first-attempt intubations and more stable babies",
+        "More failed intubations",
+        "More bradycardia",
+        "No difference"
+       ],
+       "answer": 0,
+       "explanation": "From \"HFNC during endotracheal intubation\"."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "CPAP: how it works and its parts",
+     "order": 7,
+     "read": [
+      {
+       "type": "paragraph",
+       "text": "Definition is a non-invasive method for applying a constant distending pressure level (above atmospheric) during inhalation and exhalation to support spontaneously breathing newborn infants."
+      },
+      {
+       "type": "heading",
+       "text": "Introduction"
+      },
+      {
+       "type": "paragraph",
+       "text": "The earliest documented use of CPAP in preterm neonates for providing respiratory support was in 1971 by Gregory et al. Subsequently, with the introduction and refinement of IMV in neonates, use of CPAP declined in the subsequent decade. This trend changed with the landmark publication by Avery et al. in 1987 (11). They reported the incidence of chronic lung disease (BPD) in 8 tertiary care neonatal intensive care units (NICUs) in North America, specifically to evaluate the likely causes for the difference in the incidence of BPD between these NICUs. The group found that the University of Columbia which used CPAP quite extensively with restricted IMV use had the lowest incidence of BPD. This reinvigorated the interest in CPAP globally, with its use being researched in various disease settings in neonates."
+      },
+      {
+       "type": "heading",
+       "text": "The mechanism of action of CPAP:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>It improves the functional residual capacity (FRC) and hence decreases the work of breathing.</li><li>It decreases intrapulmonary shunting.</li><li>It stabilizes the compliant chest wall of preterm neonates and splints the airway.</li><li>It decreases thoraco-abdominal asynchrony in the neonate.</li><li>It aids in accelerating the growth of the immature lung and improves protein content per gram of the lung tissue.</li><li>It reduces alveolar Edema, conserves surfactant and decreases the occurrence of apnoea, especially in preterm infants.</li><li>Nasal CPAP is usually started at a pressure of 5 cm H₂O, flow of 5 L/min and fraction of inhaled oxygen (FiO₂ ) of 30%. Following this, the CPAP is titrated to reduce the work of breathing, flow to obtain adequate bubbling (continuous bubbling in both phases of respiration) and FiO₂ to achieve the saturation targets (90%–95% for preterm neonates).</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "What does the manual give as the usual starting settings for nasal CPAP?",
+       "options": [
+        "Pressure 5 cm H₂O, flow 5 L/min, FiO₂ 30%",
+        "Pressure 10 cm H₂O, flow 1 L/min, FiO₂ 100%",
+        "Pressure 2 cm H₂O, flow 10 L/min, FiO₂ 21%",
+        "Pressure 8 cm H₂O, flow 8 L/min, FiO₂ 60%"
+       ],
+       "answer": 0,
+       "explanation": "Then titrate the pressure to the work of breathing, the flow to continuous bubbling, and FiO₂ to saturation targets (90–95% for preterm neonates)."
+      },
+      {
+       "type": "heading",
+       "text": "Components of CPAP:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>(a)</strong> flow generator: A source of warm, humidified, blended air-oxygen mixture with an inline flow generator is present. The flow could be either constant or variable.</li><li><strong>(b)</strong> positive pressure generator device: The positive pressure delivered during CPAP may be generated through one of the following techniques:</li><li>The expiratory valve of the ventilator which adjusts the expiratory pressure.</li><li>Adjustment of the inspiratory flow through flow drivers or ventilators.</li><li>The Bubble CPAP system produces a positive pressure by placing the far end of the expiratory tubing under water. The pressure is adjusted by altering the depth of the tube under the surface of the water.</li><li><strong>(b)</strong> a Humidifier To maintain temperature between 36.8 to 37.4</li><li><strong>(d)</strong> airway interface: Following nasal interfaces are used in neonates:</li><li>Long nasal prongs/nasopharyngeal prongs.</li><li>Short binasal prongs.</li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p018-1.jpg",
+       "caption": "",
+       "page": 18
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p018-2.jpg",
+       "caption": "",
+       "page": 18
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Nasal masks.</li></ul>"
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Setting up bubble CPAP step by step",
+       "caption": "Assembling the circuit, humidifier with distilled water, air and oxygen; prong size, hat, barrier dressing; securing the prongs; orogastric tube; starting at 5 cm H₂O and checking the bubbling.",
+       "script": "SN3.2.1"
+      },
+      {
+       "type": "courselink",
+       "course": "Sick & Small Newborn · Module 2: Special Newborn Care",
+       "module": 8,
+       "lesson": "Vayu bubble CPAP system",
+       "label": "Equipment · Module 2, Equipment for Newborn Care",
+       "text": "The CPAP device used in Sudan: its parts, set-up and disinfection."
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p019-3.jpg",
+       "caption": "",
+       "page": 19
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p019-2.jpg",
+       "caption": "",
+       "page": 19
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "CPAP: types and indications; starting, adjusting and weaning",
+     "order": 8,
+     "read": [
+      {
+       "type": "heading",
+       "text": "Types of CPAP:"
+      },
+      {
+       "type": "paragraph",
+       "text": "• Bubble CPAP: In B-CPAP the positive pressure in the circuit is achieved by simply submerging the distal expiratory tubing into a known depth of water column."
+      },
+      {
+       "type": "paragraph",
+       "text": "• Ventilator CPAP: In V-CPAP where an expiratory valve on the ventilator is adjusted to provide resistance to the flow of air."
+      },
+      {
+       "type": "paragraph",
+       "text": "• variable flow ventilator CPCP: Baseline flow & expiratory valve of the ventilator regulate minimal pressure fluctuation."
+      },
+      {
+       "type": "paragraph",
+       "text": "• Infant flow driver: By applying high flow gas under pressure via a large pore nasal device into the infant’s nostrils (It reduces work of breathing)."
+      },
+      {
+       "type": "paragraph",
+       "text": "Other nCPAP used in low resource settings"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p019-1.jpg",
+       "caption": "",
+       "page": 19
+      },
+      {
+       "type": "heading",
+       "text": "Indication of CPAP :"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>CPAP application in the Delivery room (DR) Earlier, extremely preterm and very preterm neonates were routinely intubated, and given surfactant in the Delivery Room prophylactically. The current evidence suggests that early use of CPAP in the DR with selective use of early rescue surfactant using lesser invasive modalities is beneficial and preferable over prophylactic surfactant use followed by IMV in preterm neonates.<ul><ul><li>Use of DR CPAP compared to IMV with or without surfactant has decreased the risk of the combined outcome of BPD or death, BPD alone and failure of treatment with no effect on the outcomes of mortality, pulmonary air leak or IVH grade &gt;2.</li></ul></li></ul></li><li>CPAP for RDS as primary respiratory support<ul><ul><li>CPAP for management of neonates with RDS should be initiated in the Delivery Room and continued while the neonate is being shifted to the NICU.</li></ul></li></ul></li><li>CPAP for apnea of prematurity<ul><ul><li>CPAP reduce the incidence of mixed and obstructive apnea in preterm neonates. It has also reduce the frequency and duration of desaturation episodes in central apnea</li></ul></li></ul></li><li>CPAP for transient tachypnea of newborn (TTN)<ul><ul><li>CPAP helps in TTN by facilitating the clearance of lung fluid and helps to reduce the duration of NICU stay.</li></ul></li></ul></li><li>CPAP for meconium aspiration syndrome (MAS)<ul><ul><li>CPAP helps in maintaining FRC and prevent atelectasis in MAS.</li></ul></li></ul></li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Where should CPAP for RDS be started?",
+       "options": [
+        "In the delivery room, and continued while the baby is moved to the NICU",
+        "Only after admission to the NICU",
+        "Only after surfactant",
+        "Only if the baby is ventilated first"
+       ],
+       "answer": 0,
+       "explanation": "The manual: CPAP for RDS should be initiated in the delivery room and continued while the neonate is being shifted to the NICU."
+      },
+      {
+       "type": "heading",
+       "text": "Initiation of CPAP"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p021-3.jpg",
+       "caption": "",
+       "page": 21
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "CPAP: general care and preventing complications",
+     "order": 9,
+     "read": [
+      {
+       "type": "heading",
+       "text": "Adjust CPAP Pressure and FiO2"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p021-1.jpg",
+       "caption": "",
+       "page": 21
+      },
+      {
+       "type": "heading",
+       "text": "Weaning of CPAP"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p021-2.jpg",
+       "caption": "",
+       "page": 21
+      },
+      {
+       "type": "heading",
+       "text": "General care for nasal CPAP and prevention of complication"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Suction may be required, this should be available and individualised to the infants needs</li><li>Continuous heart rate, respiratory rate and oxygen saturation monitoring should be in place. There should be access to a blood gas machine</li><li>Being nursed on CPAP is known to reduce venous return. This does not usually cause clinical complications for a baby, but in order to monitor for any compromise in the baby, every baby on CPAP should have their blood pressure checked at least 6 hourly</li><li>There should be careful monitoring of skin integrity of the nares, as there is a definite risk of damage to the external skin and/or internal membranes of the nose.</li><li>An oro-gastric tube should be used in preference to a naso-gastric tube, to prevent distortion of the nostrils and ensure a good seal of the prongs/mask. This should be aspirated prior to feed to empty gas and reduce the risk of abdominal distension, although CPAP rarely causes a distended abdomen</li><li>If a baby is not being fed, the oro-gastric tube should be aspirated a minimum of every four hours, and more frequently if required. It is possible to leave the tube open or a syringe barrel on the end, but you may get stomach contents passed up through it..</li><li>Ensure that the face is kept clean and free from secretions</li><li>Ensure the area behind a baby’s ears is kept clean, as very preterm babies may be nursed with a CPAP hat on 24 hours a day for many weeks in a row</li><li>If transferring a baby on CPAP within a hospital or between hospitals refer to local transportation guidelines and policies</li><li>If there is a significant change in a baby’s support requirement or respiratory status, inform the medical staff and the nurse in charge, as this may be indicative of a more serious problem</li><li>CPAP can be an uncomfortable and unpleasant experience for babies due to the loud noise levels, high gas flow through the mouth and nose, restricted head movements and obstructed faces. Staff should be vigilant for signs of pain and discomfort or distress and should seek to modify baby’s environment and offer developmental care where appropriate. For example, kangaroo care, nesting, non-nutritive sucking, containment holding or a cuddle.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Why is an orogastric tube used rather than a nasogastric tube on CPAP?",
+       "options": [
+        "To prevent distortion of the nostrils and keep a good seal of the prongs or mask",
+        "Because NG tubes cannot be aspirated",
+        "Because feeds are stopped on CPAP",
+        "There is no reason"
+       ],
+       "answer": 0,
+       "explanation": "The tube is aspirated before feeds, and at least every four hours if the baby is not fed."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Monitoring a baby on CPAP",
+     "order": 10,
+     "read": [
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Every hour check visually:</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">● The nose should not be squashed or pushed upwards<br>● The eyes should be clearly visible<br>● Tapes should not be too tight and should certainly not cause indentation, pitting or ocular oedema</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">At least four hourly checks physically:</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">● The hat should be checked for tightness and correct fit regularly – it should not be too tight or too loose or rub against the infant’s skin<br>● Prongs/Mask should be removed from the nose to allow rest from the pressure on it, more often if the infant’s condition dictates<br>● The nose should be inspected for signs of redness, skin breakdown, bruising, indentation, altered shape and bleeding. Any alteration in appearance should be documented<br>● Prongs/Mask should be checked to ensure that they are clean and patent, prior to being replaced on the infant<br>● The ears should be inspected to ensure that they are not creased or folded. They should also be inspected for signs of skin breakdown, redness, bruising, swelling, discharge or bleeding. Any alteration in appearance should be documented</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">IMPORTANT Remember:</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">● Prongs/Mask should be removed by loosening of the tapes rather than pulling them straight off the infant’s face<br>● Regular mouth care should be performed<br>● Suctioning should NOT be routine but as dictated by the infant<br>● It is important that documentation is completed when the nose is checked and any changes noted</td></tr></table>"
+      },
+      {
+       "type": "sort",
+       "text": "How often is each check done for a baby on CPAP?",
+       "groups": [
+        "Every hour, visually",
+        "At least four-hourly, physically"
+       ],
+       "items": [
+        {
+         "text": "The nose is not squashed or pushed upwards",
+         "group": 0
+        },
+        {
+         "text": "The eyes are clearly visible",
+         "group": 0
+        },
+        {
+         "text": "Tapes are not too tight",
+         "group": 0
+        },
+        {
+         "text": "Prongs or mask removed to rest the nose",
+         "group": 1
+        },
+        {
+         "text": "The ears are not creased or folded",
+         "group": 1
+        }
+       ],
+       "explanation": "From \"Monitoring for infants nursed on CPAP\"."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Caring for a baby on CPAP: the hourly and four-hourly checks",
+       "caption": "Checking the nose, eyes, tapes, hat, ears and prongs; removing prongs by loosening the tapes; scoring the nose.",
+       "script": "SN3.2.2"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p023-1.jpg",
+       "caption": "",
+       "page": 23
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Nasal injury on CPAP",
+     "order": 11,
+     "read": [
+      {
+       "type": "paragraph",
+       "text": "There should be careful monitoring of skin integrity of the nares, as there is a definite risk of damage to the external skin and/or internal membranes of the nose."
+      },
+      {
+       "type": "paragraph",
+       "text": "Best practice for nose care is for the nose and surrounding area to be assessed and scored on an hourly basis, so that evidence of skin breakdown is identified quickly and managed appropriately."
+      },
+      {
+       "type": "paragraph",
+       "text": "The score should be documented in a predetermined place, the ITU/HDU observation chart would be an appropriate place"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p024-1.jpg",
+       "caption": "",
+       "page": 24
+      },
+      {
+       "type": "heading",
+       "text": "If there are changes to the nose or surrounding area:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Check that all of the above have been followed – that the hat/mask/prongs are the correct size and are clean and patent. That there is no error with the set-up of the CPAP. Document and recheck in 1-2 hours depending on severity.</li><li><strong>2.</strong> Recheck – have there been any changes? Has it improved or deteriorated? If improved, document and continue to recheck regularly, minimum of every four hours. If deteriorated, inform the nurse in charge and medical staff, document.</li><li><strong>3.</strong> Try increasing time off to relieve pressure, consider facial oxygen if needed. Consider using Vapotherm if available or alternating masks and prongs. Consider a dressing or treatment to the affected area. Document any changes in care.</li><li><strong>4.</strong> Consider elective intubation and ett CPAP /ventilation. Inform tissue viability nurses and plastic surgeons. Complete an incident form. Document any changes in care.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "The nose looks worse on recheck. What do you do?",
+       "options": [
+        "Inform the nurse in charge and medical staff, and document",
+        "Wait for the next day",
+        "Push the prongs further in",
+        "Stop CPAP without telling anyone"
+       ],
+       "answer": 0,
+       "explanation": "Step 2: if deteriorated, inform the nurse in charge and medical staff, document. Then consider more time off, alternatives and dressings (step 3)."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Nasal intermittent positive pressure ventilation (NIPPV)",
+     "order": 12,
+     "read": [
+      {
+       "type": "paragraph",
+       "text": "Nasal (synchronized) intermittent positive pressure ventilation (s)NIPPV is defined as any mode of assisted ventilation that delivers pressure throughout the respiratory cycle without endotracheal intubation; with or without synchronization of neonatal breathing."
+      },
+      {
+       "type": "paragraph",
+       "text": "In NIPPV, the pressure is delivered at two levels [peak inspiratory pressure (PIP) and PEEP] using a mechanical ventilator, by modulating the gas flow and orifice of the expiratory valve."
+      },
+      {
+       "type": "paragraph",
+       "text": "NIPPV therefore augments nCPAP with superimposed inflations to a set PIP [55]. High nCPAP failure rates have prompted neonatologists to seek other more effective NIV modalities."
+      },
+      {
+       "type": "question",
+       "text": "What does NIPPV add to nasal CPAP?",
+       "options": [
+        "Superimposed inflations to a set peak inspiratory pressure (two pressure levels)",
+        "A higher oxygen concentration only",
+        "An endotracheal tube",
+        "Nothing: it is the same as HFNC"
+       ],
+       "answer": 0,
+       "explanation": "NIPPV delivers pressure at two levels (PIP and PEEP) without endotracheal intubation."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Bi-level positive airway pressure (BiPAP)",
+     "order": 13,
+     "read": [
+      {
+       "type": "paragraph",
+       "text": "In BiPAP, cycles of high and low positive airway pressures are delivered at preset rates."
+      },
+      {
+       "type": "paragraph",
+       "text": "Compared to NIPPV, the pressures delivered are lower, high and low pressures do not differ by more than 3–4 cm H₂O, inspiratory time (Ti) is longer (0.5–1 s) and rates are lower (10– 30/min)"
+      },
+      {
+       "type": "paragraph",
+       "text": "In term neonates with respiratory distress, BiPAP as compared to nCPAP was shown to result in better CO₂ levels and lower FiO₂ requirement. However, no difference in clinically important outcomes of duration of respiratory support, need for MV and air leaks was noted BiPAP is often considered the same as NIPPV.There are few devices capable of delivering biphasic CPAP to newborns. The maximum deliverable PIP was 11 cmH O in most available devices."
+      },
+      {
+       "type": "question",
+       "text": "How does BiPAP differ from NIPPV?",
+       "options": [
+        "Lower pressures (high and low differ by no more than 3–4 cm H₂O), longer Ti, lower rates",
+        "Higher pressures and faster rates",
+        "It needs intubation",
+        "It gives no PEEP"
+       ],
+       "answer": 0,
+       "explanation": "From the manual's description of BiPAP."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Nasal high-frequency oscillatory ventilation (nHFOV)",
+     "order": 14,
+     "read": [
+      {
+       "type": "paragraph",
+       "text": "nHFOV combines the benefits of high-frequency ventilation and nasal ventilation. Similar to invasive HFOV, the delivery of small tidal volumes at supraphysiological rates results in better CO₂ elimination."
+      },
+      {
+       "type": "reveal",
+       "text": "What does nasal HFOV combine, and what is its benefit?",
+       "answer": "It combines high-frequency ventilation and nasal ventilation: small tidal volumes at supraphysiological rates give better CO₂ elimination."
+      },
+      {
+       "type": "paragraph",
+       "text": "References"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>https://link.springer.com/article/10.1007/s12098-021-03755-z#Sec1 Noninvasive Respiratory Support in Neonates: A Review of Current Evidence and Practices</li><li>https://link.springer.com/article/10.1007/s12098-021-03755-z#Sec1</li><li>Noninvasive Respiratory Support in Neonates: A Review of Current Evidence</li><li>Frontiers | Non-invasive ventilation in neonates: a review of current literature (frontiersin.org)</li><li>https://ijponline.biomedcentral.com/articles/10.1186/s13052-019-0707-x</li><li>https://www.clinicalguidelines.scot.nhs.uk/nhsggc-guidelines/nhsggc-guidelines/neonatology/humidified-high-flow-nasal-cannulae-hhfnc/</li><li>https://ijponline.biomedcentral.com/articles/10.1186/s13052-019-0707-x</li><li>: Noninvasive Respiratory Support in Neonates: A Review of Current Evidence and Practices</li><li>Current insights in non-invasive ventilation for the treatment of neonatal respiratory disease : https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7850281/ Guidelines for surfactant replacement therapy in neonates</li><li>https://www.eoeneonatalpccsicnetwork.nhs.uk/wp content/uploads/2022/05/Surfactant-administration_ODN_v2_130222.pdf</li><li>https://academic.oup.com/pch/article/10/2/109/2648123 Recommendations for neonatal surfactant therapy</li></ul>"
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Exercises: non-invasive ventilation",
+     "order": 15,
+     "read": [
+      {
+       "type": "paragraph",
+       "text": "Work through each exercise on your own or in your small group and write your answers on the lines provided. The answers are not printed here — your facilitator will go through them with you after you have tried."
+      },
+      {
+       "type": "note",
+       "text": "In this online course you write your answer in the exercise, and the facilitator guide's answer key opens after you submit it. Try each case before you look.",
+       "label": "Online course"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">CASE EXERCISE Exercise 1 — Scenario 1 — The Baby Who Is Tiring</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">A preterm baby with respiratory distress. Increasing oxygen has been tried. The baby is now working</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">hard to breathe.</td></tr></table>"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "ssnb-m3-s2-ex1",
+       "note": "Exercise 1 — Scenario 1 — The Baby Who Is Tiring — Q1. What is your assessment of this baby? Classify the problem. Q2. What are your immediate actions, in order of priority? Q3. What will you monitor, and when would you refer or escalate?"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">CASE EXERCISE Exercise 2 — Skills Station Tasks (CPAP assembling)</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Assemble CPAP and do the wall connections.</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Apply the interface correctly.</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">State the initial settings.</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Identify the danger signs after initiation.</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Safety emphasis: a poorly fitted CPAP causes nasal injury, air leaks, and treatment failure. The fit IS</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">the therapy.</td></tr></table>"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "ssnb-m3-s2-ex2",
+       "note": "Exercise 2 — Skills Station Tasks (CPAP assembling) — Q1. What is your assessment of this baby? Classify the problem. Q3. What will you monitor, and when would you refer or escalate?"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">CASE EXERCISE Exercise 3 — Scenario 3 — Response to CPAP</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">30 minutes after CPAP initiation: RR 62/min · HR 148/min · SpO₂ 92% on FiO₂ 0.30 · chest indrawing</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">mild · baby more active.</td></tr></table>"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "ssnb-m3-s2-ex3",
+       "note": "Exercise 3 — Scenario 3 — Response to CPAP — Q1. What is your assessment of this baby? Classify the problem. Q2. What are your immediate actions, in order of priority? Q3. What will you monitor, and when would you refer or escalate?"
+      }
+     ],
+     "see": [],
+     "practise": []
+    }
+   ]
+  },
+  {
+   "title": "Mechanical Ventilation",
+   "order": 3,
+   "sections": [
+    {
+     "title": "Mechanical ventilation: introduction and objectives",
+     "order": 1,
+     "read": [
+      {
+       "type": "rich",
+       "text": "<ul><li>Knowledge and skills of invasive ventilation in NICU are essential requirements for medical staff working in intensive care unit.</li><li>This section is intended to provide the trainees with essentials and basics of the art of neonatal mechanical ventilation, aiming for safe practice.</li><li>The responsibility of the intensivist is to optimize ventilation and prevent harmful effect of over or under-ventilation.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Objectives of MV Section:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> To know the basic physiology of respiration.</li><li><strong>2.</strong> To be familiar with some of the common ventilation terminology.</li><li><strong>3.</strong> To understand the concept and common principals of mechanical ventilation.</li><li><strong>4.</strong> To be aware of common types and modes of mechanical ventilation.</li><li><strong>5.</strong> To know the common indications of mechanical ventilation.</li><li><strong>6.</strong> To develop skills needed to use the mechanical ventilator safely from initiation to weaning and extubation.</li><li><strong>7.</strong> To know how to improve the care of the ventilated babies and to monitor them.</li><li><strong>8.</strong> To be familiar with the common complications of the mechanical ventilator and how to prevent them.</li></ul>"
+      },
+      {
+       "type": "reveal",
+       "text": "What is the responsibility of the intensivist in mechanical ventilation, according to the manual?",
+       "answer": "To optimize ventilation and prevent the harmful effect of over- or under-ventilation."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Physiology and lung mechanics",
+     "order": 2,
+     "read": [
+      {
+       "type": "paragraph",
+       "text": "Normal Breathing and Lung Mechanics The main function of the respiratory system is to remove CO2 from and add O2 to systemic venous blood brought to the lung. For air to flow into and out of the lungs a pressure gradient is always required ( delta P ) In normal spontaneous respiration, air is drawn from the atmosphere into the alveoli because of negative intra-pleural pressure generated by contraction of the diaphragm and intercostal muscles during inspiration and released from alveoli into the atmosphere during expiration by pressure generated from elastic recoil of the lung."
+      },
+      {
+       "type": "paragraph",
+       "text": "What is a normal breath? A breath is defined as one cycle of flow of gas into the lung (inspiration) and flow of gas out of the lungs ( exhalation ). Phases of breathing: A breath has 4 phases:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Initiation of breath: Initiation of a breath is called triggering and the factor or variable that initiated the breath is the trigger. A normal spontaneous breath is triggered by neurological and chemical triggers and is usually spontaneous.</li><li><strong>2.</strong> Inspiratory Phase:<ul><li>During inspiratory phase the air continues to flow and the lung volume increases until the pressure reaches a peak and sustains for some time then the flow stops and inspiration is terminated.</li><li>The period from the start of the inspiration to the termination of inspiration (start of exhalation) is the inspiratory time (Ti),</li></ul></li><li><strong>3.</strong> CYCLING<ul><li>The switch from the end of inspiration to the start of exhalation is called cycling,</li><li>For a spontaneous breath, both trigger and cycling are controlled by neural output from the respiratory centers in the brainstem, modified by inputs from mechanoreceptors and chemoreceptors.</li></ul></li><li><strong>4.</strong> Expiatory phase<ul><li>Exhalation during normal spontaneous breath is passive resulting from alveolar pressure generated by elastic recoil of the lung and chest wall.</li><li>The time from the start of exhalation to start of new cycle is the expiratory time (Ti),</li></ul></li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p033-1.jpg",
+       "caption": "",
+       "page": 33
+      },
+      {
+       "type": "heading",
+       "text": "Respiratory Mechanics:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Respiratory mechanics refer to the expression of lung function through measures of pressure and flow. From these, a variety of derived indices can be determined, such as flow, pressure, volume, compliance, resistance, and work of breathing (WOB). These factors directly affect lung volumes and therefore functional residual capacity (FRC) and gas exchange.</li><li>Mechanical properties of the respiratory system govern the principles of air movement between the alveoli and the atmosphere.</li><li>Along with pressure, knowledge of lung volumes and capacities is crucial to understand normal lung function as well as many pathological conditions.</li><li>Tidal volume (VT): is the volume of gas moved with each breath. In healthy neonate, spontaneous VT is usually between 4-6 ml/kg. This volume refreshes alveolar gas with atmospheric air during inspiration and leads to removal of CO2 during exhalation; (VENTILATION).</li><li>The volume of gas remaining in the lung after tidal exhalation is termed functional residual capacity (FRC). It acts as a reservoir for gas exchange between the alveoli and the pulmonary capillary blood throughout respiration. Decreasing lung compliance will lower FRC and leads to profound effects on OXYGENATION.</li><li>Residual volume (RV): is the volume of gas remaining in the lung after a maximal forced exhalation.</li><li>Positive end-expiratory pressure (PEEP): is the positive pressure that will remain in the airways at the end of exhalation. It helps maintain end-expiratory volume and</li><li>Peak Inspiratory Pressure (PIP): is the maximum airway pressure at the end of inspiration.</li><li>The amount of air moved in and out of the lungs every minute is termed minute volume (VT x respiratory rate).</li><li>Part of the inspired VT occupies conducting airways (anatomic dead space) which does not contribute to gas exchange. Still another part of VT enters alveoli that are not sufficiently perfused (alveolar dead space). Total dead space is the sum of anatomic dead space and alveolar dead space.</li><li>Compliance is the dispensability of the lung and chest wall; that is, the change in volume (ΔV) produced by a change in pressure (ΔP), or ΔV/ΔP. It is decreased with surfactant deficiency, excess lung water, and lung fibrosis. It is also decreased when the lungs are hyper-expanded.</li><li>Resistance is the impediment to airflow due to friction between gas and airways (airway resistance) and between tissues of the lungs and chest wall (viscous tissue resistance); that is, the change in pressure divided by the change in flow.</li><li>Work of breathing is especially important in the smallest infants and those with chronic lung disease whose high airway resistance, decreased lung compliance, compliant chest wall, and weak musculature may overwhelm their metabolic energy requirements and impede growth.</li></ul>"
+      },
+      {
+       "type": "flip",
+       "title": "Lung volumes and pressures",
+       "cards": [
+        {
+         "front": "Tidal volume (VT)",
+         "back": "Gas moved with each breath; 4–6 ml/kg in a healthy neonate"
+        },
+        {
+         "front": "Functional residual capacity (FRC)",
+         "back": "Gas left in the lung after tidal exhalation; the reservoir for gas exchange"
+        },
+        {
+         "front": "PEEP",
+         "back": "Positive pressure remaining in the airways at the end of exhalation"
+        },
+        {
+         "front": "PIP",
+         "back": "Maximum airway pressure at the end of inspiration"
+        },
+        {
+         "front": "Minute volume",
+         "back": "VT × respiratory rate"
+        }
+       ]
+      },
+      {
+       "type": "question",
+       "text": "Surfactant deficiency changes compliance how?",
+       "options": [
+        "It decreases compliance (a stiff lung)",
+        "It increases compliance",
+        "It does not affect compliance",
+        "It only changes resistance"
+       ],
+       "answer": 0,
+       "explanation": "Compliance (ΔV/ΔP) is decreased with surfactant deficiency, excess lung water and lung fibrosis, and when the lungs are hyper-expanded."
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p034-1.jpg",
+       "caption": "",
+       "page": 34
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "The ventilator breath: triggering and cycling",
+     "order": 3,
+     "read": [
+      {
+       "type": "paragraph",
+       "text": "Goals: to understand how the ventilator provides breath to the baby; compare ventilator breath with spontaneous breath and common ventilator modes to control and assist in breathing."
+      },
+      {
+       "type": "paragraph",
+       "text": "In NICU mechanical ventilation of a patient requires the following components:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>High pressure gas source, (usually separate)</li><li>Oxygen blender,</li><li>Ventilator (controller of the flow), and</li><li>Humidification system.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Basic design of a ventilator"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Ventilators have pressure reducing valves internally to modulate the operating pressure of the ventilator</li><li>The ventilator functions mainly as a controller.</li><li>The output from the ventilator is a mechanical breath whose size and timing are controlled and determined by pressure and flow waveforms.</li><li>To achieve this, all ventilators have</li><li>a control system (pneumatic, electrical or electronic) to regulate the pressure, volume, or flow waveform, a cycling mechanism, and a system to provide end-expiratory pressure</li><li>All ventilators are equipped with mechanisms to provide four basic functions ( 4 phases of breathing):<ul><ul><ul><li><strong>1.</strong> initiate lung inflation, triggering</li><li><strong>2.</strong> inflate the lungs with a tidal volume, inspiration</li><li><strong>3.</strong> terminate lung inflation, cycling and</li><li><strong>4.</strong> allow the lungs to empty, exhalation.</li></ul></li></ul></li></ul></li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "These 4 phases produce a ventilator breath."
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p036-1.jpg",
+       "caption": "",
+       "page": 36
+      },
+      {
+       "type": "paragraph",
+       "text": "the above graph shows different phases of breathing on the pressure, flow and volume curves of mechanical breathing"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> the trigger and initiation of inspiration,</li><li><strong>2.</strong> the peak inspiratory flow,</li><li><strong>3.</strong> the end of inspiration (cycling),</li><li><strong>4.</strong> the peak expiratory flow,</li><li><strong>5.</strong> the time taken to fully deflate the lung during expiration,</li><li><strong>6.</strong> the end of deflation,</li><li><strong>7.</strong> the expiratory phase before the next inspiration.</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Inspiratory time = Period between 1 and 3. Expiratory time = Period between 3 and the end of 7."
+      },
+      {
+       "type": "paragraph",
+       "text": "Triggering, start of a breath, during mechanical ventilation"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Inspiration during ventilator breath can be triggered by a signal from the machine or from the baby.</li><li>When inspiratory flow starts with a ventilator-generated signal and is independent of a patient-initiated signal, it is called ventilator-triggered breath</li><li>When inspiration starts on a patient-generated signal and is independent of a ventilator-generated signal, we describe it as patient triggered breath.</li><li>In summary: a ventilator breath can be initiated by a trigger generated by the</li><li>What are the variables or triggers that can be used to trigger a ventilator breath?</li><li>The trigger to initiate a breath may be pressure, volume, flow, or time.</li><li>The minimal pressure or flow that needs to be detected in the circuit can be set for any patient-initiated breaths.</li><li>When the patient is capable of making a strong effort, a higher threshold may be chosen.</li><li>However, when a patient’s inspiratory effort is weak or poor, the threshold should be the lowest that the patient can trigger.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "A baby's inspiratory effort is weak. How is the trigger threshold set?",
+       "options": [
+        "The lowest the patient can trigger",
+        "The highest available",
+        "Triggering is switched off",
+        "It does not matter"
+       ],
+       "answer": 0,
+       "explanation": "The manual: when effort is weak or poor, the threshold should be the lowest that the patient can trigger."
+      },
+      {
+       "type": "paragraph",
+       "text": "Cycling: switching from inspiration to expiration During ventilator setting it is adjusted by setting the inspiratory time."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Ventilator-cycling refers to ending inspiration based on signals from the ventilator independent of signals based on patient factor ( Time-cycled)</li><li>Patient cycling occurs when a signal based on the patient’s respiratory mechanics reaches a threshold value.</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Similar to the trigger, the variable to cycle a breath from inspiration to exhalation may be pressure, volume, flow, or time."
+      },
+      {
+       "type": "paragraph",
+       "text": "What are the types of breath usually seen during ventilation and how to differentiate them?"
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Spontaneous and mandatory breaths",
+     "order": 4,
+     "read": [
+      {
+       "type": "heading",
+       "text": "When a baby on mechanical ventilation 2 types of breath can be recognized:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Spontaneous breath during which the start and end of a breath is determined by the patient. So it can be described as patient-triggered and patient-cycled. There are 2 types of spontaneous breath that can be recognized: a) un assisted spontaneous breath: when patient determines both the timing and size of the breath, b) assisted breath: where the ventilator does some of the inspiratory work indicated by an increase in airway pressure above the baseline. The patient must initiate a breath, and then the ventilator is triggered to provide a positive pressure breath.</li><li><strong>2.</strong> Ventilator breath, called mandatory breath: is the one in which the end of inspiration is determined by the ventilator, independent of the patient. A mandatory breath may be a) patient-triggered or b) machine-triggered. The inspiratory time is NOT under the control of the patient</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Spontaneous VS mechanical breath: Spontaneous breath:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Patient triggered and patient cycled.</li><li><strong>2.</strong> Can be un assisted or assisted</li><li><strong>3.</strong> The pressure wave is negative</li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p038-1.jpg",
+       "caption": "",
+       "page": 38
+      },
+      {
+       "type": "heading",
+       "text": "Spontaneous breath vs ventilator breath Mandatory breath"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> The ventilator always controls the cycling ( end of inspiration)</li><li><strong>2.</strong> Can be patient triggered or ventilator triggered</li><li><strong>3.</strong> The pressure wave is positive.</li></ul>"
+      },
+      {
+       "type": "sort",
+       "text": "Spontaneous or mandatory breath?",
+       "groups": [
+        "Spontaneous breath",
+        "Mandatory (ventilator) breath"
+       ],
+       "items": [
+        {
+         "text": "Patient-triggered and patient-cycled",
+         "group": 0
+        },
+        {
+         "text": "The pressure wave is negative",
+         "group": 0
+        },
+        {
+         "text": "The ventilator always controls the cycling (end of inspiration)",
+         "group": 1
+        },
+        {
+         "text": "The pressure wave is positive",
+         "group": 1
+        }
+       ]
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Reading ventilator waveforms",
+       "caption": "Animated pressure, flow and volume curves: triggering, inspiration, cycling, expiration; spontaneous vs mandatory breaths; CMV vs IMV.",
+       "script": "SN3.3.1"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p038-2.jpg",
+       "caption": "",
+       "page": 38
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Conventional ventilation: control variables and breath sequences",
+     "order": 5,
+     "read": [
+      {
+       "type": "paragraph",
+       "text": "Ventilator variables and control: There are 4 main variables that need to be controlled by the ventilator to generate and control"
+      },
+      {
+       "type": "paragraph",
+       "text": "the mandatory breath. These are the pressure (PIP), the volume (TV), the flow and the time (Ti). However only one variable ( e.g. pressure or volume) can be controlled ( and limited to a peak ) during the inspiratory phase which becomes the independent variable and the other variables vary according to the respiratory system compliance and resistance. The waveform of the controlled variable will be fixed breath to breath"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Pressure Control, PC :<ul><li>Pressure-control refers to the pressure waveform being controlled during inspiration, usually a “square-wave” or rectangular waveform as well as the predetermined pressure limit.</li><li>During PC volume and flow vary in different cycles</li><li>PRESSURE CONTROL IS THE COMMONLY USED MODE IN NEONATES</li></ul></li><li><strong>2.</strong> Volume Control, VC:<ul><li>With volume control, the shape of the volume waveform as well as the predetermined volume limit is controlled.</li><li>During VC pressure and flow are not fixed and vary in different cycles</li><li>VOLUME CONTROL IS THE COMMONLY USED MODE IN PICU</li></ul></li><li><strong>3.</strong> Flow Control<ul><li>With flow control, the flow waveform is controlled while volume and pressure vary.</li><li>When constant-flow inspiration is combined with time-cycling, it is identical to volume-control and these terms may be used interchangeably.</li><li>This type of ventilation is commonly used in pediatric patients ( not in neonates )</li></ul></li><li><strong>4.</strong> Time Control<ul><li>Time-control is a category of ventilator modes in which the flow, volume and pressure during the set Ti depend on the mechanics of the respiratory system.</li><li>High frequency oscillatory ventilation (HFOV) is an example.</li></ul></li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Conventional mechanical Ventilation basic breath sequences"
+      },
+      {
+       "type": "paragraph",
+       "text": "Three basic breath sequences that ventilator delivers are as follows:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><ul><li><strong>(1)</strong> Continuous Mandatory Ventilation, (CMV),</li><li><strong>(2)</strong> Intermittent Mandatory Ventilation (IMV), and</li><li><strong>(3)</strong> Continuous Spontaneous Ventilation (CSV)</li></ul></li><li><strong>(1)</strong> Continuous Mandatory Ventilation CMV: CMV refers to a breath sequence when<ul><li><strong>1.</strong> all the breaths are mandatory</li><li><strong>2.</strong> spontaneous breaths DONOT occur between mandatory breaths.</li></ul></li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p040-1.jpg",
+       "caption": "",
+       "page": 40
+      },
+      {
+       "type": "paragraph",
+       "text": "This diagram shows typical square shaped mandatory breath. The absence of negative wave in the pressure curve indicates no spontaneous breath. CMV."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>(2)</strong> Intermittent Mandatory Ventilation IMV refers to a breath sequence when spontaneous breaths occur between mandatory breaths. These breaths may or may not be synchronized When IMV is synchronized to the patient's inspiratory efforts, it is referred to as synchronized IMV (SIMV)</li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p041-1.jpg",
+       "caption": "",
+       "page": 41
+      },
+      {
+       "type": "paragraph",
+       "text": "This graph of pressure curve shows"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Presence of negative deflation (spontaneous breaths) in between mandatory breaths. IMV.</li><li><strong>2.</strong> Non-synchronized spontaneous breath (first arrow from the left)</li><li><strong>3.</strong> A synchronized spontaneous breath. The mandatory breath was triggered by the flow of spontaneous breath at the set rate. Second arrow from the left.</li><li><strong>4.</strong> A mandatory breath not preceded by spontaneous breath. Non-synchronized. Third arrow</li><li><strong>5.</strong> The small shaded box represents a window time for synchronization.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Which control variable is commonly used for ventilating neonates?",
+       "options": [
+        "Pressure control",
+        "Volume control",
+        "Flow control",
+        "Time control"
+       ],
+       "answer": 0,
+       "explanation": "The manual: \"PRESSURE CONTROL IS THE COMMONLY USED MODE IN NEONATES\". Volume control is commonly used in PICU."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Ventilation modes: assist control",
+     "order": 6,
+     "read": [
+      {
+       "type": "heading",
+       "text": "Modes of Mechanical Ventilation:"
+      },
+      {
+       "type": "paragraph",
+       "text": "Mode of ventilation is a predetermined pattern of interaction between the patient and the ventilator. It includes the sequence of breaths, breath patterns, control variables within and between breaths, and the schemes used to provide feedback as well as effecting the variables during mechanical ventilation. In the most recent recommendations published by the Paediatric Mechanical Ventilation Consensus Conference, no specific mode of ventilation could be recommended over another. Ventilator modes should be guided and chosen by clinician experience, patient pathophysiology, institutional protocol, and ventilator availability. Each mode of ventilation may be controlled via either pressure, volume or dual-control (DC). Mechanical ventilators and their modes can be distinguished by the phase variables—trigger, limit, and cycle—that govern the characteristics of the inspiratory phase of each breath:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>The trigger regulates the start of each breath,</li><li>the limit sustains inspiration while</li><li>the cycling controls the termination of inspiration.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "commonly used ventilatory modes in NICU"
+      },
+      {
+       "type": "paragraph",
+       "text": "There are several modes used in conventional ventilation. However, in neonates the most commonly used are"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Assist Control mode (AC)</li><li><strong>2.</strong> Synchronized Intermittent Mandatory Ventilation mode (SIMV)</li><li><strong>3.</strong> Pressure support mode (PS)</li><li><strong>4.</strong> Dual modes or Targeted modes</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Assist Control Mode (AC)"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>While using AC mode a patient can receive either a ventilator-initiated or patient-initiated mandatory breath.</li><li>Machine-triggered breaths are not preceded by a spontaneous breath.</li><li>Patient-triggered breaths are preceded by a spontaneous breath which creates a negative deflection in the pressure–time curve.</li><li>Every patient breath is triggered by pressure or flow generated by the patient inspiratory effort and “assisted” with either preselected inspiratory pressure (if PC) or volume ( if VC ).</li><li>When the patient does not make any effort of breathing such as with neuromuscular blockade, the total number of breaths is equal to the pre-set ventilator rate</li><li>Although useful in some patients, the AC mode cannot be used in the weaning process, which involves gradual decrease in ventilator support.</li><li>Ac mode can be used under pressure control (commonly for neonates) or volume control (for PICU patients)</li><li>This mode may be preferred in patients with little or no spontaneous respiratory effort or those who require complete respiratory support .</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "All patient triggered breath will be assisted regardless to ventilator rate.( are machine-cycled )."
+      },
+      {
+       "type": "question",
+       "text": "Can assist control (AC) mode be used to wean?",
+       "options": [
+        "No: every triggered breath is assisted, so support cannot be reduced gradually",
+        "Yes: it is the main weaning mode",
+        "Only with volume control",
+        "Only in term babies"
+       ],
+       "answer": 0,
+       "explanation": "The manual: the AC mode cannot be used in the weaning process. SIMV is a rate weaning mode; pressure support is a weaning mode."
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p043-1.jpg",
+       "caption": "",
+       "page": 43
+      },
+      {
+       "type": "paragraph",
+       "text": "The above graph shows pressure curves with different ventilator rates for the same patient. Patient triggered breaths are preceded by negative deflations (arrows) while ventilator"
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Ventilation modes: SIMV, pressure support and volume targeting",
+     "order": 7,
+     "read": [
+      {
+       "type": "heading",
+       "text": "Synchronized Intermittent Mandatory Ventilation (SIMV) mode"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>SIMV is synchronized to the patient's inspiratory efforts. It is a rate mode</li><li>A timing “window” appears just before the next mandatory breath is to be delivered. If the patient initiates a breath in the timing window, then the ventilator will deliver a mandatory breath synchronized to the spontaneous breath. If no spontaneous effort occurs, then the ventilator will deliver a mandatory breath at the end of the timing window.</li><li>It is the preferable mode of ventilator therapy in infants who are breathing spontaneously while on IMV.</li><li>Since this mode allows patient to initiate some spontaneous breaths, the work of breath may increase as the patient is breathing against ETT resistance. This can be overcome by adding pressure support (PS see below) during inspiration to all spontaneous breath. This is called SIMV with PS and it is preferred for SIMV alone.</li><li>SIMV is a rate weaning mode</li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p044-1.jpg",
+       "caption": "",
+       "page": 44
+      },
+      {
+       "type": "paragraph",
+       "text": "Pressure Support Ventilation (PSV)"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>PS is a continuous spontaneous ventilation (CVS).</li><li>All the breaths are spontaneous.</li><li>Patient will trigger and cycle the breath,</li><li>Ti (rate), PIP or VT are determined by patient for each breath</li><li>All the breaths are supported with a preset positive pressure. (assisted spontaneous breath)</li><li>PS is a weaning mode and is not used for paralyzed or sick patients.</li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p045-1.jpg",
+       "caption": "",
+       "page": 45
+      },
+      {
+       "type": "paragraph",
+       "text": "This graph shows 3 pressure curves representing spontaneous breathing with or without support:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> the upper curves show unassisted spontaneous breaths of a normal pattern of breathing with negative deflations (inspiration) and positive deflations (expiration) around the base line</li><li><strong>2.</strong> The middle curve demonstrates unassisted spontaneous breath with CPAP. The waves are swinging above the set PEEP</li><li><strong>3.</strong> The lower curve demonstrates Pressure Support with assisted spontaneous breaths: negative deflation before each curve, and a pressure support of 10cm water with all breaths.</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Dual-control modes of ventilation (Targeting schemes)"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Dual mode is a way of controlling two variables (pressure and volume), one variable is directly controlled and the second one is controlled indirectly (guarantees or targeted) through a feedback control used to deliver a particular pattern of breathing.</li><li>The dual modes are sometimes described as targeting schemes. This is because while the ventilator control one variable e.g. pressure, it will target or guarantee preset limit for the other variable e.g. volume</li><li>Examples of targeting schemes, dual modes<ul><ul><li>Pressure regulated volume control, PRVC (with Maquet Servo series),</li><li>Volume Grantee, VG, (Drager)</li><li>Adaptive Pressure Ventilation (APV) (with Hamilton Galileo),</li><li>Autoflow (Evita 4), or</li><li>Variable Pressure Control (Venturi)</li></ul></li></ul></li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Why do we need to control tidal volume?"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>There is increasing evidence to support that lung overstretching and overdistension that causes lung injury rather than simply high pressures;And that volume trauma is more serious than barotrauma ( lung trauma caused by high pressure).</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Why volume control is not commonly used for ventilating neonates?"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Newborn infants are ventilated using un-cuffed endotracheal tubes. This may lead to a variable leak around the endotracheal tube, and tidal volume cannot be controlled.</li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p046-1.jpg",
+       "caption": "",
+       "page": 46
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>2.</strong> Volume-targeted ventilators. Advances in technology for measuring delivered VTs have made these ventilators first-line therapy for newborns with respiratory failure. Only volume-targeted ventilators specifically designed for newborns should be used. Volume-targeted ventilators are always patient-triggered. General characteristics. Volume-targeted ventilators are similar to pressure-limited ventilators except that the operator selects the targeted tidal volume ( TTV) delivered rather than the PIP. Volume guarantee Is a mode of pressure limited ventilation, in which the ventilator targets an operator-chosen VT (usually 4 to 6 mL/kg) during mechanically delivered breaths. Volume guarantee allows rapid response of the ventilator pressures to changing lung compliance and may be particularly useful in infants with RDS who receive surfactant therapy. Pressure-regulated volume control (PRVC)<ul><li>is a modified pressure-targeted ventilatory mode, in which inspiratory pressure is sequentially adjusted to deliver a target inspiratory volume with the lowest possible pressures.</li><li>Volume-targeted ventilators are particularly useful if lung compliance is rapidly changing, as in infants receiving surfactant therapy.</li><li>The pressure automatically varies with respiratory system compliance to deliver the selected VT, therefore minimizing variability in minute ventilation and avoiding wide swings in VT frequently seen with pressure-limited ventilators.</li><li>Recent data suggest that volume-targeted ventilation reduces the risk of death or BPD in extremely low birth weight infants, presumably by reduction of the risk of volu-trauma (protective strategy).</li><li>The system can be complicated and requires more skill to operate. Because VTs in infants are small, some of the VTs selected are lost in the ventilator circuit or from air leaks around uncuffed endotracheal tubes. Some ventilators compensate for these losses by targeting expired rather than inspired VTs or by accounting for dead space in the circuit.</li></ul></li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Why is pure volume control not commonly used in neonates?",
+       "options": [
+        "Uncuffed endotracheal tubes leak, so tidal volume cannot be controlled",
+        "Neonates have no tidal volume",
+        "It is too cheap",
+        "It is only used for apnoea"
+       ],
+       "answer": 0,
+       "explanation": "Volume-targeted ventilators designed for newborns are used instead (e.g. volume guarantee, usually 4–6 ml/kg)."
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p048-1.jpg",
+       "caption": "",
+       "page": 48
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "High-frequency oscillatory ventilation: indications and starting",
+     "order": 8,
+     "read": [
+      {
+       "type": "paragraph",
+       "text": "High frequency oscillatory ventilation (HFOV) utilises rapid ventilation rates with small tidal volumes (often less than anatomical dead space) and active inspiratory AND expiratory phases. A constant distending airway pressure is applied to the alveoli which aims to maximise functional residual capacity and ventilation/perfusion matching, over which small tidal volumes are superimposed at a high rate. (HFV) is an important adjunct to conventional mechanical ventilation in newborns. The aim of using HFOV is to reduce ventilator associated lung injury when high airway pressures and volumes in conventional ventilation modes are required to maintain adequate gas exchange ( secondary or rescue mode). When initiated early ( primary mode), high frequency oscillatory ventilation may improve oxygenation and reduce risk of lung injury in neonates and infants. Indications For HFV"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Alternative to CMV ( as primary mode)</li><li><strong>2.</strong> When adequate oxygenation and/or ventilation cannot be achieved on CMV. ( as rescue mode)</li><li><strong>3.</strong> To minimise lung injury by avoiding use of high inspiratory pressures or FiO₂ on CMV.( primary or rescue )</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Particular disease settings where HFOV may be appropriate include lung disease in:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Neonatal Respiratory Distress Syndrome (RDS)</li><li>Chronic lung disease of prematurity</li><li>Meconium Aspiration Syndrome (MAS)</li><li>Congenital Diaphragmatic Hernia (CDH)</li><li>Neonatal Air-leak Syndrome with pulmonary interstitial emphysema</li><li>Pneumonia</li><li>Pulmonary Haemorrhage</li><li>Hypoplastic lungs</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Types of High Frequency Ventilation"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Three types of high-frequency Three types of high frequency ventilators are approved for use in newborns:<ul><li><strong>A.</strong> high frequency oscillator (HFO),</li><li><strong>B.</strong> a high-frequency flow interrupter (HFFI),</li><li><strong>C.</strong> and a high-frequency jet (HFJ) ventilator.</li></ul></li><li>High-frequency ventilation (HFV) refers to diverse modes of ventilation characterized in general by supra-physiologic ventilatory frequencies (&gt;60/min) and low tidal volumes.</li><li>Commonly used high frequency modes are high frequency oscillatory ventilation (HFOV) and high frequency jet ventilation (HFJV).</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Ventilatory Control Parameters in HFOV"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>The main controls in HFOV are<ul><ul><ul><ul><li><strong>1.</strong> mean airway pressure, MAP</li><li><strong>2.</strong> oscillatory pressure, delta P, amplitude/power, bias flow,</li><li><strong>3.</strong> frequency, F, and</li><li><strong>4.</strong> inspiratory time, Ti.</li></ul></li></ul></li></ul></li></ul></li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Starting HFOV Pre-Checks: Ensure blood pressure and intravascular volume is adequate before transferring to HFOV, as"
+      },
+      {
+       "type": "paragraph",
+       "text": "blood pressure may fall rapidly, especially in babies with perfusion problems in Sepsis / NEC. Consider invasive BP monitoring if possible. Correct metabolic acidosis. ETT leak - Consider upsizing ET tube Initial settings of HFOV: Mean Airway Pressure (MAP): Generally, the starting MAP is set 2-3cm abovethe current CMV mean airway pressure. However, to achieve optimal lung recruitment the operator should be prepared to start a recruitment manoeuvre. Amplitude (ΔP): Set the amplitude (delta P) to approximately double the value of the MAP, sufficient to see a chest “wiggle” from the level of the nipple to the umbilicus."
+      },
+      {
+       "type": "paragraph",
+       "text": "Frequency/Hertz: Usually frequency is set at 10 Hz. Lower frequencies may be used in severe lung disease,"
+      },
+      {
+       "type": "paragraph",
+       "text": "with poor CO 2 clearance, especially in term infants. E Ratio: I:E ratio is usually 1:1 and not changed except in special circumstancesE Ratio: I:E ratio is usually 1:1 and not changed except in special circumstances (e.g. severe gas trapping). FiO2 Set appropriate FiO2 oxygen saturation range. and titrate according to patient response and desired oxygen saturation range. Immediate. Monitoring Once stared on HFOV: Obtain a blood gas within 20-30 minutes and adjust settings as appropriate. Obtain a chest x-ray aftercommencing HFOV to determine lung expansion, ideally within one hour. X-ray should show around 8 rib spaces. The CXR should confirm the diaphragm to be lying between the 8th and 9th posterior ribs for optimal lung inflation.Overinflation is indicated by:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Diaphragm at 10+ ribs</li><li>Intercostal bulging of the lungs</li><li>Flattened diaphragm</li><li>Thin cardiac silhouette</li><li>Underinflation is indicated by:</li><li>Lung fields with areas of collapse / consolidation</li><li>Lung fields expanded to less than the 6th rib posteriorly</li><li>High diaphragm</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "On starting HFOV, where is the mean airway pressure set?",
+       "options": [
+        "2–3 cm above the current CMV mean airway pressure",
+        "Equal to PEEP",
+        "10 cm below the CMV MAP",
+        "At the highest the ventilator allows"
+       ],
+       "answer": 0,
+       "explanation": "The manual: generally, the starting MAP is set 2–3 cm above the current CMV MAP. Frequency is usually 10 Hz; amplitude about double the MAP, enough to see a chest \"wiggle\"."
+      },
+      {
+       "type": "question",
+       "text": "The chest X-ray on HFOV shows the diaphragm at the 10th rib and flattened. What does this mean?",
+       "options": [
+        "Over-inflation",
+        "Under-inflation",
+        "Optimal inflation",
+        "Pneumothorax"
+       ],
+       "answer": 0,
+       "explanation": "Optimal: diaphragm between the 8th and 9th posterior ribs. Diaphragm at 10+ ribs, intercostal bulging, a flattened diaphragm and a thin cardiac silhouette indicate over-inflation."
+      },
+      {
+       "type": "paragraph",
+       "text": "In specific situations such as non-uniform lung disease with one side of the lungs collapsed, you might have to tolerate slight over distension in the good lung to encourage recruitment in the other side."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "HFOV: oxygenation, ventilation and low PO₂",
+     "order": 9,
+     "read": [
+      {
+       "type": "heading",
+       "text": "Monitoring oxygenation and ventilation"
+      },
+      {
+       "type": "paragraph",
+       "text": "It is very useful and practical to consider monitoring and adjustment of HFV on the basis of oxygenation and ventilation. Oxygenation Main oxygenation control parameters are FiO2 and MAP. FiO2: Titrate according to patient response and desired oxygen saturation range. MAP: To improve oxygenation MAP can be increased gradually by 1-2 cm H2O. However high MAPs ( > 12- 16) should be adjusted carefully as it may compomise the venous return and lower arterial BP and worsen oxegenation . Whenever oxygenation is maintained, MAP should be titrated and weaned gradually and carefully. As discussed above adjustion of MAP is monitored by assessement of lung inflation on chest x-ray. Recruitment Manoeuvre Is a stepwise increase in MAP of 1-2cmH O whilst monitoring response (oxygenation, CO 2 2 clearance, BP). Usually the MAP would be incremented every 5-10 minutes, but more rapid increments in MAP, every 1-2 minutes, might be required depending on the clinical condition, (for example, in a baby with severe oxygenation problem with a collapsed lung volume). Beyond the point of over-inflation (critical opening pressure) oxygenation will no longer improve (and may deteriorate). MAP should then be reduced back to 2- 4cmH O below this critical opening pressure. Typical operating range for MAP will be between 10 to 16 If Higher MAPs are required, Ventilation (CO2 clearance) Ventilation (CO 2 clearance) in HFOV is controlled by 1) the ΔP (amplitude), for a given level of lung inflation. It is also influenced by 2) the frequency of oscillation (Hz). Decreasing the frequency can cause markedly increased CO2 elimination and should not be done without discussion with the attending expert senior. In response to pCO 2 measurements adjust the DP (amplitude) in increments of 2-4.:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>a)</strong> Increase ΔP (amplitude) in response to a raised pCO2</li><li><strong>b)</strong> Reduce ΔP (amplitude) in response to a low pCO2</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Typical operating ranges for ΔP will be between 20 to 30cm H2O. Higher ΔP should only be used with caution only in severe lung disease."
+      },
+      {
+       "type": "paragraph",
+       "text": "Always observe the chest wall to make sure that it is still vibrating. Recheck a blood gas 20 minutes after making a change."
+      },
+      {
+       "type": "heading",
+       "text": "Making Adjustments Once Established on HFOV:"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p053-1.jpg",
+       "caption": "",
+       "page": 53
+      },
+      {
+       "type": "heading",
+       "text": "Trouble Shooting During HFOV: Low PO2: Consider:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> ET tube patency and position – Check for chest movement/wiggle &amp; breath</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "sounds, consider suction, while giving manual breaths with self inflation bag to check if ETT is in the airway."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>2.</strong> Condensation/ rain-out in the ventilator circuit- slight elevation of the oscillation to assist with rain-out and enable good drainage.</li><li><strong>3.</strong> Air leak/ Pneumothorax- Transilluminate, Urgent CXR, drain if needed</li><li><strong>4.</strong> Sub-optimal lung recruitment- Increment MAP or recruitment manoeuver, consider CXR</li><li><strong>5.</strong> Over inflated lung –Check BP, reduce MAP; does oxygenation improve, Consider C- XR</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "On HFOV the PaCO₂ is high. What is the main control to adjust?",
+       "options": [
+        "Increase ΔP (amplitude) in increments of 2–4",
+        "Increase FiO₂",
+        "Increase MAP only",
+        "Increase the frequency"
+       ],
+       "answer": 0,
+       "explanation": "Ventilation (CO₂ clearance) is controlled by ΔP. Decreasing the frequency markedly increases CO₂ elimination and should not be done without the expert senior."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "HFOV: high PCO₂, weaning and complications",
+     "order": 10,
+     "read": [
+      {
+       "type": "heading",
+       "text": "High PCO2: Consider:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> ET tube patency and position : (as above)</li><li><strong>2.</strong> Under-inflated lungs, insufficient alveolar ventilation :– Increase ΔP (amplitude) and look for improvement in chest wall movement, could decrease frequency(Hz) after discussion with expert senior.</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "The disadvantage of high MAP is “Over inflation of lungs” which leads to decreased cardiac output and reduced BP, high pulmonary vascular resistance, decreased venous return and pulmonary leaks. It can lead to poor oxygenation and tissue perfusion, eventually leading to high CO₂ levels in blood. It should be timely identified by means of clinical assessment, BP and CXR and corrected by reducing the MAP. Weaning Weaning is primarily through reduction in the MAP as compliance improves, however it may also be necessary to adjust ΔP +/- frequency (Hz), as CO2 clearance improves, to avoid hypocarbia."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> It is important to maintain the lung volume during weaning. Reduce FiO2 as tolerated, and once less than around 30% begin weaning the MAP in increments of 1-2 cm H2O (except when over-inflation is evident).</li><li><strong>2.</strong> In air leak syndromes, reducing MAP may take priority over weaning the FiO2</li><li><strong>3.</strong> Reduce ΔP (amplitude) in increments of 2-4, according to the paCO2. Remember to observe the chest wall to confirm vibration.</li><li><strong>4.</strong> If an acceptable paCO 2 cannot be maintained by adjusting the ΔP (amplitude) alone then adjustments to the frequency (Hz) may be required. Changes in frequency should be discussed with the expert senior.</li><li><strong>5.</strong> Deterioration in oxygenation may be due to either a MAP which is too low (atelectasis), or too high (over distension during the baby’s recovery phase). A C-XR may help to distinguish these.</li><li><strong>6.</strong> Patients may be extubated from HFOV e.g. to Vapotherm or CPAP. Alternatively, patients may be transitioned to conventional ventilation prior to extubation. When changing to conventional ventilation set an appropriate PEEP and then choose a PIP to give a MAP 1 - 2 cm H2O below the HFOV setting.</li><li><strong>7.</strong> Remember to wean sedation and start caffeine citrate, if indicated, in advance of</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Potential Complications – HFO"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Decreased cardiac output</li><li><strong>2.</strong> Over-distension leading to pulmonary air-leaks</li><li><strong>3.</strong> IVH due to changes in cerebral circulation related to treatment with the oscillaton.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "How is HFOV mainly weaned?",
+       "options": [
+        "By reducing the MAP as compliance improves; FiO₂ first, then MAP in 1–2 cm H₂O steps once FiO₂ is below about 30%",
+        "By increasing the frequency",
+        "By stopping abruptly",
+        "By increasing ΔP"
+       ],
+       "answer": 0,
+       "explanation": "From \"Weaning\" in the manual. In air leak syndromes, reducing MAP may take priority over weaning FiO₂."
+      },
+      {
+       "type": "paragraph",
+       "text": "HFOV with Volume Guarantee (HFOV-VG) HFOV-VG is gaining more interest in the past few years, although clinical experience with"
+      },
+      {
+       "type": "paragraph",
+       "text": "this mode is still limited. It combines two advanced strategies: High-Frequency Oscillatory Ventilation (HFOV) and Volume Guarantee (VG). ( out of scope of this manual)"
+      },
+      {
+       "type": "heading",
+       "text": "Flowchart for starting & managing a baby on HF"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p056-1.jpg",
+       "caption": "",
+       "page": 56
+      },
+      {
+       "type": "heading",
+       "text": "References"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> High Frequency Oscillatory Ventilation (HFOV) : a guide to the use of HFOV in the neonate, Tayyaba Yasmeen – Neonatal Grid Trainee, NE; Althaf Ansary - Neonatal Consultant – Ayrshire Maternity Unit.</li><li><strong>2.</strong> Avila, K., Mazza, L., and Morgan-Trujillo.L. 1994. High Frequency Oscillatory Ventilation: A nursing approach to bedside care. Neonatal Network, 13 (5), 23- 31.</li><li><strong>3.</strong> Bouchut, J.C. Godard, J. &amp; Claris, O. (2004) High Frequency Ventilation. Anaesthesiology, 100 (4), 1007-1012.</li><li><strong>4.</strong> Bunnell, J.B. (1990) High-Frequency Ventilation in Newborn and Pediatric</li><li><strong>5.</strong> Intensive Care. Neonatal Intensive Care, May/June, 28-32.</li><li><strong>6.</strong> Bunnell, J.B. (1990) High-Frequency Ventilation in newborn and Pediatric</li><li><strong>7.</strong> Intensive Care – Part ll. Neonatal Intensive Care, July/August, 12-18.</li><li><strong>8.</strong> Chan KP, Stewart TE, Mehta S. (2007).High-frequency oscillatory ventilation for adult patients with ARDS. Chest; 131(6):1907-1916Duval, E.L. Markhorst, D.G. &amp; Vught, A.J. (2009) High frequency oscillatory</li><li><strong>9.</strong> ventilation in children: an overview. Respiratory Medicine CME 2, 155-161.</li><li><strong>10.</strong> Froese, A.B. &amp; Kinsella, J.P. (2005) High-frequency oscillatory ventilation:</li><li><strong>11.</strong> lessons from the neonatal/pediatric experience. Critical Care Medicine, 33(3), S115-S121.</li><li><strong>12.</strong> Mammel MC. High-frequency ventilation. In: Goldsmith JP and Karotkin EH (Eds).</li><li><strong>13.</strong> Assisted ventilation of the neonate. 4th Edition, Saunders, pp 183-201</li><li><strong>14.</strong> Pillow, J.J. (2005) High-frequency oscillatory ventilation: Mechanisms of gas exchange and lung mechanics. Critical Care Medicine, 33(3), S135-141.</li><li><strong>15.</strong> Spitzer, A.R. (2005) Intensive Care of the Fetus and Neonate (2nd ed)</li><li><strong>16.</strong> Philadelphia, Elsevier Health Sciences.</li><li><strong>17.</strong> Dimitriou G, Greenough A, Kavvadia V, Milner AD. (1999). Comparison of two inspiratory: expiratory ratios during high frequency oscillation. Eur J Pediatr. 1999 Oct;158(10):796-9.</li><li><strong>18.</strong> Cools F, Offringa M, Askie LM. Elective high frequency oscillatory ventilation</li><li><strong>19.</strong> versus conventional ventilation for acute pulmonary dysfunction in preterm infants. Cochrane Database of Systematic Reviews 2015, Issue 3. Art. No.: CD000104.</li><li><strong>20.</strong> Belteki G, Morley CJHigh-frequency oscillatory ventilation with volume</li><li><strong>21.</strong> guarantee: a single-centre experience Archives of Disease in Childhood -</li><li><strong>23.</strong> Tuzun F, Deliloglu B, Cengiz MM, Iscan B, Duman N, Ozkan H. Volume</li><li><strong>24.</strong> Guarantee High-Frequency Oscillatory Ventilation in Preterm Infants With</li><li><strong>25.</strong> RDS: Tidal Volume and DCO2 Levels for Optimal Ventilation Using Open-Lung</li><li><strong>26.</strong> Strategies. Front Pediatr. 2020 Mar 24;8:105.</li><li><strong>27.</strong> González-Pacheco N, Sánchez-Luna M, Ramos-Navarro C, Navarro-Patiño</li><li><strong>28.</strong> N, de la Blanca AR. Using very high frequencies with very low lung volumes during high-frequency oscillatory ventilation to protect the immature lung. A pilot study. J Perinatol. 2016 Apr;36(4):306-10. doi: 10.1038/jp.2015.197. Epub</li><li><strong>29.</strong> 2016 Jan 7.</li><li><strong>30.</strong> Carr. C, Mangus W.C, Deanehan. J.K, Mechanical Ventilation of Pediatric Patieennts in the Emergency Department.EB MEDICINE; July 2020 Volume 17, Number 7.</li><li><strong>31.</strong> Wallis. S , Firth.C. Neonatal Ventilation – basics of mechanical ventilation. NHS foundation trgust. Approved by: –Neonatal Guidelines Group 04/03/2014. No change 2017 – Reviewed Sept 2019. Review date: 17/09/2022 Version: 2.</li><li><strong>32.</strong> Sarnaik.P.A ,Venkataraman T.S, Kuch.A.B. Mechanical Ventilation in Neonates and Children. Springer Nature Switzerland AG 2022, corrected publication 2022</li></ul>"
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Ventilation strategy and starting settings",
+     "order": 11,
+     "read": [
+      {
+       "type": "paragraph",
+       "text": "When strategizing mechanical ventilation for an individual patient, certain physiologic parameters need to be assessed:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Pathophysiologic considerations (disease process) e.g. RDS vs MAS. Post surfactant therapy. Lung hypoplasia</li><li>clinical findings</li><li>blood gas analyses, (oxygenation vs ventilation)</li><li>imaging studies.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Define your goal:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>to improve V/Q mismatch, (but to avoid O2 toxicity), or</li><li>to recruit the lung, (but avoid lung trauma), or</li><li>to support respiration, (plan for extubation as soon as indicated)</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Initiation of Conventional Ventilation Pressure control mode in general:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>May start with</li><li>PEEP: 4–6 cm H2O usually 5</li><li>PIP: 14–25 cm H2O usually 16 to 20</li><li>Rate: 30–60/min</li><li>Ti : 0.30–0.40 s</li><li>I:E ratio at least 1:2</li></ul>"
+      },
+      {
+       "type": "calc",
+       "question": "Starting conventional ventilation in pressure control mode, what PEEP does the manual say is usual?",
+       "answer": 5,
+       "unit": "cm H₂O",
+       "explanation": "PEEP 4–6, usually 5; PIP 14–25, usually 16–20; rate 30–60/min; Ti 0.30–0.40 s; I:E at least 1:2."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Settings by disease: RDS, apnoea and BPD",
+     "order": 12,
+     "read": [
+      {
+       "type": "paragraph",
+       "text": "Respiratory distress syndrome (RDS): Pathophysiology: RDS is caused by surfactant deficiency, which results in a severe decrease"
+      },
+      {
+       "type": "paragraph",
+       "text": "in compliance (stiff lung) increasing the risk of pneumothorax. This causes diffuse alveolar collapse with increased work of breathing. Ventilator strategy: Is indicated when increased FiO2 and CPAP are inadequate to maintain gas exchange, or in infants who tire from the increased work of breathing. The preferred approach is to maintain the appropriate MAP with a TI initially set at 0.3 second and rate of approximately 20 to 40 breaths per minute. Rarely, a longer TI is required to provide adequate oxygenation. PIP is initially estimated by visible chest excursion and is usually 20 to 25 cm H2O.PEEP is usually set at 4 to 6 cm H2O. Higher PEEP may interfere with cardiac output. Flow rates of 7 to 12 L/minute are needed to provide a relatively square pressure waveform. Higher flows may be required at very high PIP (>35 cm H2O)."
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p060-1.jpg",
+       "caption": "",
+       "page": 60
+      },
+      {
+       "type": "paragraph",
+       "text": "Apnoea: Pathophysiology: Occasionally, apnoea is severe enough to warrant ventilator support,"
+      },
+      {
+       "type": "paragraph",
+       "text": "even in the absence of pulmonary disease. This may result from apnoea of prematurity, or during or following general anaesthesia. Ventilator strategy: For infants completely dependent on the ventilator, the goal should be to provide “physiologic” ventilation. moderate PEEP (3 to 4 cm H2O), low gas flow, and normal rates (30 to 40 breaths per minute), PIP or VT adjusted to prevent hyperventilation (10 to 18 cm H2O). Prolonged TI is unnecessary. For infants requiring a ventilator because of intermittent but prolonged apnoea, low rates (12 to 15 breaths per minute) may be sufficient"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p061-1.jpg",
+       "caption": "",
+       "page": 61
+      },
+      {
+       "type": "heading",
+       "text": "Bronchopulmonary Dysplasia (BPD): Pathophysiology:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Is an acquired chronic lung disease that occurs because of premature birth.</li><li>It results from injury to the alveoli and airways.</li><li>Bleb formation may lead to poor recoil.</li><li>Fibrosis and excess lung water may cause stiffer compliance.</li><li>Airways may be narrowed and fibrotic or hyper-reactive.</li><li>The upper airways may be over-distended and conduct airflow poorly.</li><li>BPD is marked by shifting focal atelectasis, hyperinflation, chronic and acute increases in airway resistance, and a significant increase in the work of breathing.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Ventilator strategy:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Targeting oxygen saturations between 92 and 95%,</li><li>Use of large tidal volume to account for dead space, VT (8 to 12 ml/kg)</li><li>Adequate PEEP to avoid atelectasis and prevent airway collapse, (7 to 8 cm H2O)</li><li>Low set rate, (&lt; 20 breaths/minute) with longer inspiratory times (0.6–0.8 s)</li><li>Higher PIP are sometimes required (20 to 30 cm H2O) because of the stiff lungs.</li></ul>"
+      },
+      {
+       "type": "sort",
+       "text": "Which disease does each ventilator strategy suit?",
+       "groups": [
+        "RDS",
+        "Apnoea (no lung disease)",
+        "BPD"
+       ],
+       "items": [
+        {
+         "text": "Ti 0.3 s, rate 20–40, PIP 20–25, PEEP 4–6",
+         "group": 0
+        },
+        {
+         "text": "\"Physiologic\" ventilation: PEEP 3–4, rate 30–40, PIP 10–18",
+         "group": 1
+        },
+        {
+         "text": "Large VT 8–12 ml/kg, PEEP 7–8, rate < 20, Ti 0.6–0.8 s",
+         "group": 2
+        }
+       ],
+       "explanation": "From \"Initiation of conventional ventilation according to disease\"."
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p062-1.jpg",
+       "caption": "",
+       "page": 62
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Settings by disease: MAS and CDH; how changes affect blood gases",
+     "order": 13,
+     "read": [
+      {
+       "type": "heading",
+       "text": "Meconium aspiration syndrome (MAS): Pathophysiology:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>MAS results from aspiration of meconium-stained amniotic fluid. The aspirated meconium causes acute airway obstruction, markedly increased airway resistance, scattered atelectasis, and hyper-expansion due to obstructive ball-valve effects.</li><li>The indications for intubation include : worsening clinical distress, increased oxygen requirements, worsening hypoxemia/acidosis, clinical instability and intolerance of CPAP Ventilator strategy: Because of the ball-valve effects, the application of positive pressure may result in pneumothorax or other air leak, so initiating mechanical ventilation requires careful consideration of the risks and benefits.</li><li>low ventilator rate (30/min), adequate expiratory time to minimize air-trapping with inspiratory time 0.3–0.4 s.</li><li>minimal PEEP that is needed to achieve sufficient oxygenation, 5 cm H2O</li><li>PIP limited to 25 cm H2O</li><li>If oxygenation is limited despite increasing PEEP to 7 cm H2O and/or PIP to more than 25 cm H2O to achieve a higher MAP, the infant likely needs more respiratory support and high frequency ventilation should be considered.</li><li>HFV has been successfully used in infants with MAS who are failing conventional ventilation or who have air leak, slower frequencies (8 to 10 Hz) may be useful to improve oxygenation and ventilation in severe cases.</li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p063-1.jpg",
+       "caption": "",
+       "page": 63
+      },
+      {
+       "type": "heading",
+       "text": "Congenital Diaphragmatic Hernia: Pathophysiology:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>It is a malformation resulting in the migration of intra-abdominal organs into the thoracic cavity during fetal development.</li><li>This compromises fetal lung development, leading to pulmonary hypoplasia with involvement of both ipsilateral and contralateral lungs.</li><li>Impaired branching morphogenesis, acinar hypoplasia, decreased terminal bronchioles and failed alveolarization all contribute to decreased compliance and FRC.</li><li>Gas exchange is impaired leading to severe hypoxemia.</li><li>Time constant is reduced due to reduced compliance.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Ventilator strategy:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Permissive hypercapnia (PaCO2 46–60 torr) is frequently practiced along with lower target pre-ductal SaO2 (85–95%) and pH 7.25–7.40.</li><li>Lower peak inspiratory pressures PIP (&lt; 25 cm H2O) are best to avoid pneumothorax.</li><li>Mean airway pressures (MAP) can range from 12 to 18 cm H2O</li><li>HFOV can be used for hypercapnia or hypoxia/hypoxemia either as an initial or rescue therapy after conventional mechanical ventilation did not improve clinical status.</li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p064-1.jpg",
+       "caption": "",
+       "page": 64
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p065-1.jpg",
+       "caption": "",
+       "page": 65
+      },
+      {
+       "type": "heading",
+       "text": "SUMMARY: HOW VENTILATOR CHANGES AFFECT BLOOD GASES"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>A.</strong> Oxygenation:<ul><ul><li>Increasing inspired oxygen is the simplest and most direct means of improving oxygenation</li><li>Increasing PIP although it increases the risk of developing air leaks and BPD.</li><li>Increasing PEEP. It is also associated with Increase in expiratory work, CO2 and dead space.</li><li>Increasing inspiratory time Ti which may result in slower rates.</li></ul></li></ul></li><li><strong>B.</strong> Increase Ventilation and Decrease PaCO2:<ul><ul><li>Increasing PIP</li><li>Increasing expiratory time TE</li><li>Decreasing PEEP</li></ul></li></ul></li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "How do you lower a high PaCO₂ on conventional ventilation?",
+       "options": [
+        "Increase PIP or expiratory time, or decrease PEEP",
+        "Increase PEEP",
+        "Increase FiO₂",
+        "Shorten expiratory time"
+       ],
+       "answer": 0,
+       "explanation": "Summary in the manual: \"B. Increase ventilation and decrease PaCO₂: increasing PIP, increasing expiratory time TE, decreasing PEEP\"."
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m3-p066-1.jpg",
+       "caption": "",
+       "page": 66
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Care and monitoring of a ventilated baby",
+     "order": 14,
+     "read": [
+      {
+       "type": "heading",
+       "text": "Monitoring & routine care:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>It is possible to monitor a variety of respiratory functions at the bedside in infants and children.</li><li>These include an assessment of gas exchange, lung mechanics, work of breathing, neuromuscular capacity and the metabolic status of the patient.</li><li>This chapter will briefly review some of the monitoring that is readily available at the bedside.</li><li>The parameters listed below should be assessed frequently to guide changes in the ventilator settings.</li><li>Care should be taken when any change is made.</li><li>because adjusting one parameter is likely to affect the others.</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Fraction of Inspired Oxygen."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Inspired oxygen may be harmful to the lung parenchyma after prolonged exposure due to the production of toxic oxygen-derived radicals.</li><li>Although the precise threshold for concern is not known, it is desirable to reduce the FIO2 to 0.5 (50% oxygen) or below as soon as possible, ideally within the first 24 hours.</li><li>The primary determinants of oxygenation during mechanical ventilation are FIO2 and mean airway pressure (Paw).</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Humidification:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Inspired oxygen may be harmful to the lung parenchyma after prolonged exposure due to the production of toxic oxygen-derived radicals.</li><li>Although the precise threshold for concern is not known, it is desirable to reduce the FIO2 to 0.5 (50% oxygen) or below as soon as possible, ideally within the first 24 hours.</li><li>The primary determinants of oxygenation during mechanical ventilation are FIO2 and mean airway pressure (Paw).</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Inspiratory Pressure (PIP)"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>It reflects the pressure required to overcome elastic recoil and is the best estimate of peak alveolar pressure, which is an important indicator of alveolar distension.</li><li>Accurate measurement of Ppeak requires the absence of any patient effort during inspiration or exhalation.</li><li>Potential adverse effects from high inspiratory pressure include barotrauma, volutrauma, and reduced cardiac output.</li><li>Inspiratory plateau pressure should ideally be &lt;30 cm H2O.</li><li>Elevated Pplat may be reduced by decreasing PEEP, which may also decrease oxygenation, or by decreasing VT, which may lead to a reduction in minute ventilation.</li><li>Permissive hypercapnia and a controlled reduction in pH may be accepted when high Pplat must be reduced.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Relationship of Inspiratory Time to Expiratory Time and Auto-PEEP"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>The total respiratory cycle time is calculated by dividing 60 seconds by the respiratory rate.</li><li>The times for inhalation (inspiratory time) and exhalation (expiratory time) occur within the total cycle time and are termed the I:E ratio</li><li>During spontaneous breathing, the normal I:E ratio is ~1:2,</li><li>indicating that for normal patients, the exhalation time is about twice as long as inhalation time.</li><li>In chronic lung disease and other conditions associated with obstruction to expiratory flow, such as asthma, the</li><li>exhalation time becomes prolonged, and the I:E ratio changes (e.g., 1:2.5 or 1:3).</li><li>The inspiratory time during volume breaths (AC or SIMV modes) is often determined by the VT and inspiratory gas flow rate (flow × inspiratory time = VT).</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "How soon should FiO₂ be reduced to 0.5 or below, if possible?",
+       "options": [
+        "As soon as possible, ideally within the first 24 hours",
+        "After one week",
+        "Only before extubation",
+        "Never"
+       ],
+       "answer": 0,
+       "explanation": "Inspired oxygen may be harmful to the lung parenchyma after prolonged exposure."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Auto-PEEP, minute ventilation and monitoring",
+     "order": 15,
+     "read": [
+      {
+       "type": "heading",
+       "text": "Reduction in auto-PEEP can be accomplished by:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Shortening the inspiratory time. This extends the expiratory time to allow full exhalation of the VT ; however, it may cause alveoli with longer time constants to fill incompletely.</li><li>Decreasing the respiratory rate. This is the most effective way to decrease auto-PEEP.</li><li>Decreasing VT. Increasing the inspiratory flow rate (volume breaths) is typically less effective unless flow rates are set inappropriately low. The influence of a decreased respiratory rate and VT on the PaCO2, pH, and minute ventilation must be considered.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Minute Ventilation:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>The primary determinant of CO2 exchange during mechanical ventilation is alveolar minute ventilation (VA), calculated as: VA = (VT- VD) × f</li><li>where VD is dead space and f is respiratory rate.</li><li>Physiologic VD represents, in general, lung units that are relatively well ventilated but under perfused.</li><li>The physiologic effect of increased VD is hypercapnia.</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Monitoring patients on mechanical ventilator support: Require continuous monitoring to assess the effects of treatment."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Obtain a chest radiograph after intubation and intermittently as needed to evaluate placement of the endotracheal tube and deterioration in status.</li><li>Obtain arterial blood gas measurements after initiation of mechanical ventilation and intermittently based upon patient status.</li><li>Measure vital signs intermittently; frequently observe the patient directly (including evaluation of patient-ventilator interaction).</li><li>Measure inspiratory plateau pressure as clinically appropriate.</li><li>Use continuous pulse oximetry to measure oxygenation.</li><li>Use ventilator alarms to monitor key physiologic and ventilator parameters.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "What is the most effective way to decrease auto-PEEP?",
+       "options": [
+        "Decreasing the respiratory rate",
+        "Increasing PEEP",
+        "Increasing the rate",
+        "Increasing VT"
+       ],
+       "answer": 0,
+       "explanation": "From \"Reduction in auto-PEEP can be accomplished by\"."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Weaning and readiness for extubation",
+     "order": 16,
+     "read": [
+      {
+       "type": "heading",
+       "text": "WEANING FROM MECHANICAL VENTILATION:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>This process should be considered as soon as pulmonary function begins to improve. Decisions concerning weaning are separate and apart from decisions concerning extubation.</li><li>During weaning from mechanical ventilation, a patient gradually takes on more of the function of gas exchange while the ventilator contributes less to the patient’s minute ventilation.</li><li>The circumstances that required mechanical ventilation support must be resolved. In addition, the patient must actively participate in the process, and objective and subjective criteria must be set to monitor the success or failure of the process.</li><li>Factors that influence weaning from mechanical ventilation include:<ul><li>the patient’s level of alertness,</li><li>need for sedative medication,</li><li>respiratory drive and adequacy of oxygenation (SPO2 &gt;95% with fractional excretion of oxygen&lt; 40% and or low PEEP requirements &lt;7cmH2o),</li><li>Adequacy of ventilation (PaCo2 &lt;45 mmHg with no chronic respiratory failure, or &gt;45 mmHg with acceptable PH),</li><li>the time elapsed since the patient’s most recent episode of respiratory or hemodynamic decompensation.</li></ul></li><li>Although previously thought of as a failed weaning attempt, it is currently endorsed by the American College of Chest Physicians and the American Thoracic Society (ATS) to extubate patients to preventive non-invasive ventilation. Multiple studies correlated extubation to NIV with shorter intensive care length of stay and short-term mortality. Predictors for successful extubation:</li><li>Once the neonate has achieved ventilatory settings when extubation seems to be a reasonable next step, physicians should evaluate whether the patient is ‘ready’ or not for extubation. This is a very important phase of this whole process since some patients can be easily weaned to low settings but are not yet prepared to cope with respiration without invasive support.</li><li>The following section will review the role of clinical factors, spontaneous breathing trials (SBT) and autonomic nervous system function evaluation in assessing extubation readiness in extremely preterm infants.</li></ul>"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Clinical Factors:</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Several epidemiological studies have tried to identify the risk factors</td></tr></table>"
+      },
+      {
+       "type": "paragraph",
+       "text": "associated with extubation failure in preterm infants. Those include:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><ul><li>low gestational age (&lt;26 weeks),</li><li>prolonged ventilation (&gt;10–14 days),</li><li>low pH and extubation from high ventilatory settings (e.g., high mean airway pressure and high FiO₂ ).</li><li>Infants with a history of previous extubation failure or multiple intubation attempts are also predisposed to fail extubation again.</li><li>In addition, the presence of other morbidities, such as residual lung disease (e.g., bronchopulmonary dysplasia) or a hemodynamically significant patent ductus arteriosus (PDA) can increase the likelihood of extubation failure.</li></ul></li><li>Autonomic Nervous System Function :<ul><li>Variations in heart rate and respiratory rate are well known to be influenced by the autonomic nervous system (ANS). In fact, integrity of the cardiovascular system depends on the right balance between sympathetic and parasympathetic tones.</li><li>The role of heart rate variability(HRV) and respiratory variability(RV) in predicting disease in newborn infants is not as well understood.</li><li>It has however gained popularity over the past years, especially with the latest evidence that loss of HRV precedes the clinical presentation of late-onset neonatal sepsis.</li><li>With regards to prediction of extubation readiness, a recent small prospective observational study of 56 preterm infants (birth weight ≤1,250 g) showed that HRV was significantly decreased in those who failed extubation.</li></ul></li></ul>"
+      },
+      {
+       "type": "reveal",
+       "text": "Which preterm babies are at higher risk of failing extubation?",
+       "answer": "Low gestational age (< 26 weeks), prolonged ventilation (> 10–14 days), low pH, extubation from high settings (high MAP, high FiO₂), previous extubation failure or multiple intubation attempts, and residual lung disease (BPD) or a significant PDA."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "How to extubate, and caffeine",
+     "order": 17,
+     "read": [
+      {
+       "type": "heading",
+       "text": "Spontaneous Breathing Trials"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>SBTs have been validated and extensively used in adult and pediatric patients as a means of predicting successful extubation.</li><li>In premature infants, though, data to justify their use are insufficient. A meta-analysis on SBT concluded that preterm infants should be extubated directly without a trial of SBT.<ul><li>permissive hypercapnia is a strategy that may facilitate weaning from MV and reduce ventilator-induced lung injury.</li><li>Various PaCO₂ targets have been used in studies, although generally they are limited by a pH of at least 7.20–7.25.</li><li>Preterm infants exposed to permissive hypercapnia for 10 days or longer have shown improved respiratory drive, a reduction in number of days on MV, and a trend toward reduction of BPD or death. It appears suitable to target PaCO₂ levels of 50–60 while maintaining a pH over 7.20</li></ul></li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "PRACTISE THIS SKILL How to Extubate:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Once an infant is deemed ready for extubation, a number of steps need to be followed methodically to ensure a successful transition.</li><li>The process of extubation takes time, meticulous planning and requires the full collaboration of all team members caring for the infant (including clinicians, nurses and respiratory therapists). The procedure itself should be done in a controlled environment, in the presence of personnel skilled in respiratory stabilization and intubation (if needed)</li><li><strong>1.</strong> Develop and implement a mechanical ventilation protocol, including the weaning phase, extubation and reintubation criteria. This should involve all health care professionals (neonatologists, nurses and respiratory therapists)</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "working at the NICU."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>2.</strong> Use assist control mode with volume-targeted ventilation if equipped with the proximal flow sensor</li><li><strong>3.</strong> Allow for permissive hypercapnia (PaCO₂ 50–60 mmHg) and establish oxygen saturation targets (SpO₂ 91–95 %)</li><li><strong>4.</strong> Administer a loading dose of caffeine before extubation (ideally within 24 h prior to extubation)</li><li><strong>5.</strong> Place the infant on CPAP or NIPPV immediately after extubation (PEEP ≥5 cmH O) using bi-nasal prongs or a nasal mask</li><li><strong>6.</strong> Enteral feeds should be stopped for 4 hrs before extubation.</li><li><strong>7.</strong> Acceptable weaning parameters may include:</li><li><strong>i.</strong> MAP 8cm H2o or less,</li><li><strong>ii.</strong> Fio2 less than 30-40%</li><li><strong>iii.</strong> Rate less than 30Bpm with acceptable blood gas</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Use of Caffeine Prior to Extubation"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>The benefits of caffeine for extremely preterm infants have been suggested in several small single-center studies and confirmed by a large multi-center trial conducted in.</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "This randomized controlled trial showed that infants assigned to the caffeine group had less BPD, a shorter duration on supplemental oxygen and were intubated for almost 1 week less."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>A secondary, post hoc subgroup analysis showed that early administration of caffeine (before 3 days of life) could further reduce the time on MV</li><li>From these studies, we conclude that caffeine is beneficial and should be part of the regimen when preparing an infant for extubation. It appears reasonable to give it within at least 24 h from the projected time of extubation. However, although tempting, the routine administration of caffeine immediately after birth (or in the first few hours after birth) has not been investigated.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "After extubating a preterm baby, when is CPAP or NIPPV started?",
+       "options": [
+        "Immediately after extubation (PEEP ≥ 5 cm H₂O)",
+        "After 4 hours if the baby tires",
+        "Only if a blood gas is abnormal",
+        "Not needed if caffeine was given"
+       ],
+       "answer": 0,
+       "explanation": "Step 5 of \"How to extubate\". A loading dose of caffeine is given before extubation (ideally within 24 hours), and feeds stopped 4 hours before."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Extubating a preterm baby step by step",
+       "caption": "Checking the weaning parameters, caffeine given, feeds stopped, CPAP set up and running at the bedside before the tube comes out; extubation and immediate CPAP.",
+       "script": "SN3.3.2"
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "After extubation, and failed weaning",
+     "order": 18,
+     "read": [
+      {
+       "type": "heading",
+       "text": "Post-extubation Ventilation Strategies"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Following extubation, premature infants still have insufficient respiratory drive and muscle strength to maintain FRC independently. For this reason, a distending pressure is necessary to reduce the risk of post-extubation atelectasis. This pressure should be applied immediately after the removal of the endotracheal tube and may be provided in the form of CPAP or nasal intermittent positive pressure ventilation (NIPPV) using short, bi-nasal prongs or nasal masks.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Common reasons for failed weaning include:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Cardiac dysfunction</li><li>Cognitive dysfunction</li><li>Respiratory pump failure</li><li>Respiratory muscle and diaphragmatic dysfunction</li><li>Metabolic disorders</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "A baby keeps failing extubation. What does the manual list as common reasons for failed weaning?",
+       "options": [
+        "Cardiac or cognitive dysfunction, respiratory pump failure, respiratory muscle and diaphragm dysfunction, metabolic disorders",
+        "Only the lungs",
+        "Too much caffeine",
+        "Feeding too early"
+       ],
+       "answer": 0,
+       "explanation": "Look beyond the lungs: the heart, metabolic state, diaphragm and sedation."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Complications of mechanical ventilation",
+     "order": 19,
+     "read": [
+      {
+       "type": "rich",
+       "text": "<ul><li>Mechanical ventilation (MV) is life-saving for many babies who require respiratory support in the newborn period.</li><li>Paediatric patients and newborns in particular are anatomically and physiologically than the increase in airway diameter which is a precipitating factor in why infants are especially prone to hyperinflation and air trapping.</li><li>Unfortunately, infants who require mechanical ventilation frequently develop complications. The most common ones are:</li><li><strong>A.</strong> Lung injury and oxygen toxicity:<ul><li><strong>1.</strong> BPD is related to increased airway pressure and changes in lung volume, although</li></ul></li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "oxygen toxicity, anatomic and physiologic immaturity, and individual susceptibility also contribute."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>2.</strong> Air leak is directly related to increased airway pressure. Risk is increased at MAPs in</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "excess of 14 cm H2O."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>B.</strong> Mechanical:<ul><li><strong>1.</strong> Obstruction of endotracheal tubes may result in hypoxemia and respiratory acidosis.</li><li><strong>2.</strong> Equipment malfunction, particularly disconnection, is not uncommon and requires</li></ul></li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "functioning alarm systems and vigilance."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>C.</strong> Complications of invasive monitoring:<ul><li><strong>1.</strong> Peripheral arterial occlusion with infarction</li><li><strong>2.</strong> Aortic thrombosis from umbilical arterial catheters, occasionally leading to renal</li></ul></li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "impairment and hypertension"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>3.</strong> Emboli from flushed catheters, particularly to the lower extremities, the splanchnic bed,</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "or even the brain"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>D.</strong> Anatomic:<ul><li><strong>1.</strong> Subglottic stenosis from prolonged intubation; risk increases with multiple reintubations</li><li><strong>2.</strong> Acquired tracheobronchomalacia from prolonged mechanical intubation</li><li><strong>3.</strong> Palatal grooves from prolonged orotracheal intubation</li><li><strong>4.</strong> Vocal cord damage</li></ul></li><li><strong>E.</strong> Ventilator associated pneumonia caused by nosocomial infection in the NICU. It can be prevented by early extubation to minimize the time spent on the ventilator, changing ventilator circuits only as needed, mouth care, and medical staff hand hygiene.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "How can ventilator-associated pneumonia be prevented, according to the manual?",
+       "options": [
+        "Early extubation, changing circuits only as needed, mouth care and hand hygiene",
+        "Changing the circuit every day",
+        "Routine suction every hour",
+        "Prophylactic antibiotics for all"
+       ],
+       "answer": 0,
+       "explanation": "From \"Complications of mechanical ventilation\", E. Air leak risk increases at MAPs over 14 cm H₂O."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Troubleshooting the ventilated baby",
+     "order": 20,
+     "read": [
+      {
+       "type": "rich",
+       "text": "<ul><li>Sudden desaturation with high CO2: Disconnect the patient and bag;<ul><li>If he improves, then check the ventilator (O2 source, increase Fio2, consider mechanical or electrical failure).</li><li>Also check the tube for displacement, obstruction or Leak.</li><li>If he does not improve, now assess the baby for pneumothorax, hypoglycaemia, hypotension, intraventricular haemorrhage and sepsis.</li></ul></li><li>Gradual desaturation with high CO2: This suggests inappropriate ventilator settings;<ul><li>Increase PIP/ PEEP/ I:E ratio</li><li>Repeat blood gas.</li></ul></li><li>Gradual increase in PCO2 without gross changes in PO2: May be due to:<ul><li>Insufficient tidal volume, rate or both</li><li>Increased dead space (long ETT, non-ventilated alveoli)</li></ul></li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Actions:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><ul><li>Increase PIP by (2-5cm water), and/ or</li><li>Decrease PEEP by 1, and/ or</li><li>Increase rate by (5-10 bpm), and/ or</li><li>Shorten ETT if long to decrease the dead space.</li></ul></li><li>Decrease in PCO2 caused by over-ventilation:<ul><ul><ul><li>Decrease the rate,</li><li>Decrease PIP and or increase PEEP.</li></ul></li></ul></li></ul></li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "A ventilated baby suddenly desaturates with a high CO₂. What is the first action?",
+       "options": [
+        "Disconnect the baby from the ventilator and bag by hand",
+        "Increase the FiO₂ on the ventilator",
+        "Increase the PIP",
+        "Send a blood gas and wait"
+       ],
+       "answer": 0,
+       "explanation": "If he improves, check the ventilator and the tube (displacement, obstruction, leak). If he does not, assess the baby: pneumothorax, hypoglycaemia, hypotension, IVH, sepsis."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Sudden desaturation on the ventilator: disconnect and bag",
+       "caption": "A simulated ventilated preterm desaturates; the nurse disconnects and bags; two endings: the baby improves (tube or ventilator problem) or not (pneumothorax: transillumination).",
+       "script": "SN3.3.3"
+      },
+      {
+       "type": "courselink",
+       "course": "Sick & Small Newborn · Module 2: Special Newborn Care",
+       "module": 7,
+       "lesson": "Needle thoracotomy",
+       "label": "Procedure · Module 2, Neonatal Procedures",
+       "text": "If a pneumothorax is the cause."
+      }
+     ],
+     "see": [],
+     "practise": []
+    },
+    {
+     "title": "Exercises: mechanical ventilation",
+     "order": 21,
+     "read": [
+      {
+       "type": "paragraph",
+       "text": "Work through each exercise on your own or in your small group and write your answers on the lines provided. The answers are not printed here — your facilitator will go through them with you after you have tried."
+      },
+      {
+       "type": "note",
+       "text": "In this online course you write your answer in the exercise, and the facilitator guide's answer key opens after you submit it. Try each case before you look.",
+       "label": "Online course"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">CASE EXERCISE Exercise 1 — Case — The Baby CPAP Could Not Hold</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">A 28-week baby, day 1, on CPAP 6 cmH₂O and FiO₂ 0.55 for RDS. Over the last hour: rising oxygen</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">requirement, now 0.65; a blood gas shows pH 7.24, PaCO₂ 64; two apnoeas needing stimulation;</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">visibly tiring.</td></tr></table>"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "ssnb-m3-s3-ex1",
+       "note": "Exercise 1 — Case — The Baby CPAP Could Not Hold — Q1. Has CPAP failed? Which criteria are met? Q2. What is the next step — and what must happen before you set a single ventilator dial? Q3. What surfactant decision runs alongside this?"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">CASE EXERCISE Exercise 2 — Scenario — Run the Algorithm Live</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">A ventilated 27-week baby, day 2, suddenly desaturates to 78% with a rising CO₂ on the monitor. Give</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">the group 60 seconds.</td></tr></table>"
+      },
+      {
+       "type": "exercise",
+       "exerciseId": "ssnb-m3-s3-ex2",
+       "note": "Exercise 2 — Scenario — Run the Algorithm Live — Q1. What is your assessment of this baby? Classify the problem. Q2. What are your immediate actions, in order of priority?"
+      },
+      {
+       "type": "heading",
+       "text": "References:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Complications during mechanical ventilation—A pediatric intensive care perspective<ul><li>PMC (nih.gov)</li></ul></li><li><strong>2.</strong> Mechanical ventilation in neonates and children A Pathophysiology-Based Management Approach Ashok P. Sarnaik Shekhar T. Venkataraman Bradley A. Kuch Editors M</li><li><strong>3.</strong> Cloherty and Stark’s manual of neonatal care by Eric. C. Eichinwald Ann R. Hansen Camilia R. Martin Ann R. Stark</li></ul>"
+      }
+     ],
+     "see": [],
+     "practise": []
+    }
+   ]
+  }
+ ],
+ "exercises": [
+  {
+   "id": "ssnb-m3-s2-ex1",
+   "order": 1,
+   "title": "Sick & Small Newborn: SSN M3 · Scenario 1 — The Baby Who Is Tiring",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 10,
+   "draft": false,
+   "source": "Manual Module (3) Intensive Newborn Care, Section 2 exercises; answer key: Facilitator guide 2026",
+   "narrative": [
+    "A preterm baby with respiratory distress. Increasing oxygen has been tried. The baby is now working hard to breathe."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "q1",
+     "type": "open",
+     "question": "Q1. What is your assessment of this baby? Classify the problem. Q2. What are your immediate actions, in order of priority? Q3. What will you monitor, and when would you refer or escalate?",
+     "points": [
+      "Expected Participant Reasoning",
+      "Persistent hypoxia despite oxygen",
+      "High respiratory rate with severe work of breathing",
+      "Prematurity + RDS risk",
+      "Baby tiring → impending failure Correct Action — Facilitator Emphasises Start CPAP IMMEDIATELY. Do NOT wait for further deterioration. Do NOT increase oxygen blindly.",
+      "Key Teaching Points",
+      "RR > 70 + retractions + poor response to oxygen = NIV indicated.",
+      "Early CPAP prevents intubation.",
+      "Delayed action worsens outcomes.",
+      "Common Errors to Correct",
+      "Increasing oxygen flow repeatedly",
+      "Waiting for consultant review",
+      "No baseline documentation before NIV"
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "ssnb-m3-s2-ex2",
+   "order": 2,
+   "title": "Sick & Small Newborn: SSN M3 · Skills Station Tasks (CPAP assembling)",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 10,
+   "draft": false,
+   "source": "Manual Module (3) Intensive Newborn Care, Section 2 exercises; answer key: Facilitator guide 2026",
+   "narrative": [
+    "Assemble CPAP and do the wall connections.",
+    "Apply the interface correctly.",
+    "State the initial settings.",
+    "Identify the danger signs after initiation.",
+    "Safety emphasis: a poorly fitted CPAP causes nasal injury, air leaks, and treatment failure. The fit IS the therapy."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "q1",
+     "type": "open",
+     "question": "Q1. What is your assessment of this baby? Classify the problem. Q3. What will you monitor, and when would you refer or escalate?",
+     "points": [
+      "Assemble CPAP and do the wall connections.",
+      "Apply the interface correctly.",
+      "State the initial settings.",
+      "Identify the danger signs after initiation.",
+      "Safety emphasis: a poorly fitted CPAP causes nasal injury, air leaks, and treatment failure.",
+      "The fit IS the therapy."
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "ssnb-m3-s2-ex3",
+   "order": 3,
+   "title": "Sick & Small Newborn: SSN M3 · Scenario 3 — Response to CPAP",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 10,
+   "draft": false,
+   "source": "Manual Module (3) Intensive Newborn Care, Section 2 exercises; answer key: Facilitator guide 2026 (line 7719)",
+   "narrative": [
+    "30 minutes after CPAP initiation: RR 62/min · HR 148/min · SpO₂ 92% on FiO₂ 0.30 · chest indrawing mild · baby more active."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "q1",
+     "type": "open",
+     "question": "Q1. What is your assessment of this baby? Classify the problem. Q2. What are your immediate actions, in order of priority? Q3. What will you monitor, and when would you refer or escalate?",
+     "points": [
+      "IMPROVEMENT. Compare to a distressed baby: the rate has settled, the indrawing is now only mild, the baby is more active, and the saturation is on target at a LOW FiO₂ of 0.30. Every trend is the right way.",
+      "The parameters that prove it: reduced work of breathing (mild indrawing), a settling respiratory rate, improved activity — not the saturation alone.",
+      "Document: the settings, the full set of vitals, the work of breathing, and the time.",
+      "Plan: continue CPAP, maintain monitoring, avoid unnecessary changes.",
+      "Teaching point: this is the GREEN column of the traffic light. The instinct of an anxious team is to keep adjusting a baby who is getting better. Do not. ‘Avoid unnecessary changes’ is an active decision, not passivity.",
+      "The CPAP Adjustment Traffic Light (Module 3) INCREASE CPAP INCREASE FiO₂ NO CHANGE",
+      "CRITERIA:",
+      "Retractions ++ (severe)",
+      "SpO₂ < 90%",
+      "Chest X-ray < 6 spaces (30 min post-CPAP)",
+      "ACTION:",
+      "Increase CPAP by 1 cmH₂O steps",
+      "Reassess after each adjustment",
+      "Monitor for improvement",
+      "CRITERIA:",
+      "Retractions + (mild) or absent",
+      "SpO₂ < 90%",
+      "Adequate CPAP pressure",
+      "ACTION:",
+      "Increase FiO₂ by 5% steps",
+      "For every 10% FiO₂ rise: reassess need for 1 cmH₂O CPAP increase",
+      "Monitor SpO₂ response",
+      "CRITERIA:",
+      "Baby comfortable",
+      "Minimal / no retractions",
+      "Normal CRT & BP",
+      "SpO₂ 90–99%",
+      "Good bubbling",
+      "Audible breath sounds",
+      "ACTION:",
+      "Continue current settings",
+      "Maintain monitoring",
+      "Document stable status",
+      "The golden rule of adjustment: FiO₂ and pressure go hand in hand. If there is a mismatch, something is wrong. Bring down the FiO₂ FIRST, then the pressure.",
+      "Monitoring — What You Check, and How Often Frequency Check EVERY HOUR (visual) The nose is not squashed or pushed upwards · the eyes are clearly visible · tapes not too tight, no indentation, pitting or ocular oedema At least 4-HOURLY (physical) Hat fit — not too tight/loose, not rubbing · remove prongs/mask to rest the nose from pressure · inspect the nose for redness, breakdown, bruising, indentation, altered shape, bleeding · prongs clean and patent before replacing · ears not creased or folded Continuously Pulse oximetry · HR, RR, chest indrawing, grunting, flaring As required Blood gas · regular inspection of the circuit and equipment",
+      "Remember (manual): remove prongs/mask by LOOSENING the tapes, not by pulling them off the face. Perform regular mouth care. Suctioning should NOT be routine — only as the baby dictates.",
+      "Document whenever the nose is checked.",
+      "Also monitor: capillary refill, blood pressure, urine output; tone, activity and response; a respiratory distress score (e.g. Downe's); chest X-ray at start and if deterioration occurs.",
+      "Feeding on NIV",
+      "Babies are initially kept nil per mouth until stabilised.",
+      "Thereafter, commence feeds by orogastric tube.",
+      "The NCPAP System — Four Things Right, Every Round",
+      "Tubes in the nose",
+      "Nasal airway clear",
+      "Mouth closed",
+      "Neck slightly extended Ward Round (your draft) — Run It Live",
+      "Conduct a ward round of 3–4 patients on NCPAP (or simulated stations).",
+      "For each baby, demonstrate: pressure · FiO₂ and oxygen saturation · clinical signs · any complications · whether adjustments are needed.",
+      "Each pair of participants answers for each patient, then places the baby in a traffic-light column and justifies it."
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "ssnb-m3-s3-ex1",
+   "order": 1,
+   "title": "Sick & Small Newborn: SSN M3 · Case — The Baby CPAP Could Not Hold",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 10,
+   "draft": false,
+   "source": "Manual Module (3) Intensive Newborn Care, Section 3 exercises; answer key: Facilitator guide 2026 (line 7976)",
+   "narrative": [
+    "A 28-week baby, day 1, on CPAP 6 cmH₂O and FiO₂ 0.55 for RDS. Over the last hour: rising oxygen requirement, now 0.65; a blood gas shows pH 7.24, PaCO₂ 64; two apnoeas needing stimulation;",
+    "visibly tiring."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "q1",
+     "type": "open",
+     "question": "Q1. Has CPAP failed? Which criteria are met? Q2. What is the next step — and what must happen before you set a single ventilator dial? Q3. What surfactant decision runs alongside this?",
+     "points": [
+      "CPAP has failed. Three criteria met: FiO₂ now > 0.6; pH < 7.28 with PaCO₂ > 60; recurrent apnoea requiring stimulation. This is not a borderline call.",
+      "Next step: intubation and invasive ventilation. Before touching a dial — the intubation itself (taught in the Advance Airway session), confirmed tube position, and a plan. HFNC during intubation improves first-attempt success and stability (cross-reference NIV).",
+      "Surfactant: this RDS baby who is now intubated should receive surfactant — early rescue. The ventilator and the surfactant are one decision, not two (cross-reference Prematurity — RDS)."
+     ],
+     "explain": ""
+    }
+   ]
+  },
+  {
+   "id": "ssnb-m3-s3-ex2",
+   "order": 2,
+   "title": "Sick & Small Newborn: SSN M3 · Scenario — Run the Algorithm Live",
+   "subCourse": "online IMCI course",
+   "passMark": 80,
+   "estimatedMinutes": 10,
+   "draft": false,
+   "source": "Manual Module (3) Intensive Newborn Care, Section 3 exercises; answer key: Facilitator guide 2026",
+   "narrative": [
+    "A ventilated 27-week baby, day 2, suddenly desaturates to 78% with a rising CO₂ on the monitor. Give the group 60 seconds."
+   ],
+   "kind": "quiz",
+   "questions": [
+    {
+     "id": "q1",
+     "type": "open",
+     "question": "Q1. What is your assessment of this baby? Classify the problem. Q2. What are your immediate actions, in order of priority?",
+     "points": [
+      "Expected first action: DISCONNECT and BAG by hand — not reach for the ventilator.",
+      "If bagging is easy and the baby pinks up: ventilator or tube. Check O₂ source, FiO₂, circuit, and the tube for displacement/obstruction/leak.",
+      "If bagging is HARD and the baby stays blue: the baby. Think pneumothorax first — transilluminate, prepare to decompress — then hypoglycaemia, hypotension, IVH, sepsis."
+     ],
+     "explain": ""
+    }
+   ]
+  }
+ ]
+}

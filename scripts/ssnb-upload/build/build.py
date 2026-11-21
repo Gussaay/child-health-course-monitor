@@ -79,9 +79,8 @@ def cases(items, ctx):
         title0 = title
         key = answer_key(fgt, used=ctx['fg_used']) if fgt else None
         if key: ctx['fg_used'].add(key[0])
-        points = key[1] if key else []
-        if not points:
-            points = ctx['answers'].get(title0, [])
+        # an answer range written in books/<key>.py wins over the automatic match (to leave out a facilitator's aside)
+        points = ctx['answers'].get(title0) or (key[1] if key else [])
         if not points:
             REPORT.append(f"no answer key in the facilitator guide for: {ctx['key']} Section {ctx['sec']}: {title}")
             points = ['Discuss your answer with your facilitator.']
@@ -233,7 +232,8 @@ def finish(cfg, out_mods, exercises):
                 if b['type'] == 'video' and not b.get('url') and b.get('script') in VIDEOS: b['url'] = VIDEOS[b['script']]
                 read.append(b)
             where = f"{cfg.SHORT} · {mm['title']} · {L['title']}"
-            if not any(b['type'] in ACTIVITY for b in read): ERRORS.append(f'no activity: {where}')
+            # a video placeholder (no link yet) is not an activity in the app (activityKeys.js)
+            if not any(b['type'] in ACTIVITY and not (b['type'] == 'video' and not b.get('url')) for b in read): ERRORS.append(f'no activity: {where}')
             for b in read:
                 if b['type'] in ('paragraph', 'heading', 'rich', 'note') and not str(b.get('text', '')).strip(): ERRORS.append(f'empty {b["type"]}: {where}')
                 if b['type'] == 'question' and not (0 <= b['answer'] < len(b['options'])): ERRORS.append(f'answer out of range: {where}')
@@ -254,6 +254,15 @@ def main():
         if not r: continue
         cfg, mods, exs, els, used = r
         pkg = finish(cfg, mods, exs)
+        # word-loss check: every word of the book's elements should be somewhere in the course (lessons or exercises)
+        text = html.unescape(re.sub(r'</?[a-z][a-z0-9]*[^<>]*>', ' ', json.dumps(pkg, ensure_ascii=False))).lower()
+        have = set(re.findall(r"[a-z]{3,}", text))
+        book = []
+        for e in els:
+            if e['i'] in used and e['k'] in ('line', 'para'): book += re.findall(r"[a-z]{3,}", e['t'].lower())
+            if e['i'] in used and e['k'] == 'table': book += [w for r in e['rows'] for c in r for w in re.findall(r"[a-z]{3,}", c.lower())]
+        lost = sorted({w for w in book if w not in have})
+        print(f"   word check: {len(book)} words of the book, {len(lost)} distinct words not found" + (': ' + ' '.join(lost[:30]) if lost else ''))
         out = os.path.join(ROOT, 'course-packages', cfg.FILE)
         json.dump(pkg, open(out, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
         nl = sum(len(m['sections']) for m in pkg['modules'])
