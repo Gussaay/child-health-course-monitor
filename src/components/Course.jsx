@@ -72,6 +72,7 @@ import { publicBaseUrl } from '../utils/publicLink';
 import { useRememberedState } from '../utils/rememberedState';
 import { countsForCoverage } from '../utils/coverageEligibility';
 import { textIncludes, lowerText } from '../utils/textSearch';
+import { facilitatorOptionsFor } from '../utils/facilitatorOptions';
 import { IS_EMONC_SITE } from '../siteMode';
 import { usePageAddButton } from '../utils/pageChrome';
 
@@ -2948,52 +2949,34 @@ export function CourseForm({
 
     const [error, setError] = useState('');
 
-    const directorOptions = useMemo(() => {
-        // Program Management: any existing facilitator can be the course director.
-        if (isProgramManagement || canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
-            return [...facilitatorsList].sort((a, b) => a.name.localeCompare(b.name));
+    // The whole facilitator list is offered for every role: the people
+    // tagged for this package come first, but nobody is hidden — a package
+    // with nobody tagged yet used to offer an empty search, so no director
+    // or facilitator could be chosen and the course could not be created.
+    const directorOptions = useMemo(() => facilitatorOptionsFor(facilitatorsList, (f) => {
+        const fCourses = Array.isArray(f.courses) ? f.courses : [];
+        if (isProgramManagement) return true;
+        if (isCpcm) {
+            return fCourses.includes('ICCM') || fCourses.includes('IMNCI') || fCourses.includes('Comprehensive Package For Community Midwives');
         }
-        return facilitatorsList
-            .filter(f => {
-                const fCourses = Array.isArray(f.courses) ? f.courses : [];
-                if (isCpcm) {
-                    return fCourses.includes('ICCM') || fCourses.includes('IMNCI') || fCourses.includes('Comprehensive Package For Community Midwives');
-                }
-                if (isSmallAndSick) {
-                    return fCourses.includes('SSNC') || fCourses.includes('Small & Sick Newborn');
-                }
-                return f.directorCourse === 'Yes';
-            })
-            .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, isCpcm, isSmallAndSick, isProgramManagement, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures]);
+        if (isSmallAndSick) {
+            return fCourses.includes('SSNC') || fCourses.includes('Small & Sick Newborn');
+        }
+        return f.directorCourse === 'Yes';
+    }), [facilitatorsList, isCpcm, isSmallAndSick, isProgramManagement]);
 
-    const clinicalInstructorOptions = useMemo(() => {
-        if (canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
-            return [...facilitatorsList].sort((a, b) => a.name.localeCompare(b.name));
-        }
-        return facilitatorsList
-            .filter(f => f.isClinicalInstructor === 'Yes' || f.directorCourse === 'Yes')
-            .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures]);
+    const clinicalInstructorOptions = useMemo(() => facilitatorOptionsFor(facilitatorsList,
+        (f) => f.isClinicalInstructor === 'Yes' || f.directorCourse === 'Yes'), [facilitatorsList]);
 
-    const facilitatorOptions = useMemo(() => {
-        // Program Management: any existing facilitator can facilitate.
-        if (isProgramManagement || canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
-            return [...facilitatorsList].sort((a, b) => a.name.localeCompare(b.name));
-        }
-        return facilitatorsList
-            .filter(f => {
-                const fCourses = Array.isArray(f.courses) ? f.courses : [];
-                
-                if (isIccm || isCpcm) return fCourses.includes('ICCM') || fCourses.includes('IMNCI') || fCourses.includes('Comprehensive Package For Community Midwives');
-                if (isInfectionControl) return fCourses.includes('IPC');
-                if (isSmallAndSick) return fCourses.includes('SSNC') || fCourses.includes('Small & Sick Newborn');
-                if (isEmonc) return fCourses.includes('EmONC') || fCourses.includes('EENC');
-                
-                return fCourses.includes(courseType);
-            })
-            .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, courseType, isInfectionControl, isIccm, isCpcm, isProgramManagement, isSmallAndSick, isEmonc, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures]);
+    const facilitatorOptions = useMemo(() => facilitatorOptionsFor(facilitatorsList, (f) => {
+        const fCourses = Array.isArray(f.courses) ? f.courses : [];
+        if (isProgramManagement) return true;
+        if (isIccm || isCpcm) return fCourses.includes('ICCM') || fCourses.includes('IMNCI') || fCourses.includes('Comprehensive Package For Community Midwives');
+        if (isInfectionControl) return fCourses.includes('IPC');
+        if (isSmallAndSick) return fCourses.includes('SSNC') || fCourses.includes('Small & Sick Newborn');
+        if (isEmonc) return fCourses.includes('EmONC') || fCourses.includes('EENC');
+        return fCourses.includes(courseType);
+    }), [facilitatorsList, courseType, isInfectionControl, isIccm, isCpcm, isProgramManagement, isSmallAndSick, isEmonc]);
 
     const federalCoordinatorOptions = useMemo(() => {
         return federalCoordinatorsList.map(c => ({ id: c.id, name: c.name }));
@@ -3489,7 +3472,7 @@ export function CourseForm({
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                                 <div {...fieldWrap('director')}>
                                     <FormGroup label={<ReqLabel text={L('مدير الدورة', 'Course director')} required={!isInfectionControl} />}>
-                                        <SearchableSelect disabled={isSaving} value={director} onChange={setDirector} options={directorOptions} placeholder={searchPh} label={L('مدير الدورة', 'Course director')} />
+                                        <SearchableSelect disabled={isSaving} value={director} onChange={setDirector} onOpenNewForm={(name) => setDirector(name)} options={directorOptions} placeholder={searchPh} label={L('مدير الدورة', 'Course director')} />
                                         <FieldError show={err('director')}>{req}</FieldError>
                                     </FormGroup>
                                 </div>
@@ -3505,7 +3488,7 @@ export function CourseForm({
                             {(isImnci || isIccm || isCpcm) && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end pt-4 border-t border-gray-100">
                                     <FormGroup label={L('المدرب السريري - اختياري', 'Clinical instructor (optional)')}>
-                                        <SearchableSelect disabled={isSaving} value={clinical} onChange={setClinical} options={clinicalInstructorOptions} placeholder={searchPh} label={L('المدرب السريري - اختياري', 'Clinical instructor (optional)')} />
+                                        <SearchableSelect disabled={isSaving} value={clinical} onChange={setClinical} onOpenNewForm={(name) => setClinical(name)} options={clinicalInstructorOptions} placeholder={searchPh} label={L('المدرب السريري - اختياري', 'Clinical instructor (optional)')} />
                                     </FormGroup>
                                     {isImnci && (
                                         <FormGroup label={L('اسم الورشة الفرعية', 'Sub-course')}>
@@ -3535,6 +3518,7 @@ export function CourseForm({
                                                 disabled={isSaving}
                                                 value={assignment.name}
                                                 onChange={(value) => updateFacilitatorAssignment(groupName, index, 'name', value)}
+                                                onOpenNewForm={(name) => updateFacilitatorAssignment(groupName, index, 'name', name)}
                                                 options={facilitatorOptions}
                                                 placeholder={searchPh}
                                                 label={L('اسم الميسر', 'Facilitator')}
