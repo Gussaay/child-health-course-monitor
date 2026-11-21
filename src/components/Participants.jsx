@@ -43,6 +43,7 @@ import { confirmDialog, alertDialog } from './dialogs';
 import { publicBaseUrl } from '../utils/publicLink';
 import { whatsappLink } from '../utils/whatsapp';
 import { textIncludes } from '../utils/textSearch';
+import { participantPlace, participantPlaceLabel } from '../utils/participantAffiliation';
 import { sharePdf, certificateFileName } from '../utils/sharePdf';
 import { Capacitor } from '@capacitor/core';
 import { useRememberedState } from '../utils/rememberedState';
@@ -2330,6 +2331,7 @@ export function ParticipantsView({
                 setFormCarryOver({
                     group: participantData.group, state: participantData.state, locality: participantData.locality,
                     facilityId: participantData.facilityId || null, center_name: participantData.center_name || '',
+                    program: participantData.program || '',
                 });
                 setEditingParticipant(null);
                 setParticipantFormKey(k => k + 1);
@@ -2960,7 +2962,7 @@ export function ParticipantsView({
 
                                     <td className="p-3 align-middle border border-slate-200">
                                         <div className="text-[12px] font-semibold text-gray-700 whitespace-nowrap truncate max-w-[220px]">
-                                            {course.course_type === 'Program Management' ? (p.department || t('participants_page.common.na', 'N/A')) : p.center_name}
+                                            {course.course_type === 'Program Management' ? (p.department || t('participants_page.common.na', 'N/A')) : participantPlaceLabel(p)}
                                         </div>
                                         {p.locality && <div className="text-xs text-gray-500 whitespace-nowrap truncate max-w-[260px]" title={p.locality}>{t('participants_page.list.locality_value', 'Locality: {{locality}}', { locality: p.locality })}</div>}
                                     </td>
@@ -3048,7 +3050,7 @@ export function ParticipantsView({
                             >
                                 <div>
                                     <h3 className="font-bold text-lg text-gray-800">{p.name}</h3>
-                                    <p className="text-gray-600 text-sm">{p.job_title} • {course.course_type === 'Program Management' ? (p.department || t('participants_page.common.na', 'N/A')) : p.center_name}</p>
+                                    <p className="text-gray-600 text-sm">{p.job_title} • {course.course_type === 'Program Management' ? (p.department || t('participants_page.common.na', 'N/A')) : participantPlaceLabel(p)}</p>
                                     <div className="flex flex-wrap items-center gap-2 mt-2">
                                         <span className="text-xs font-medium px-2 py-1 bg-gray-100 rounded text-gray-600">{t('participants_page.list.group_value', 'Group: {{group}}', { group: p.group })}</span>
                                         {certAwaiting && (
@@ -3165,6 +3167,12 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
     const [locality, setLocality] = useState(initialData?.locality || carryOver?.locality || course?.locality || ''); 
     const [center, setCenter] = useState(String(initialData?.center_name || carryOver?.center_name || '')); 
     const [department, setDepartment] = useState(String(initialData?.department || ''));
+    // Where the participant comes from: a health facility (the usual case)
+    // or a programme such as the National Child Health Program, whose staff
+    // belong to no facility.
+    const [affiliation, setAffiliation] = useState((initialData?.program || carryOver?.program) ? 'program' : 'facility');
+    const [program, setProgram] = useState(String(initialData?.program || carryOver?.program || ''));
+    const fromProgram = !isIccm && !isCpcm && !isProgramManagement && affiliation === 'program';
     const [phone, setPhone] = useState(String(initialData?.phone || ''));
     const [group, setGroup] = useState(initialData?.group || carryOver?.group || 'Group A');
     const [error, setError] = useState('');
@@ -3448,7 +3456,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
     // Steps: the person first, then training, then facility questions.
     useFullPageForm(true);
     const hasTrainingStep = showTestScores || isImnci || isIccm || isCpcm || isEtat || isEenc || isSsnc;
-    const STEP_IDS = ['basic', ...(hasTrainingStep ? ['training'] : []), ...(isImnci ? ['facility'] : [])];
+    const STEP_IDS = ['basic', ...(hasTrainingStep ? ['training'] : []), ...(isImnci && !fromProgram ? ['facility'] : [])];
     const [stepId, setStepId] = useState('basic');
     const stepIndex = STEP_IDS.indexOf(stepId);
     const isLastStep = stepIndex === STEP_IDS.length - 1;
@@ -3505,7 +3513,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
         // one popup per field.
         const missingNow = {
             state: !state, locality: !locality,
-            center: !isProgramManagement && !center.trim(),
+            center: !isProgramManagement && !fromProgram && !center.trim(),
+            program: fromProgram && !program.trim(),
             department: isProgramManagement && !department.trim(),
             name: !name.trim(), job: !finalJobTitle, phone: !phone.trim(),
         };
@@ -3550,6 +3559,14 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                 ? { ...signedApproval, name: name.trim() }
                 : null;
 
+            // Where the participant comes from. A programme participant has
+            // no facility: nothing is added to any facility's staff list.
+            const place = participantPlace({
+                programManaged: isProgramManagement, fromProgram,
+                centerName: center, programName: program,
+                facilityId: (isIccm || isCpcm || selectedFacility?.id?.startsWith('pending_')) ? null : selectedFacility?.id || null,
+            });
+
             let p = {
                 ...(initialData || {}), 
                 name: name.trim(), group, state, locality,
@@ -3566,8 +3583,9 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                 // stale the day the course ended, over a correction that was
                 // deliberately allowed while it was running.
                 ...(approvalFollowsName ? { certificateApproval: approvalFollowsName } : {}),
-                center_name: isProgramManagement ? 'N/A' : center.trim(),
-                facilityId: (isIccm || isCpcm || isProgramManagement || selectedFacility?.id.startsWith('pending_')) ? null : selectedFacility?.id || null, 
+                center_name: place.center_name,
+                facilityId: place.facilityId,
+                program: place.program,
                 job_title: finalJobTitle, phone: phone.trim(), email: email ? email.trim() : null,
                 department: isProgramManagement ? department.trim() : null
             };
@@ -3596,7 +3614,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                         isIntroducingImnci = true;
                     }
                     
-                    p.introduced_imci_to_facility = isIntroducingImnci;
+                    // A programme participant introduces IMNCI to no facility.
+                    p.introduced_imci_to_facility = fromProgram ? false : isIntroducingImnci;
 
                     const computedTotalProv = (Number(imnciDoctorsTotal) || 0) + (Number(imnciMedicalAssistantsTotal) || 0);
                     const computedTrainedProv = (Number(imnciDoctorsTrained) || 0) + (Number(imnciMedicalAssistantsTrained) || 0);
@@ -3624,7 +3643,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                 } else if (isIccm || isCpcm) {
                     p = { ...p, imci_sub_type: finalImciSubType, nearest_health_facility: nearestHealthFacility || null, hours_to_facility: hoursToFacility !== '' ? Number(hoursToFacility) : null }; 
                 }
-            } else if (isEtat) {
+            } else if (isEtat && !fromProgram) {
                 if (!hospitalTypeEtat) { showError('نوع المستشفى مطلوب لـ ETAT.'); setIsSaving(false); return; }
                 p = { 
                     ...p, hospital_type: hospitalTypeEtat, 
@@ -3636,7 +3655,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                     num_staff_in_er: numStaffInEr !== '' ? Number(numStaffInEr) : null, 
                     num_staff_trained_in_etat: numStaffTrainedInEtat !== '' ? Number(numStaffTrainedInEtat) : null 
                 };
-            } else if (isEenc || isSsnc) {
+            } else if ((isEenc || isSsnc) && !fromProgram) {
                 if (!hospitalTypeEenc) { showError(`نوع المستشفى مطلوب لـ ${isEenc ? 'EENC/EmONC' : 'SSNC'}.`); setIsSaving(false); return; }
                 if (hospitalTypeEenc === 'other' && !otherHospitalTypeEenc) { showError(`الرجاء تحديد نوع المستشفى لـ ${isEenc ? 'EENC/EmONC' : 'SSNC'}.`); setIsSaving(false); return; }
                 p = { 
@@ -3705,7 +3724,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                     facilityUpdatePayload = { ...selectedFacility, ...baseFacilityPayload, id: selectedFacility.id, date_of_visit: new Date().toISOString().split('T')[0], [staffField]: updatedStaffList };
                 }
 
-                if (initialData?.facilityId && selectedFacility?.id && initialData.facilityId !== selectedFacility.id) {
+                if (initialData?.facilityId && (fromProgram || (selectedFacility?.id && initialData.facilityId !== selectedFacility.id))) {
                     try {
                         const oldFacility = await getHealthFacilityById(initialData.facilityId);
                         if (oldFacility) {
@@ -3866,6 +3885,19 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                                 </FormGroup>
                             )}
 
+                            {!isProgramManagement && !isIccm && !isCpcm && (
+                                <FormGroup label={L("جهة المشارك", "Participant from")}>
+                                    <Select disabled={isSaving} value={affiliation} onChange={(e) => {
+                                        const v = e.target.value;
+                                        setAffiliation(v);
+                                        if (v === 'program') { setSelectedFacility(null); setCenter(''); setIsEditingExistingWorker(false); }
+                                    }}>
+                                        <option value="facility">{L("مؤسسة صحية", "Health facility")}</option>
+                                        <option value="program">{L("برنامج (مثل البرنامج القومي لصحة الطفل)", "A programme (e.g. National Child Health Program)")}</option>
+                                    </Select>
+                                </FormGroup>
+                            )}
+
                             {!isProgramManagement && (
                                 (isIccm || isCpcm) ? (
                                     <FormGroup label={L("اسم القرية", "Village")}>
@@ -3876,6 +3908,20 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                                             placeholder={L("أدخل اسم القرية", "Village name")}
                                         />
                                     </FormGroup>
+                                ) : fromProgram ? (
+                                    <div {...markWrap('program')}><FormGroup label={L("اسم البرنامج", "Program name")}>
+                                        <Input
+                                            disabled={isSaving}
+                                            value={program}
+                                            onChange={(e) => setProgram(e.target.value)}
+                                            placeholder={L("مثال: البرنامج القومي لصحة الطفل", "e.g. National Child Health Program")}
+                                            list="participant-program-suggestions"
+                                        />
+                                        <datalist id="participant-program-suggestions">
+                                            <option value="National Child Health Program" />
+                                        </datalist>
+                                        <FieldError show={fe('program')}>{reqMsg}</FieldError>
+                                    </FormGroup></div>
                                 ) : (
                                     <div {...markWrap('center')}><FormGroup label={isEtat ? L("اسم المستشفى", "Hospital") : L("اسم المؤسسة الصحية", "Health facility")}>
                                         <div 
@@ -3902,7 +3948,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                                 )
                             )}
                             
-                            {(isIccm || isCpcm || isProgramManagement) ? (
+                            {(isIccm || isCpcm || isProgramManagement || fromProgram) ? (
                                  <FormGroup label={L("اسم المشارك", "Participant name")}>
                                     <Input
                                         disabled={isSaving || !locality}
