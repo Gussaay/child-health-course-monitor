@@ -5,7 +5,7 @@ TITLES = {
     'Shock in Neonates': 'Shock: definition, causes and signs',
     'Shock in Neonates: Fluids': 'Shock: fluids, signs of improvement and antibiotics',
     'Neonatal Hypoglycemia': 'Hypoglycaemia: definition and severity',
-    'Neonatal Hypoglycemia: RISK FACTORS (SCREENING INDICATIONS)': 'Hypoglycaemia: who to screen, and the signs',
+    'Neonatal Hypoglycemia: High-Risk Categories': 'Hypoglycaemia: who to screen, and the signs',
     'Neonatal Hypoglycemia: DIAGNOSIS AND MONITORING': 'Hypoglycaemia: measuring glucose and managing the baby without signs',
     'Neonatal Hypoglycemia: Symptomatic or Severe Hypoglycaemia (BG <1.0mmol/l or there are abnormal clinical signs)': 'Hypoglycaemia: severe or with signs',
     'Neonatal Hypoglycemia: WHEN BLOOD GLUCOSE MONITORING IS UNAVAILABLE In resource-limited settings without glucometers/labs': 'Hypoglycaemia: no glucometer, weaning, and persistent low glucose',

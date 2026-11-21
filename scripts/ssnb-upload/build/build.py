@@ -180,8 +180,9 @@ def build_book(key):
                 lessons.remove(L)
             if len(group) > 1 and mc.get('merge_titles', {}).get(group[0]): first['title'] = mc['merge_titles'][group[0]]
         for old, new in mc.get('rename', {}).items():
-            for L in lessons:
-                if L['title'] == old: L['title'] = new
+            hit = [L for L in lessons if L['title'] == old]
+            if not hit: ERRORS.append(f"{key} S{si}: no lesson titled {old!r} to rename")
+            for L in hit: L['title'] = new
         # inserts: activities, videos, links, after the block holding the anchor text
         for ins in mc.get('add', []):
             anchor, blocks = ins[0], ins[1] if isinstance(ins[1], list) else [ins[1]]

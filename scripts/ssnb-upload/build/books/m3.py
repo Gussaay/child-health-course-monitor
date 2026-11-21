@@ -1,6 +1,7 @@
 # Manual Module (3) Intensive Newborn Care: how the manual becomes the online course. One app module per manual Section.
 from lib import *
 from fg import fg_lines
+from books import m3_all
 CATEGORY = "Small & Sick Newborn"
 SUB = "Online course: Management of Sick and Small Newborns (2026)"
 
@@ -25,7 +26,7 @@ ANSWERS = {
 }
 
 MODULES = [
-    dict(title='Oxygen Therapy', add=[]),
-    dict(title='Non-Invasive Ventilation', add=[]),
-    dict(title='Mechanical Ventilation', add=[]),
+    dict(title='Oxygen Therapy', rename=m3_all.S1_TITLES, add=m3_all.S1),
+    dict(title='Non-Invasive Ventilation', rename=m3_all.S2_TITLES, add=m3_all.S2),
+    dict(title='Mechanical Ventilation', rename=m3_all.S3_TITLES, add=m3_all.S3),
 ]

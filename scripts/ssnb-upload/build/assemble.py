@@ -28,9 +28,21 @@ def list_html(items):
     while stack: out.append('</li></ul>'); stack.pop()
     return ''.join(out)
 
+from src import MARK
+def cell_text(c):
+    """A table cell's printed lines: a line that only continues the one above is joined
+    to it; a line that starts a bullet or a number starts a new line."""
+    out = []
+    for ln in [x.strip() for x in c.split('\n') if x.strip()]:
+        if out and not MARK.match(ln) and not re.search(r'[.:;?!]$', out[-1]):
+            out[-1] += ' ' + ln
+        else:
+            out.append(ln)
+    return '<br>'.join(esc(x) for x in out)
+
 def table_html(rows):
     cell = lambda c, b=False: ('<td style="padding: 6px; border: 1px solid #cbd5e1; vertical-align: top">'
-                               + ('<strong>' if b else '') + esc(c).replace('\n', '<br>') + ('</strong>' if b else '') + '</td>')
+                               + ('<strong>' if b else '') + cell_text(c) + ('</strong>' if b else '') + '</td>')
     head = len(rows) > 1 and all(len(c) < 60 for c in rows[0]) and len(rows[0]) > 1
     body = ''.join('<tr>' + ''.join(cell(c, head and ri == 0) for c in r) + '</tr>' for ri, r in enumerate(rows))
     return '<table style="width: 100%; border-collapse: collapse">' + body + '</table>'
@@ -85,6 +97,9 @@ def split_long(title, blocks, cuts=None):
         if len(cur) > MAX_BLOCKS * 1.5 and b['type'] != 'heading':
             pass
     if cur: parts.append(cur)
+    # a part that is only the references: kept with the part before it
+    while len(parts) > 1 and parts[-1][0]['type'] == 'heading' and re.match(r'^\s*references?\b', parts[-1][0].get('text', ''), re.I):
+        last = parts.pop(); parts[-1] = parts[-1] + last
     if cuts is None and len(parts) > 1 and len(parts[-1]) <= 2 and chars({'text': ' '.join(x.get('text', '') for x in parts[-1])}) < 600:
         last = parts.pop(); parts[-1] = parts[-1] + last
     out = []

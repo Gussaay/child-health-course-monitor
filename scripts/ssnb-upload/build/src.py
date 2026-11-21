@@ -34,8 +34,65 @@ def join(a, b):
     return a + ' ' + b
 
 # ---------------------------------------------------------------- PDF books
+# Subscripts the PDF text layer prints as a separate small "2" (H₂O, FiO₂ ...):
+# the 2 is put back in its word and the stray digit dropped. Listed in README.
+SUBS = [(re.compile(r'\bcm H O\b'), 'cm H₂O'), (re.compile(r'\bH O\b'), 'H₂O'), (re.compile(r'\bFiO\b(?![₂2])'), 'FiO₂'),
+        (re.compile(r'\bPaCO\b(?![₂2])'), 'PaCO₂'), (re.compile(r'\bPaO\b(?![₂2])'), 'PaO₂'), (re.compile(r'\bSpO\b(?![₂2])'), 'SpO₂'),
+        (re.compile(r'\bCO (?=levels|elimination|removal|retention)'), 'CO₂ ')]
+def fix_sub(t):
+    for rx, rep in SUBS: t = rx.sub(rep, t)
+    return t
+STRAY = re.compile(r'^\s*(?:/\s*)?2(?:\s+2)?\s*$')
+
+def box_lines(e, labelled=False):
+    """A text box the PDF draws as a one-column 'table' (or a label | text box): its
+    printed lines, as if they were ordinary lines of the page, so they become
+    paragraphs and lists. A short label cell beside the text, or a short line
+    standing alone between sentences (a heading inside the box), becomes a heading line."""
+    flat = []
+    for row in e['rows']:
+        cells = [c for c in row if c and c.strip()]
+        for ci, c in enumerate(cells):
+            lines = [x.strip() for x in c.split('\n') if x.strip() and not STRAY.match(x)]
+            label = labelled and len(cells) > 1 and ci == 0 and len(lines) <= 3 and len(c) < 60
+            flat += [(t, label) for t in lines]
+    out = []
+    for k, (t, label) in enumerate(flat):
+        prev = out[-1]['t'] if out else ''
+        nxt = flat[k + 1][0] if k + 1 < len(flat) else ''
+        heading = label or (len(t) < 70 and not END.search(t) and not MARK.match(t) and t[:1].isupper()
+                            and (not out or END.search(prev) or out[-1].get('b')) and (MARK.match(nxt) or nxt[:1].isupper()))
+        brk = (not out) or heading or out[-1].get('b') or bool(END.search(prev)) or bool(MARK.match(t))
+        out.append({'k': 'line', 't': fix_sub(t), 'x': 72, 'x1': 540, 'size': 12, 'font': 'Box', 'b': heading,
+                    'gap': 20 if brk else 9, 'i': e['i'], 'page': e['page']})      # a box starts a new block
+    return out
+
+def single_col(e):
+    """(is a text box, has a label column)"""
+    rows = e['rows']
+    if rows and rows[0] and 'EXERCISE' in rows[0][0].replace(' ', '').upper():
+        return False, False      # a case box of the exercises: kept whole (build.py makes it an exercise)
+    one = sum(1 for r in rows if sum(1 for c in r if c.strip()) <= 1)
+    two_label = all(len([c for c in r if c.strip()]) <= 2 for r in rows) and len(rows[0]) <= 3 and \
+        sum(len(r[0]) for r in rows) < 0.25 * sum(len(' '.join(r)) for r in rows) and any('\n' in ' '.join(r) for r in rows) and len(rows) <= 2
+    return (one >= 0.8 * len(rows) or two_label), two_label
+
 def pdf_items(els, lvl_base=72, step=18):
     items, cur = [], None
+    expanded = []
+    for e in els:
+        if e['k'] == 'table' and single_col(e)[0]:
+            expanded.extend(box_lines(e, single_col(e)[1]))
+        elif e['k'] == 'line':
+            if e['size'] <= 9 and STRAY.match(e['t']):
+                expanded.append({**e, 't': '…'})     # a subscript 2, restored by fix_sub: kept only to count as placed
+            else:
+                expanded.append({**e, 't': fix_sub(e['t'])})
+        elif e['k'] == 'table':
+            expanded.append({**e, 'rows': [[fix_sub('\n'.join(x for x in c.split('\n') if not STRAY.match(x))) for c in r] for r in e['rows']]})
+        else:
+            expanded.append(e)
+    els = expanded
     def push():
         nonlocal cur
         if cur: items.append(cur)
@@ -63,6 +120,7 @@ def pdf_items(els, lvl_base=72, step=18):
         if not new:
             if e['gap'] == 99:   # first line of a page
                 new = END.search(cur['text']) is not None or not (t[:1].islower() or t[:1].isdigit() or t[:1] in '(')
+                new = new or (cur['allbold'] and not e['b'] and len(cur['text']) < 160)   # a heading, then its text
                 if cur['type'] == 'li' and e['x'] <= cur['mx']: new = new or False
             elif e['gap'] >= 14:
                 new = True

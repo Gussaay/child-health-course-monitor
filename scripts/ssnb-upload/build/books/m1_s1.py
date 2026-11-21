@@ -14,7 +14,7 @@ TITLES = {
     'Essential Newborn Care (EENC)': 'Early essential newborn care and the initial steps',
     'Essential Newborn Care (EENC): Definition': 'Delayed cord clamping: definition and evidence',
     'Essential Newborn Care (EENC): NRP recommendations regarding delayed cord clamping (DCC)': 'Delayed cord clamping: recommendations and contraindications',
-    'Essential Newborn Care (EENC): Thermoregulation and Prevention of Hypothermia': 'Thermoregulation: normal temperature and why hypothermia matters',
+    'Essential Newborn Care (EENC): Introduction': 'Thermoregulation: normal temperature and why hypothermia matters',
     'Essential Newborn Care (EENC): Risk Factors for Hypothermia': 'Hypothermia: risk factors and the four ways a baby loses heat',
     'Essential Newborn Care (EENC): Signs and symptoms of hypothermia': 'Hypothermia: signs, prevention and the delivery room',
     'Essential Newborn Care (EENC): Uninterrupted skin-to-skin contact for 60-90 minutes': 'Skin-to-skin contact and the warm chain',
