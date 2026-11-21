@@ -215,7 +215,7 @@
 },
 {
 "k": "para",
-"t": "Neonatal resuscitators in a variety of settings use the International Liaison Committee on Resuscitation (ILCOR) algorithm to guide delivery room management, including countries implementing the Helping Babies Breathe (HBB) program, which provides resuscitation training and standardized guidelines to medical teams in low-resource settings.  Algorithms such as the Neonatal Resuscitation Program apply the same timeline.",
+"t": "Neonatal resuscitators in a variety of settings use the International Liaison Committee on Resuscitation (ILCOR) algorithm to guide delivery room management, including countries implementing the Helping Babies Breathe (HBB) program, which provides resuscitation training and standardized guidelines to medical teams in low-resource settings. Algorithms such as the Neonatal Resuscitation Program apply the same timeline.",
 "style": "Normal",
 "head": 0,
 "b": false,
@@ -383,7 +383,7 @@
 },
 {
 "k": "para",
-"t": "Evidence shows that rational, consensus peri- viability ( see section 7) guidelines are well accepted and can be used for antenatal counseling  by neonatologists, obstetricians, and nurses who provide care to pregnant women and infants at extremely low gestational ages.",
+"t": "Evidence shows that rational, consensus peri- viability ( see section 7) guidelines are well accepted and can be used for antenatal counseling by neonatologists, obstetricians, and nurses who provide care to pregnant women and infants at extremely low gestational ages.",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -491,7 +491,7 @@
 },
 {
 "k": "para",
-"t": "Presence of other complications such as  major congenital anomalies.",
+"t": "Presence of other complications such as major congenital anomalies.",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -663,7 +663,7 @@
 },
 {
 "k": "para",
-"t": "Labour ward staff have primary responsibility for assessing the degree of risk anticipated and communicating their concerns effectively to the neonatal team.  The earlier the neonatal team is given notice of a potential problem the better, allowing decisions to be made around the appropriate staffing and management at delivery.",
+"t": "Labour ward staff have primary responsibility for assessing the degree of risk anticipated and communicating their concerns effectively to the neonatal team. The earlier the neonatal team is given notice of a potential problem the better, allowing decisions to be made around the appropriate staffing and management at delivery.",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -691,7 +691,7 @@
 },
 {
 "k": "para",
-"t": "Communication around an emerging situation where there may be both neonatal and maternal concerns is a challenge, however every effort should be made to ensure that adequate information is accurately passed to the neonatal team when they are called for resuscitation.  Ideally the call should be made by a member of staff with a good working knowledge of the situation- if the midwife looking after the mother or midwife in charge is not able to make the call to the neonatal team, they should ensure that when delegating this adequate information is passed on",
+"t": "Communication around an emerging situation where there may be both neonatal and maternal concerns is a challenge, however every effort should be made to ensure that adequate information is accurately passed to the neonatal team when they are called for resuscitation. Ideally the call should be made by a member of staff with a good working knowledge of the situation- if the midwife looking after the mother or midwife in charge is not able to make the call to the neonatal team, they should ensure that when delegating this adequate information is passed on",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -720,11 +720,11 @@
 "rows": [
 [
 "S",
-"Situation\ne.g. -  I’ve got a baby about to deliver with meconium and a non reassuring CTG"
+"Situation\ne.g. - I’ve got a baby about to deliver with meconium and a non reassuring CTG"
 ],
 [
 "B",
-"Background\ne.g.  - The baby is at term, mum has gestational diabetes, and there have been no other concerns in pregnancy.  The   obstetric registar is setting up for a vacuum extraction in the room"
+"Background\ne.g. - The baby is at term, mum has gestational diabetes, and there have been no other concerns in pregnancy. The obstetric registar is setting up for a vacuum extraction in the room"
 ],
 [
 "A",
@@ -985,7 +985,7 @@
 },
 {
 "k": "para",
-"t": "Maternal drug therapy: opiates,  magnesium, adrenergic-blocking drugs",
+"t": "Maternal drug therapy: opiates, magnesium, adrenergic-blocking drugs",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -1435,10 +1435,10 @@
 "k": "table",
 "rows": [
 [
-"PRACTISE THIS SKILL   Preparation for specific neonatal conditions"
+"PRACTISE THIS SKILL Preparation for specific neonatal conditions"
 ],
 [
-"Preterm infant <32 weeks’ gestation or less than 1500 grams:\n• Prepare a polyethylene bag or sheet/wrap.\n• If using a polyethylene bag: cut a square  hole (large enough for the infant’s head)  into the end opposite the zip lock.\n• At birth, the infant’s body (but not the head) should be placed immediately into the bag or wrap (wet and warm) and directly under a radiant heat source.\n• The infant’s head should be dried, and a woolen hat placed onto the infant’s head"
+"Preterm infant <32 weeks’ gestation or less than 1500 grams:\n• Prepare a polyethylene bag or sheet/wrap.\n• If using a polyethylene bag: cut a square hole (large enough for the infant’s head) into the end opposite the zip lock.\n• At birth, the infant’s body (but not the head) should be placed immediately into the bag or wrap (wet and warm) and directly under a radiant heat source.\n• The infant’s head should be dried, and a woolen hat placed onto the infant’s head"
 ]
 ],
 "i": 143
@@ -1516,7 +1516,7 @@
 },
 {
 "k": "para",
-"t": "Provide a fully equipped resuscitator for each infant if  possible",
+"t": "Provide a fully equipped resuscitator for each infant if possible",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -1526,7 +1526,7 @@
 },
 {
 "k": "para",
-"t": "At least one person with advanced resuscitation skills must be  available for  each infant",
+"t": "At least one person with advanced resuscitation skills must be available for each infant",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -2390,7 +2390,7 @@
 "k": "table",
 "rows": [
 [
-"IMPORTANT   Remember:"
+"IMPORTANT Remember:"
 ],
 [
 "Resuscitation with the umbilical cord intact should be considered whenever feasible\nMaternal safety always takes precedence over neonatal benefit"
@@ -2517,7 +2517,7 @@
 },
 {
 "k": "para",
-"t": "Admission temperature in the NICU is a strong predictor of neonatal mortality. The highest risk of neonatal hypothermia is within the first minutes to hours after birth, as there is a  wide difference between in-utero and environmental temperature",
+"t": "Admission temperature in the NICU is a strong predictor of neonatal mortality. The highest risk of neonatal hypothermia is within the first minutes to hours after birth, as there is a wide difference between in-utero and environmental temperature",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -2732,7 +2732,7 @@
 },
 {
 "k": "para",
-"t": "Radiation: when the newborn is near cool objects, walls, tables, and cabinets, without actually being in contact with them. The transfer of heat between solid surfaces that are not touching. Factors that affect heat change due to radiation are the temperature gradient between the two surfaces, the surface area of the solid surfaces, and the distance between the  solid surfaces. This is the greatest source of heat loss after birth.",
+"t": "Radiation: when the newborn is near cool objects, walls, tables, and cabinets, without actually being in contact with them. The transfer of heat between solid surfaces that are not touching. Factors that affect heat change due to radiation are the temperature gradient between the two surfaces, the surface area of the solid surfaces, and the distance between the solid surfaces. This is the greatest source of heat loss after birth.",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -2875,7 +2875,7 @@
 },
 {
 "k": "para",
-"t": "Thermal care interventions in the delivery room for preterm neonates are associated with improved core body temperature. Specifically, use of a plastic bag or wrap with a plastic cap or with heated, humidified gas was associated with a  lower risk of major brain injury and mortality.",
+"t": "Thermal care interventions in the delivery room for preterm neonates are associated with improved core body temperature. Specifically, use of a plastic bag or wrap with a plastic cap or with heated, humidified gas was associated with a lower risk of major brain injury and mortality.",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -3042,7 +3042,7 @@
 },
 {
 "k": "para",
-"t": "The World Health Organization (WHO) strongly recommends uninterrupted skin-to-skin contact (SSC) for all mothers and newborns immediately after birth. The WHO advises that  this initial contact should be prolonged and uninterrupted for at least 90 minutes, or ideally longer.",
+"t": "The World Health Organization (WHO) strongly recommends uninterrupted skin-to-skin contact (SSC) for all mothers and newborns immediately after birth. The WHO advises that this initial contact should be prolonged and uninterrupted for at least 90 minutes, or ideally longer.",
 "style": "Normal",
 "head": 0,
 "b": false,
@@ -3197,8 +3197,8 @@
 "Immediately dry the newborn after birth with a warm towel/cloth to prevent evaporation heat loss (for <29 wks. GA refers to NRP guidelines)."
 ],
 [
-"3. Skin-to-skin  contact",
-"• Place the newborn on the mother's chest/abdomen while drying to prevent heat loss (if the mother is unable, the partner may do so).\n• Cover with a second towel and put a cap on the head to prevent convective heat loss.  Keep newborn skin-to-skin with mother and covered.\n• Minimize uncovering during assessments/interventions.\n• Maintain skin-to-skin during:\n• Placenta delivery/suturing\n• Transfer to the postnatal unit/recovery room\n• Assessments/interventions\nFirst hours after birth"
+"3. Skin-to-skin contact",
+"• Place the newborn on the mother's chest/abdomen while drying to prevent heat loss (if the mother is unable, the partner may do so).\n• Cover with a second towel and put a cap on the head to prevent convective heat loss. Keep newborn skin-to-skin with mother and covered.\n• Minimize uncovering during assessments/interventions.\n• Maintain skin-to-skin during:\n• Placenta delivery/suturing\n• Transfer to the postnatal unit/recovery room\n• Assessments/interventions\nFirst hours after birth"
 ],
 [
 "4. Breastfeeding",
@@ -3206,7 +3206,7 @@
 ],
 [
 "5. Postpone\nweighing and\nbathing",
-"• Weigh after uninterrupted skin-to-skin contact and first feed; use a warm blanket on  a scale.\n• Bathing soon after birth causes a temperature drop → risk of hypothermia/hypoglycemia.\n• Delay bathing until 6–8 hrs or when stable.\n• If hypothermic with thick wet hair → wash/dry hair only, then cover the head. Bathe quickly in a warm room with warm water (tub bathing preferred for stable newborns; water should cover shoulders).\n• After bath → dry thoroughly, place skin-to-skin (or double wrap with warm blankets and cover head).\nAfter skin-to-skin → dress, cap, and wrap the newborn in a dry ,warm blanket."
+"• Weigh after uninterrupted skin-to-skin contact and first feed; use a warm blanket on a scale.\n• Bathing soon after birth causes a temperature drop → risk of hypothermia/hypoglycemia.\n• Delay bathing until 6–8 hrs or when stable.\n• If hypothermic with thick wet hair → wash/dry hair only, then cover the head. Bathe quickly in a warm room with warm water (tub bathing preferred for stable newborns; water should cover shoulders).\n• After bath → dry thoroughly, place skin-to-skin (or double wrap with warm blankets and cover head).\nAfter skin-to-skin → dress, cap, and wrap the newborn in a dry ,warm blanket."
 ],
 [
 "6. Appropriate\nclothing/blanket",
@@ -3221,7 +3221,7 @@
 "• Keep warm while waiting for transport.\nDress and wrap in blankets if a transport device is used."
 ],
 [
-"Warm\nassessment (if  not skin-to-skin)",
+"Warm\nassessment (if not skin-to-skin)",
 "• Place the newborn on a warm surface in a warm room.\n• Add extra heat source if needed (radiant warmer).\nUse servo-control if the radiant warmer is >10 minutes."
 ]
 ],
@@ -3491,7 +3491,7 @@
 },
 {
 "k": "para",
-"t": "The first golden minute — Is it relevant?, Tonia Branche,a,b Marta Perez,a,b and Ola D. Saugstadb,c,*.  John Madar, Charles C.Roehr, Sean Ainsworth  Berndt Urlesberger  Dominic Wilkinson  Jonathan P. Wyllie Published:March 24, 2021 BJA Educ. 2021 Dec; 21(12): 479–485. Published online 2021 Sep 15. doi: 10.1016/j.bjae.2021.07.008 PMCID: PMC8606598 PMID: 34840820",
+"t": "The first golden minute — Is it relevant?, Tonia Branche,a,b Marta Perez,a,b and Ola D. Saugstadb,c,*. John Madar, Charles C.Roehr, Sean Ainsworth Berndt Urlesberger Dominic Wilkinson Jonathan P. Wyllie Published:March 24, 2021 BJA Educ. 2021 Dec; 21(12): 479–485. Published online 2021 Sep 15. doi: 10.1016/j.bjae.2021.07.008 PMCID: PMC8606598 PMID: 34840820",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -3501,7 +3501,7 @@
 },
 {
 "k": "para",
-"t": "Textbook of Neonatal Resuscitation (8th Edition) Edited by Gary M. Weiner, MD, FAAP;  Jeanette Zaichkin, RN, MN, NNP-BC American Academy of Pediatrics  DOI: https://doi.org/10.1542/9781610025256 ISBN electronic: 978-1-61002-525-6 ISBN print: 978-1-61002-524-9 Publication date: June 2021",
+"t": "Textbook of Neonatal Resuscitation (8th Edition) Edited by Gary M. Weiner, MD, FAAP; Jeanette Zaichkin, RN, MN, NNP-BC American Academy of Pediatrics DOI: https://doi.org/10.1542/9781610025256 ISBN electronic: 978-1-61002-525-6 ISBN print: 978-1-61002-524-9 Publication date: June 2021",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -3541,7 +3541,7 @@
 },
 {
 "k": "para",
-"t": "Sudomotor function, thermoregulation and electrodermal control in the human brain Laura Crucianelli, ... Hugo Critchley, in Reference Module in Neuroscience and Biobehavioral Psychology, 2024 BMC Pediatr. 2022; 22: 447.  Published online 2022 Jul 25. doi: 10.1186/s12887-022-03512-x PMCID: PMC9316355 PMID: 35879708 Factors associated with hypothermia within the first 6 hours of life in infants born at ≥340 weeks’ gestation: a multivariable analysis",
+"t": "Sudomotor function, thermoregulation and electrodermal control in the human brain Laura Crucianelli, ... Hugo Critchley, in Reference Module in Neuroscience and Biobehavioral Psychology, 2024 BMC Pediatr. 2022; 22: 447. Published online 2022 Jul 25. doi: 10.1186/s12887-022-03512-x PMCID: PMC9316355 PMID: 35879708 Factors associated with hypothermia within the first 6 hours of life in infants born at ≥340 weeks’ gestation: a multivariable analysis",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -3617,7 +3617,7 @@
 },
 {
 "k": "para",
-"t": "It's a major cause of neonatal death, with early recognition crucial for survival, involving fluid resuscitation, cardiovascular support(vasopressors),  and addressing underlying infection.",
+"t": "It's a major cause of neonatal death, with early recognition crucial for survival, involving fluid resuscitation, cardiovascular support(vasopressors), and addressing underlying infection.",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -3821,7 +3821,7 @@
 },
 {
 "k": "para",
-"t": "Amount of fluids different according to the shock type: start with  20 ml/ kg, over 15-30 minutes.",
+"t": "Amount of fluids different according to the shock type: start with 20 ml/ kg, over 15-30 minutes.",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -4550,7 +4550,7 @@
 },
 {
 "k": "para",
-"t": "If there is contraindication to breast milk, or it is  insufficient,  give 40–60 mL/kg/day 3-hrly over first 24 hr after birth, increasing to 70–90 mL/kg/day in 24–48 hr after birth, and 100–120 mL/kg/day in first 48–72 hr after birth.Baby may require NGT feeding to maintain adequate blood glucose levels",
+"t": "If there is contraindication to breast milk, or it is insufficient, give 40–60 mL/kg/day 3-hrly over first 24 hr after birth, increasing to 70–90 mL/kg/day in 24–48 hr after birth, and 100–120 mL/kg/day in first 48–72 hr after birth.Baby may require NGT feeding to maintain adequate blood glucose levels",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -4620,7 +4620,7 @@
 },
 {
 "k": "para",
-"t": "Do not allow >3 hr between feeds until 2 consecutive blood glucose measurements ≥2.0 mmol/L (in ≥37 weeks) or ≥2.6 mmol/L(in <37 weeks),  and at least 24-48 hr of successful feeding to be demonstrated before discharge",
+"t": "Do not allow >3 hr between feeds until 2 consecutive blood glucose measurements ≥2.0 mmol/L (in ≥37 weeks) or ≥2.6 mmol/L(in <37 weeks), and at least 24-48 hr of successful feeding to be demonstrated before discharge",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -6316,7 +6316,7 @@
 },
 {
 "k": "para",
-"t": "10 mg/kg IV in ten minutes may be  given",
+"t": "10 mg/kg IV in ten minutes may be given",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -6729,7 +6729,7 @@
 "k": "table",
 "rows": [
 [
-"CASE EXERCISE   Exercise 1 — Case Study: Neonatal Shock Management"
+"CASE EXERCISE Exercise 1 — Case Study: Neonatal Shock Management"
 ],
 [
 "A 5-day-old newborn is brought into the emergency unit.\nSystem\nFindings\nWeight\n3 kg\nHistory\nPoor feeding, vomiting"
@@ -6778,7 +6778,7 @@
 "k": "table",
 "rows": [
 [
-"CASE EXERCISE   Exercise 2 — Case 2 — The Preterm with Cold Shock"
+"CASE EXERCISE Exercise 2 — Case 2 — The Preterm with Cold Shock"
 ],
 [
 "A preterm baby is lethargic and feeding poorly. On assessment:\nParameter\nValue\nHeart rate\n180 / min\nCapillary refill time\n5 seconds"
@@ -6827,7 +6827,7 @@
 "k": "table",
 "rows": [
 [
-"CASE EXERCISE   Exercise 3 — Case Study: Neonatal Convulsions"
+"CASE EXERCISE Exercise 3 — Case Study: Neonatal Convulsions"
 ],
 [
 "A premature newborn weighing 1.5 kg begins to exhibit clinical convulsions in the NICU.\nVitals & access: the infant has secure IV access and is currently stable on respiratory support.\nStat labs: a point-of-care test reveals an ionized calcium level of 0.7 mmol/L. Blood glucose and magnesium are normal."
@@ -6876,7 +6876,7 @@
 "k": "table",
 "rows": [
 [
-"CASE EXERCISE   Exercise 4 — Case 2 — The Baby Who Was Never Seizing"
+"CASE EXERCISE Exercise 4 — Case 2 — The Baby Who Was Never Seizing"
 ],
 [
 "A 2-day-old term baby, 3 kg, is referred for “fits”. The midwife describes shaking of both arms. On your examination the baby is awake, looking at you, and the arms are trembling rapidly. When you gently hold the wrist, the trembling stops. Blood glucose is 3.4 mmol/L. Temperature 36.9°C.\nAsk the group:"
@@ -8210,7 +8210,7 @@
 },
 {
 "k": "para",
-"t": "Unplanned or non-organized newborn transfer from the labour room/  delivery facility to NICU may increase the mortality and morbidity leading to worse outcomes.",
+"t": "Unplanned or non-organized newborn transfer from the labour room/ delivery facility to NICU may increase the mortality and morbidity leading to worse outcomes.",
 "style": "Normal",
 "head": 0,
 "b": false,
@@ -8850,7 +8850,7 @@
 },
 {
 "k": "para",
-"t": "●   Simple, comfortable",
+"t": "● Simple, comfortable",
 "style": "Normal",
 "head": 0,
 "b": false,
@@ -8858,7 +8858,7 @@
 },
 {
 "k": "para",
-"t": "●   Safe",
+"t": "● Safe",
 "style": "Normal",
 "head": 0,
 "b": false,
@@ -8866,7 +8866,7 @@
 },
 {
 "k": "para",
-"t": "●   Stable",
+"t": "● Stable",
 "style": "Normal",
 "head": 0,
 "b": false,
@@ -8874,7 +8874,7 @@
 },
 {
 "k": "para",
-"t": "●   Closely monitored transfer",
+"t": "● Closely monitored transfer",
 "style": "Normal",
 "head": 0,
 "b": false,
@@ -9024,7 +9024,7 @@
 },
 {
 "k": "para",
-"t": "The baby is secured to its mother, ensuring that close contact is always maintained. The ‘face-up’ mode enables staff to monitor the baby, while the quick release system allows fast access. Maintains warmth.  The system is lightweight and easy to store, as well as being easy to clean.",
+"t": "The baby is secured to its mother, ensuring that close contact is always maintained. The ‘face-up’ mode enables staff to monitor the baby, while the quick release system allows fast access. Maintains warmth. The system is lightweight and easy to store, as well as being easy to clean.",
 "style": "Normal",
 "head": 0,
 "b": false,
@@ -9149,7 +9149,7 @@
 },
 {
 "k": "para",
-"t": "Check equipment:   oxygen source (cylinder or concentrator), CPAP, T-piece, PPV bag, or transport ventilator, transport incubator, monitors and infection control equipment.",
+"t": "Check equipment: oxygen source (cylinder or concentrator), CPAP, T-piece, PPV bag, or transport ventilator, transport incubator, monitors and infection control equipment.",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -9169,7 +9169,7 @@
 },
 {
 "k": "para",
-"t": "Documentation:   GA, weight and diagnosis. Serial recording of vital signs and temperature before and after transfer, equipment check, parental and staff communication, timing of moving to SPECIAL CARE NEWBORN UNIT (SCNU) and any event during transport.",
+"t": "Documentation: GA, weight and diagnosis. Serial recording of vital signs and temperature before and after transfer, equipment check, parental and staff communication, timing of moving to SPECIAL CARE NEWBORN UNIT (SCNU) and any event during transport.",
 "style": "List Paragraph",
 "head": 0,
 "b": false,
@@ -9392,7 +9392,7 @@
 "k": "table",
 "rows": [
 [
-"CASE EXERCISE   Exercise 1 — Case 1 — Temperature Problem"
+"CASE EXERCISE Exercise 1 — Case 1 — Temperature Problem"
 ],
 [
 "Baby Nour — female, born at term, 39 weeks gestation\n90 minutes of age\nBaby Nour is 90 minutes old. She cried at birth and breastfed within the first hour. On examination she is active, breathing 44 breaths per minute with no chest indrawing, and pink. Her weight is 2900 g. Axillary temperature is 36.2°C."
@@ -9441,7 +9441,7 @@
 "k": "table",
 "rows": [
 [
-"CASE EXERCISE   Exercise 2 — Case 2 — Birth Weight Problem"
+"CASE EXERCISE Exercise 2 — Case 2 — Birth Weight Problem"
 ],
 [
 "Baby Yasin — male, born at 32 weeks gestation\nBaby Yasin was born at 32 weeks gestation by spontaneous vaginal delivery at a health centre. He cried weakly at birth. At 90 minutes of age he is weighed: 1350 g. Temperature is 36.6°C. He is breathing 48 breaths per minute with no chest indrawing. He has not yet attempted to breastfeed."
@@ -9490,7 +9490,7 @@
 "k": "table",
 "rows": [
 [
-"CASE EXERCISE   Exercise 3 — Case 3 — Feeding Problem"
+"CASE EXERCISE Exercise 3 — Case 3 — Feeding Problem"
 ],
 [
 "Baby Salma — female, born at 35 weeks gestation\nBaby Salma is 4 hours old, born at 35 weeks, weighing 1950 g. Temperature is 36.8°C and breathing is normal. She attempted to breastfeed at 1 hour of age but has not latched. She licks at the nipple but falls asleep after a few minutes without sucking."
@@ -9539,7 +9539,7 @@
 "k": "table",
 "rows": [
 [
-"CASE EXERCISE   Exercise 4 — Case 4 — Putting It All Together"
+"CASE EXERCISE Exercise 4 — Case 4 — Putting It All Together"
 ],
 [
 "Baby Mohammed — male, born at 33 weeks gestation\n90 minutes of age\nBaby Mohammed was born at 33 weeks by vaginal delivery, birth weight 2700 g. At 90 minutes of age his temperature is 36.7°C, breathing is 40 breaths per minute with no chest indrawing, and he well attached to the breast."
@@ -9588,7 +9588,7 @@
 "k": "table",
 "rows": [
 [
-"CASE EXERCISE   Exercise 5 — Case study – Transport Sick and small newborn"
+"CASE EXERCISE Exercise 5 — Case study – Transport Sick and small newborn"
 ],
 [
 "Purpose: the purpose of a clinical drill is to help participants practise responding to clinical situations that require immediate action.\nHow to Run It\nAssign a team of four: team leader, nurse (airway and warmth), nurse (monitoring and documentation), and one who makes the phone calls.\nAnnounce the case. The team has 10 minutes to prepare the baby and “leave”.\nThe other participants observe using the Transfer Checklist.\nRotate roles so that every participant leads once."
@@ -9637,7 +9637,7 @@
 "k": "table",
 "rows": [
 [
-"CASE EXERCISE   Exercise 6 — Case 1 — The Preterm Needing Ventilation"
+"CASE EXERCISE Exercise 6 — Case 1 — The Preterm Needing Ventilation"
 ],
 [
 "A baby born at 28 weeks, 1.1 kg, in a facility with no ventilator. Grunting, chest indrawing, SpO₂ 84% on nasal cannula. Temperature 35.8°C. The nearest level 3 NICU is 45 minutes away.\nAsk the team:"

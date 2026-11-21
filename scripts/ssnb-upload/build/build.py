@@ -7,7 +7,7 @@
 # Stops (exit 1) when a line of a manual is not placed, a lesson has no
 # activity, an exercise or figure is missing, an answer index is wrong, or an
 # exercise id repeats.
-import copy, importlib, json, os, re, sys
+import copy, html, importlib, json, os, re, sys
 from collections import Counter
 from src import book_items, load
 from assemble import to_blocks, split_long, modules_of, strip_num, chars, esc
@@ -127,7 +127,7 @@ def find_block(lessons, anchor):
     hits = []
     for L in lessons:
         for bi, b in enumerate(L['blocks']):
-            txt = re.sub('<[^>]+>', '', b.get('text', '') or b.get('path', '') or b.get('exerciseId', ''))
+            txt = html.unescape(re.sub('<[^>]+>', '', b.get('text', '') or b.get('path', '') or b.get('exerciseId', '')))
             if anchor in txt: hits.append((L, bi))
     return hits
 

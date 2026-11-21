@@ -109,12 +109,21 @@ def main(path, out_json, fig_dir):
         name = f'm1-{nimg[0]:03d}{ext}'
         open(os.path.join(fig_dir, name), 'wb').write(part.blob)
         return name
+    def ptext(p):
+        # the paragraph's text with its line breaks (python-docx's p.text drops them)
+        out = []
+        for el in p._p.iter():
+            tag = el.tag.split('}')[1] if '}' in el.tag else el.tag
+            if tag == 't' and el.text: out.append(el.text)
+            elif tag in ('br', 'cr'): out.append('\n')
+            elif tag == 'tab': out.append(' ')
+        return ''.join(out)
     def para(p):
-        text = p.text.replace(' ', ' ')
+        text = ptext(p).replace('\u00a0', ' ')
         style = p.style.name if p.style is not None else ''
         head = 1 if style == 'Heading 1' else 2 if style == 'Heading 2' else 3 if style.startswith('Heading') else 0
         n = para_num(p)
-        e = {'k': 'para', 't': text.strip(), 'style': style, 'head': head, 'b': is_bold(p)}
+        e = {'k': 'para', 't': re.sub(r'[ \t]+', ' ', text).strip(), 'style': style, 'head': head, 'b': is_bold(p)}
         if n and text.strip():
             e['lvl'] = n[1]; e['marker'] = num.marker(*n)
         return e

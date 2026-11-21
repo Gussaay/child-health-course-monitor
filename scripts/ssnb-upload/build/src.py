@@ -93,9 +93,26 @@ def pdf_items(els, lvl_base=72, step=18):
 # --------------------------------------------------------------- Word book
 def docx_items(els):
     items = []
+    flat = []
     for e in els:
+        # a paragraph with line breaks in it: one item per line; the first keeps the paragraph's list marker
+        if e['k'] == 'para' and '\n' in e['t']:
+            parts = [x.strip() for x in e['t'].split('\n') if x.strip()]
+            for n, x in enumerate(parts):
+                f = dict(e, t=x)
+                if n > 0:
+                    f.pop('marker', None); f['head'] = 0
+                    mk, rest = marker_of(x)
+                    if mk: f['marker'] = mk; f['t'] = rest; f['lvl'] = e.get('lvl', 0) + (0 if is_bullet(mk) else 1)
+                flat.append(f)
+        else:
+            flat.append(e)
+    # 64 px box icons set next to the "Practise this skill" / "Important" / case boxes: decoration, not figures
+    DECOR = {f'm1-{n:03d}' for n in (3, 5, 8, 13, 20, 21, 26, 27, 28, 29, 43, 44, 45, 46, 47, 48)}
+    tiny = lambda name: name.rsplit('.', 1)[0] in DECOR
+    for e in flat:
         if e['k'] == 'img':
-            items.append({'type': 'img', 'ids': [e['i']], 'name': e['name']}); continue
+            items.append({'type': 'filler' if tiny(e['name']) else 'img', 'ids': [e['i']], 'name': e['name']}); continue
         if e['k'] == 'table':
             items.append({'type': 'table', 'ids': [e['i']], 'rows': e['rows']}); continue
         t = re.sub(r'\s+', ' ', e['t']).strip()

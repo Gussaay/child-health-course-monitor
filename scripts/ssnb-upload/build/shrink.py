@@ -7,6 +7,9 @@ d = sys.argv[1]
 for f in sorted(os.listdir(d)):
     p = os.path.join(d, f); base, ext = os.path.splitext(f)
     if ext.lower() not in ('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tif', '.tiff', '.emf', '.wmf'): continue
+    if ext.lower() == '.jpg' and os.path.getsize(p) < 450_000:
+        with Image.open(p) as probe:
+            if probe.width <= 1100: continue     # already shrunk
     try:
         im = Image.open(p)
     except Exception as e:
