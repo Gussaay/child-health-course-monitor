@@ -3513,7 +3513,7 @@ export function CourseForm({
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                                 <div {...fieldWrap('director')}>
                                     <FormGroup label={<ReqLabel text={L('مدير الدورة', 'Course director')} required={!isInfectionControl} />}>
-                                        <SearchableSelect disabled={isSaving} value={director} onChange={setDirector} onOpenNewForm={(name) => setDirector(name)} options={directorOptions} placeholder={searchPh} label={L('مدير الدورة', 'Course director')} />
+                                        <SearchableSelect disabled={isSaving} value={director} onChange={setDirector} options={directorOptions} placeholder={searchPh} label={L('مدير الدورة', 'Course director')} />
                                         <FieldError show={err('director')}>{req}</FieldError>
                                     </FormGroup>
                                 </div>
@@ -3529,7 +3529,7 @@ export function CourseForm({
                             {(isImnci || isIccm || isCpcm) && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end pt-4 border-t border-gray-100">
                                     <FormGroup label={L('المدرب السريري - اختياري', 'Clinical instructor (optional)')}>
-                                        <SearchableSelect disabled={isSaving} value={clinical} onChange={setClinical} onOpenNewForm={(name) => setClinical(name)} options={clinicalInstructorOptions} placeholder={searchPh} label={L('المدرب السريري - اختياري', 'Clinical instructor (optional)')} />
+                                        <SearchableSelect disabled={isSaving} value={clinical} onChange={setClinical} options={clinicalInstructorOptions} placeholder={searchPh} label={L('المدرب السريري - اختياري', 'Clinical instructor (optional)')} />
                                     </FormGroup>
                                     {isImnci && (
                                         <FormGroup label={L('اسم الورشة الفرعية', 'Sub-course')}>
@@ -3559,7 +3559,6 @@ export function CourseForm({
                                                 disabled={isSaving}
                                                 value={assignment.name}
                                                 onChange={(value) => updateFacilitatorAssignment(groupName, index, 'name', value)}
-                                                onOpenNewForm={(name) => updateFacilitatorAssignment(groupName, index, 'name', name)}
                                                 options={facilitatorOptions}
                                                 placeholder={searchPh}
                                                 label={L('اسم الميسر', 'Facilitator')}
