@@ -543,9 +543,9 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Preparing the resuscitation area and the quick equipment check",
-       "caption": "Going through the NRP quick equipment check: warm, clear airway, auscultate, ventilate, oxygenate, intubate, medicate.",
+       "url": "https://www.youtube.com/watch?v=WZz8Yysq5mo",
+       "title": "Preparing the Birth Room - Childbirth Series",
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
        "script": "SN1.1.2"
       }
      ],
@@ -603,9 +603,9 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Early essential newborn care: the first minutes",
-       "caption": "Drying, stimulation, skin-to-skin contact and ongoing monitoring of a vigorous term baby.",
+       "url": "https://www.youtube.com/watch?v=0clo9Lvpv7Y",
+       "title": "Helping Babies Breathe at Birth - Newborn Care Series",
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
        "script": "SN1.1.3"
       },
       {
@@ -931,9 +931,9 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Four ways a newborn loses heat, and how to stop each",
-       "caption": "Conduction, convection, evaporation and radiation shown in a delivery room, with the action that prevents each.",
+       "url": "https://www.youtube.com/watch?v=BAX4gB48Ewk",
+       "title": "Keeping the Baby Warm - Newborn Care Series",
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
        "script": "SN1.1.4"
       },
       {
@@ -964,6 +964,12 @@
       {
        "type": "rich",
        "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">IMPORTANT All these signs are non-specific and may indicate other significant conditions, such as bacterial infection in the newborn.</td></tr></table>"
+      },
+      {
+       "type": "video",
+       "url": "https://www.youtube.com/watch?v=-6T7f40EB9E",
+       "title": "The Cold Baby - Newborn Care Series",
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel."
       },
       {
        "type": "question",
@@ -1093,9 +1099,9 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Skin-to-skin contact and the ten steps of the warm chain",
-       "caption": "Placing a newborn skin-to-skin, covering, capping, and keeping the warm chain from delivery to the postnatal ward.",
+       "url": "https://www.youtube.com/watch?v=hs7ai466toE",
+       "title": "Early Initiation of Breastfeeding - Breastfeeding Series",
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
        "script": "SN1.1.5"
       },
       {
@@ -1552,9 +1558,9 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Checking blood glucose by heel prick",
-       "caption": "Warming the heel, wiping away the first drop, collecting the second drop, and reading the glucometer.",
+       "url": "https://www.youtube.com/watch?v=MieKJa5YJd4",
+       "title": "Taking a Heel Blood Sample - Newborn Care Series",
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
        "script": "SN1.2.2"
       },
       {
@@ -2420,6 +2426,12 @@
        "text": "<ul><li>Because this treatment is painful, it should not be given during the first</li><li>hour after birth</li><li>The dose of vitamin K is 1 mg (0.5 mg for babies &lt;1500 grams), and it is given intramuscularly (IM) in the front, outside of the mid-thigh.</li><li>Providers must wash their hands</li><li>Place used needles in a solid container with a lid to avoid injury and infection</li></ul>"
       },
       {
+       "type": "video",
+       "url": "https://www.youtube.com/watch?v=VAb_zGqiyZg",
+       "title": "Giving an Intramuscular Injection - Newborn Care Series",
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel."
+      },
+      {
        "type": "calc",
        "question": "What dose of vitamin K is given to a baby who weighs 1300 g?",
        "answer": 0.5,
@@ -2440,9 +2452,9 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Vitamin K, eye care and cord care at 90 minutes",
-       "caption": "Giving vitamin K IM in the mid-thigh, applying eye medicine to the lower lid, and caring for the cord.",
+       "url": "https://www.youtube.com/watch?v=5xUY7SlGxfM",
+       "title": "Care of the Cord - Newborn Care Series",
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
        "script": "SN1.3.1"
       }
      ],
@@ -2460,6 +2472,12 @@
       {
        "type": "rich",
        "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>assess</strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>Action</strong></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• Breathing &gt;60<br>• Chest indrawing<br>• Temp 38 0C<br>• Not feeding<br>• No movement<br>• Convulsions</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• Give antibiotics<br>• Stabilize for referral as needed</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• Weight &lt;1500g<br>• Severe malformation<br>• Birth injury<br>• Severe jaundice<br>• Poor weight gain</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• Stabilize for referral as needed</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• Weight 1500 – &lt;2500g<br>• Temp 35.5 – 38 0C<br>• Feeding difficulty<br>• Risk of infection</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• Maintain skin-to-skin Support breastfeeding<br>• Treat risk of infection<br>• For Feeding difficulty<br>• Express breast milk<br>• Feed with cup or tube<br>• Transition to exclusive breastfeeding<br>• Low weight or low temperature<br>• Provide continuous skin-to-skin<br>• Improve thermal care<br>• If not improved or had danger sign, stabilize for referral<br>• If improved immunize and advice about home care</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• Weight ≥2500g<br>• Temp 36.5 – 37.5 0C<br>• Feeding well<br>• Normal exam</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• Maintain normal temperature<br>• Support breastfeeding<br>• Advise about breast feeding problems<br>• Reassess for discharge<br>• Immunize<br>• Advise about home care</td></tr></table>"
+      },
+      {
+       "type": "video",
+       "url": "https://www.youtube.com/watch?v=8foaEYKfDRo",
+       "title": "Newborn Physical Exam - Newborn Care Series",
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel."
       },
       {
        "type": "sort",
@@ -2542,6 +2560,12 @@
       {
        "type": "paragraph",
        "text": "Assess temperature every four hours during routine care by touching the foot or forehead If the skin feels too cool or too hot, measure a temperature"
+      },
+      {
+       "type": "video",
+       "url": "https://www.youtube.com/watch?v=_uhWHZOtq2U",
+       "title": "The Hot Baby - Newborn Care Series",
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel."
       },
       {
        "type": "question",
@@ -2673,9 +2697,9 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Helping a mother with positioning and attachment",
-       "caption": "A mother semi-reclined with her baby: body supported, head and body in line, nose opposite the nipple; the four signs of good attachment.",
+       "url": "https://www.youtube.com/watch?v=y--syZR0u1E",
+       "title": "Breastfeeding Attachment - Breastfeeding Series",
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
        "script": "SN1.3.2"
       }
      ],
@@ -2804,9 +2828,9 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Teaching a mother to hand express breast milk and cup feed",
-       "caption": "Hand expression step by step, and giving expressed milk by cup.",
+       "url": "https://www.youtube.com/watch?v=31Fw-XHQdwQ",
+       "title": "Expressing and Storing Breastmilk - Breastfeeding Series",
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
        "script": "SN1.3.3"
       },
       {
@@ -3081,9 +3105,9 @@
       },
       {
        "type": "video",
-       "url": "",
-       "title": "Preparing and moving a newborn for referral",
-       "caption": "Stabilising, checking transport equipment, the phone handover with read-back, and moving the baby safely.",
+       "url": "https://www.youtube.com/watch?v=nhWYqF6lDW4",
+       "title": "Referring a Sick Baby - Newborn Care Series",
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
        "script": "SN1.3.4"
       },
       {

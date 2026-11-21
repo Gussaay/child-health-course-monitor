@@ -18,8 +18,12 @@ const COURSES = {
   classic: { batch: 'imnci-sudan-classic-modules-1-3-2026-11-17', file: 'sudan-imnci-classic-modules-1-3.imnci.json' },
   dimci: { batch: 'imnci-dimci-modules-1-2-2026-11-15', file: 'who-dimci-modules-1-9.imnci.json' },
   etat: { batch: 'sudan-etat-training-2026-11-18', file: 'sudan-etat-training.imnci.json' },
+  ssnb1: { batch: 'ssnb-m1-2026-11-21', file: 'ssnb-module-1-essential-emergency-newborn-care.imnci.json' },
+  ssnb2: { batch: 'ssnb-m2-2026-11-21', file: 'ssnb-module-2-special-newborn-care.imnci.json' },
+  ssnb3: { batch: 'ssnb-m3-2026-11-21', file: 'ssnb-module-3-intensive-newborn-care.imnci.json' },
+  ssnbannex: { batch: 'ssnb-annex-2026-11-21', file: 'ssnb-annex-neonatal-procedures-and-equipment.imnci.json' },
 };
-const UPDATE_TAG = 'lesson-update-2026-11-20';
+const UPDATE_TAG = 'lesson-update-2026-11-21-ghmp-videos';
 const CONTENT = ['read', 'see', 'practise'];
 // Lessons edited in the app that may still be overwritten (titles, one per line), after the author agreed.
 const FORCE = (() => { try { return fs.readFileSync(path.join(__dirname, 'force.txt'), 'utf8').split('\n').map((x) => x.trim().toLowerCase()).filter(Boolean); } catch { return []; } })();

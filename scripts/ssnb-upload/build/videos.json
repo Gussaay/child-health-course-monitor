@@ -1,1 +1,19 @@
-{}
+{
+ "note": "Video slot code -> YouTube video. Global Health Media Project (GHMP) videos, from their own YouTube channel (UCLxFqUTzhUVC-_F_pd4Yvkg), each checked on 2026-11-21 to be GHMP's and embeddable. Whole videos only (GHMP terms: not clipped or altered). A code not listed keeps its being-recorded placeholder and its script in the Word file.",
+ "videos": {
+  "SN1.1.2": {"id": "WZz8Yysq5mo", "title": "Preparing the Birth Room - Childbirth Series"},
+  "SN1.1.3": {"id": "0clo9Lvpv7Y", "title": "Helping Babies Breathe at Birth - Newborn Care Series"},
+  "SN1.1.4": {"id": "BAX4gB48Ewk", "title": "Keeping the Baby Warm - Newborn Care Series"},
+  "SN1.1.5": {"id": "hs7ai466toE", "title": "Early Initiation of Breastfeeding - Breastfeeding Series"},
+  "SN1.2.2": {"id": "MieKJa5YJd4", "title": "Taking a Heel Blood Sample - Newborn Care Series"},
+  "SN1.3.1": {"id": "5xUY7SlGxfM", "title": "Care of the Cord - Newborn Care Series"},
+  "SN1.3.2": {"id": "y--syZR0u1E", "title": "Breastfeeding Attachment - Breastfeeding Series"},
+  "SN1.3.3": {"id": "31Fw-XHQdwQ", "title": "Expressing and Storing Breastmilk - Breastfeeding Series"},
+  "SN1.3.4": {"id": "nhWYqF6lDW4", "title": "Referring a Sick Baby - Newborn Care Series"},
+  "SN2.6.1": {"id": "Ue5iaa8lulM", "title": "Carrying Your Baby Skin-to-Skin - Small Baby Series"},
+  "SN2.10.1": {"id": "5FfVjiou_YE", "title": "Taking a Venous Blood Sample - Newborn Care Series"},
+  "SN2.10.2": {"id": "gUOyzA64_iU", "title": "Protecting Small Babies from Infection - Small Baby Series"},
+  "SN2.10.3": {"id": "35Sf5_D9kv0", "title": "Cleaning Resuscitation Equipment with a Chemical Solution - Newborn Care Series"},
+  "SN2.8.8": {"id": "0clo9Lvpv7Y", "title": "Helping Babies Breathe at Birth - Newborn Care Series"}
+ }
+}

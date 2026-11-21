@@ -17,7 +17,7 @@ import lib
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, '..', '..', '..')
 FIGS = os.path.join(HERE, '..', 'figures')
-VIDEOS = json.load(open(os.path.join(HERE, 'videos.json'))) if os.path.exists(os.path.join(HERE, 'videos.json')) else {}
+VIDEOS = (json.load(open(os.path.join(HERE, 'videos.json'))).get('videos', {})) if os.path.exists(os.path.join(HERE, 'videos.json')) else {}
 ACTIVITY = {'question', 'reveal', 'flip', 'sort', 'steps', 'story', 'calc', 'exercise', 'video', 'reflect', 'drill', 'scenario', 'spot', 'classcards'}
 ERRORS, REPORT = [], []
 LETTER = re.compile(r'^\(?([A-Ha-h])[.)]$')
@@ -199,6 +199,13 @@ def build_book(key):
                 ERRORS.append(f"{key} S{si}: anchor {'not found' if not hits else 'found %d times' % len(hits)}: {anchor!r}"); continue
             L, bi = hits[0]
             L['blocks'][bi + 1:bi + 1] = [copy.deepcopy(b) for b in blocks]
+        from books.ghm import EXTRA, ghm
+        for book, sec, anchor, vid, vtitle in EXTRA:
+            if book != key or sec != si: continue
+            hits = find_block(lessons, anchor)
+            if len(hits) != 1: ERRORS.append(f"{key} S{si}: GHMP video anchor not found once: {anchor!r}"); continue
+            L, bi = hits[0]
+            L['blocks'].insert(bi + 1, ghm(vid, vtitle))
         ctx['exercises'].extend(mc.get('exercises', []))
         out_mods.append({'title': mc['title'], 'order': si, 'lessons': lessons, 'ids': m['ids'], 'anyOrder': mc.get('anyOrder', False)})
     # ---- coverage
@@ -229,7 +236,11 @@ def finish(cfg, out_mods, exercises):
             for b in L['blocks']:
                 if b['type'].startswith('_'): continue
                 b = {k: v for k, v in b.items() if not k.startswith('_')}
-                if b['type'] == 'video' and not b.get('url') and b.get('script') in VIDEOS: b['url'] = VIDEOS[b['script']]
+                if b['type'] == 'video' and not b.get('url') and VIDEOS.get(b.get('script')):
+                    v = VIDEOS[b['script']]      # a GHMP video fills the slot: its own title, the slot's code kept
+                    b['url'] = f"https://www.youtube.com/watch?v={v['id']}"
+                    b['title'] = v['title']
+                    b['caption'] = 'Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.'
                 read.append(b)
             where = f"{cfg.SHORT} · {mm['title']} · {L['title']}"
             # a video placeholder (no link yet) is not an activity in the app (activityKeys.js)
