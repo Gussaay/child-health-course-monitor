@@ -11,7 +11,7 @@ BOOK = "Manual Module (2) Special Newborn Care"
 SHORT = "SSN M2"
 COURSE = {
     "title": "Sick & Small Newborn · Module 2: Special Newborn Care",
-    "description": 'Sudan Training Course on Management of Sick and Small Newborns (2026), Module 2. Care in the special care newborn unit: triage, admission, the golden hour, prematurity, KMC, procedures, equipment, patient safety and neonatal sepsis. Each section is a module you can take, share and finish on its own; Procedures and Equipment are reference modules you can open at any lesson.',
+    "description": 'Sudan Training Course on Management of Sick and Small Newborns (2026), Module 2. Care in the special care newborn unit: triage, admission, the golden hour, prematurity, KMC, procedures, equipment, patient safety and neonatal sepsis. Each section is a module you can take, share and finish on its own. Neonatal procedures and equipment are in the open Annex course, linked from the lessons.',
     "category": CATEGORY, "subcategory": SUB,
     "lockOrder": True, "modulesAnyOrder": True, "enrolment": "approval",
 }
@@ -39,8 +39,16 @@ MODULES = [
     dict(title='The Golden Hour of Life', rename=m2_s4.TITLES, add=m2_s4.ADD),
     dict(title='Care of the Premature Baby and Prevention of Major Complications', rename=m2_s5.TITLES, split=m2_s5.SPLIT, add=m2_s5.ADD),
     dict(title='Kangaroo Mother Care', merge=m2_s6_9.S6_MERGE, rename=m2_s6_9.S6_TITLES, add=m2_s6_9.S6),
-    dict(title='Neonatal Procedures', anyOrder=True, rename=M2_S7, add=m2_s7.ADD),
-    dict(title='Equipment Required for Newborn Care', anyOrder=True, merge=m2_s8.MERGE, rename=M2_S8, add=m2_s8.ADD),
+    dict(title='Neonatal Procedures', rename=M2_S7, add=m2_s7.ADD),
+    dict(title='Equipment Required for Newborn Care', merge=m2_s8.MERGE, rename=M2_S8, add=m2_s8.ADD),
     dict(title='Patient Safety', rename=m2_s6_9.S9_TITLES, add=m2_s6_9.S9),
     dict(title='Neonatal Sepsis: Surveillance, Management and Prevention', merge=m2_s10.MERGE, merge_titles=m2_s10.MERGE_TITLES, rename=m2_s10.TITLES, split=m2_s10.SPLIT, add=m2_s10.ADD, exercises=m2_s10.EXERCISES),
 ]
+
+# Sections 7 (Procedures) and 8 (Equipment) are taken out of this course into their own open course,
+# the annex: anyone can open it without enrolment approval, every lesson in any order.
+ANNEX = dict(sections=[7, 8], file="ssnb-annex-neonatal-procedures-and-equipment.imnci.json", course={
+    "title": "Sick & Small Newborn · Annex: Neonatal Procedures and Equipment",
+    "description": "Neonatal procedures (pain relief, umbilical catheters, PICC, intraosseous access, intubation, needle thoracotomy, chest tube, lumbar puncture, bladder catheterization and aspiration) and the equipment of the newborn unit (warmers, incubator, bubble CPAP, pulse oximeter, phototherapy, pumps, suction, bag and mask, oxygen), from the Sudan Training Manual for Sick and Small Newborn 2026, Module 2 Sections 7 and 8. Open to everyone; open any lesson in any order. The other Small & Sick Newborn courses link here.",
+    "category": CATEGORY, "subcategory": SUB, "lockOrder": False, "modulesAnyOrder": True, "enrolment": "open",
+})

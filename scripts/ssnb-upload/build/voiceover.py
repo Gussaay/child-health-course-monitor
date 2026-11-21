@@ -12,12 +12,15 @@ def where(key):
     out = {}
     p = os.path.join(ROOT, 'course-packages', FILES[key] + '.imnci.json')
     if not os.path.exists(p): return out
-    pkg = json.load(open(p))
-    for m in pkg['modules']:
+    pkgs = [json.load(open(p))]
+    if key == 'm2':
+        pkgs.append(json.load(open(os.path.join(ROOT, 'course-packages', 'ssnb-annex-neonatal-procedures-and-equipment.imnci.json'))))
+    for pkg in pkgs:
+      for m in pkg['modules']:
         for s in m['sections']:
             for b in s['read']:
                 if b['type'] == 'video' and b.get('script'):
-                    out[b['script']] = (pkg['course']['title'], f"Module {m['order']}: {m['title']}", s['title'], b.get('url', ''))
+                    out[b['script']] = (pkg['course']['title'], f"{pkg['course']['title'].split('· ')[-1]} → Module {m['order']}: {m['title']}", s['title'], b.get('url', ''))
     return out
 
 def main(out):

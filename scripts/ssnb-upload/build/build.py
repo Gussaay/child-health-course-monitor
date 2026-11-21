@@ -253,9 +253,20 @@ def main():
         r = build_book(key)
         if not r: continue
         cfg, mods, exs, els, used = r
+        annex = getattr(cfg, 'ANNEX', None); apkg = None
+        if annex:
+            amods = [m for m in mods if m['order'] in annex['sections']]
+            mods = [m for m in mods if m['order'] not in annex['sections']]
+            for k, m in enumerate(mods, 1): m['order'] = k
+            for k, m in enumerate(amods, 1): m['order'] = k; m['anyOrder'] = True
+            acfg = type('A', (), {'COURSE': annex['course'], 'BOOK': cfg.BOOK + ', Sections 7 and 8', 'SHORT': 'SSN Annex', 'FILE': annex['file']})
+            apkg = finish(acfg, amods, [])
+            json.dump(apkg, open(os.path.join(ROOT, 'course-packages', annex['file']), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+            print(f"{annex['file']}: {len(apkg['modules'])} modules, {sum(len(m['sections']) for m in apkg['modules'])} lessons, "
+                  f"{sum(1 for m in apkg['modules'] for s in m['sections'] for b in s['read'] if b['type'] == 'video')} video slots")
         pkg = finish(cfg, mods, exs)
         # word-loss check: every word of the book's elements should be somewhere in the course (lessons or exercises)
-        text = html.unescape(re.sub(r'</?[a-z][a-z0-9]*[^<>]*>', ' ', json.dumps(pkg, ensure_ascii=False))).lower()
+        text = html.unescape(re.sub(r'</?[a-z][a-z0-9]*[^<>]*>', ' ', json.dumps([pkg, apkg], ensure_ascii=False))).lower()
         have = set(re.findall(r"[a-z]{3,}", text))
         book = []
         for e in els:

@@ -5,6 +5,8 @@ from lib import courselink
 M1 = 'Sick & Small Newborn · Module 1: Essential and Emergency Newborn Care'
 M2 = 'Sick & Small Newborn · Module 2: Special Newborn Care'
 M3 = 'Sick & Small Newborn · Module 3: Intensive Newborn Care'
+# Module 2 Sections 7 and 8 are published as their own open course, the annex every course links to.
+ANNEX = 'Sick & Small Newborn · Annex: Neonatal Procedures and Equipment'
 
 # Module 2, Section 7 (Neonatal Procedures) and Section 8 (Equipment): reference modules.
 M2_S7 = {
@@ -40,14 +42,14 @@ M2_S8 = {
 }
 
 def procedure(lesson, text=''):
-    """Link to a lesson of Module 2, Section 7 (Neonatal Procedures)."""
+    """Link to a lesson of the annex, module 1 (Neonatal Procedures, manual Module 2 Section 7)."""
     assert lesson in M2_S7.values(), lesson
-    return courselink(M2, 7, lesson, 'Procedure · Module 2, Neonatal Procedures', text)
+    return courselink(ANNEX, 1, lesson, 'Procedure · Annex, Neonatal Procedures', text)
 
 def equipment(lesson, text=''):
-    """Link to a lesson of Module 2, Section 8 (Equipment)."""
+    """Link to a lesson of the annex, module 2 (Equipment, manual Module 2 Section 8)."""
     assert lesson in M2_S8.values(), lesson
-    return courselink(M2, 8, lesson, 'Equipment · Module 2, Equipment for Newborn Care', text)
+    return courselink(ANNEX, 2, lesson, 'Equipment · Annex, Equipment for Newborn Care', text)
 
 def lesson_in(course, module, lesson, label, text=''):
     return courselink(course, module, lesson, label, text)

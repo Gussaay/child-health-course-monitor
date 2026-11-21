@@ -111,10 +111,10 @@
       },
       {
        "type": "courselink",
-       "course": "Sick & Small Newborn · Module 2: Special Newborn Care",
-       "module": 8,
+       "course": "Sick & Small Newborn · Annex: Neonatal Procedures and Equipment",
+       "module": 2,
        "lesson": "Pulse oximeter",
-       "label": "Equipment · Module 2, Equipment for Newborn Care",
+       "label": "Equipment · Annex, Equipment for Newborn Care",
        "text": "The device, its parts and its standard operating procedure."
       }
      ],
@@ -213,10 +213,10 @@
       },
       {
        "type": "courselink",
-       "course": "Sick & Small Newborn · Module 2: Special Newborn Care",
-       "module": 8,
+       "course": "Sick & Small Newborn · Annex: Neonatal Procedures and Equipment",
+       "module": 2,
        "lesson": "Oxygen concentrator and oxygen blender",
-       "label": "Equipment · Module 2, Equipment for Newborn Care"
+       "label": "Equipment · Annex, Equipment for Newborn Care"
       },
       {
        "type": "image",
@@ -744,10 +744,10 @@
       },
       {
        "type": "courselink",
-       "course": "Sick & Small Newborn · Module 2: Special Newborn Care",
-       "module": 8,
+       "course": "Sick & Small Newborn · Annex: Neonatal Procedures and Equipment",
+       "module": 2,
        "lesson": "Vayu bubble CPAP system",
-       "label": "Equipment · Module 2, Equipment for Newborn Care",
+       "label": "Equipment · Annex, Equipment for Newborn Care",
        "text": "The CPAP device used in Sudan: its parts, set-up and disinfection."
       },
       {
@@ -2385,10 +2385,10 @@
       },
       {
        "type": "courselink",
-       "course": "Sick & Small Newborn · Module 2: Special Newborn Care",
-       "module": 7,
+       "course": "Sick & Small Newborn · Annex: Neonatal Procedures and Equipment",
+       "module": 1,
        "lesson": "Needle thoracotomy",
-       "label": "Procedure · Module 2, Neonatal Procedures",
+       "label": "Procedure · Annex, Neonatal Procedures",
        "text": "If a pneumothorax is the cause."
       }
      ],
