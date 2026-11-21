@@ -5,6 +5,7 @@ import { Button, Modal, Input, Select, Textarea } from '../../CommonComponents';
 import { notify } from '../../dialogs';
 import { upsertOnlineCourse, upsertOnlineCourseItem } from '../../../data';
 import { COURSE_CATEGORIES, categoryOf, subcategoriesFor } from './categories';
+import { courseSavePayload } from './courseForm';
 
 // =============================================================================
 // Authoring
@@ -21,16 +22,28 @@ export function CourseModal({ isOpen, onClose, course, onSaved }) {
     useEffect(() => { if (isOpen) setForm(withCategory(course)); }, [isOpen, course]);
     const subOptions = subcategoriesFor(form.category);
 
-    const save = async () => {
-        if (!form.title?.trim()) { notify(t('imnci_ui.courses.course_modal.enter_title', 'Enter a course title.'), 'error'); return; }
+    const persist = async (payload, doneMessage) => {
         setSaving(true);
         try {
-            await upsertOnlineCourse({ ...form, title: form.title.trim(), category: String(form.category || '').trim(), subcategory: String(form.subcategory || '').trim() });
-            notify(t('imnci_ui.courses.course_modal.saved', 'Course saved.'), 'success');
+            await upsertOnlineCourse(payload);
+            notify(doneMessage, 'success');
             onSaved(); onClose();
         } catch (e) {
             console.error(e); notify(t('imnci_ui.courses.course_modal.save_failed', 'Could not save the course.'), 'error');
         } finally { setSaving(false); }
+    };
+
+    const save = async () => {
+        if (!form.title?.trim()) { notify(t('imnci_ui.courses.course_modal.enter_title', 'Enter a course title.'), 'error'); return; }
+        await persist(courseSavePayload(form), t('imnci_ui.courses.course_modal.saved', 'Course saved.'));
+    };
+
+    // A draft keeps whatever is filled in so far — no title, category or
+    // description is demanded — and is never published, so learners do not
+    // see it until the author finishes it and publishes it.
+    const saveDraft = async () => {
+        const untitled = t('imnci_ui.courses.course_modal.untitled_draft', 'Untitled course (draft)');
+        await persist(courseSavePayload(form, { draft: true, untitled }), t('imnci_ui.courses.course_modal.saved_draft', 'Saved as draft.'));
     };
 
     return (
@@ -89,6 +102,10 @@ export function CourseModal({ isOpen, onClose, course, onSaved }) {
                 )}
                 <div className="flex justify-end gap-2 pt-2 border-t">
                     <Button variant="secondary" onClick={onClose} disabled={saving}>{t('imnci_ui.courses.common.cancel', 'Cancel')}</Button>
+                    <Button variant="secondary" onClick={saveDraft} disabled={saving}
+                        title={t('imnci_ui.courses.course_modal.save_draft_title', 'Keep the course unpublished and save whatever is filled in so far')}>
+                        {t('imnci_ui.courses.course_modal.save_draft', 'Save as draft')}
+                    </Button>
                     <Button onClick={save} disabled={saving}>{saving ? t('imnci_ui.courses.common.saving', 'Saving…') : t('imnci_ui.courses.common.save', 'Save')}</Button>
                 </div>
             </div>
