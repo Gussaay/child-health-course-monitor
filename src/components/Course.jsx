@@ -73,6 +73,7 @@ import { useRememberedState } from '../utils/rememberedState';
 import { countsForCoverage } from '../utils/coverageEligibility';
 import { textIncludes, lowerText } from '../utils/textSearch';
 import { facilitatorOptionsFor } from '../utils/facilitatorOptions';
+import { participantPlace } from '../utils/participantAffiliation';
 import { IS_EMONC_SITE } from '../siteMode';
 import { usePageAddButton } from '../utils/pageChrome';
 
@@ -459,6 +460,14 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
 
     const [facilityId, setFacilityId] = useState('');
     const [facilityName, setFacilityName] = useState(''); 
+    // Where the person comes from: a health facility (the usual case) or a
+    // programme such as the National Child Health Program, whose staff belong
+    // to no facility. Village-based packages (ICCM / CPCM) and Program
+    // Management keep their own rules.
+    const [affiliation, setAffiliation] = useState('facility');
+    const [programName, setProgramName] = useState('');
+    const canChooseProgram = !['ICCM', 'Comprehensive Package For Community Midwives', 'Program Management'].includes(course?.course_type);
+    const fromProgram = canChooseProgram && affiliation === 'program';
     
     const [facilities, setFacilities] = useState([]);
     const [selectedFacility, setSelectedFacility] = useState(null);
@@ -496,10 +505,12 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
         if (!jobTitle) return showError(t('course_page.registration.err_job', 'Job Title is required. Choose your job title from the list.'));
         if (!regState) return showError(t('course_page.registration.err_state', 'State is required. Choose your state.'));
         if (!regLocality) return showError(t('course_page.registration.err_locality', 'Locality is required. Choose your locality.'));
-        if (!facilityId) return showError(t('course_page.registration.err_facility', 'Facility is required. Choose your facility from the list.')); 
+        if (fromProgram && !programName.trim()) return showError(t('course_page.registration.err_program', 'Program name is required.'));
+        if (!fromProgram && !facilityId) return showError(t('course_page.registration.err_facility', 'Facility is required. Choose your facility from the list.')); 
 
         setIsSaving(true);
         try {
+            const place = participantPlace({ fromProgram, centerName: facilityName, programName, facilityId });
             const participantData = {
                 name: name.trim(),
                 phone: phone.trim(),
@@ -513,9 +524,10 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                     ? { imci_sub_type: subCourseOfGroup(course, group) } : {}),
                 state: regState,
                 locality: regLocality,
-                center_name: facilityName, 
+                center_name: place.center_name, 
+                program: place.program,
                 courseId: course.id,
-                facilityId: facilityId 
+                facilityId: place.facilityId 
             };
 
             const isImnci = course.course_type === 'IMNCI';
@@ -526,7 +538,7 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
 
             let facilityUpdatePayload = null;
 
-            if ((isImnci || isEenc || isEtat || isSsnc || isIpc) && selectedFacility && !selectedFacility.id.startsWith('pending_')) {
+            if (!fromProgram && (isImnci || isEenc || isEtat || isSsnc || isIpc) && selectedFacility && !selectedFacility.id.startsWith('pending_')) {
                 const staffField = isEtat ? 'critical_staff' 
                                  : (isSsnc || isIpc) ? 'neonatal_staff' 
                                  : isEenc ? 'eenc_staff' 
@@ -649,6 +661,25 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                         </Select>
                     </FormGroup>
 
+                    {canChooseProgram && (
+                        <FormGroup label={t('course_page.registration.participant_from', 'Participant from')}>
+                            <Select disabled={isSaving} value={affiliation} onChange={e => {
+                                const v = e.target.value;
+                                setAffiliation(v);
+                                if (v === 'program') { setFacilityName(''); setFacilityId(''); setSelectedFacility(null); setIsFacilitySelectorOpen(false); }
+                            }}>
+                                <option value="facility">{t('course_page.registration.from_facility', 'Health facility')}</option>
+                                <option value="program">{t('course_page.registration.from_program', 'A programme (e.g. National Child Health Program)')}</option>
+                            </Select>
+                        </FormGroup>
+                    )}
+
+                    {fromProgram ? (
+                    <FormGroup label={t('course_page.registration.program_name', 'Program name')}>
+                        <Input disabled={isSaving} value={programName} onChange={e => setProgramName(e.target.value)} placeholder={t('course_page.registration.program_placeholder', 'e.g. National Child Health Program')} list="registration-program-suggestions" />
+                        <datalist id="registration-program-suggestions"><option value="National Child Health Program" /></datalist>
+                    </FormGroup>
+                    ) : (
                     <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             {t('course_page.registration.health_facility_in', 'Health Facility (in {{locality}})', { locality: regLocality || '\u2014' })}
@@ -690,6 +721,7 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                             )}
                         </div>
                     </div>
+                    )}
                 </div>
             </CardBody>
             <CardFooter className="flex justify-end gap-2">

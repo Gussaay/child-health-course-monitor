@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { publicBaseUrl } from '../utils/publicLink';
 import { useLeaveGuard, leaveForm } from '../utils/leaveGuard';
 import { textIncludes } from '../utils/textSearch';
+import { participantPlace } from '../utils/participantAffiliation';
 import FormPdfButton from './FormPdfButton';
 
 export const EENC_TEST_QUESTIONS = [
@@ -1749,6 +1750,11 @@ export function CourseTestForm({
 
     const [newParticipantCenter, setNewParticipantCenter] = useState('');
     const [newParticipantDepartment, setNewParticipantDepartment] = useState('');
+    // Where the new participant comes from: a health facility (the usual case)
+    // or a programme such as the National Child Health Program, whose staff
+    // belong to no facility.
+    const [newParticipantAffiliation, setNewParticipantAffiliation] = useState('facility');
+    const [newParticipantProgram, setNewParticipantProgram] = useState('');
     const [selectedFacilityId, setSelectedFacilityId] = useState(null);
     const [facilitiesInLocality, setFacilitiesInLocality] = useState([]);
     const [isLoadingFacilities, setIsLoadingFacilities] = useState(false);
@@ -1929,6 +1935,8 @@ export function CourseTestForm({
         setNewParticipantLocality((!isFederal && courseLocalities.length === 1 && !isFederalValue(courseLocalities[0])) ? courseLocalities[0] : ''); 
         setNewParticipantCenter(''); 
         setNewParticipantDepartment('');
+        setNewParticipantAffiliation('facility');
+        setNewParticipantProgram('');
         setSelectedFacilityId(null); 
         setFacilitiesInLocality([]); 
         setNewParticipantGroup('Group A'); 
@@ -2009,13 +2017,22 @@ export function CourseTestForm({
             
             if (!isProgramManagement && !newParticipantState) throw new Error(t('course_tests.tests.errors.state_required', 'State is required.'));
             if (!isProgramManagement && !newParticipantLocality) throw new Error(t('course_tests.tests.errors.locality_required', 'Locality is required.'));
-            if (!isProgramManagement && !newParticipantCenter.trim()) throw new Error(t('course_tests.tests.errors.field_required', '{{field}} is required.', { field: centerNameLabel }));
+            const fromProgram = !isIccm && !isProgramManagement && newParticipantAffiliation === 'program';
+            if (fromProgram && !newParticipantProgram.trim()) throw new Error(t('course_tests.tests.errors.program_required', 'Program name is required.'));
+            if (!isProgramManagement && !fromProgram && !newParticipantCenter.trim()) throw new Error(t('course_tests.tests.errors.field_required', '{{field}} is required.', { field: centerNameLabel }));
             if (isProgramManagement && !newParticipantDepartment.trim()) throw new Error(t('course_tests.tests.errors.department_required', 'Department is required.'));
             
             if (!newParticipantName.trim()) throw new Error(t('course_tests.tests.errors.name_required', 'Participant Name is required.'));
             if (!finalJobTitle) throw new Error(t('course_tests.tests.errors.job_required', 'Job Title is required.'));
             if (!newParticipantPhone.trim()) throw new Error(t('course_tests.tests.errors.phone_required', 'Phone Number is required.'));
             
+            // A programme participant has no facility: nothing is added to any
+            // facility's staff list for them.
+            const place = participantPlace({
+                programManaged: isProgramManagement, fromProgram,
+                centerName: newParticipantCenter, programName: newParticipantProgram,
+                facilityId: (isIccm || (selectedFacilityId && selectedFacilityId.startsWith('pending_'))) ? null : selectedFacilityId,
+            });
             const participantPayload = {
                 name: newParticipantName.trim(),
                 phone: newParticipantPhone.trim(),
@@ -2023,12 +2040,13 @@ export function CourseTestForm({
                 group: newParticipantGroup,
                 state: isProgramManagement ? course.state : newParticipantState, 
                 locality: isProgramManagement ? course.locality : newParticipantLocality, 
-                center_name: isProgramManagement ? 'N/A' : newParticipantCenter.trim(),
+                center_name: place.center_name,
+                program: place.program,
                 department: isProgramManagement ? newParticipantDepartment.trim() : null,
                 courseId: course.id,
                 // EmONC: remember which module this participant takes, so they are listed under it.
                 ...(currentModule ? { imci_sub_type: currentModule } : {}),
-                facilityId: (isIccm || isProgramManagement || (selectedFacilityId && selectedFacilityId.startsWith('pending_'))) ? null : selectedFacilityId,
+                facilityId: place.facilityId,
                 ...(isIccm && { trained_before: false, last_imci_training: null, nearest_health_facility: null, hours_to_facility: null })
             };
 
@@ -2040,7 +2058,7 @@ export function CourseTestForm({
 
             let facilityUpdatePayload = null;
 
-            if ((isImnci || isEenc || isEtat || isSsnc || isIpc) && selectedFacilityId && !selectedFacilityId.startsWith('pending_')) {
+            if (!fromProgram && (isImnci || isEenc || isEtat || isSsnc || isIpc) && selectedFacilityId && !selectedFacilityId.startsWith('pending_')) {
                 const selectedFacilityObj = facilitiesInLocality.find(f => f.id === selectedFacilityId);
                 
                 if (selectedFacilityObj) {
@@ -2551,6 +2569,23 @@ export function CourseTestForm({
                                     <Input value={newParticipantCenter} onChange={(e) => setNewParticipantCenter(e.target.value)} placeholder={t('course_tests.tests.enter_field', 'Enter {{field}}', { field: centerNameLabel })} disabled={!newParticipantLocality} />
                                 </FormGroup>
                             ) : (
+                                <>
+                                <FormGroup label={t('course_tests.tests.participant_from', 'Participant from')}>
+                                    <Select value={newParticipantAffiliation} onChange={(e) => {
+                                        const v = e.target.value;
+                                        setNewParticipantAffiliation(v);
+                                        if (v === 'program') { setNewParticipantCenter(''); setSelectedFacilityId(null); }
+                                    }}>
+                                        <option value="facility">{t('course_tests.tests.from_facility', 'Health facility')}</option>
+                                        <option value="program">{t('course_tests.tests.from_program', 'A programme (e.g. National Child Health Program)')}</option>
+                                    </Select>
+                                </FormGroup>
+                                {newParticipantAffiliation === 'program' ? (
+                                <FormGroup label={t('course_tests.tests.program_name', 'Program name')}>
+                                    <Input value={newParticipantProgram} onChange={(e) => setNewParticipantProgram(e.target.value)} placeholder={t('course_tests.tests.program_placeholder', 'e.g. National Child Health Program')} list="test-program-suggestions" />
+                                    <datalist id="test-program-suggestions"><option value="National Child Health Program" /></datalist>
+                                </FormGroup>
+                                ) : (
                                 <FormGroup label={centerNameLabel}>
                                     <div 
                                         onClick={() => {
@@ -2575,6 +2610,8 @@ export function CourseTestForm({
                                         <Search size={16} className="text-gray-400 ms-2 shrink-0" aria-hidden="true" />
                                     </div>
                                 </FormGroup>
+                                )}
+                                </>
                             )}
 
                             <FormGroup label={t('course_tests.tests.participant_name', 'Participant Name')}><Input value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder={t('course_tests.tests.enter_name', 'Enter name')} disabled={!isProgramManagement && !newParticipantLocality} /></FormGroup>
