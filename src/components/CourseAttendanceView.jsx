@@ -18,6 +18,7 @@ import { notify, confirmDialog, promptDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
 import { findLinkedParticipant } from '../utils/linkedParticipant';
 import { textIncludes } from '../utils/textSearch';
+import { withoutPractice } from '../utils/practiceParticipants';
 
 // --- Helper Functions ---
 
@@ -260,7 +261,7 @@ export function AttendanceManagerView({ course, onClose }) {
         const loadData = async () => {
             setLoading(true);
             try {
-                const data = await listAllParticipantsForCourse(course.id, 'server');
+                const data = await listAllParticipantsForCourse(course.id, { source: 'server', includePractice: true });
                 setParticipants(data || []);
             } catch (err) {
                 console.error(err);
@@ -415,7 +416,7 @@ export function AttendanceManagerView({ course, onClose }) {
         await new Promise(resolve => setTimeout(resolve, 100)); // allow UI to register generating state
         await generateAttendanceReportPdf(
             course, 
-            participants, 
+            withoutPractice(participants), 
             sessionDates,
             (msg) => { notify(msg); setIsPdfGenerating(false); },
             (msg) => { notify(msg); setIsPdfGenerating(false); },
@@ -423,15 +424,17 @@ export function AttendanceManagerView({ course, onClose }) {
         );
     };
 
-    // KPIs
-    const totalParticipants = participants.length;
+    // KPIs. Facilitators' practice entries can be marked (to try the form)
+    // but are never counted in attendance.
+    const countedParticipants = withoutPractice(participants);
+    const totalParticipants = countedParticipants.length;
     const totalSessions = sessionDates.length;
     const totalPossibleAttendance = totalParticipants * totalSessions;
-    const totalActualAttendance = participants.reduce((acc, p) => acc + (p.attendance ? p.attendance.length : 0), 0);
+    const totalActualAttendance = countedParticipants.reduce((acc, p) => acc + (p.attendance ? p.attendance.length : 0), 0);
     const avgAttendance = totalPossibleAttendance > 0 ? (totalActualAttendance / totalPossibleAttendance) * 100 : 0;
 
     const dailyCounts = sessionDates.map(date => {
-        const count = participants.filter(p => p.attendance && p.attendance.includes(date)).length;
+        const count = countedParticipants.filter(p => p.attendance && p.attendance.includes(date)).length;
         return { date, count };
     });
 
@@ -605,7 +608,7 @@ export function PublicAttendanceView({ courseId, user = null }) {
                 const courseData = await getCourseById(courseId, 'server');
                 if (!courseData) throw new Error(t('course_tests.attendance.course_not_found', 'Course not found.'));
                 setCourse(courseData);
-                const participantsData = await listAllParticipantsForCourse(courseId, 'server');
+                const participantsData = await listAllParticipantsForCourse(courseId, { source: 'server', includePractice: true });
                 setParticipants(participantsData || []);
             } catch (err) {
                 console.error(err);

@@ -1,5 +1,6 @@
 // DataContext.jsx
 import React, { useState, createContext, useContext, useCallback, useEffect, useMemo, useRef } from 'react';
+import { withoutPractice } from './utils/practiceParticipants.js';
 import { 
     listAllCourses,
     listAllParticipants,
@@ -1249,8 +1250,18 @@ export const DataProvider = ({ children }) => {
         try { return await run; } finally { homeCopyInflight.current = null; }
     }, []);
 
+    // Facilitators' practice entries (and their tests) never reach the
+    // app-wide lists: dashboards, counts and reports read these. The live
+    // delta listeners bring raw documents, so they are filtered here too.
+    const cachedParticipants = cache.participants;
+    const cachedParticipantTests = cache.participantTests;
+    const participantsNoPractice = useMemo(() => withoutPractice(cachedParticipants), [cachedParticipants]);
+    const participantTestsNoPractice = useMemo(() => withoutPractice(cachedParticipantTests), [cachedParticipantTests]);
+
     const value = {
         ...cache,
+        participants: participantsNoPractice,
+        participantTests: participantTestsNoPractice,
         ...fetchers,
         // IMNCIRecordingForm reads `protocols.child` / `protocols.dosages_infant`,
         // so the cache key is aliased rather than renamed: `imnciProtocols` keeps

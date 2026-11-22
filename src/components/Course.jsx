@@ -72,6 +72,9 @@ import { publicBaseUrl } from '../utils/publicLink';
 import { useRememberedState } from '../utils/rememberedState';
 import { countsForCoverage } from '../utils/coverageEligibility';
 import { textIncludes, lowerText } from '../utils/textSearch';
+import { facilitatorOptionsFor } from '../utils/facilitatorOptions';
+import { participantPlace } from '../utils/participantAffiliation';
+import { withoutPractice } from '../utils/practiceParticipants';
 import { IS_EMONC_SITE } from '../siteMode';
 import { usePageAddButton } from '../utils/pageChrome';
 
@@ -458,6 +461,14 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
 
     const [facilityId, setFacilityId] = useState('');
     const [facilityName, setFacilityName] = useState(''); 
+    // Where the person comes from: a health facility (the usual case) or a
+    // programme such as the National Child Health Program, whose staff belong
+    // to no facility. Village-based packages (ICCM / CPCM) and Program
+    // Management keep their own rules.
+    const [affiliation, setAffiliation] = useState('facility');
+    const [programName, setProgramName] = useState('');
+    const canChooseProgram = !['ICCM', 'Comprehensive Package For Community Midwives', 'Program Management'].includes(course?.course_type);
+    const fromProgram = canChooseProgram && affiliation === 'program';
     
     const [facilities, setFacilities] = useState([]);
     const [selectedFacility, setSelectedFacility] = useState(null);
@@ -495,10 +506,12 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
         if (!jobTitle) return showError(t('course_page.registration.err_job', 'Job Title is required. Choose your job title from the list.'));
         if (!regState) return showError(t('course_page.registration.err_state', 'State is required. Choose your state.'));
         if (!regLocality) return showError(t('course_page.registration.err_locality', 'Locality is required. Choose your locality.'));
-        if (!facilityId) return showError(t('course_page.registration.err_facility', 'Facility is required. Choose your facility from the list.')); 
+        if (fromProgram && !programName.trim()) return showError(t('course_page.registration.err_program', 'Program name is required.'));
+        if (!fromProgram && !facilityId) return showError(t('course_page.registration.err_facility', 'Facility is required. Choose your facility from the list.')); 
 
         setIsSaving(true);
         try {
+            const place = participantPlace({ fromProgram, centerName: facilityName, programName, facilityId });
             const participantData = {
                 name: name.trim(),
                 phone: phone.trim(),
@@ -512,9 +525,10 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                     ? { imci_sub_type: subCourseOfGroup(course, group) } : {}),
                 state: regState,
                 locality: regLocality,
-                center_name: facilityName, 
+                center_name: place.center_name, 
+                program: place.program,
                 courseId: course.id,
-                facilityId: facilityId 
+                facilityId: place.facilityId 
             };
 
             const isImnci = course.course_type === 'IMNCI';
@@ -525,7 +539,7 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
 
             let facilityUpdatePayload = null;
 
-            if ((isImnci || isEenc || isEtat || isSsnc || isIpc) && selectedFacility && !selectedFacility.id.startsWith('pending_')) {
+            if (!fromProgram && (isImnci || isEenc || isEtat || isSsnc || isIpc) && selectedFacility && !selectedFacility.id.startsWith('pending_')) {
                 const staffField = isEtat ? 'critical_staff' 
                                  : (isSsnc || isIpc) ? 'neonatal_staff' 
                                  : isEenc ? 'eenc_staff' 
@@ -648,6 +662,25 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                         </Select>
                     </FormGroup>
 
+                    {canChooseProgram && (
+                        <FormGroup label={t('course_page.registration.participant_from', 'Participant from')}>
+                            <Select disabled={isSaving} value={affiliation} onChange={e => {
+                                const v = e.target.value;
+                                setAffiliation(v);
+                                if (v === 'program') { setFacilityName(''); setFacilityId(''); setSelectedFacility(null); setIsFacilitySelectorOpen(false); }
+                            }}>
+                                <option value="facility">{t('course_page.registration.from_facility', 'Health facility')}</option>
+                                <option value="program">{t('course_page.registration.from_program', 'A programme (e.g. National Child Health Program)')}</option>
+                            </Select>
+                        </FormGroup>
+                    )}
+
+                    {fromProgram ? (
+                    <FormGroup label={t('course_page.registration.program_name', 'Program name')}>
+                        <Input disabled={isSaving} value={programName} onChange={e => setProgramName(e.target.value)} placeholder={t('course_page.registration.program_placeholder', 'e.g. National Child Health Program')} list="registration-program-suggestions" />
+                        <datalist id="registration-program-suggestions"><option value="National Child Health Program" /></datalist>
+                    </FormGroup>
+                    ) : (
                     <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             {t('course_page.registration.health_facility_in', 'Health Facility (in {{locality}})', { locality: regLocality || '\u2014' })}
@@ -689,6 +722,7 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                             )}
                         </div>
                     </div>
+                    )}
                 </div>
             </CardBody>
             <CardFooter className="flex justify-end gap-2">
@@ -1739,6 +1773,7 @@ export function CourseManagementView({
         stateCoordinators, fetchStateCoordinators,
         localityCoordinators, fetchLocalityCoordinators,
         funders, fetchFunders,
+        fetchFacilitators,
         fetchCourses,
         participants: globalParticipants, 
         fetchParticipants,
@@ -1765,7 +1800,12 @@ const [emoncModule, setEmoncModule] = useState('maternal');
         fetchStateCoordinators();
         fetchLocalityCoordinators();
         fetchFunders();
-    }, [fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators, fetchFunders]); 
+        // The course form (add / edit) picks its director, clinical instructor
+        // and facilitators from this list. It used to load only on the Human
+        // Resources screens, so opening Courses straight away gave an empty
+        // search ("No results found") for every package.
+        if (fetchFacilitators) fetchFacilitators();
+    }, [fetchFederalCoordinators, fetchStateCoordinators, fetchLocalityCoordinators, fetchFunders, fetchFacilitators]); 
 
     // Courses first, participants after. Both used to start together, and the
     // participant list (many times larger) took the connection the course list
@@ -2607,7 +2647,7 @@ const [emoncModule, setEmoncModule] = useState('maternal');
 
 
 
-        {activeCoursesTab === 'reports' && selectedCourse && <Suspense fallback={<PageSkeleton />}><ReportsView course={selectedCourse} participants={participants} allObs={liveAllObs || undefined} allCases={liveAllCases || undefined} allTests={participantTests} /></Suspense>}
+        {activeCoursesTab === 'reports' && selectedCourse && <Suspense fallback={<PageSkeleton />}><ReportsView course={selectedCourse} participants={withoutPractice(participants)} allObs={withoutPractice(liveAllObs) || undefined} allCases={withoutPractice(liveAllCases) || undefined} allTests={withoutPractice(participantTests)} /></Suspense>}
         
         {activeCoursesTab === 'enter-test-scores' && selectedCourse && (
             <CourseTestForm
@@ -2948,52 +2988,34 @@ export function CourseForm({
 
     const [error, setError] = useState('');
 
-    const directorOptions = useMemo(() => {
-        // Program Management: any existing facilitator can be the course director.
-        if (isProgramManagement || canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
-            return [...facilitatorsList].sort((a, b) => a.name.localeCompare(b.name));
+    // The whole facilitator list is offered for every role: the people
+    // tagged for this package come first, but nobody is hidden — a package
+    // with nobody tagged yet used to offer an empty search, so no director
+    // or facilitator could be chosen and the course could not be created.
+    const directorOptions = useMemo(() => facilitatorOptionsFor(facilitatorsList, (f) => {
+        const fCourses = Array.isArray(f.courses) ? f.courses : [];
+        if (isProgramManagement) return true;
+        if (isCpcm) {
+            return fCourses.includes('ICCM') || fCourses.includes('IMNCI') || fCourses.includes('Comprehensive Package For Community Midwives');
         }
-        return facilitatorsList
-            .filter(f => {
-                const fCourses = Array.isArray(f.courses) ? f.courses : [];
-                if (isCpcm) {
-                    return fCourses.includes('ICCM') || fCourses.includes('IMNCI') || fCourses.includes('Comprehensive Package For Community Midwives');
-                }
-                if (isSmallAndSick) {
-                    return fCourses.includes('SSNC') || fCourses.includes('Small & Sick Newborn');
-                }
-                return f.directorCourse === 'Yes';
-            })
-            .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, isCpcm, isSmallAndSick, isProgramManagement, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures]);
+        if (isSmallAndSick) {
+            return fCourses.includes('SSNC') || fCourses.includes('Small & Sick Newborn');
+        }
+        return f.directorCourse === 'Yes';
+    }), [facilitatorsList, isCpcm, isSmallAndSick, isProgramManagement]);
 
-    const clinicalInstructorOptions = useMemo(() => {
-        if (canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
-            return [...facilitatorsList].sort((a, b) => a.name.localeCompare(b.name));
-        }
-        return facilitatorsList
-            .filter(f => f.isClinicalInstructor === 'Yes' || f.directorCourse === 'Yes')
-            .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures]);
+    const clinicalInstructorOptions = useMemo(() => facilitatorOptionsFor(facilitatorsList,
+        (f) => f.isClinicalInstructor === 'Yes' || f.directorCourse === 'Yes'), [facilitatorsList]);
 
-    const facilitatorOptions = useMemo(() => {
-        // Program Management: any existing facilitator can facilitate.
-        if (isProgramManagement || canUseFederalManagerAdvancedFeatures || canUseSuperUserAdvancedFeatures) {
-            return [...facilitatorsList].sort((a, b) => a.name.localeCompare(b.name));
-        }
-        return facilitatorsList
-            .filter(f => {
-                const fCourses = Array.isArray(f.courses) ? f.courses : [];
-                
-                if (isIccm || isCpcm) return fCourses.includes('ICCM') || fCourses.includes('IMNCI') || fCourses.includes('Comprehensive Package For Community Midwives');
-                if (isInfectionControl) return fCourses.includes('IPC');
-                if (isSmallAndSick) return fCourses.includes('SSNC') || fCourses.includes('Small & Sick Newborn');
-                if (isEmonc) return fCourses.includes('EmONC') || fCourses.includes('EENC');
-                
-                return fCourses.includes(courseType);
-            })
-            .sort((a, b) => a.name.localeCompare(b.name));
-    }, [facilitatorsList, courseType, isInfectionControl, isIccm, isCpcm, isProgramManagement, isSmallAndSick, isEmonc, canUseFederalManagerAdvancedFeatures, canUseSuperUserAdvancedFeatures]);
+    const facilitatorOptions = useMemo(() => facilitatorOptionsFor(facilitatorsList, (f) => {
+        const fCourses = Array.isArray(f.courses) ? f.courses : [];
+        if (isProgramManagement) return true;
+        if (isIccm || isCpcm) return fCourses.includes('ICCM') || fCourses.includes('IMNCI') || fCourses.includes('Comprehensive Package For Community Midwives');
+        if (isInfectionControl) return fCourses.includes('IPC');
+        if (isSmallAndSick) return fCourses.includes('SSNC') || fCourses.includes('Small & Sick Newborn');
+        if (isEmonc) return fCourses.includes('EmONC') || fCourses.includes('EENC');
+        return fCourses.includes(courseType);
+    }), [facilitatorsList, courseType, isInfectionControl, isIccm, isCpcm, isProgramManagement, isSmallAndSick, isEmonc]);
 
     const federalCoordinatorOptions = useMemo(() => {
         return federalCoordinatorsList.map(c => ({ id: c.id, name: c.name }));
@@ -3187,7 +3209,9 @@ export function CourseForm({
             const groupAssignments = facilitatorGroups[group].map(assignment => ({
                 ...assignment,
                 group: group
-            })).filter(assignment => assignment.name && (assignment.imci_sub_type || isIccm || isCpcm));
+            // Keep every named facilitator: those without a sub-course used to
+            // be dropped silently on save.
+            })).filter(assignment => assignment.name);
             
             if (isIccm) {
                 groupAssignments.forEach(a => a.imci_sub_type = ICCM_SUBCOURSE_TYPES[0]);
@@ -3207,7 +3231,8 @@ export function CourseForm({
             facilitators: L('تعيين ميسر واحد على الأقل', 'At least one facilitator'),
         };
         const missingFields = Object.keys(missing).filter(k => missing[k]);
-        if (missingFields.length > 0) {
+        // A super user may save with required fields still empty.
+        if (missingFields.length > 0 && !canUseSuperUserAdvancedFeatures) {
             setShowErrors(true);
             const firstMissing = Object.keys(SECTION_FIELDS).find(sec => STEP_IDS.includes(sec) && missingIn(sec) > 0);
             if (firstMissing) setStepId(firstMissing);
@@ -3586,6 +3611,11 @@ export function CourseForm({
                 {stepId === 'review' && (
                     <section className="mb-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                         <h3 className="mb-3 text-base font-bold text-slate-900">{L('راجع الدورة قبل الحفظ', 'Check the course before saving')}</h3>
+                        {canUseSuperUserAdvancedFeatures && Object.values(missing).some(Boolean) && (
+                            <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                                {L('بعض الحقول الإلزامية فارغة. يمكنك الحفظ لأنك مستخدم خارق.', 'Some required fields are empty. You can still save because you are a super user.')}
+                            </p>
+                        )}
                     <div dir={isAr ? 'rtl' : 'ltr'} className="space-y-2">
                         {[
                             ['basics', L('الأساسيات', 'Basics'), [

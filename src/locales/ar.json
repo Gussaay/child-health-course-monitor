@@ -2053,7 +2053,13 @@
       "select_state": "-- اختر الولاية --",
       "state": "الولاية",
       "success_registered": "تم تسجيل {{name}}.",
-      "successful": "تم التسجيل"
+      "successful": "تم التسجيل",
+      "participant_from": "جهة المشارك",
+      "from_facility": "مؤسسة صحية",
+      "from_program": "برنامج (مثل البرنامج القومي لصحة الطفل)",
+      "program_name": "اسم البرنامج",
+      "program_placeholder": "مثال: البرنامج القومي لصحة الطفل",
+      "err_program": "اسم البرنامج مطلوب."
     },
     "reports": {
       "analytics": "تحليلات الدورة",
@@ -2476,7 +2482,9 @@
       "group_value": "المجموعة: {{group}}",
       "cert_needs_reapproval": "الشهادة تحتاج إلى إعادة اعتماد",
       "created": "تاريخ الإنشاء:",
-      "last_edit": "آخر تعديل:"
+      "last_edit": "آخر تعديل:",
+      "practice": "تجريبي",
+      "practice_tooltip": "ميسر يجرّب النماذج: لا يُحسب في أي نتيجة أو تقرير أو شهادة"
     },
     "cert_mgmt": {
       "download_title": "تنزيل الشهادات",
@@ -2642,7 +2650,8 @@
         "save_participant_failed": "فشل حفظ المشارك: {{message}}",
         "save_test_failed": "فشل حفظ الاختبار: {{message}}",
         "select_participant_first": "يجب اختيار مشارك أو حفظه قبل إرسال الاختبار.",
-        "state_required": "الولاية مطلوبة."
+        "state_required": "الولاية مطلوبة.",
+        "program_required": "اسم البرنامج مطلوب."
       },
       "facility_name": "اسم المؤسسة الصحية",
       "federal_note": "دورة على المستوى الاتحادي — يمكن تسجيل مشاركين من أي ولاية.",
@@ -2790,7 +2799,13 @@
       "unsupported_question": "نوع سؤال غير مدعوم.",
       "view_edit_test": "عرض/تعديل الاختبار",
       "view_result_details": "عرض تفاصيل النتيجة",
-      "village_name": "اسم القرية"
+      "village_name": "اسم القرية",
+      "participant_from": "جهة المشارك",
+      "from_facility": "مؤسسة صحية",
+      "from_program": "برنامج (مثل البرنامج القومي لصحة الطفل)",
+      "program_name": "اسم البرنامج",
+      "program_placeholder": "مثال: البرنامج القومي لصحة الطفل",
+      "practice": "تجريبي"
     }
   },
   "facilitators_page": {

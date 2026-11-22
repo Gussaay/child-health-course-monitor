@@ -2057,7 +2057,13 @@
       "select_state": "-- Select State --",
       "state": "State",
       "success_registered": "Registered {{name}}.",
-      "successful": "Registered"
+      "successful": "Registered",
+      "participant_from": "Participant from",
+      "from_facility": "Health facility",
+      "from_program": "A programme (e.g. National Child Health Program)",
+      "program_name": "Program name",
+      "program_placeholder": "e.g. National Child Health Program",
+      "err_program": "Program name is required."
     },
     "reports": {
       "analytics": "Course Analytics",
@@ -2480,7 +2486,9 @@
       "group_value": "Group: {{group}}",
       "cert_needs_reapproval": "Certificate needs re-approval",
       "created": "Created:",
-      "last_edit": "Last Edit:"
+      "last_edit": "Last Edit:",
+      "practice": "Practice",
+      "practice_tooltip": "Facilitator practice entry: not counted in any score, report or certificate"
     },
     "cert_mgmt": {
       "download_title": "Download Certificates",
@@ -2646,7 +2654,8 @@
         "save_participant_failed": "Failed to save participant: {{message}}",
         "save_test_failed": "Failed to save test: {{message}}",
         "select_participant_first": "A participant must be selected or saved before submitting the test.",
-        "state_required": "State is required."
+        "state_required": "State is required.",
+        "program_required": "Program name is required."
       },
       "facility_name": "Facility Name",
       "federal_note": "Federal-level course — participants can be registered from any state.",
@@ -2794,7 +2803,13 @@
       "unsupported_question": "Unsupported question type.",
       "view_edit_test": "View/Edit Test",
       "view_result_details": "View Result Details",
-      "village_name": "Village Name"
+      "village_name": "Village Name",
+      "participant_from": "Participant from",
+      "from_facility": "Health facility",
+      "from_program": "A programme (e.g. National Child Health Program)",
+      "program_name": "Program name",
+      "program_placeholder": "e.g. National Child Health Program",
+      "practice": "Practice"
     }
   },
   "facilitators_page": {

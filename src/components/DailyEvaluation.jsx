@@ -340,6 +340,9 @@ export const PublicDailyEvaluationView = ({ formId }) => {
     const [ans, setAns] = useState({ lectures: {}, general: {} });
     const [meta, setMeta] = useState({ stateLocality: '', job: '', applyLevel: '', applyText: '', difficulty: '', suggestions: '' });
     const [sent, setSent] = useState(false);
+    // A facilitator trying the form ticks this: the answers are kept apart and
+    // never counted in the course's evaluation results.
+    const [isPractice, setIsPractice] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
 
@@ -391,6 +394,7 @@ export const PublicDailyEvaluationView = ({ formId }) => {
                 stateLocality: meta.stateLocality.slice(0, 200), job: meta.job.slice(0, 200),
                 applyLevel: meta.applyLevel, applyText: meta.applyText.slice(0, 2000),
                 difficulty: meta.difficulty.slice(0, 2000), suggestions: meta.suggestions.slice(0, 2000),
+                ...(isPractice ? { isPractice: true } : {}),
             });
             setSent(true);
             window.scrollTo?.(0, 0);
@@ -472,6 +476,10 @@ export const PublicDailyEvaluationView = ({ formId }) => {
                         <div className="font-bold tabular-nums text-slate-800">{progress.done} / {progress.total}</div>
                         <div className="text-xs text-slate-500">{error ? <span className="text-red-600">{error}</span> : 'بنود تم تقييمها'}</div>
                     </div>
+                    <label className="flex items-center gap-1.5 text-xs text-violet-800 cursor-pointer select-none">
+                        <input type="checkbox" checked={isPractice} onChange={(e) => setIsPractice(e.target.checked)} />
+                        <span>أنا ميسر أجرّب الاستمارة (لا تُحسب)</span>
+                    </label>
                     <div className="ms-auto">
                         <Button onClick={submit} disabled={busy}>{busy ? <Spinner size="sm" /> : 'إرسال التقييم'}</Button>
                     </div>

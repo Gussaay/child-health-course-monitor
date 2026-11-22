@@ -52,6 +52,31 @@ function writeCache(uid, value) {
 const ENROL_FRESH_MS = 6 * 60 * 60 * 1000;
 const ENROL_WAITING_MS = 2 * 60 * 1000;
 
+// How often a screen that stays open re-checks enrolment on its own. This
+// is what makes enrolment feel live: a new request reaches the manager's
+// list, and an approval opens the course for the learner, within seconds
+// and without anyone reloading the page.
+export const ENROL_LIVE_MS = 20 * 1000;
+
+/** True while any of these enrolments is still waiting on a manager. */
+export const enrolmentWaiting = (enrolments) => (enrolments || []).some((e) => e.status === 'requested');
+
+/**
+ * Run `refresh` every ENROL_LIVE_MS while `active` and the tab is visible,
+ * and once more as soon as the tab is seen again. Pausing while the tab is
+ * hidden keeps a forgotten page from calling the server all day.
+ */
+export function useEnrolmentLive(refresh, active = true) {
+    useEffect(() => {
+        if (!active || !refresh) return undefined;
+        const tick = () => { if (!document.hidden) refresh(); };
+        const id = setInterval(tick, ENROL_LIVE_MS);
+        const onVisible = () => { if (!document.hidden) refresh(); };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVisible); };
+    }, [refresh, active]);
+}
+
 /** The signed-in learner's enrolments, by course, and the groups they are in. */
 export function useMyEnrolments(uid) {
     const [state, setState] = useState(() => readCache(uid) || { enrolments: [], groups: [], loaded: false });
@@ -62,7 +87,7 @@ export function useMyEnrolments(uid) {
         // manager is checked more often, so an approval shows soon.
         if (ifStale) {
             const saved = readCache(uid);
-            const waiting = (saved?.enrolments || []).some((e) => e.status === 'requested');
+            const waiting = enrolmentWaiting(saved?.enrolments);
             const age = Date.now() - (saved?.fetchedAt || 0);
             if (saved?.loaded && !saved.failed && age < (waiting ? ENROL_WAITING_MS : ENROL_FRESH_MS)) return;
         }
@@ -77,6 +102,10 @@ export function useMyEnrolments(uid) {
         }
     }, [uid]);
     useEffect(() => { load({ ifStale: true }); }, [load]);
+    // While one of my requests is waiting, keep checking on the short live
+    // cycle: the moment a manager approves it, this state changes, the
+    // course's access flips to enrolled and the gate opens by itself.
+    useEnrolmentLive(load, enrolmentWaiting(state.enrolments));
     const byCourse = Object.fromEntries((state.enrolments || []).map((e) => [e.courseId, e]));
     const groupById = Object.fromEntries((state.groups || []).map((g) => [g.id, g]));
     const request = useCallback(async (courseId) => {

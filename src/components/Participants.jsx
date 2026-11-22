@@ -43,6 +43,8 @@ import { confirmDialog, alertDialog } from './dialogs';
 import { publicBaseUrl } from '../utils/publicLink';
 import { whatsappLink } from '../utils/whatsapp';
 import { textIncludes } from '../utils/textSearch';
+import { participantPlace, participantPlaceLabel } from '../utils/participantAffiliation';
+import { withoutPractice, isPracticeParticipant } from '../utils/practiceParticipants';
 import { sharePdf, certificateFileName } from '../utils/sharePdf';
 import { Capacitor } from '@capacitor/core';
 import { useRememberedState } from '../utils/rememberedState';
@@ -2017,7 +2019,7 @@ export function ParticipantsView({
 
     // Whose certificates are held because their details moved after sign-off.
     const heldCertificates = useMemo(
-        () => staleCertificateParticipants(participants, localCourseData),
+        () => staleCertificateParticipants(withoutPractice(participants), localCourseData),
         [participants, localCourseData]
     );
 
@@ -2132,7 +2134,7 @@ export function ParticipantsView({
                            (courseType === 'EENC' || courseType === 'EmONC') ? 'eenc_staff' : 
                            'imnci_staff';
 
-        const validParticipants = participants.filter(p => p.facilityId || p.center_name);
+        const validParticipants = withoutPractice(participants).filter(p => p.facilityId || p.center_name);
 
         validParticipants.forEach(p => {
             const facilityKey = p.facilityId || `${p.state}-${p.locality}-${p.center_name}`;
@@ -2242,6 +2244,10 @@ export function ParticipantsView({
             return matchGroup && matchJob && matchFacility && matchLocality && matchSubType;
         });
     }, [participants, groupFilter, jobTitleFilter, facilityFilter, localityFilter, subTypeFilter, course.facilitatorAssignments]);
+    // The real participants among those shown: facilitators' practice entries
+    // are listed (so they can try every form) but get no certificate or email.
+    const certificatePool = useMemo(() => withoutPractice(filtered), [filtered]);
+    const realParticipantCount = useMemo(() => withoutPractice(participants || []).length, [participants]);
 
     const toggleExpandParticipant = (id) => {
         setExpandedParticipantId(prev => (prev === id ? null : id));
@@ -2330,6 +2336,7 @@ export function ParticipantsView({
                 setFormCarryOver({
                     group: participantData.group, state: participantData.state, locality: participantData.locality,
                     facilityId: participantData.facilityId || null, center_name: participantData.center_name || '',
+                    program: participantData.program || '',
                 });
                 setEditingParticipant(null);
                 setParticipantFormKey(k => k + 1);
@@ -2498,6 +2505,8 @@ export function ParticipantsView({
     };
 
     const handleBulkCertificateDownload = async (language) => {
+        // Facilitators' practice entries never get a certificate.
+        const filtered = certificatePool;
         if (filtered.length === 0) {
             setToast({ show: true, message: t('participants_page.cert.no_bulk', 'No participants available for bulk certificate download.'), type: 'warning' });
             return;
@@ -2573,7 +2582,7 @@ export function ParticipantsView({
     };
 
     const handleOpenBulkEmail = () => {
-        setEmailTargets(filtered);
+        setEmailTargets(certificatePool);
         setIsBulkEmail(true);
         setEmailModalOpen(true);
     };
@@ -2852,7 +2861,7 @@ export function ParticipantsView({
             {finalFederalPerm && (
                 <div className="flex gap-2 border-b border-gray-200 mb-4">
                     {[
-                        { id: 'active', label: `${t('participants_page.list.tab_participants', 'Participants')} (${participants?.length || 0})` },
+                        { id: 'active', label: `${t('participants_page.list.tab_participants', 'Participants')} (${realParticipantCount})` },
                         { id: 'deleted', label: t('participants_page.list.deleted_participants', 'Deleted Participants'), count: pendingReaddCount },
                     ].map(({ id, label, count }) => (
                         <button key={id} type="button" onClick={() => setListTab(id)} disabled={isProcessing} className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px flex items-center gap-2 ${listTab === id ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
@@ -2947,6 +2956,11 @@ export function ParticipantsView({
                                         <div className="flex flex-col gap-0.5">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-bold text-gray-900 text-[13px] break-words">{p.name}</span>
+                                                {isPracticeParticipant(p) && (
+                                                    <span className="px-1.5 py-0.5 rounded bg-violet-100 text-violet-800 text-xs font-bold" title={t('participants_page.list.practice_tooltip', 'Facilitator practice entry: not counted in any score, report or certificate')}>
+                                                        {t('participants_page.list.practice', 'Practice')}
+                                                    </span>
+                                                )}
                                                 {certAwaiting && (
                                                     <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-xs font-bold "
                                                         title={t('participants_page.list.stale_tooltip', 'Name or sub-course changed after this course was approved')}>
@@ -2960,7 +2974,7 @@ export function ParticipantsView({
 
                                     <td className="p-3 align-middle border border-slate-200">
                                         <div className="text-[12px] font-semibold text-gray-700 whitespace-nowrap truncate max-w-[220px]">
-                                            {course.course_type === 'Program Management' ? (p.department || t('participants_page.common.na', 'N/A')) : p.center_name}
+                                            {course.course_type === 'Program Management' ? (p.department || t('participants_page.common.na', 'N/A')) : participantPlaceLabel(p)}
                                         </div>
                                         {p.locality && <div className="text-xs text-gray-500 whitespace-nowrap truncate max-w-[260px]" title={p.locality}>{t('participants_page.list.locality_value', 'Locality: {{locality}}', { locality: p.locality })}</div>}
                                     </td>
@@ -2993,7 +3007,7 @@ export function ParticipantsView({
                                                 </Button>
                                             )}
 
-                                            {isCertApproved && finalCertPerm && (
+                                            {isCertApproved && finalCertPerm && !isPracticeParticipant(p) && (
                                                 <Button 
                                                     variant="secondary" 
                                                     className="px-2.5 py-1 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50" 
@@ -3047,8 +3061,8 @@ export function ParticipantsView({
                                 onClick={() => toggleExpandParticipant(p.id)}
                             >
                                 <div>
-                                    <h3 className="font-bold text-lg text-gray-800">{p.name}</h3>
-                                    <p className="text-gray-600 text-sm">{p.job_title} • {course.course_type === 'Program Management' ? (p.department || t('participants_page.common.na', 'N/A')) : p.center_name}</p>
+                                    <h3 className="font-bold text-lg text-gray-800">{p.name}{isPracticeParticipant(p) && <span className="ms-2 align-middle px-1.5 py-0.5 rounded bg-violet-100 text-violet-800 text-xs font-bold">{t('participants_page.list.practice', 'Practice')}</span>}</h3>
+                                    <p className="text-gray-600 text-sm">{p.job_title} • {course.course_type === 'Program Management' ? (p.department || t('participants_page.common.na', 'N/A')) : participantPlaceLabel(p)}</p>
                                     <div className="flex flex-wrap items-center gap-2 mt-2">
                                         <span className="text-xs font-medium px-2 py-1 bg-gray-100 rounded text-gray-600">{t('participants_page.list.group_value', 'Group: {{group}}', { group: p.group })}</span>
                                         {certAwaiting && (
@@ -3078,7 +3092,7 @@ export function ParticipantsView({
                                             <Button variant="secondary" className="w-full justify-center" onClick={() => setExerciseModalParticipant(p)} disabled={isProcessing}>{t('participants_page.actions.exercises', 'Exercises')}</Button>
                                         )}
                                         
-                                        {isCertApproved && finalCertPerm && (
+                                        {isCertApproved && finalCertPerm && !isPracticeParticipant(p) && (
                                             <Button variant="secondary" className="w-full justify-center border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => setCertActionModal({ isOpen: true, data: { p, participantSubCourse } })} disabled={isCacheLoading || isProcessing || processingRowId === p.id}>
                                                 {processingRowId === p.id ? <Spinner size="sm" /> : t('participants_page.actions.certificate', 'Certificate')}
                                             </Button>
@@ -3165,6 +3179,12 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
     const [locality, setLocality] = useState(initialData?.locality || carryOver?.locality || course?.locality || ''); 
     const [center, setCenter] = useState(String(initialData?.center_name || carryOver?.center_name || '')); 
     const [department, setDepartment] = useState(String(initialData?.department || ''));
+    // Where the participant comes from: a health facility (the usual case)
+    // or a programme such as the National Child Health Program, whose staff
+    // belong to no facility.
+    const [affiliation, setAffiliation] = useState((initialData?.program || carryOver?.program) ? 'program' : 'facility');
+    const [program, setProgram] = useState(String(initialData?.program || carryOver?.program || ''));
+    const fromProgram = !isIccm && !isCpcm && !isProgramManagement && affiliation === 'program';
     const [phone, setPhone] = useState(String(initialData?.phone || ''));
     const [group, setGroup] = useState(initialData?.group || carryOver?.group || 'Group A');
     const [error, setError] = useState('');
@@ -3448,7 +3468,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
     // Steps: the person first, then training, then facility questions.
     useFullPageForm(true);
     const hasTrainingStep = showTestScores || isImnci || isIccm || isCpcm || isEtat || isEenc || isSsnc;
-    const STEP_IDS = ['basic', ...(hasTrainingStep ? ['training'] : []), ...(isImnci ? ['facility'] : [])];
+    const STEP_IDS = ['basic', ...(hasTrainingStep ? ['training'] : []), ...(isImnci && !fromProgram ? ['facility'] : [])];
     const [stepId, setStepId] = useState('basic');
     const stepIndex = STEP_IDS.indexOf(stepId);
     const isLastStep = stepIndex === STEP_IDS.length - 1;
@@ -3505,7 +3525,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
         // one popup per field.
         const missingNow = {
             state: !state, locality: !locality,
-            center: !isProgramManagement && !center.trim(),
+            center: !isProgramManagement && !fromProgram && !center.trim(),
+            program: fromProgram && !program.trim(),
             department: isProgramManagement && !department.trim(),
             name: !name.trim(), job: !finalJobTitle, phone: !phone.trim(),
         };
@@ -3550,6 +3571,14 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                 ? { ...signedApproval, name: name.trim() }
                 : null;
 
+            // Where the participant comes from. A programme participant has
+            // no facility: nothing is added to any facility's staff list.
+            const place = participantPlace({
+                programManaged: isProgramManagement, fromProgram,
+                centerName: center, programName: program,
+                facilityId: (isIccm || isCpcm || selectedFacility?.id?.startsWith('pending_')) ? null : selectedFacility?.id || null,
+            });
+
             let p = {
                 ...(initialData || {}), 
                 name: name.trim(), group, state, locality,
@@ -3566,8 +3595,9 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                 // stale the day the course ended, over a correction that was
                 // deliberately allowed while it was running.
                 ...(approvalFollowsName ? { certificateApproval: approvalFollowsName } : {}),
-                center_name: isProgramManagement ? 'N/A' : center.trim(),
-                facilityId: (isIccm || isCpcm || isProgramManagement || selectedFacility?.id.startsWith('pending_')) ? null : selectedFacility?.id || null, 
+                center_name: place.center_name,
+                facilityId: place.facilityId,
+                program: place.program,
                 job_title: finalJobTitle, phone: phone.trim(), email: email ? email.trim() : null,
                 department: isProgramManagement ? department.trim() : null
             };
@@ -3596,7 +3626,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                         isIntroducingImnci = true;
                     }
                     
-                    p.introduced_imci_to_facility = isIntroducingImnci;
+                    // A programme participant introduces IMNCI to no facility.
+                    p.introduced_imci_to_facility = fromProgram ? false : isIntroducingImnci;
 
                     const computedTotalProv = (Number(imnciDoctorsTotal) || 0) + (Number(imnciMedicalAssistantsTotal) || 0);
                     const computedTrainedProv = (Number(imnciDoctorsTrained) || 0) + (Number(imnciMedicalAssistantsTrained) || 0);
@@ -3624,7 +3655,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                 } else if (isIccm || isCpcm) {
                     p = { ...p, imci_sub_type: finalImciSubType, nearest_health_facility: nearestHealthFacility || null, hours_to_facility: hoursToFacility !== '' ? Number(hoursToFacility) : null }; 
                 }
-            } else if (isEtat) {
+            } else if (isEtat && !fromProgram) {
                 if (!hospitalTypeEtat) { showError('نوع المستشفى مطلوب لـ ETAT.'); setIsSaving(false); return; }
                 p = { 
                     ...p, hospital_type: hospitalTypeEtat, 
@@ -3636,7 +3667,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                     num_staff_in_er: numStaffInEr !== '' ? Number(numStaffInEr) : null, 
                     num_staff_trained_in_etat: numStaffTrainedInEtat !== '' ? Number(numStaffTrainedInEtat) : null 
                 };
-            } else if (isEenc || isSsnc) {
+            } else if ((isEenc || isSsnc) && !fromProgram) {
                 if (!hospitalTypeEenc) { showError(`نوع المستشفى مطلوب لـ ${isEenc ? 'EENC/EmONC' : 'SSNC'}.`); setIsSaving(false); return; }
                 if (hospitalTypeEenc === 'other' && !otherHospitalTypeEenc) { showError(`الرجاء تحديد نوع المستشفى لـ ${isEenc ? 'EENC/EmONC' : 'SSNC'}.`); setIsSaving(false); return; }
                 p = { 
@@ -3705,7 +3736,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                     facilityUpdatePayload = { ...selectedFacility, ...baseFacilityPayload, id: selectedFacility.id, date_of_visit: new Date().toISOString().split('T')[0], [staffField]: updatedStaffList };
                 }
 
-                if (initialData?.facilityId && selectedFacility?.id && initialData.facilityId !== selectedFacility.id) {
+                if (initialData?.facilityId && (fromProgram || (selectedFacility?.id && initialData.facilityId !== selectedFacility.id))) {
                     try {
                         const oldFacility = await getHealthFacilityById(initialData.facilityId);
                         if (oldFacility) {
@@ -3866,6 +3897,19 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                                 </FormGroup>
                             )}
 
+                            {!isProgramManagement && !isIccm && !isCpcm && (
+                                <FormGroup label={L("جهة المشارك", "Participant from")}>
+                                    <Select disabled={isSaving} value={affiliation} onChange={(e) => {
+                                        const v = e.target.value;
+                                        setAffiliation(v);
+                                        if (v === 'program') { setSelectedFacility(null); setCenter(''); setIsEditingExistingWorker(false); }
+                                    }}>
+                                        <option value="facility">{L("مؤسسة صحية", "Health facility")}</option>
+                                        <option value="program">{L("برنامج (مثل البرنامج القومي لصحة الطفل)", "A programme (e.g. National Child Health Program)")}</option>
+                                    </Select>
+                                </FormGroup>
+                            )}
+
                             {!isProgramManagement && (
                                 (isIccm || isCpcm) ? (
                                     <FormGroup label={L("اسم القرية", "Village")}>
@@ -3876,6 +3920,20 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                                             placeholder={L("أدخل اسم القرية", "Village name")}
                                         />
                                     </FormGroup>
+                                ) : fromProgram ? (
+                                    <div {...markWrap('program')}><FormGroup label={L("اسم البرنامج", "Program name")}>
+                                        <Input
+                                            disabled={isSaving}
+                                            value={program}
+                                            onChange={(e) => setProgram(e.target.value)}
+                                            placeholder={L("مثال: البرنامج القومي لصحة الطفل", "e.g. National Child Health Program")}
+                                            list="participant-program-suggestions"
+                                        />
+                                        <datalist id="participant-program-suggestions">
+                                            <option value="National Child Health Program" />
+                                        </datalist>
+                                        <FieldError show={fe('program')}>{reqMsg}</FieldError>
+                                    </FormGroup></div>
                                 ) : (
                                     <div {...markWrap('center')}><FormGroup label={isEtat ? L("اسم المستشفى", "Hospital") : L("اسم المؤسسة الصحية", "Health facility")}>
                                         <div 
@@ -3902,7 +3960,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                                 )
                             )}
                             
-                            {(isIccm || isCpcm || isProgramManagement) ? (
+                            {(isIccm || isCpcm || isProgramManagement || fromProgram) ? (
                                  <FormGroup label={L("اسم المشارك", "Participant name")}>
                                     <Input
                                         disabled={isSaving || !locality}

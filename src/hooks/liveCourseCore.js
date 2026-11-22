@@ -79,9 +79,9 @@ const withCorrectness = (cases, obs) => cases.map((c) => {
 async function refreshCourseFromServer(courseId, setCourseDetailsCache) {
     try {
         const [participants, participantTests, data] = await Promise.all([
-            listAllParticipantsForCourse(courseId, { source: 'server' }),
-            listParticipantTestsForCourse(courseId, { source: 'server' }),
-            listAllDataForCourse(courseId, { source: 'server' }),
+            listAllParticipantsForCourse(courseId, { source: 'server', includePractice: true }),
+            listParticipantTestsForCourse(courseId, { source: 'server', includePractice: true }),
+            listAllDataForCourse(courseId, { source: 'server', includePractice: true }),
         ]);
         setCourseDetailsCache((prev) => ({ ...prev, [courseId]: { ...(prev[courseId] || {}),
             participants: (participants || []).filter(alive), participantTests: (participantTests || []).filter(alive),
@@ -145,7 +145,7 @@ export function startLiveCourse({ courseId, base, loaded, setCourseDetailsCache 
                 try {
                     if (changedIds.length > 300) {
                         const wanted = new Set(changedIds);
-                        obs = (await listAllDataForCourse(courseId)).allObs.filter((o) => wanted.has(o.caseId));
+                        obs = (await listAllDataForCourse(courseId, { includePractice: true })).allObs.filter((o) => wanted.has(o.caseId));
                     } else {
                         obs = await listObservationsForCases(changedIds);
                     }
