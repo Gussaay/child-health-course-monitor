@@ -81,12 +81,14 @@ export function GroupedCourses({ render, list }) {
                     return (
                         <button key={area.id} type="button" role="tab" aria-selected={on} data-testid="course-area"
                             onClick={() => setOnly(on ? '' : area.id)} disabled={!cs.length}
-                            className={`relative text-start rounded-2xl p-4 text-white bg-gradient-to-br ${area.tone.tile} shadow-sm transition
-                                ${on ? 'ring-4 ring-offset-2 ring-sky-300' : 'hover:shadow-lg hover:-translate-y-0.5'} disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-sm`}>
-                            <Icon size={40} strokeWidth={1.75} className="opacity-95" />
-                            <span className="block mt-3 text-lg font-extrabold leading-tight">{name(area)}</span>
-                            <span className="block text-xs text-white/85 leading-snug mt-0.5">{full(area)}</span>
-                            <span className="block text-[11px] font-semibold mt-2 text-white/90">
+                            className={`text-start rounded-xl border bg-white p-4 transition
+                                ${on ? 'border-sky-600 ring-1 ring-sky-600' : 'border-slate-200 hover:border-slate-400'} disabled:opacity-50 disabled:hover:border-slate-200`}>
+                            <span className={`w-11 h-11 rounded-lg grid place-items-center ${on ? 'bg-sky-700 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                                <Icon size={24} strokeWidth={1.75} />
+                            </span>
+                            <span className="block mt-3 text-base font-bold text-slate-900 leading-tight">{name(area)}</span>
+                            <span className="block text-xs text-slate-500 leading-snug mt-0.5">{full(area)}</span>
+                            <span className="block text-xs font-medium mt-2 text-slate-600">
                                 {cs.length ? t('imnci_ui.areas.n_courses', '{{count}} courses', { count: cs.length }) : t('imnci_ui.areas.soon', 'Coming soon')}
                             </span>
                         </button>
@@ -103,24 +105,15 @@ export function GroupedCourses({ render, list }) {
                 return (
                     <section key={area.id} className="space-y-3" data-testid="course-category">
                         <h2 className="flex items-center gap-3">
-                            <span className={`w-11 h-11 rounded-xl grid place-items-center border ${area.tone.soft}`}><Icon size={24} /></span>
+                            <span className="w-10 h-10 rounded-lg grid place-items-center bg-slate-100 text-slate-700"><Icon size={22} strokeWidth={1.75} /></span>
                             <span className="min-w-0">
-                                <span className="block text-lg font-extrabold text-slate-800 leading-tight">{name(area)}</span>
+                                <span className="block text-lg font-bold text-slate-900 leading-tight">{name(area)}</span>
                                 <span className="block text-sm text-slate-500">{full(area)}</span>
                             </span>
                         </h2>
-                        {groupCourses(cs).map((g) => g.subgroups.map((sg) => (
-                            <div key={`${g.category}|${sg.subcategory}`} className="space-y-2">
-                                {(sg.subcategory || g.category !== area.short) && (
-                                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide">
-                                        {[g.category !== area.short && g.category !== 'Other' ? g.category : null, sg.subcategory || null].filter(Boolean).join(' · ')}
-                                    </h3>
-                                )}
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                    {sg.courses.map(render)}
-                                </div>
-                            </div>
-                        )))}
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {groupCourses(cs).flatMap((g) => g.subgroups.flatMap((sg) => sg.courses)).map(render)}
+                        </div>
                     </section>
                 );
             })}
@@ -139,15 +132,15 @@ export function CourseCardBody({ course: c, children, badge }) {
     const area = areaOf(c);
     const AreaIcon = area.icon;
     return (
-        <div className="rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm hover:shadow-md hover:border-sky-300 transition flex flex-col" data-testid="course-card">
+        <div className="rounded-xl border border-slate-200 bg-white hover:border-slate-400 transition flex flex-col" data-testid="course-card">
             {/* The course's area colour and icon, with its full name. */}
-            <div className={`relative bg-gradient-to-br ${area.tone.tile} text-white px-4 pt-4 pb-3 flex items-start gap-3`}>
+            <div className="px-4 pt-4 flex items-start gap-3">
                 {c.imageUrl
-                    ? <img src={c.imageUrl} alt="" className="w-14 h-14 rounded-xl object-cover bg-white/20 shrink-0" />
-                    : <span className="w-14 h-14 rounded-xl bg-white/15 grid place-items-center shrink-0"><AreaIcon size={32} strokeWidth={1.75} /></span>}
+                    ? <img src={c.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0" />
+                    : <span className="w-12 h-12 rounded-lg bg-slate-100 text-slate-700 grid place-items-center shrink-0"><AreaIcon size={26} strokeWidth={1.75} /></span>}
                 <div className="min-w-0 flex-1">
-                    <span className="block text-[11px] font-bold uppercase tracking-wider text-white/80">{t(`imnci_ui.areas.${area.id}.short`, area.short)}</span>
-                    <h3 className="font-extrabold text-base leading-snug break-words">{c.title}</h3>
+                    <span className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 break-words">{c.subcategory || t(`imnci_ui.areas.${area.id}.short`, area.short)}</span>
+                    <h3 className="font-bold text-base text-slate-900 leading-snug break-words">{c.title}</h3>
                 </div>
             </div>
             <div className="p-4 flex flex-col flex-1 gap-3">

@@ -10,24 +10,18 @@ import { categoryOf } from './categories';
 
 export const AREAS = [
     { id: 'imnci', short: 'IMNCI', full: 'Integrated Management of Newborn and Childhood Illness', icon: Stethoscope,
-        tone: { tile: 'from-sky-600 to-sky-800', soft: 'bg-sky-50 text-sky-700 border-sky-200', bar: 'bg-sky-600' },
         categories: ['IMNCI', 'ICCM'] },
     { id: 'etat', short: 'ETAT', full: 'Emergency Triage, Assessment and Treatment', icon: Siren,
-        tone: { tile: 'from-rose-600 to-rose-800', soft: 'bg-rose-50 text-rose-700 border-rose-200', bar: 'bg-rose-600' },
         categories: ['ETAT'] },
     { id: 'newborn', short: 'Newborn', full: 'Newborn care: Small & Sick Newborn, EENC and EmONC', icon: Baby,
-        tone: { tile: 'from-amber-500 to-orange-700', soft: 'bg-amber-50 text-amber-800 border-amber-200', bar: 'bg-amber-500' },
         categories: ['Small & Sick Newborn', 'EmONC', 'EENC', 'Comprehensive Package For Community Midwives'] },
     { id: 'adolescent', short: 'Adolescent', full: 'Adolescent health', icon: Sprout,
-        tone: { tile: 'from-emerald-600 to-emerald-800', soft: 'bg-emerald-50 text-emerald-700 border-emerald-200', bar: 'bg-emerald-600' },
         categories: ['Adolescent', 'Adolescent Health'] },
     { id: 'program', short: 'Program Management', full: 'Program management, planning and supervision', icon: ClipboardList,
-        tone: { tile: 'from-indigo-600 to-indigo-800', soft: 'bg-indigo-50 text-indigo-700 border-indigo-200', bar: 'bg-indigo-600' },
         categories: ['Program Management'] },
 ];
 
-export const OTHER_AREA = { id: 'other', short: 'Other', full: 'Other courses (infection prevention and more)', icon: GraduationCap,
-    tone: { tile: 'from-slate-500 to-slate-700', soft: 'bg-slate-50 text-slate-700 border-slate-200', bar: 'bg-slate-500' }, categories: [] };
+export const OTHER_AREA = { id: 'other', short: 'Other', full: 'Other courses (infection prevention and more)', icon: GraduationCap, categories: [] };
 
 /** The area a course belongs to. */
 export function areaOf(course) {

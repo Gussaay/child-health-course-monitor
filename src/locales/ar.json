@@ -8625,7 +8625,9 @@
       },
       "n_courses": "الدورات: {{count}}",
       "soon": "قريباً",
-      "show_all": "عرض كل المجالات"
+      "show_all": "عرض كل المجالات",
+      "n_courses_one": "دورة واحدة",
+      "n_courses_other": "الدورات: {{count}}"
     }
   },
   "theme": {

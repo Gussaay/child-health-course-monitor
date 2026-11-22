@@ -8548,7 +8548,9 @@
       },
       "n_courses": "{{count}} courses",
       "soon": "Coming soon",
-      "show_all": "Show all areas"
+      "show_all": "Show all areas",
+      "n_courses_one": "{{count}} course",
+      "n_courses_other": "{{count}} courses"
     }
   },
   "theme": {
