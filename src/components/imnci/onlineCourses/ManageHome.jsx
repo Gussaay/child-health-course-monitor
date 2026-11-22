@@ -34,6 +34,8 @@ export function ManageHome() {
         setImportOpen, setTopTab, syncing, topTab,
     } = useCourseScreen();
     const admin = useEnrolmentAdmin();
+    const guideDocs = courses.filter((c) => c.audience === 'facilitators');
+    const learnerCourses = courses.filter((c) => c.audience !== 'facilitators');
 
     const tabs = [
         canManage && { id: 'courses', label: t('imnci_ui.manage.tab_courses', 'Courses'), icon: GraduationCap },
@@ -95,7 +97,23 @@ export function ManageHome() {
                             <div className="text-sm mt-1">{t('imnci_ui.courses.main.use_import', 'Use Import to bring in the IMNCI course from the Android app.')}</div>
                         </CardBody></Card>
                     ) : (
-                        <GroupedCourses render={(c) => <AuthorCourseCard key={c.id} course={c} enrolled={admin.enrolledIn(c.id)} waiting={admin.waitingFor(c.id)} />} />
+                        <>
+                            {learnerCourses.length > 0 && (
+                                <GroupedCourses list={learnerCourses} render={(c) => <AuthorCourseCard key={c.id} course={c} enrolled={admin.enrolledIn(c.id)} waiting={admin.waitingFor(c.id)} />} />
+                            )}
+                            {/* A facilitator guide is a guideline, not a course: it is read in
+                                Protocol & Course Management > the service > Facilitator guide.
+                                Its text is still edited here. */}
+                            {guideDocs.length > 0 && (
+                                <div className="space-y-2" data-testid="manage-guides">
+                                    <h3 className="text-base font-bold text-slate-900">{t('imnci_ui.manage.guides_title', 'Facilitator guides')}</h3>
+                                    <p className="text-sm text-slate-500">{t('imnci_ui.manage.guides_hint', 'Guidelines for running a course, not courses: facilitators read them in Protocol & Course Management. Edit their text here.')}</p>
+                                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                        {guideDocs.map((c) => <AuthorCourseCard key={c.id} course={c} guide />)}
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             ) : shownTab === 'enrolment' ? (
@@ -117,14 +135,14 @@ export function ManageHome() {
     );
 }
 
-function AuthorCourseCard({ course: c, enrolled, waiting }) {
+function AuthorCourseCard({ course: c, enrolled, waiting, guide = false }) {
     const { t } = useTranslation();
     const { go, removeCourse, setCourseModal, setTopTab } = useCourseScreen();
     const open = isOpenCourse(c);
     const badge = (
         <>
             {!c.isPublished && <Pill tone="draft">{t('imnci_ui.courses.main.draft', 'draft')}</Pill>}
-            {open
+            {guide ? <Pill tone="open">{t('imnci_ui.manage.guide_pill', 'Facilitator guide')}</Pill> : open
                 ? <Pill tone="open"><Unlock size={11} /> {t('imnci_ui.enrol.open', 'Open')}</Pill>
                 : <Pill tone="lock"><Lock size={11} /> {t('imnci_ui.enrol.approval', 'Approval')}</Pill>}
         </>
@@ -133,7 +151,7 @@ function AuthorCourseCard({ course: c, enrolled, waiting }) {
         <CourseCardBody course={c} badge={badge}>
             {() => (
                 <div className="flex-1 space-y-2">
-                    {!open && (
+                    {!open && !guide && (
                         <button onClick={() => setTopTab('enrolment')} className="text-xs text-slate-500 hover:text-sky-700 inline-flex items-center gap-1">
                             <UserCheck size={12} /> {t('imnci_ui.enrol.counts', '{{n}} enrolled · {{w}} waiting', { n: enrolled, w: waiting })}
                         </button>

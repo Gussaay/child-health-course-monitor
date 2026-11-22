@@ -1486,7 +1486,7 @@
       "about": "The programme team",
       "survey": "Field surveys and mapping",
       "online_courses_manage": "Courses, enrolment, groups and progress",
-      "protocol_manager": "Protocols and guides by service"
+      "protocol_manager": "Protocols, facilitator guides and online courses by service"
     },
     "welcome": "Welcome",
     "subtitle": "Select a module to get started",
@@ -1518,7 +1518,7 @@
       "monitoring": "Monitoring",
       "survey": "Surveys",
       "online_courses_manage": "Course Manager",
-      "protocol_manager": "Protocol Manager"
+      "protocol_manager": "Protocol & Course Management"
     }
   },
   "auth": {
@@ -6205,16 +6205,35 @@
       }
     },
     "guides": {
-      "loading": "Loading the courses…",
+      "loading": "Loading the guides…",
       "none": "No course has facilitator notes yet.",
-      "intro": "What the facilitator needs to run each course, online or face to face: the timetable, the prompts and the drills, lesson by lesson. Learners do not see these notes.",
+      "intro": "The timetable, the prompts and the drills kept in the lessons for the facilitator, lesson by lesson. Learners do not see these notes.",
       "courses": "Courses",
       "draft": "draft",
       "guide_course": "A facilitator guide, with answer keys. Its links open the learners' lessons.",
       "notes_count": "{{n}} notes for the facilitator in this course.",
       "open_course": "Open the course",
       "open_lesson": "Open the lesson",
-      "lessons_n": "{{n}} lessons"
+      "lessons_n": "{{n}} lessons",
+      "none_service": "No facilitator guide for this service yet.",
+      "pick": "Choose a facilitator guide",
+      "kicker": "Facilitator guide · how to run the course",
+      "size": "{{c}} chapters · {{s}} sections",
+      "all": "All guides and notes of this service",
+      "search": "Search the whole guide",
+      "contents": "Contents",
+      "smaller": "Smaller text",
+      "larger": "Larger text",
+      "print_chapter": "Print this chapter",
+      "results": "{{n}} places found",
+      "no_results": "Nothing in this guide matches.",
+      "chapter_n": "Chapter {{n}} of {{total}}",
+      "previous": "Previous chapter",
+      "next": "Next chapter",
+      "top": "Back to the top of the chapter",
+      "empty_guide": "This guide has no content yet.",
+      "notes_title": "Facilitator notes inside the online lessons",
+      "overview": "Overview"
     }
   },
   "trackers": {
@@ -8479,6 +8498,11 @@
         "normal": "Normal",
         "small": "Small"
       }
+    },
+    "manage": {
+      "guides_title": "Facilitator guides",
+      "guides_hint": "Guidelines for running a course, not courses: facilitators read them in Protocol & Course Management. Edit their text here.",
+      "guide_pill": "Facilitator guide"
     }
   },
   "theme": {
@@ -9203,6 +9227,23 @@
     "other": "Other (type it)"
   },
   "protocol_manager": {
-    "subtitle": "Protocols and facilitator guides, by service"
+    "subtitle": "Protocols, facilitator guides and online courses, by service",
+    "service_sub": "Protocol, facilitator guide and online courses",
+    "you_are_here": "You are here",
+    "parts": {
+      "protocol": "Protocol",
+      "guide": "Facilitator guide",
+      "courses": "Online courses"
+    },
+    "has_protocol": "Protocol",
+    "n_guides": "{{count}} facilitator guides",
+    "n_courses": "{{count}} online courses",
+    "no_protocol": "There is no protocol for this service in the app yet. Its facilitator guide and online courses are in the other two parts.",
+    "desc": {
+      "protocol": "The national protocol: classification, treatment, doses, photograph booklet",
+      "protocol_none": "Not in the app yet for this service",
+      "guide": "How to run the course, word for word, with contents and search — {{count}} guides",
+      "courses": "Courses, enrolment, groups and progress — {{count}} courses"
+    }
   }
 }

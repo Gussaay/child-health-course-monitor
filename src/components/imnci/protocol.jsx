@@ -342,14 +342,16 @@ const HistoryPanel = ({ entries, loading, onClose, t }) => (
 
 // canEdit: false for facilitators who come here only to read the facilitator
 // guides, the photograph booklet and the protocol; nothing can be changed.
-export default function ProtocolEditor({ canEdit = true }) {
+// `showGuides`: false where the facilitator guides have a place of their own
+// (Protocol & Course Management > a service > Facilitator guide).
+export default function ProtocolEditor({ canEdit = true, showGuides = true }) {
     const { t, i18n } = useTranslation();
     const ar = i18n.language === 'ar';
     const { protocols, fetchProtocols, isLoading } = useDataCache();
     const [part, setPart] = useState('child');
     // The photograph booklet and the facilitator guides sit beside the two age
     // groups; they have no protocol documents. `photos` is true while either is open.
-    const [sheet, setSheet] = useState(canEdit ? null : 'guides');
+    const [sheet, setSheet] = useState(canEdit || !showGuides ? null : 'guides');
     const photos = sheet !== null;
     const [topicChoice, setTopicChoice] = useState({});
     // Every protocol document of both parts, by formType, as being edited.
@@ -938,10 +940,10 @@ export default function ProtocolEditor({ canEdit = true }) {
                             className={`px-4 py-2 text-sm font-bold flex items-center gap-2 disabled:opacity-50 ${sheet === 'photos' ? 'bg-sky-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}>
                             <Images size={16} /> {t('clinical_ui.protocol.parts.photos', 'Photograph booklet')}
                         </button>
-                        <button type="button" role="tab" aria-selected={sheet === 'guides'} onClick={() => setSheet('guides')} disabled={editing} data-testid="facilitator-guides-tab"
+                        {showGuides && <button type="button" role="tab" aria-selected={sheet === 'guides'} onClick={() => setSheet('guides')} disabled={editing} data-testid="facilitator-guides-tab"
                             className={`px-4 py-2 text-sm font-bold flex items-center gap-2 disabled:opacity-50 ${sheet === 'guides' ? 'bg-sky-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}>
                             <Users size={16} /> {t('clinical_ui.protocol.parts.guides', 'Facilitator guides')}
-                        </button>
+                        </button>}
                     </div>
                     {!photos && canEdit && <div className="flex flex-wrap items-center gap-2">
                         {!editing ? (

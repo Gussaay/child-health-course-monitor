@@ -427,7 +427,7 @@ function pageTitles(t) {
     projects: t('landing.modules.projects', 'Project Tracker'), meetings: t('landing.modules.meetings', 'Meeting Tracker'),
     planning: t('landing.modules.planning', 'Master Plan'), localityPlan: t('landing.modules.locality_plan', 'Bottom-up Planning'),
     supplyManagement: t('landing.modules.supply', 'Supply Management'), supervision: t('landing.modules.supervision', 'Supervision'), survey: t('landing.modules.survey', 'Surveys'),
-    onlineCourses: t('landing.modules.online_courses', 'Online Courses'), onlineCoursesManage: t('landing.modules.online_courses_manage', 'Course Manager'), protocolManager: t('landing.modules.protocol_manager', 'Protocol Manager'), downloads: t('landing.modules.downloads', 'App Files & Downloads'),
+    onlineCourses: t('landing.modules.online_courses', 'Online Courses'), onlineCoursesManage: t('landing.modules.online_courses_manage', 'Course Manager'), protocolManager: t('landing.modules.protocol_manager', 'Protocol & Course Management'), downloads: t('landing.modules.downloads', 'App Files & Downloads'),
     admin: t('landing.modules.admin', 'Admin'), about: t('landing.modules.about', 'About Team'),
     courseReport: t('landing.modules.course_report', 'Course Report'), participantReport: t('landing.modules.participant_report', 'Participant Report'),
     facilitatorReport: t('landing.modules.facilitator_report', 'Facilitator Report'), facilitatorForm: t('landing.modules.facilitator_form', 'Facilitator'),
@@ -453,7 +453,7 @@ function allModules(t, permissions) {
         { label: t('landing.modules.imci', 'IMNCI Protocol'), tagline: tile('imci', 'Assess and classify a sick child'), view: 'imciForm', group: 'training', icon: Activity, permission: permissions.canViewCourse },
         { label: t('landing.modules.online_courses', 'Online Courses'), tagline: tile('online_courses', 'Learn and practise online'), view: 'onlineCourses', group: 'training', icon: BookOpen, permission: permissions.canViewOnlineCourses },
         { label: t('landing.modules.online_courses_manage', 'Course Manager'), tagline: tile('online_courses_manage', 'Courses, enrolment, groups and progress'), view: 'onlineCoursesManage', group: 'training', icon: Settings2, permission: permissions.canManageOnlineLearners },
-        { label: t('landing.modules.protocol_manager', 'Protocol Manager'), tagline: tile('protocol_manager', 'Protocols and guides by service'), view: 'protocolManager', group: 'training', icon: ClipboardCheck, permission: permissions.canManageOnlineLearners },
+        { label: t('landing.modules.protocol_manager', 'Protocol & Course Management'), tagline: tile('protocol_manager', 'Protocols, facilitator guides and online courses by service'), view: 'protocolManager', group: 'training', icon: ClipboardCheck, permission: permissions.canManageOnlineLearners },
         { label: t('landing.modules.supervision', 'Supervision'), tagline: tile('supervision', 'Supervision checklists'), view: 'supervision', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSupervision },
         { label: t('landing.modules.survey', 'Surveys'), tagline: tile('survey', 'Field surveys and mapping'), view: 'survey', group: 'services', icon: MapPin, permission: permissions.canViewSupervision },
         { label: t('landing.modules.supply', 'Supply Management'), tagline: tile('supply', 'Stock and distribution'), view: 'supplyManagement', group: 'services', icon: Package, permission: permissions.canViewSupplyChain },
@@ -2756,7 +2756,7 @@ export default function App() {
            case 'onlineCourses':
     return permissions.canViewOnlineCourses ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><OnlineCoursesView permissions={permissions} userRoles={userRoles} area="learn" openOtherArea={permissions.canManageOnlineLearners && !siteHiddenViews?.has('onlineCoursesManage') ? () => navigate('onlineCoursesManage') : null} /></ImnciProvider></Suspense> ) : null;
            case 'protocolManager':
-    return permissions.canManageOnlineLearners ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><ProtocolManager permissions={permissions} /></ImnciProvider></Suspense> ) : null;
+    return permissions.canManageOnlineLearners ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><ProtocolManager permissions={permissions} userRoles={userRoles} /></ImnciProvider></Suspense> ) : null;
            case 'onlineCoursesManage':
     // Keyed so the two pages never share one set of screen state.
     return permissions.canManageOnlineLearners ? ( <Suspense fallback={<PageSkeleton />}><ImnciProvider><OnlineCoursesView key="manage" permissions={permissions} userRoles={userRoles} area="manage" openOtherArea={() => navigate('onlineCourses')} /></ImnciProvider></Suspense> ) : null;

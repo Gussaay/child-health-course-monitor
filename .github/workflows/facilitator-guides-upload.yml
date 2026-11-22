@@ -1,0 +1,28 @@
+name: One-off - facilitator guides upload
+# Runs scripts/facilitator-guides/upload-guides.cjs for each guide in courses.txt (etat imnci) with the mode in mode.txt
+# (dry = read only, commit = write, replace = swap the uploaded lessons for the file's, undo = remove what was written).
+on:
+  push:
+    branches: [claude/peaceful-carson-1mky1n]
+    paths: ['scripts/facilitator-guides/upload-guides.cjs', 'scripts/facilitator-guides/mode.txt', 'scripts/facilitator-guides/courses.txt', 'course-packages/sudan-*-facilitator-guide.imnci.json', '.github/workflows/facilitator-guides-upload.yml']
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-save --ignore-scripts firebase-admin@13
+        working-directory: scripts/facilitator-guides
+      - env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IMNCI_COURSES_MONITOR }}
+        working-directory: scripts/facilitator-guides
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/key.json"
+          MODE=$(tr -d '[:space:]' < mode.txt)
+          FLAG=""; [ "$MODE" = commit ] && FLAG=--commit; [ "$MODE" = undo ] && FLAG=--undo; [ "$MODE" = replace ] && FLAG=--replace
+          echo "Mode: ${MODE}"
+          for C in $(cat courses.txt); do
+            echo "================ Course ${C} ================"
+            KEY_FILE="$RUNNER_TEMP/key.json" node upload-guides.cjs --course "$C" $FLAG
+          done

@@ -46,6 +46,7 @@ import { CoursePage } from './onlineCourses/CoursePage';
 import { CourseList } from './onlineCourses/CourseList';
 import { BuilderPane } from './onlineCourses/BuilderPane';
 import { canSeeCourse, followsAnyLesson, isFacilitatorRole } from './onlineCourses/audience';
+import { categoryOf } from './onlineCourses/categories';
 import { useMyEnrolments, courseAccess, canStudy } from './onlineCourses/enrolment';
 import { EnrolGate } from './onlineCourses/EnrolGate';
 import { ManageHome } from './onlineCourses/ManageHome';
@@ -65,7 +66,9 @@ const MANAGER_ROLES = ['super_user', 'federal_manager', 'states_manager', 'local
 // `area`: "learn" is the Online Courses page every learner sees; "manage" is
 // the separate Manage online courses page (authoring, enrolment, groups and
 // the learners' progress), so a learner never meets the managers' tools.
-export default function OnlineCoursesView({ permissions = {}, userRoles = [], area = 'learn', openOtherArea = null }) {
+// `category`: only the courses of one service (Protocol & Course Management
+// opens the Course Manager for one service this way).
+export default function OnlineCoursesView({ permissions = {}, userRoles = [], area = 'learn', openOtherArea = null, category = '' }) {
     const { t, i18n } = useTranslation();
     const isArabic = i18n.language === 'ar';
     const tabName = (x) => (isArabic && x.labelAr ? x.labelAr : x.label);
@@ -200,8 +203,9 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
         // and the examination) is not shown to learners.
         .filter((c) => canSeeCourse(c, { canManage, canSeeProgress, isFacilitator }))
         .filter((c) => !focusId || c.id === focusId)
+        .filter((c) => !category || categoryOf(c) === category)
         .sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.title).localeCompare(String(b.title))),
-    [onlineCourses, canManage, canSeeProgress, isFacilitator, inManageArea, focusId]);
+    [onlineCourses, canManage, canSeeProgress, isFacilitator, inManageArea, focusId, category]);
 
     // Old copies left on this device by an upload's replace are dropped here.
     const currentItems = useMemo(() => dropReplacedLeftovers(onlineCourseItems || []), [onlineCourseItems]);
