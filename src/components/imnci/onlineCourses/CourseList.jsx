@@ -7,9 +7,10 @@
 import React, { Suspense, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    BookOpen, GraduationCap, Layers, RefreshCw, TrendingUp, Lock, Clock, Unlock, Users, Settings2, ArrowLeft, ChevronRight,
+    BookOpen, GraduationCap, Layers, TrendingUp, Lock, Clock, Unlock, Users, Settings2, ArrowLeft, ChevronRight,
 } from 'lucide-react';
-import { Card, CardBody, PageHeader, Button, Spinner, PageTabs } from '../../CommonComponents';
+import { Card, CardBody, PageHeader, Button, Spinner, PageTabs, IS_NATIVE, useInPageBack } from '../../CommonComponents';
+import { useFormTitle } from '../../../utils/pageChrome';
 import { notify } from '../../dialogs';
 import { MyProgress } from './lazyParts';
 import { useCourseScreen } from './screen';
@@ -19,20 +20,15 @@ import { canStudy, groupName } from './enrolment';
 
 export function CourseList() {
     const { t } = useTranslation();
-    const { courses, enrolments, openOtherArea, permissions, resync, setTopTab, syncing, topTab } = useCourseScreen();
+    const { courses, openOtherArea, permissions, setTopTab, topTab } = useCourseScreen();
     const shownTab = topTab === 'mine' ? 'mine' : 'courses';
     return (
         <div className="space-y-4">
             <PageHeader
                 title={t('imnci_ui.courses.main.page_title', 'Online Courses')}
                 subtitle={t('imnci_ui.courses.main.page_subtitle', 'Self-paced training')}
-                actions={
+                actions={permissions.canManageOnlineLearners && openOtherArea ? (
                     <div className="flex flex-wrap gap-2 items-center">
-                        <Button variant="secondary" onClick={() => { resync(); enrolments?.reload?.(); }} disabled={syncing}
-                            title={t('imnci_ui.courses.main.refresh_title', 'Look for anything added on another device')}>
-                            <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
-                            <span className="hidden sm:inline">{syncing ? t('imnci_ui.courses.main.checking', 'Checking…') : t('imnci_ui.courses.main.refresh', 'Refresh')}</span>
-                        </Button>
                         {permissions.canManageOnlineLearners && openOtherArea && (
                             <Button variant="secondary" onClick={openOtherArea}
                                 title={t('imnci_ui.manage.open', 'Manage online courses')}>
@@ -40,7 +36,7 @@ export function CourseList() {
                             </Button>
                         )}
                     </div>
-                }
+                ) : null}
             />
             <PageTabs active={shownTab} onChange={setTopTab} tabs={[
                 { id: 'courses', label: t('imnci_ui.courses.main.tab_courses', 'Courses'), icon: GraduationCap },
@@ -105,24 +101,32 @@ export function GroupedCourses({ render, list }) {
     const name = (a) => t(`imnci_ui.areas.${a.id}.short`, a.short);
     const full = (a) => t(`imnci_ui.areas.${a.id}.full`, a.full);
     const current = areas.find((x) => x.area.id === chosen && x.courses.length) || null;
+    // In the Android app the top bar names the open service and its arrow
+    // (and the phone's back button) returns to the services.
+    useFormTitle(current ? name(current.area) : '', '', IS_NATIVE && !!current);
+    useInPageBack(close, IS_NATIVE && !!current);
 
     if (current) {
         const { area, courses: cs } = current;
-        const Icon = area.icon;
         const sorted = groupCourses(cs).flatMap((g) => g.subgroups.flatMap((sg) => sg.courses));
         return (
             <div className="space-y-4" data-testid="service-page">
-                <div className="flex items-center gap-3">
-                    <button type="button" onClick={close} aria-label={t('imnci_ui.areas.back', 'All services')}
-                        className="w-10 h-10 rounded-full border border-slate-200 bg-white grid place-items-center text-slate-700 hover:border-slate-400 shrink-0">
-                        <ArrowLeft size={18} className="rtl:-scale-x-100" />
-                    </button>
-                    <span className="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 grid place-items-center shrink-0"><Icon size={26} strokeWidth={1.75} /></span>
-                    <div className="min-w-0">
-                        <h2 className="text-xl font-bold text-slate-900 leading-tight">{name(area)}</h2>
-                        <p className="text-sm text-slate-500">{full(area)} · {t('imnci_ui.areas.n_courses', '{{count}} courses', { count: cs.length })}</p>
+                {/* The Android app's top bar names the service and has the back
+                    arrow; the web page draws them once here. */}
+                {IS_NATIVE ? (
+                    <p className="text-sm text-slate-500">{full(area)} · {t('imnci_ui.areas.n_courses', '{{count}} courses', { count: cs.length })}</p>
+                ) : (
+                    <div className="flex items-center gap-3">
+                        <button type="button" onClick={close} aria-label={t('imnci_ui.areas.back', 'All services')}
+                            className="w-10 h-10 rounded-full border border-slate-200 bg-white grid place-items-center text-slate-700 hover:border-slate-400 shrink-0">
+                            <ArrowLeft size={18} className="rtl:-scale-x-100" />
+                        </button>
+                        <div className="min-w-0">
+                            <h2 className="text-xl font-bold text-slate-900 leading-tight">{name(area)}</h2>
+                            <p className="text-sm text-slate-500">{full(area)} · {t('imnci_ui.areas.n_courses', '{{count}} courses', { count: cs.length })}</p>
+                        </div>
                     </div>
-                </div>
+                )}
                 <RowLayout.Provider value>
                     <div className="space-y-3" data-testid="service-course-list">{sorted.map(render)}</div>
                 </RowLayout.Provider>

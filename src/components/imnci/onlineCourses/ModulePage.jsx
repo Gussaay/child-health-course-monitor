@@ -5,7 +5,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, ArrowLeft, CheckCircle2, Wand2, ChevronRight, Clock, RefreshCw, FileDown, Award, Share2 } from 'lucide-react';
-import { Button } from '../../CommonComponents';
+import { Button, IS_NATIVE, useInPageBack } from '../../CommonComponents';
+import { useFormTitle } from '../../../utils/pageChrome';
 import { learnerContent } from '../book';
 import { activityKeys } from './activityKeys';
 import { ConvertBookModal } from './ConvertBookModal';
@@ -60,16 +61,22 @@ export function ModulePage() {
     // The lesson to do next: the first one not finished.
     const firstOpen = secs.findIndex((s) => !progress.completed?.[s.id]);
 
+    // In the Android app the top bar names the course and its arrow steps back.
+    useFormTitle(openCourse.title, '', IS_NATIVE);
+    useInPageBack(back, IS_NATIVE);
+
     return (
         <div className="space-y-4 max-w-4xl mx-auto">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-                <button onClick={back}
-                    className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-sky-700">
-                    <ArrowLeft size={15} className="rtl:rotate-180" /> {openCourse.title}
-                </button>
+            {(!IS_NATIVE || isAdmin) && <div className="flex flex-wrap items-center justify-between gap-2">
+                {!IS_NATIVE ? (
+                    <button onClick={back}
+                        className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-sky-700">
+                        <ArrowLeft size={15} className="rtl:rotate-180" /> {openCourse.title}
+                    </button>
+                ) : <span />}
                 <div className="flex flex-wrap gap-2">
-                    {/* A draft course is not shown to learners, so its link would open nothing. */}
-                    {openCourse.isPublished && (
+                    {/* Sharing is for those who manage the course; a draft's link would open nothing. */}
+                    {isAdmin && openCourse.isPublished && (
                         <Button variant="secondary" onClick={shareModule} data-testid="share-module">
                             <Share2 size={16} /> {t('imnci_ui.courses.share.button', 'Share link')}
                         </Button>
@@ -92,13 +99,12 @@ export function ModulePage() {
                     </>
                 )}
                 </div>
-            </div>
+            </div>}
 
             <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
                 <div className="px-4 sm:px-6 py-5 border-b border-slate-100">
                     <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                        {moduleNo > 0 && <>{t('imnci_ui.courses.look.module_n', 'Module {{n}}', { n: moduleNo })} · </>}
-                        <span className="normal-case tracking-normal font-semibold text-sky-700">{openCourse.title}</span>
+                        {moduleNo > 0 && t('imnci_ui.courses.look.module_n', 'Module {{n}}', { n: moduleNo })}
                     </div>
                     <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 mt-1">{openModule.title}</h2>
                     <div className="text-sm text-slate-500 mt-1 tabular-nums">

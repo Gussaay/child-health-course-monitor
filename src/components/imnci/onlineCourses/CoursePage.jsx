@@ -13,7 +13,8 @@ import {
     Plus, Pencil, ArrowLeft, ChevronRight, CheckCircle2, Lock, Search, X,
     CloudDownload, PlayCircle, Award, Share2,
 } from 'lucide-react';
-import { Card, Button } from '../../CommonComponents';
+import { Card, Button, IS_NATIVE, useInPageBack } from '../../CommonComponents';
+import { useFormTitle } from '../../../utils/pageChrome';
 import { ItemModal } from './ItemModals';
 import { searchSections } from './search';
 import { CourseBooks } from './lazyParts';
@@ -85,43 +86,51 @@ export function CoursePage() {
     const moduleTitle = Object.fromEntries(modules.map((m) => [m.id, m.title]));
     const openSection = (s) => go({ module: s.moduleId || '__none__', section: s.id, tab: 'read' });
 
+    const area = areaOf(openCourse);
+    const areaName = t(`imnci_ui.areas.${area.id}.short`, area.short);
+    const fromArea = !!new URLSearchParams(window.location.search).get('area');
+    // In the Android app the top bar names where the learner is and its arrow
+    // (and the phone's back button) steps back from the course.
+    useFormTitle(fromArea ? areaName : t('imnci_ui.courses.main.page_title', 'Online Courses'), '', IS_NATIVE);
+    useInPageBack(back, IS_NATIVE && !focusId);
+
     return (
         <div className="space-y-4 max-w-4xl mx-auto">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-                {focusId ? <span /> : (
-                    <button onClick={back}
-                        className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-sky-700">
-                        <ArrowLeft size={15} className="rtl:rotate-180" /> {new URLSearchParams(window.location.search).get('area')
-                            ? t(`imnci_ui.areas.${areaOf(openCourse).id}.short`, areaOf(openCourse).short)
-                            : t('imnci_ui.courses.main.all_courses', 'All courses')}
-                    </button>
-                )}
-                <div className="flex flex-wrap items-center gap-2">
-                    {/* A draft is not shown to learners, so its link would open nothing. */}
-                    {openCourse.isPublished && (
-                        <Button variant="secondary" onClick={shareCourse} data-testid="share-course">
-                            <Share2 size={16} /> {t('imnci_ui.courses.share.button', 'Share link')}
-                        </Button>
-                    )}
+            {/* The Android app's top bar already has the back arrow and the
+                service's name; the web page gets one back link. Sharing and
+                writing are for those who manage the course. */}
+            {((!IS_NATIVE && !focusId) || isAdmin) && (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    {!IS_NATIVE && !focusId ? (
+                        <button onClick={back}
+                            className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-sky-700">
+                            <ArrowLeft size={15} className="rtl:rotate-180" /> {fromArea ? areaName : t('imnci_ui.courses.main.all_courses', 'All courses')}
+                        </button>
+                    ) : <span />}
                     {isAdmin && (
-                        <Button variant="secondary" onClick={() => setItemModal({ kind: 'module' })}>
-                            <Plus size={16} /> {t('imnci_ui.courses.item_modal.add_module', 'Add module')}
-                        </Button>
+                        <div className="flex flex-wrap items-center gap-2">
+                            {/* A draft is not shown to learners, so its link would open nothing. */}
+                            {openCourse.isPublished && (
+                                <Button variant="secondary" onClick={shareCourse} data-testid="share-course">
+                                    <Share2 size={16} /> {t('imnci_ui.courses.share.button', 'Share link')}
+                                </Button>
+                            )}
+                            <Button variant="secondary" onClick={() => setItemModal({ kind: 'module' })}>
+                                <Plus size={16} /> {t('imnci_ui.courses.item_modal.add_module', 'Add module')}
+                            </Button>
+                        </div>
                     )}
                 </div>
-            </div>
+            )}
 
             {/* The course: its name, one line of numbers, and where to carry on. */}
             <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                {/* The course picture, or the service's icon on a plain band. */}
-                {openCourse.imageUrl ? (
+                {/* The course picture, when the course has one. */}
+                {openCourse.imageUrl && (
                     <img src={openCourse.imageUrl} alt="" className="w-full h-40 sm:h-56 object-cover" data-testid="course-hero" />
-                ) : (() => { const A = areaOf(openCourse).icon; return (
-                    <div className="h-24 sm:h-28 bg-slate-100 grid place-items-center text-slate-400" data-testid="course-hero">
-                        <A size={48} strokeWidth={1.25} />
-                    </div>
-                ); })()}
-                <div className="p-4 sm:p-5">
+                )}
+                <div className="p-4 sm:p-6">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-sky-700 mb-1">{areaName}</div>
                 <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 leading-tight">{openCourse.title}</h1>
                 {openCourse.description && (
                     <p className="text-slate-600 text-sm mt-1 line-clamp-2">{openCourse.description}</p>
