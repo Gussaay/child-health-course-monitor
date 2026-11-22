@@ -22,10 +22,11 @@ def words(s):
 def is_columnar(line):
     return bool(re.search(r'\S {3,}\S', line.strip()))
 
-def gutters(lines):
-    """Character positions that are blank in every line, as runs of at least 3, between text."""
+def gutters(lines, share=1.0):
+    """Character positions that are blank in every line (or in `share` of them), as runs of at least 2, between text."""
     w = max(len(l) for l in lines)
-    blank = [all(c >= len(l) or l[c] == ' ' for l in lines) for c in range(w)]
+    need = max(1, int(len([l for l in lines if l.strip()]) * share))
+    blank = [sum(1 for l in lines if l.strip() and (c >= len(l) or l[c] == ' ')) >= need for c in range(w)]
     first = min(len(l) - len(l.lstrip()) for l in lines if l.strip())
     out, c = [], first
     while c < w:
@@ -38,14 +39,17 @@ def gutters(lines):
     return out
 
 def cut(line, gs):
+    """The line cut at the gutters; a word that runs into a gutter is kept whole, in the cell it starts in."""
     cells, start = [], 0
     for s, e in gs:
-        cells.append(line[start:s].strip()); start = e
+        end = s
+        while end < len(line) and line[end] != ' ': end += 1
+        cells.append(line[start:end].strip()); start = end if line[end:e].strip() else max(e, end)
     cells.append(line[start:].strip())
     return cells
 
 def table_block(lines):
-    gs = gutters(lines)
+    gs = gutters(lines) or gutters(lines, 0.9)
     if not gs:
         return None
     rows = []
