@@ -23,6 +23,7 @@ import { Pill, LockedBadge } from './ui';
 import { groupName } from './enrolment';
 import { notify } from '../../dialogs';
 import { shareCourseLink } from '../../../utils/courseShare';
+import { areaOf } from './areas';
 
 export function CoursePage() {
     const { t } = useTranslation();
@@ -90,7 +91,9 @@ export function CoursePage() {
                 {focusId ? <span /> : (
                     <button onClick={back}
                         className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-sky-700">
-                        <ArrowLeft size={15} className="rtl:rotate-180" /> {t('imnci_ui.courses.main.all_courses', 'All courses')}
+                        <ArrowLeft size={15} className="rtl:rotate-180" /> {new URLSearchParams(window.location.search).get('area')
+                            ? t(`imnci_ui.areas.${areaOf(openCourse).id}.short`, areaOf(openCourse).short)
+                            : t('imnci_ui.courses.main.all_courses', 'All courses')}
                     </button>
                 )}
                 <div className="flex flex-wrap items-center gap-2">
@@ -109,7 +112,16 @@ export function CoursePage() {
             </div>
 
             {/* The course: its name, one line of numbers, and where to carry on. */}
-            <section className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 sm:p-5">
+            <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                {/* The course picture, or the service's icon on a plain band. */}
+                {openCourse.imageUrl ? (
+                    <img src={openCourse.imageUrl} alt="" className="w-full h-40 sm:h-56 object-cover" data-testid="course-hero" />
+                ) : (() => { const A = areaOf(openCourse).icon; return (
+                    <div className="h-24 sm:h-28 bg-slate-100 grid place-items-center text-slate-400" data-testid="course-hero">
+                        <A size={48} strokeWidth={1.25} />
+                    </div>
+                ); })()}
+                <div className="p-4 sm:p-5">
                 <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 leading-tight">{openCourse.title}</h1>
                 {openCourse.description && (
                     <p className="text-slate-600 text-sm mt-1 line-clamp-2">{openCourse.description}</p>
@@ -174,6 +186,7 @@ export function CoursePage() {
                         {t('imnci_ui.courses.look.course_complete', 'Course complete')}
                     </div>
                 )}
+                </div>
             </section>
 
             {/* Search the course: a sign, a dose, a classification. */}

@@ -8551,7 +8551,9 @@
       "show_all": "Show all areas",
       "n_courses_one": "{{count}} course",
       "n_courses_other": "{{count}} courses",
-      "choose": "Choose an area to see its courses."
+      "choose": "Choose an area to see its courses.",
+      "back": "All services",
+      "services": "Services"
     }
   },
   "theme": {

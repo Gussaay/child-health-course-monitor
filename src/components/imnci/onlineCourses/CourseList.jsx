@@ -4,10 +4,10 @@
 // like the face-to-face courses, and their own progress. Writing courses,
 // enrolment, groups and everyone's progress are on the separate Manage online
 // courses page (ManageHome.jsx), so nothing here is a manager's tool.
-import React, { Suspense, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    BookOpen, GraduationCap, Layers, RefreshCw, TrendingUp, Lock, Clock, Unlock, Users, Settings2,
+    BookOpen, GraduationCap, Layers, RefreshCw, TrendingUp, Lock, Clock, Unlock, Users, Settings2, ArrowLeft, ChevronRight,
 } from 'lucide-react';
 import { Card, CardBody, PageHeader, Button, Spinner, PageTabs } from '../../CommonComponents';
 import { notify } from '../../dialogs';
@@ -58,69 +58,101 @@ export function CourseList() {
     );
 }
 
+// The service page open, kept in the address (?area=newborn) so the back
+// button returns to the services and a course opened from it returns to it.
+function useAreaPlace() {
+    const read = () => new URLSearchParams(window.location.search).get('area') || '';
+    const [area, setArea] = useState(read);
+    useEffect(() => {
+        const onPop = () => setArea(read());
+        window.addEventListener('popstate', onPop);
+        return () => window.removeEventListener('popstate', onPop);
+    }, []);
+    const open = useCallback((id) => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('area', id);
+        const st = window.history.state || {};
+        window.history.pushState({ ...st, chmIdx: (st.chmIdx || 0) + 1, areaPushed: true }, '', url);
+        setArea(id);
+        window.scrollTo(0, 0);
+    }, []);
+    const close = useCallback(() => {
+        if (window.history.state?.areaPushed) { window.history.back(); return; }
+        const url = new URL(window.location.href);
+        url.searchParams.delete('area');
+        window.history.replaceState(window.history.state, '', url);
+        setArea('');
+    }, []);
+    return [area, open, close];
+}
+
+// Course cards drawn as rows of a list (the service page) rather than tiles.
+const RowLayout = React.createContext(false);
+
 /**
- * The courses by programme area (areas.js): a tile per area with its icon and
- * full name (IMNCI, ETAT, Newborn, Adolescent, Program Management), then each
- * area's courses under its own heading, by category and subcategory. A tile
- * shows that area only. `render(course)` draws each card.
+ * The services (areas.js) and their courses, one page each:
+ *   the services page: a card per service with its icon and full name
+ *     (IMNCI, ETAT, Newborn, Adolescent, Program Management);
+ *   a service page (?area=...): its own page, with a back arrow, listing that
+ *     service's courses as rows with the course picture.
+ * `render(course)` draws each course.
  */
 export function GroupedCourses({ render, list }) {
     const { t } = useTranslation();
     const { courses } = useCourseScreen();
     const areas = useMemo(() => coursesByArea(list || courses), [list, courses]);
-    // One area at a time: the page opens on the tiles, and a tile shows that
-    // area's courses only. The last area chosen is remembered on this device.
-    const [chosen, setChosenState] = useState(() => { try { return localStorage.getItem('onlineCourseArea') || ''; } catch { return ''; } });
-    const setOnly = (id) => { setChosenState(id); try { localStorage.setItem('onlineCourseArea', id); } catch { /* private mode */ } };
-    const only = areas.some((x) => x.area.id === chosen && x.courses.length) ? chosen : '';
-    const shown = areas.filter((x) => x.courses.length && x.area.id === only);
+    const [chosen, open, close] = useAreaPlace();
     const name = (a) => t(`imnci_ui.areas.${a.id}.short`, a.short);
     const full = (a) => t(`imnci_ui.areas.${a.id}.full`, a.full);
+    const current = areas.find((x) => x.area.id === chosen && x.courses.length) || null;
+
+    if (current) {
+        const { area, courses: cs } = current;
+        const Icon = area.icon;
+        const sorted = groupCourses(cs).flatMap((g) => g.subgroups.flatMap((sg) => sg.courses));
+        return (
+            <div className="space-y-4" data-testid="service-page">
+                <div className="flex items-center gap-3">
+                    <button type="button" onClick={close} aria-label={t('imnci_ui.areas.back', 'All services')}
+                        className="w-10 h-10 rounded-full border border-slate-200 bg-white grid place-items-center text-slate-700 hover:border-slate-400 shrink-0">
+                        <ArrowLeft size={18} className="rtl:-scale-x-100" />
+                    </button>
+                    <span className="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 grid place-items-center shrink-0"><Icon size={26} strokeWidth={1.75} /></span>
+                    <div className="min-w-0">
+                        <h2 className="text-xl font-bold text-slate-900 leading-tight">{name(area)}</h2>
+                        <p className="text-sm text-slate-500">{full(area)} · {t('imnci_ui.areas.n_courses', '{{count}} courses', { count: cs.length })}</p>
+                    </div>
+                </div>
+                <RowLayout.Provider value>
+                    <div className="space-y-3" data-testid="service-course-list">{sorted.map(render)}</div>
+                </RowLayout.Provider>
+            </div>
+        );
+    }
+
     return (
-        <div className="space-y-6">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" role="tablist" data-testid="course-areas">
+        <div className="space-y-3">
+            <h2 className="text-sm font-semibold text-slate-500">{t('imnci_ui.areas.services', 'Services')}</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" data-testid="course-areas">
                 {areas.map(({ area, courses: cs }) => {
                     const Icon = area.icon;
-                    const on = only === area.id;
                     return (
-                        <button key={area.id} type="button" role="tab" aria-selected={on} data-testid="course-area"
-                            onClick={() => setOnly(area.id)} disabled={!cs.length}
-                            className={`text-start rounded-xl border bg-white p-4 transition
-                                ${on ? 'border-sky-600 ring-1 ring-sky-600' : 'border-slate-200 hover:border-slate-400'} disabled:opacity-50 disabled:hover:border-slate-200`}>
-                            <span className={`w-11 h-11 rounded-lg grid place-items-center ${on ? 'bg-sky-700 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                        <button key={area.id} type="button" data-testid="course-area"
+                            onClick={() => open(area.id)} disabled={!cs.length}
+                            className="text-start rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-400 disabled:opacity-50 disabled:hover:border-slate-200 flex flex-col">
+                            <span className="w-11 h-11 rounded-lg grid place-items-center bg-slate-100 text-slate-700">
                                 <Icon size={24} strokeWidth={1.75} />
                             </span>
                             <span className="block mt-3 text-base font-bold text-slate-900 leading-tight">{name(area)}</span>
-                            <span className="block text-xs text-slate-500 leading-snug mt-0.5">{full(area)}</span>
-                            <span className="block text-xs font-medium mt-2 text-slate-600">
+                            <span className="block text-xs text-slate-500 leading-snug mt-0.5 flex-1">{full(area)}</span>
+                            <span className="mt-2 flex items-center justify-between text-xs font-medium text-slate-600">
                                 {cs.length ? t('imnci_ui.areas.n_courses', '{{count}} courses', { count: cs.length }) : t('imnci_ui.areas.soon', 'Coming soon')}
+                                {cs.length > 0 && <ChevronRight size={16} className="text-slate-400 rtl:-scale-x-100" />}
                             </span>
                         </button>
                     );
                 })}
             </div>
-            {!only && (
-                <p className="text-sm text-slate-500" data-testid="course-areas-hint">
-                    {t('imnci_ui.areas.choose', 'Choose an area to see its courses.')}
-                </p>
-            )}
-            {shown.map(({ area, courses: cs }) => {
-                const Icon = area.icon;
-                return (
-                    <section key={area.id} className="space-y-3" data-testid="course-category">
-                        <h2 className="flex items-center gap-3">
-                            <span className="w-10 h-10 rounded-lg grid place-items-center bg-slate-100 text-slate-700"><Icon size={22} strokeWidth={1.75} /></span>
-                            <span className="min-w-0">
-                                <span className="block text-lg font-bold text-slate-900 leading-tight">{name(area)}</span>
-                                <span className="block text-sm text-slate-500">{full(area)}</span>
-                            </span>
-                        </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                            {groupCourses(cs).flatMap((g) => g.subgroups.flatMap((sg) => sg.courses)).map(render)}
-                        </div>
-                    </section>
-                );
-            })}
         </div>
     );
 }
@@ -135,6 +167,39 @@ export function CourseCardBody({ course: c, children, badge }) {
     const pct = secs.length ? Math.round((done / secs.length) * 100) : 0;
     const area = areaOf(c);
     const AreaIcon = area.icon;
+    const row = useContext(RowLayout);
+    if (row) {
+        // A row of the service page: the course picture (or the service icon) on the
+        // left, its name, sub-course, size, progress and action on the right.
+        return (
+            <div className="rounded-xl border border-slate-200 bg-white hover:border-slate-400 transition p-3 sm:p-4 flex gap-3 sm:gap-4" data-testid="course-row">
+                <div className="w-24 h-24 sm:w-40 sm:h-28 rounded-lg overflow-hidden bg-slate-100 shrink-0 grid place-items-center">
+                    {c.imageUrl
+                        ? <img src={c.imageUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                        : <AreaIcon size={40} strokeWidth={1.5} className="text-slate-500" />}
+                </div>
+                <div className="min-w-0 flex-1 flex flex-col gap-1.5">
+                    {c.subcategory && <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 break-words">{c.subcategory}</span>}
+                    <h3 className="font-bold text-slate-900 leading-snug break-words">{c.title}</h3>
+                    {c.description && <p className="hidden sm:block text-sm text-slate-600 line-clamp-2">{c.description}</p>}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                        <span className="inline-flex items-center gap-1"><Layers size={13} /> {t('imnci_ui.courses.main.n_modules', '{{n}} modules', { n: mods.length })}</span>
+                        <span className="inline-flex items-center gap-1"><BookOpen size={13} /> {t('imnci_ui.courses.main.n_lessons', '{{n}} lessons', { n: secs.length })}</span>
+                        {badge}
+                    </div>
+                    {secs.length > 0 && done > 0 && (
+                        <div className="flex items-center gap-2">
+                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden flex-1 max-w-xs">
+                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-xs text-slate-500">{pct}%</span>
+                        </div>
+                    )}
+                    <div className="flex gap-2 mt-auto pt-1 max-w-sm">{children({ done })}</div>
+                </div>
+            </div>
+        );
+    }
     return (
         <div className="rounded-xl border border-slate-200 bg-white hover:border-slate-400 transition flex flex-col" data-testid="course-card">
             {/* The course's area colour and icon, with its full name. */}
