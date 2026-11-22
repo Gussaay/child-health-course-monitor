@@ -68,8 +68,12 @@ export function GroupedCourses({ render, list }) {
     const { t } = useTranslation();
     const { courses } = useCourseScreen();
     const areas = useMemo(() => coursesByArea(list || courses), [list, courses]);
-    const [only, setOnly] = useState('');
-    const shown = areas.filter((x) => x.courses.length && (!only || x.area.id === only));
+    // One area at a time: the page opens on the tiles, and a tile shows that
+    // area's courses only. The last area chosen is remembered on this device.
+    const [chosen, setChosenState] = useState(() => { try { return localStorage.getItem('onlineCourseArea') || ''; } catch { return ''; } });
+    const setOnly = (id) => { setChosenState(id); try { localStorage.setItem('onlineCourseArea', id); } catch { /* private mode */ } };
+    const only = areas.some((x) => x.area.id === chosen && x.courses.length) ? chosen : '';
+    const shown = areas.filter((x) => x.courses.length && x.area.id === only);
     const name = (a) => t(`imnci_ui.areas.${a.id}.short`, a.short);
     const full = (a) => t(`imnci_ui.areas.${a.id}.full`, a.full);
     return (
@@ -80,7 +84,7 @@ export function GroupedCourses({ render, list }) {
                     const on = only === area.id;
                     return (
                         <button key={area.id} type="button" role="tab" aria-selected={on} data-testid="course-area"
-                            onClick={() => setOnly(on ? '' : area.id)} disabled={!cs.length}
+                            onClick={() => setOnly(area.id)} disabled={!cs.length}
                             className={`text-start rounded-xl border bg-white p-4 transition
                                 ${on ? 'border-sky-600 ring-1 ring-sky-600' : 'border-slate-200 hover:border-slate-400'} disabled:opacity-50 disabled:hover:border-slate-200`}>
                             <span className={`w-11 h-11 rounded-lg grid place-items-center ${on ? 'bg-sky-700 text-white' : 'bg-slate-100 text-slate-700'}`}>
@@ -95,10 +99,10 @@ export function GroupedCourses({ render, list }) {
                     );
                 })}
             </div>
-            {only && (
-                <button type="button" onClick={() => setOnly('')} className="text-sm font-semibold text-sky-700 hover:underline">
-                    {t('imnci_ui.areas.show_all', 'Show all areas')}
-                </button>
+            {!only && (
+                <p className="text-sm text-slate-500" data-testid="course-areas-hint">
+                    {t('imnci_ui.areas.choose', 'Choose an area to see its courses.')}
+                </p>
             )}
             {shown.map(({ area, courses: cs }) => {
                 const Icon = area.icon;
