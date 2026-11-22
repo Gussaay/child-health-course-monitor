@@ -211,7 +211,7 @@ export default function FacilitatorGuides({ category = '' }) {
 // ---------------------------------------------------------------------------
 // The reader
 // ---------------------------------------------------------------------------
-export function GuideReader({ course, items, place, go, onAllGuides = null }) {
+export function GuideReader({ course, items, place, go, onAllGuides = null, kicker = null, actions = null }) {
     const { t } = useTranslation();
     const outline = useMemo(() => guideOutline(course, items), [course, items]);
     const lastKey = `guidePlace:${course.id}`;
@@ -283,10 +283,11 @@ export function GuideReader({ course, items, place, go, onAllGuides = null }) {
                 <div className="flex flex-wrap items-start gap-3">
                     <span className="w-10 h-10 rounded-lg bg-sky-50 text-sky-700 grid place-items-center shrink-0"><BookMarked size={20} /></span>
                     <div className="flex-1 min-w-0">
-                        <div className="text-[11px] font-bold uppercase tracking-wider text-sky-700">{t('clinical_ui.guides.kicker', 'Facilitator guide · how to run the course')}</div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-sky-700">{kicker || t('clinical_ui.guides.kicker', 'Facilitator guide · how to run the course')}</div>
                         <h3 className="font-bold text-slate-900 text-lg leading-snug">{course.title}</h3>
                         <div className="text-xs text-slate-500">{t('clinical_ui.guides.size', '{{c}} chapters · {{s}} sections', { c: outline.length, s: total })}</div>
                     </div>
+                    {actions}
                     {onAllGuides && (
                         <button type="button" onClick={onAllGuides} className="text-sm font-semibold text-sky-700 hover:underline">
                             {t('clinical_ui.guides.all', 'All guides and notes of this service')}

@@ -12,6 +12,7 @@ import { toSeconds, toClock } from '../cardText';
 import { BookImage } from '../blocks';
 import { Field, Choice, Tick, RowList, TextList, AnswersEditor, RecordEditor } from './rows';
 import { kindOf, newCase } from './elements';
+import { useCourseScreen } from '../screen';
 
 // A time in a video, typed as 1:05. Kept as typed while the author types, and
 // saved in seconds; an empty box removes it.
@@ -338,6 +339,7 @@ export function ElementForm({ block: b, onChange: set, uploadPicture }) {
             );
 
         case 'courselink':
+            if (b.popup) return <AnnexPicker b={b} set={set} t={t} />;
             return (
                 <div className="space-y-3">
                     <Field label={t('imnci_ui.courses.editor.link_course', 'Course (its title)')} value={b.course} onChange={(v) => set({ course: v })} />
@@ -482,4 +484,48 @@ export function ElementForm({ block: b, onChange: set, uploadPicture }) {
                 </p>
             );
     }
+}
+
+// An annex button: pick the annex page (a standard operating procedure, a skill
+// checklist ...) from the annexes kept in Protocol & Course Management.
+function AnnexPicker({ b, set, t }) {
+    const screen = useCourseScreen();
+    const live = (x) => x && x.isDeleted !== true;
+    const annexes = (screen?.allCourses || []).filter((c) => live(c) && c.audience === 'annex');
+    const items = (screen?.allItems || []).filter(live);
+    const annex = annexes.find((c) => c.title === b.course) || null;
+    const modules = annex ? items.filter((i) => i.kind === 'module' && i.courseId === annex.id).sort((x, y) => (x.order || 0) - (y.order || 0)) : [];
+    const mod = modules.find((m) => Number(m.order) === Number(b.module)) || null;
+    const pages = mod ? items.filter((i) => i.kind === 'section' && i.moduleId === mod.id).sort((x, y) => (x.order || 0) - (y.order || 0)) : [];
+    const sel = 'w-full rounded-lg border border-slate-300 text-sm';
+    return (
+        <div className="space-y-3" data-testid="annex-picker">
+            <label className="block text-sm">
+                <span className="block font-medium text-slate-700 mb-1">{t('imnci_ui.courses.editor.annex_set', 'Annex')}</span>
+                <select className={sel} value={b.course || ''} onChange={(e) => set({ course: e.target.value, module: 1, lesson: '' })}>
+                    <option value="">{t('imnci_ui.courses.editor.annex_choose', '— Choose —')}</option>
+                    {annexes.map((c) => <option key={c.id} value={c.title}>{c.title}</option>)}
+                </select>
+            </label>
+            {annex && (
+                <label className="block text-sm">
+                    <span className="block font-medium text-slate-700 mb-1">{t('imnci_ui.courses.editor.annex_part', 'Part')}</span>
+                    <select className={sel} value={b.module || 1} onChange={(e) => set({ module: Number(e.target.value), lesson: '' })}>
+                        {modules.map((m) => <option key={m.id} value={m.order}>{m.title}</option>)}
+                    </select>
+                </label>
+            )}
+            {mod && (
+                <label className="block text-sm">
+                    <span className="block font-medium text-slate-700 mb-1">{t('imnci_ui.courses.editor.annex_page', 'Page')}</span>
+                    <select className={sel} value={b.lesson || ''} onChange={(e) => set({ lesson: e.target.value })}>
+                        <option value="">{t('imnci_ui.courses.editor.annex_choose', '— Choose —')}</option>
+                        {pages.map((p) => <option key={p.id} value={p.title}>{p.title}</option>)}
+                    </select>
+                </label>
+            )}
+            <Field label={t('imnci_ui.courses.editor.link_label', 'Label on the link (optional)')} value={b.label} onChange={(v) => set({ label: v })} />
+            <Field label={t('imnci_ui.courses.editor.link_text', 'What to do there (optional)')} value={b.text} onChange={(v) => set({ text: v })} />
+        </div>
+    );
 }

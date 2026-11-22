@@ -19,6 +19,7 @@ export const ELEMENTS = [
     ['note', 'Key point', Lightbulb, 'write', 'A labelled box that stands out'],
     ['facilitator', 'Facilitator note', Users, 'write', 'Shown in Protocol management, never to learners'],
     ['courselink', 'Link to a module', Link2, 'write', 'Opens another module or lesson'],
+    ['annex', 'Annex (SOP, checklist)', ClipboardList, 'show', 'A button that opens an annex page over the lesson'],
     ['video', 'Video', Film, 'show', 'YouTube or MP4, with chapters and questions'],
     ['steps', 'Step by step', ListOrdered, 'show', 'Numbered steps, each with a picture'],
     ['booklet', 'Chart booklet table', BookOpen, 'show', 'Live from Protocol management'],
@@ -58,6 +59,7 @@ export function kindOf(b) {
         if (/sudan/i.test(b.label || '')) return 'sudan';
         return 'note';
     }
+    if (b.type === 'courselink' && b.popup) return 'annex';
     return b.type;
 }
 
@@ -89,6 +91,7 @@ export function newElement(kind) {
         case 'story': return { type: 'story', title: '', stages: [{ text: '', question: '', options: [], answer: 0, explanation: '' }] };
         case 'growthchart': return { type: 'growthchart', title: '', text: '', sex: 'female', ageMonths: 12, weightKg: 8, lengthCm: 72, explanation: '' };
         case 'courselink': return { type: 'courselink', course: 'IMNCI distance learning modules', module: 1, lesson: '', label: '', text: '' };
+        case 'annex': return { type: 'courselink', popup: true, course: '', module: 1, lesson: '', label: 'Standard operating procedure', text: '' };
         case 'scenario': return { type: 'scenario', title: '', text: '', part: 'child', categories: [], cases: [newCase()] };
         case 'spot': return { type: 'spot', title: 'Find the error', text: '', part: 'child', child: {}, record: [], explanation: '' };
         case 'drill': return { type: 'drill', title: '', text: '', url: '', given: '', count: { answer: 0, tolerance: 2, unit: 'breaths per minute' }, question: '', options: [], answer: 0, explanation: '' };

@@ -50,9 +50,9 @@ MODULES = [
 # and other material. The lessons that use an SOP open it with a button (books/sops.py).
 SOP_SECTIONS = [7, 8]
 ANNEX = dict(file="ssnb-annex-neonatal-procedures-and-equipment.imnci.json", course={
-    "title": "Sick & Small Newborn · Course annexes",
+    "title": "Sick & Small Newborn · Annexes: procedures and equipment SOPs",
     "audience": "annex",
-    "description": "Course annexes of the Small & Sick Newborn courses, opened from the lessons when needed: the standard operating "
+    "description": "Annexes shared by the Small & Sick Newborn courses (Protocol & Course Management > Small & Sick Newborn > Annexes), opened from the lessons when needed: the standard operating "
                    "procedures for neonatal procedures (pain relief, umbilical catheters, PICC, intraosseous access, intubation, needle "
                    "thoracotomy, chest tube, lumbar puncture, bladder catheterization and aspiration) and for the equipment of the "
                    "newborn unit (warmers, incubator, bubble CPAP, pulse oximeter, phototherapy, pumps, suction, bag and mask, oxygen), "

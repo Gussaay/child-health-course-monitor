@@ -3,9 +3,9 @@
  "version": 1,
  "about": "Manual Module (2) Special Newborn Care, Sections 7 and 8: Sudan Training Manual for Sick and Small Newborn (2026). Built by scripts/ssnb-upload/build. One module per manual section; every line of the manual is placed in the book's words and order.",
  "course": {
-  "title": "Sick & Small Newborn · Course annexes",
+  "title": "Sick & Small Newborn · Annexes: procedures and equipment SOPs",
   "audience": "annex",
-  "description": "Course annexes of the Small & Sick Newborn courses, opened from the lessons when needed: the standard operating procedures for neonatal procedures (pain relief, umbilical catheters, PICC, intraosseous access, intubation, needle thoracotomy, chest tube, lumbar puncture, bladder catheterization and aspiration) and for the equipment of the newborn unit (warmers, incubator, bubble CPAP, pulse oximeter, phototherapy, pumps, suction, bag and mask, oxygen), from the Sudan Training Manual for Sick and Small Newborn 2026, Module 2 Sections 7 and 8. Skill checklists, the chart booklet and other material can be added as further modules.",
+  "description": "Annexes shared by the Small & Sick Newborn courses (Protocol & Course Management > Small & Sick Newborn > Annexes), opened from the lessons when needed: the standard operating procedures for neonatal procedures (pain relief, umbilical catheters, PICC, intraosseous access, intubation, needle thoracotomy, chest tube, lumbar puncture, bladder catheterization and aspiration) and for the equipment of the newborn unit (warmers, incubator, bubble CPAP, pulse oximeter, phototherapy, pumps, suction, bag and mask, oxygen), from the Sudan Training Manual for Sick and Small Newborn 2026, Module 2 Sections 7 and 8. Skill checklists, the chart booklet and other material can be added as further modules.",
   "category": "Small & Sick Newborn",
   "subcategory": "Online course: Management of Sick and Small Newborns (2026)",
   "lockOrder": false,

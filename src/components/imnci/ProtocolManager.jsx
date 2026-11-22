@@ -19,12 +19,13 @@ import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from
 import { useTranslation } from 'react-i18next';
 import {
     Stethoscope, Siren, Baby, HeartPulse, ShieldCheck, HeartHandshake, ClipboardList, Users,
-    BookMarked, GraduationCap, FileText, ChevronRight, LayoutGrid,
+    BookMarked, GraduationCap, FileText, ChevronRight, LayoutGrid, ClipboardList as AnnexIcon,
 } from 'lucide-react';
 import { PageHeader, Spinner } from '../CommonComponents';
 import { useDataCache } from '../../DataContext';
 import { COURSE_CATEGORIES, OTHER_CATEGORY, categoryOf } from './onlineCourses/categories';
 import FacilitatorGuides from './FacilitatorGuides';
+import CourseAnnexes from './CourseAnnexes';
 import ProtocolEditor from './protocol';
 
 const OnlineCoursesView = lazy(() => import('./courses'));
@@ -46,7 +47,7 @@ const LOOK = {
 };
 export const serviceLook = (s) => LOOK[s] || { icon: GraduationCap, tone: 'bg-slate-200 text-slate-700' };
 
-const PARTS = ['protocol', 'guide', 'courses'];
+const PARTS = ['protocol', 'guide', 'annexes', 'courses'];
 
 // The place (svc, part) in the address.
 const readPlace = () => {
@@ -89,8 +90,10 @@ export default function ProtocolManager({ permissions = {}, userRoles = [] }) {
         const out = {};
         (onlineCourses || []).filter((c) => c.isDeleted !== true).forEach((c) => {
             const k = categoryOf(c);
-            out[k] = out[k] || { guides: 0, courses: 0 };
-            if (c.audience === 'facilitators') out[k].guides += 1; else out[k].courses += 1;
+            out[k] = out[k] || { guides: 0, courses: 0, annexes: 0 };
+            if (c.audience === 'facilitators') out[k].guides += 1;
+            else if (c.audience === 'annex') out[k].annexes += 1;
+            else out[k].courses += 1;
         });
         return out;
     }, [onlineCourses]);
@@ -99,6 +102,7 @@ export default function ProtocolManager({ permissions = {}, userRoles = [] }) {
     const partName = (p) => ({
         protocol: t('protocol_manager.parts.protocol', 'Protocol'),
         guide: t('protocol_manager.parts.guide', 'Facilitator guide'),
+        annexes: t('protocol_manager.parts.annexes', 'Annexes'),
         courses: t('protocol_manager.parts.courses', 'Online courses'),
     }[p]);
     const svcName = (s) => t(`protocol_manager.services.${s.replace(/[^A-Za-z]/g, '_')}`, s);
@@ -131,7 +135,7 @@ export default function ProtocolManager({ permissions = {}, userRoles = [] }) {
                 <ServiceGrid counts={counts} svcName={svcName} onOpen={(s) => go({ svc: s })} />
             ) : (
                 <>
-                    <PartCards svc={place.svc} part={place.part} counts={counts[place.svc] || { guides: 0, courses: 0 }}
+                    <PartCards svc={place.svc} part={place.part} counts={counts[place.svc] || { guides: 0, courses: 0, annexes: 0 }}
                         partName={partName} onOpen={(p) => go({ svc: place.svc, part: p })} compact={!!place.part} />
                     {place.part && (
                         <Suspense fallback={<Spinner />}>
@@ -140,6 +144,7 @@ export default function ProtocolManager({ permissions = {}, userRoles = [] }) {
                                     ? <ProtocolEditor canEdit={!!permissions.canManageProtocols} showGuides={false} />
                                     : <Empty text={t('protocol_manager.no_protocol', 'There is no protocol for this service in the app yet. Its facilitator guide and online courses are in the other two parts.')} />)}
                                 {place.part === 'guide' && <FacilitatorGuides category={place.svc} />}
+                                {place.part === 'annexes' && <CourseAnnexes category={place.svc} canEdit={!!permissions.canManageOnlineCourses} />}
                                 {place.part === 'courses' && (
                                     <OnlineCoursesView key={place.svc} permissions={permissions} userRoles={userRoles} area="manage" category={place.svc} />
                                 )}
@@ -188,10 +193,11 @@ function PartCards({ svc, part, counts, partName, onOpen, compact }) {
             ? t('protocol_manager.desc.protocol', 'The national protocol: classification, treatment, doses, photograph booklet')
             : t('protocol_manager.desc.protocol_none', 'Not in the app yet for this service') },
         { id: 'guide', icon: BookMarked, desc: t('protocol_manager.desc.guide', 'How to run the course, word for word, with contents and search — {{count}} guides', { count: counts.guides }) },
+        { id: 'annexes', icon: AnnexIcon, desc: t('protocol_manager.desc.annexes', 'SOPs, skill checklists, chart booklet: opened from any course\'s lessons — {{count}}', { count: counts.annexes || 0 }) },
         { id: 'courses', icon: LayoutGrid, desc: t('protocol_manager.desc.courses', 'Courses, enrolment, groups and progress — {{count}} courses', { count: counts.courses }) },
     ];
     return (
-        <div className={`grid gap-2 ${compact ? 'grid-cols-3' : 'sm:grid-cols-3'}`} data-testid="pcm-parts">
+        <div className={`grid gap-2 ${compact ? 'grid-cols-2 sm:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-4'}`} data-testid="pcm-parts">
             {parts.map(({ id, icon: Icon, desc }) => {
                 const on = part === id;
                 return (

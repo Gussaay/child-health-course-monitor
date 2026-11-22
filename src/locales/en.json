@@ -7937,7 +7937,11 @@
         "hints": "A hint for each answer, split by ; in the same order (shown after a wrong pick)",
         "hint_wrong": "Hint if picked",
         "add_calc": "Work it out",
-        "add_facilitator": "Facilitator note"
+        "add_facilitator": "Facilitator note",
+        "annex_set": "Annex",
+        "annex_part": "Part",
+        "annex_page": "Page",
+        "annex_choose": "— Choose —"
       },
       "exlink": {
         "gone": "This section points at an exercise ({{id}}) that is no longer in Online Exercises.",
@@ -9246,7 +9250,8 @@
     "parts": {
       "protocol": "Protocol",
       "guide": "Facilitator guide",
-      "courses": "Online courses"
+      "courses": "Online courses",
+      "annexes": "Annexes"
     },
     "has_protocol": "Protocol",
     "n_guides": "{{count}} facilitator guides",
@@ -9256,7 +9261,12 @@
       "protocol": "The national protocol: classification, treatment, doses, photograph booklet",
       "protocol_none": "Not in the app yet for this service",
       "guide": "How to run the course, word for word, with contents and search — {{count}} guides",
-      "courses": "Courses, enrolment, groups and progress — {{count}} courses"
-    }
+      "courses": "Courses, enrolment, groups and progress — {{count}} courses",
+      "annexes": "SOPs, skill checklists, chart booklet: opened from any course's lessons — {{count}}"
+    },
+    "annexes_none": "No annexes for this service yet. Annexes hold standard operating procedures, skill checklists, chart booklet pages and other material that any course of the service can open from its lessons.",
+    "annexes_intro": "Shared by every course of this service. A lesson opens a page with a button: in the lesson editor, add \"Annex (SOP, checklist)\" and pick the page.",
+    "annex_kicker": "Course annex · opened from the lessons",
+    "annex_edit": "Edit or add pages"
   }
 }

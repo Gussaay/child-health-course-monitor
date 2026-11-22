@@ -35,7 +35,6 @@ export function ManageHome() {
     } = useCourseScreen();
     const admin = useEnrolmentAdmin();
     const guideDocs = courses.filter((c) => c.audience === 'facilitators');
-    const annexDocs = courses.filter((c) => c.audience === 'annex');
     const learnerCourses = courses.filter((c) => !['facilitators', 'annex'].includes(c.audience));
 
     const tabs = [
@@ -105,18 +104,9 @@ export function ManageHome() {
                             {/* A facilitator guide is a guideline, not a course: it is read in
                                 Protocol & Course Management > the service > Facilitator guide.
                                 Its text is still edited here. */}
-                            {/* Course annexes: the procedures and equipment SOPs, skill
-                                checklists, chart booklet pages ... that lessons open
-                                with a button when needed. Not listed for learners. */}
-                            {annexDocs.length > 0 && (
-                                <div className="space-y-2" data-testid="manage-annexes">
-                                    <h3 className="text-base font-bold text-slate-900">{t('imnci_ui.manage.annexes_title', 'Course annexes')}</h3>
-                                    <p className="text-sm text-slate-500">{t('imnci_ui.manage.annexes_hint', 'Standard operating procedures, skill checklists, chart booklet and other material the lessons open with a button when needed. Learners do not see them in the course list.')}</p>
-                                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                        {annexDocs.map((c) => <AuthorCourseCard key={c.id} course={c} annex />)}
-                                    </div>
-                                </div>
-                            )}
+                            {/* Course annexes (SOPs, skill checklists, chart booklet ...) are not
+                                courses: they are kept in Protocol & Course Management > a service >
+                                Annexes, like the protocol, and any lesson opens them with a button. */}
                             {guideDocs.length > 0 && (
                                 <div className="space-y-2" data-testid="manage-guides">
                                     <h3 className="text-base font-bold text-slate-900">{t('imnci_ui.manage.guides_title', 'Facilitator guides')}</h3>
