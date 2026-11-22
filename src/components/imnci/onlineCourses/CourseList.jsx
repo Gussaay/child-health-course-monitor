@@ -14,6 +14,7 @@ import { notify } from '../../dialogs';
 import { MyProgress } from './lazyParts';
 import { useCourseScreen } from './screen';
 import { groupCourses } from './categories';
+import { areaOf, coursesByArea } from './areas';
 import { canStudy, groupName } from './enrolment';
 
 export function CourseList() {
@@ -58,44 +59,71 @@ export function CourseList() {
 }
 
 /**
- * The courses under their category and subcategory headings, with a row of
- * category chips to show one category. `render(course)` draws each card.
+ * The courses by programme area (areas.js): a tile per area with its icon and
+ * full name (IMNCI, ETAT, Newborn, Adolescent, Program Management), then each
+ * area's courses under its own heading, by category and subcategory. A tile
+ * shows that area only. `render(course)` draws each card.
  */
 export function GroupedCourses({ render, list }) {
     const { t } = useTranslation();
     const { courses } = useCourseScreen();
-    const groups = useMemo(() => groupCourses(list || courses), [list, courses]);
+    const areas = useMemo(() => coursesByArea(list || courses), [list, courses]);
     const [only, setOnly] = useState('');
-    const shown = only ? groups.filter((g) => g.category === only) : groups;
-    const chip = (active) => `px-3 py-1.5 rounded-full text-sm font-semibold border whitespace-nowrap ${active ? 'bg-sky-700 text-white border-sky-700' : 'bg-white text-slate-600 border-slate-300 hover:border-sky-400'}`;
+    const shown = areas.filter((x) => x.courses.length && (!only || x.area.id === only));
+    const name = (a) => t(`imnci_ui.areas.${a.id}.short`, a.short);
+    const full = (a) => t(`imnci_ui.areas.${a.id}.full`, a.full);
     return (
         <div className="space-y-6">
-            {groups.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" role="tablist">
-                    <button className={chip(!only)} onClick={() => setOnly('')}>{t('imnci_ui.categories.all', 'All')}</button>
-                    {groups.map((g) => (
-                        <button key={g.category} className={chip(only === g.category)} onClick={() => setOnly(g.category)}>
-                            {g.category === 'Other' ? t('imnci_ui.categories.other', 'Other') : g.category}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" role="tablist" data-testid="course-areas">
+                {areas.map(({ area, courses: cs }) => {
+                    const Icon = area.icon;
+                    const on = only === area.id;
+                    return (
+                        <button key={area.id} type="button" role="tab" aria-selected={on} data-testid="course-area"
+                            onClick={() => setOnly(on ? '' : area.id)} disabled={!cs.length}
+                            className={`relative text-start rounded-2xl p-4 text-white bg-gradient-to-br ${area.tone.tile} shadow-sm transition
+                                ${on ? 'ring-4 ring-offset-2 ring-sky-300' : 'hover:shadow-lg hover:-translate-y-0.5'} disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-sm`}>
+                            <Icon size={40} strokeWidth={1.75} className="opacity-95" />
+                            <span className="block mt-3 text-lg font-extrabold leading-tight">{name(area)}</span>
+                            <span className="block text-xs text-white/85 leading-snug mt-0.5">{full(area)}</span>
+                            <span className="block text-[11px] font-semibold mt-2 text-white/90">
+                                {cs.length ? t('imnci_ui.areas.n_courses', '{{count}} courses', { count: cs.length }) : t('imnci_ui.areas.soon', 'Coming soon')}
+                            </span>
                         </button>
-                    ))}
-                </div>
+                    );
+                })}
+            </div>
+            {only && (
+                <button type="button" onClick={() => setOnly('')} className="text-sm font-semibold text-sky-700 hover:underline">
+                    {t('imnci_ui.areas.show_all', 'Show all areas')}
+                </button>
             )}
-            {shown.map((g) => (
-                <section key={g.category} className="space-y-3" data-testid="course-category">
-                    <h2 className="text-lg font-extrabold text-slate-800 flex items-center gap-2">
-                        <span className="w-1.5 h-5 rounded-full bg-sky-600" />
-                        {g.category === 'Other' ? t('imnci_ui.categories.other', 'Other') : g.category}
-                    </h2>
-                    {g.subgroups.map((sg) => (
-                        <div key={sg.subcategory || '_'} className="space-y-2">
-                            {sg.subcategory && <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide">{sg.subcategory}</h3>}
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                {sg.courses.map(render)}
+            {shown.map(({ area, courses: cs }) => {
+                const Icon = area.icon;
+                return (
+                    <section key={area.id} className="space-y-3" data-testid="course-category">
+                        <h2 className="flex items-center gap-3">
+                            <span className={`w-11 h-11 rounded-xl grid place-items-center border ${area.tone.soft}`}><Icon size={24} /></span>
+                            <span className="min-w-0">
+                                <span className="block text-lg font-extrabold text-slate-800 leading-tight">{name(area)}</span>
+                                <span className="block text-sm text-slate-500">{full(area)}</span>
+                            </span>
+                        </h2>
+                        {groupCourses(cs).map((g) => g.subgroups.map((sg) => (
+                            <div key={`${g.category}|${sg.subcategory}`} className="space-y-2">
+                                {(sg.subcategory || g.category !== area.short) && (
+                                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide">
+                                        {[g.category !== area.short && g.category !== 'Other' ? g.category : null, sg.subcategory || null].filter(Boolean).join(' · ')}
+                                    </h3>
+                                )}
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                    {sg.courses.map(render)}
+                                </div>
                             </div>
-                        </div>
-                    ))}
-                </section>
-            ))}
+                        )))}
+                    </section>
+                );
+            })}
         </div>
     );
 }
@@ -108,21 +136,27 @@ export function CourseCardBody({ course: c, children, badge }) {
     const mods = items.filter((i) => i.kind === 'module' && i.courseId === c.id);
     const done = secs.filter((s) => progress.completed?.[s.id]).length;
     const pct = secs.length ? Math.round((done / secs.length) * 100) : 0;
+    const area = areaOf(c);
+    const AreaIcon = area.icon;
     return (
-        <div className="rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm hover:shadow-md hover:border-sky-300 transition flex flex-col">
-            <div className="p-4 flex flex-col flex-1 gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                    <span className="w-10 h-10 rounded-lg bg-sky-50 text-sky-700 grid place-items-center shrink-0">
-                        <BookOpen size={20} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                        <h3 className="font-bold text-slate-800 flex items-start gap-2 flex-wrap">
-                            <span className="min-w-0">{c.title}</span>
-                            {badge}
-                        </h3>
-                        {c.description && <p className="text-sm text-slate-600 line-clamp-2 mt-0.5">{c.description}</p>}
-                    </div>
+        <div className="rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm hover:shadow-md hover:border-sky-300 transition flex flex-col" data-testid="course-card">
+            {/* The course's area colour and icon, with its full name. */}
+            <div className={`relative bg-gradient-to-br ${area.tone.tile} text-white px-4 pt-4 pb-3 flex items-start gap-3`}>
+                {c.imageUrl
+                    ? <img src={c.imageUrl} alt="" className="w-14 h-14 rounded-xl object-cover bg-white/20 shrink-0" />
+                    : <span className="w-14 h-14 rounded-xl bg-white/15 grid place-items-center shrink-0"><AreaIcon size={32} strokeWidth={1.75} /></span>}
+                <div className="min-w-0 flex-1">
+                    <span className="block text-[11px] font-bold uppercase tracking-wider text-white/80">{t(`imnci_ui.areas.${area.id}.short`, area.short)}</span>
+                    <h3 className="font-extrabold text-base leading-snug break-words">{c.title}</h3>
                 </div>
+            </div>
+            <div className="p-4 flex flex-col flex-1 gap-3">
+                {(badge || c.description) && (
+                    <div className="min-w-0 space-y-1.5">
+                        {badge && <div className="flex flex-wrap gap-1.5">{badge}</div>}
+                        {c.description && <p className="text-sm text-slate-600 line-clamp-3">{c.description}</p>}
+                    </div>
+                )}
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
                     <span className="inline-flex items-center gap-1"><Layers size={13} /> {t('imnci_ui.courses.main.n_modules', '{{n}} modules', { n: mods.length })}</span>
                     <span className="inline-flex items-center gap-1"><BookOpen size={13} /> {t('imnci_ui.courses.main.n_lessons', '{{n}} lessons', { n: secs.length })}</span>

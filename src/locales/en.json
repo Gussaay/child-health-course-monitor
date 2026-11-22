@@ -8520,6 +8520,35 @@
       "annexes_title": "Course annexes",
       "annexes_hint": "Standard operating procedures, skill checklists, chart booklet and other material the lessons open with a button when needed. Learners do not see them in the course list.",
       "annex_pill": "Course annex"
+    },
+    "areas": {
+      "imnci": {
+        "short": "IMNCI",
+        "full": "Integrated Management of Newborn and Childhood Illness"
+      },
+      "etat": {
+        "short": "ETAT",
+        "full": "Emergency Triage, Assessment and Treatment"
+      },
+      "newborn": {
+        "short": "Newborn",
+        "full": "Newborn care: Small & Sick Newborn, EENC and EmONC"
+      },
+      "adolescent": {
+        "short": "Adolescent",
+        "full": "Adolescent health"
+      },
+      "program": {
+        "short": "Program Management",
+        "full": "Program management, planning and supervision"
+      },
+      "other": {
+        "short": "Other",
+        "full": "Other courses (infection prevention and more)"
+      },
+      "n_courses": "{{count}} courses",
+      "soon": "Coming soon",
+      "show_all": "Show all areas"
     }
   },
   "theme": {
