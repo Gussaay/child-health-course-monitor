@@ -50,10 +50,13 @@ word check (words of the book not found in the course: only renamed headings rem
 Scripts: `videoscripts/m1.py`, `m2.py`, `m3.py` → `voiceover.py` → Word file. Links go in `videos.json`
 (`{"SN2.7.3": "https://youtu.be/..."}`), then rebuild.
 
-## Annex and facilitator guide
+## Procedures, equipment and facilitator guide
 
-- `books/m2.py` `ANNEX`: Module 2 Sections 7 and 8 are written to their own course file,
-  `ssnb-annex-neonatal-procedures-and-equipment.imnci.json` (enrolment open, lockOrder false, every module anyOrder).
+- Module 2 Sections 7 (Procedures) and 8 (Equipment) are no module or course of their own (`books/m2.py` `SOP_SECTIONS`).
+  Each SOP is placed in full inside every lesson that uses it, under a "Standard operating procedure" card: at a lesson's
+  own `equipment()`/`procedure()` call, and in the lessons listed in `books/sops.py` `PLACES` (e.g. the radiant warmer
+  in thermal care, lumbar puncture in sepsis treatment, bubble CPAP in CPAP). The build prints where each SOP went and
+  stops if one is placed nowhere.
 - `fgbuild.py`: the facilitator guide (extract with `extract_pdf.py <guide.pdf> fg sources/fgdoc.json <scratch>`) →
   `ssnb-facilitator-guide.imnci.json`, audience "facilitators", one module per chapter, Chapter 3 (resuscitation) left out,
   each chapter opening with links to the learners' modules.

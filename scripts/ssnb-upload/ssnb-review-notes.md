@@ -7,16 +7,19 @@
 | Module 1: Essential and Emergency Newborn Care | 3 | 45 | 10 | 13 |
 | Module 2: Special Newborn Care | 8 | 68 | 36 + sepsis pre/post test | 11 |
 | Module 3: Intensive Newborn Care | 3 | 40 | 5 | 7 |
-| **Annex: Neonatal Procedures and Equipment** (open: no approval, any lesson in any order) | 2 (manual Module 2 Sections 7 and 8) | 27 | – | 19 |
 | **Facilitator guide** (facilitators only: Protocol management → Facilitator guides; Chapter 3 resuscitation left out) | 15 chapters | 165 | – | – |
 
 - Every line of the three manuals is placed, in the manuals' words and order (`build.py` checks; word check clean).
 - Every lesson has at least one activity: the manuals' own MCQs (scored), checks written from the lesson's text,
   sort/flip/calculation activities, and the case exercises with the facilitator guide's answer keys.
 - Each manual section is an app module that opens on its own, can be shared by link and finished alone. Lessons inside
-  a module are read in order, except in the Procedures and Equipment modules, which open at any lesson.
-- Re-use across sections: procedures and equipment are one open Annex course every course links to (e.g. Module 3 CPAP →
-  Annex "Vayu bubble CPAP system"; ventilation troubleshooting → Annex "Needle thoracotomy"). Managers can also **copy a lesson**
+  a module are read in order, 
+- Procedures and equipment (manual Module 2 Sections 7 and 8) are **not a separate course or module**: each SOP is placed
+  in full inside every lesson that uses it, under a "Standard operating procedure" card. For example: radiant warmer in
+  thermal care (M1 hypothermia; M2 golden hour), incubator in "Incubator, radiant warmer or cot?", lumbar puncture in
+  sepsis treatment and in the seizure work-up, Vayu bubble CPAP in CPAP (M3) and in breathing support (M2), UVC and
+  intraosseous access in shock, ETT insertion in surfactant and ventilation, chest tube in ventilation complications,
+  warmer/incubator cleaning in infection prevention. The full list is `build/books/sops.py`. Managers can also **copy a lesson**
   into another module of any course (new button on the lesson page in Manage mode).
 
 ## App changes (must be live before the upload)

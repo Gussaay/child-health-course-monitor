@@ -261,40 +261,85 @@ def finish(cfg, out_mods, exercises):
         pkg['modules'].append(mod)
     return pkg
 
+def sop_blocks(sops, name, section):
+    """The SOP lesson `name` in full, under a card naming it, for placing inside another lesson."""
+    head = {'type': 'note', 'label': 'Standard operating procedure', 'text': f'<strong>{name}</strong> · from the manual, {section}'}
+    return [head] + copy.deepcopy(sops[name])
+
+def place_sops(books, sops, where_sop):
+    """Each SOP is placed in full inside the lessons that use it: at a lesson's own equipment()/procedure() marker, and
+    at the end of each lesson in books/sops.py PLACES. Returns where each SOP went."""
+    from books.sops import GROUP, PLACES
+    went = {n: [] for n in sops}
+    def expand(n): return GROUP.get(n, [n])
+    def put(key, L, names, at=None):
+        add = []
+        for n in names:
+            for m in expand(n):
+                if m not in sops: ERRORS.append(f'no SOP lesson "{m}"'); continue
+                add += sop_blocks(sops, m, where_sop[m]); went[m].append((key, L['title']))
+        if at is None: L['blocks'] += add
+        else: L['blocks'][at:at + 1] = add
+    for key, (cfg, mods) in books.items():
+        for mm in mods:
+            for L in mm['lessons']:
+                while True:
+                    at = next((k for k, b in enumerate(L['blocks']) if b['type'] == '_sop'), None)
+                    if at is None: break
+                    put(key, L, [L['blocks'][at]['sop']], at)
+    for key, title, names in PLACES:
+        if key not in books: continue
+        hit = [L for mm in books[key][1] for L in mm['lessons'] if L['title'] == title]
+        if len(hit) != 1: ERRORS.append(f'SOP place: {len(hit)} lessons called "{title}" in {key}'); continue
+        put(key, hit[0], names)
+    return went
+
 def main():
     keys = sys.argv[2:] or ['m1', 'm2', 'm3']
+    from books.sops import PROCEDURES_SECTION, EQUIPMENT_SECTION
+    built, sops, where_sop, words = {}, {}, {}, {}
     for key in keys:
         r = build_book(key)
         if not r: continue
         cfg, mods, exs, els, used = r
-        annex = getattr(cfg, 'ANNEX', None); apkg = None
-        if annex:
-            amods = [m for m in mods if m['order'] in annex['sections']]
-            mods = [m for m in mods if m['order'] not in annex['sections']]
+        secs = getattr(cfg, 'SOP_SECTIONS', None)
+        if secs:
+            # Sections 7 and 8 are no module of their own: their lessons are the SOPs placed inside other lessons.
+            for m in mods:
+                if m['order'] in secs:
+                    for L in m['lessons']:
+                        sops[L['title']] = [b for b in L['blocks'] if not b['type'].startswith('_')]
+                        where_sop[L['title']] = PROCEDURES_SECTION if m['order'] == secs[0] else EQUIPMENT_SECTION
+            mods = [m for m in mods if m['order'] not in secs]
             for k, m in enumerate(mods, 1): m['order'] = k
-            for k, m in enumerate(amods, 1): m['order'] = k; m['anyOrder'] = True
-            acfg = type('A', (), {'COURSE': annex['course'], 'BOOK': cfg.BOOK + ', Sections 7 and 8', 'SHORT': 'SSN Annex', 'FILE': annex['file']})
-            apkg = finish(acfg, amods, [])
-            json.dump(apkg, open(os.path.join(ROOT, 'course-packages', annex['file']), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
-            print(f"{annex['file']}: {len(apkg['modules'])} modules, {sum(len(m['sections']) for m in apkg['modules'])} lessons, "
-                  f"{sum(1 for m in apkg['modules'] for s in m['sections'] for b in s['read'] if b['type'] == 'video')} video slots")
-        pkg = finish(cfg, mods, exs)
-        # word-loss check: every word of the book's elements should be somewhere in the course (lessons or exercises)
-        text = html.unescape(re.sub(r'</?[a-z][a-z0-9]*[^<>]*>', ' ', json.dumps([pkg, apkg], ensure_ascii=False))).lower()
-        have = set(re.findall(r"[a-z]{3,}", text))
+        built[key] = (cfg, mods, exs)
+        words[key] = (els, used)
+    went = place_sops({k: (v[0], v[1]) for k, v in built.items()}, sops, where_sop) if sops else {}
+    pkgs = {key: finish(cfg, mods, exs) for key, (cfg, mods, exs) in built.items()}
+    # word-loss check: every word of the book's elements should be somewhere in the courses (an SOP of Module 2
+    # Sections 7 and 8 can sit in Module 1 or 3)
+    text = html.unescape(re.sub(r'</?[a-z][a-z0-9]*[^<>]*>', ' ', json.dumps(list(pkgs.values()), ensure_ascii=False))).lower()
+    have = set(re.findall(r"[a-z]{3,}", text))
+    for key, pkg in pkgs.items():
+        cfg, els, used = built[key][0], *words[key]
         book = []
         for e in els:
             if e['i'] in used and e['k'] in ('line', 'para'): book += re.findall(r"[a-z]{3,}", e['t'].lower())
             if e['i'] in used and e['k'] == 'table': book += [w for r in e['rows'] for c in r for w in re.findall(r"[a-z]{3,}", c.lower())]
         lost = sorted({w for w in book if w not in have})
-        print(f"   word check: {len(book)} words of the book, {len(lost)} distinct words not found" + (': ' + ' '.join(lost[:30]) if lost else ''))
         out = os.path.join(ROOT, 'course-packages', cfg.FILE)
         json.dump(pkg, open(out, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
         nl = sum(len(m['sections']) for m in pkg['modules'])
-        print(f"{cfg.FILE}: {len(pkg['modules'])} modules, {nl} lessons, {len(exs)} exercises, "
+        print(f"{cfg.FILE}: {len(pkg['modules'])} modules, {nl} lessons, {len(built[key][2])} exercises, "
               f"{sum(1 for m in pkg['modules'] for s in m['sections'] for b in s['read'] if b['type'] == 'video')} video slots")
+        print(f"   word check: {len(book)} words of the book, {len(lost)} distinct words not found" + (': ' + ' '.join(lost[:30]) if lost else ''))
         for m in pkg['modules']:
             print(f"   {m['order']:>2}. {m['title']} — {len(m['sections'])} lessons" + (' (reference: any order)' if m.get('anyOrder') else ''))
+    if went:
+        print('SOPs placed in lessons:')
+        for n, w in went.items():
+            print(f"   {n}: " + ('; '.join(f'{k} "{t}"' for k, t in w) if w else 'NOWHERE'))
+            if not w: ERRORS.append(f'SOP placed nowhere: {n}')
     for r in REPORT: print('NOTE', r)
     for e in ERRORS: print('ERROR', e)
     sys.exit(1 if ERRORS else 0)

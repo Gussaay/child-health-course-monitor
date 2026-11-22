@@ -21,6 +21,7 @@ jobs:
           printf '%s' "$SA" > "$RUNNER_TEMP/key.json"
           MODE=$(tr -d '[:space:]' < mode.txt)
           FLAG=""; [ "$MODE" = commit ] && FLAG=--commit; [ "$MODE" = undo ] && FLAG=--undo; [ "$MODE" = replace ] && FLAG=--replace
+          [ "$MODE" = withdraw ] && FLAG=--withdraw; [ "$MODE" = withdraw-commit ] && FLAG="--withdraw --commit"
           echo "Mode: ${MODE}"
           for C in $(cat courses.txt); do
             echo "================ Course ${C} ================"

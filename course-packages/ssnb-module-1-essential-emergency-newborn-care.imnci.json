@@ -504,6 +504,68 @@
        "type": "image",
        "path": "ssnb/m1-004.jpg",
        "caption": ""
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Bag and mask</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Fit the mask over the nose and mouth. Press firmly to prevent air leaks.</li><li>Hold with the thumb on one side and the index and middle fingers on the other.</li><li>With the other hand, squeeze the bag at a rate of 30 to 60 breaths/minute for 60 seconds. Ventilation is effective if the chest rises and falls.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "IMPORTANT"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>excessive ventilation pressure can cause a pneumothorax.<ul><li>If the chest fails to rise:<ul><ul><li>Check the connection between the bag and the mask.</li><li>Correct the position of the mask on the face.</li><li>Correct the head position.</li></ul></li></ul></li><li>Check every minute for spontaneous respiratory effort (look for chest movement); do not take the mask off the neonate’s face to check for spontaneous breathing.</li><li>Continue manual ventilation until there is spontaneous respiratory effort.</li></ul></li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p190-1.jpg",
+       "caption": "",
+       "page": 190
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p190-2.jpg",
+       "caption": "",
+       "page": 190
+      },
+      {
+       "type": "heading",
+       "text": "Bag and Mask Disinfection"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Rinse the components under running (tap) water to remove gross soil.</li><li>soak the device in in soupy solution, for the removal of residues of dried blood with using a soft brush until all visible soil is removed.</li><li>Rinse the components with running (tap) water for one minute.</li><li>Fully immerse the device in disinfection solution for the 20 minutes</li><li>Rinse the device by fully immersing it in distill water and repeat for a total of 3 rinses using a fresh batch of distill water each time.</li><li>Dry the device using a sterile cloth.</li><li>Autoclave can be used with running a full cycle at 134 – 135 °C with an exposure time of 10 minutes and a dry time of 45 minutes.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Bag and mask ventilation: what rate, and how do you know it is effective?",
+       "options": [
+        "30–60 breaths a minute; the chest rises and falls",
+        "100 breaths a minute; the baby cries",
+        "10 breaths a minute; the bag empties",
+        "60–80 a minute; the saturation is 100%"
+       ],
+       "answer": 0,
+       "explanation": "If the chest does not rise: check the bag–mask connection, the mask position and the head position. Excessive pressure can cause a pneumothorax."
+      },
+      {
+       "type": "video",
+       "url": "https://www.youtube.com/watch?v=0clo9Lvpv7Y",
+       "title": "Helping Babies Breathe at Birth - Newborn Care Series",
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
+       "script": "SN2.8.8"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p191-1.jpg",
+       "caption": "",
+       "page": 191
       }
      ],
      "see": [],
@@ -547,6 +609,107 @@
        "title": "Preparing the Birth Room - Childbirth Series",
        "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
        "script": "SN1.1.2"
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Suction bulb</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "paragraph",
+       "text": "A reusable, hand-held, manual suction device designed to suck gently and clear excessive mucus from the airway of a newborn to facilitate easier breathing. The life span of the device is minimum 3 years or 20 autoclave sessions, whichever comes first. Standard procedure"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Always use clean disinfected Bulb</li><li><strong>2.</strong> squeeze the air out of the bulb. Keep the bulb squeezed.</li><li><strong>3.</strong> Gently place the tip of the squeezed bulb into a nostril.</li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p188-2.jpg",
+       "caption": "",
+       "page": 188
+      },
+      {
+       "type": "rich",
+       "text": "<ul><ul><li><strong>4.</strong> Let go of the bulb to let the air back into it. This will pull the mucus out of the nose and into the bulb.</li><li><strong>5.</strong> Squeeze the mucus out of the bulb and onto a tissue.</li><li><strong>6.</strong> Suction the other nostril the same way.</li><li><strong>7.</strong> If mucus is too thick to suction, you can thin it with saline</li></ul></li><li><strong>8.</strong> Gently wipe off the mucus around the baby’s nose with tissues to prevent irritation.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Disinfection of The Suction Bulb"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Wash the bulb syringe in warm, soapy water after each use.</li><li>Squeeze soapy water into the bulb and shake to clean out the mucus. Then, squeeze the water out.</li><li>Put in chlorine solution foe 20 minutes</li><li>Rinse the bulb many times by filling it with clear water, then squeezing the water out.</li><li>Also, can be autoclaved at 136°C</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Using a suction bulb on a newborn: what is the first step at the nose?",
+       "options": [
+        "Squeeze the air out of the bulb first, then place the tip gently in the nostril and let go",
+        "Put the tip in, then squeeze",
+        "Squeeze inside the nostril repeatedly",
+        "Use it on the mouth only"
+       ],
+       "answer": 0,
+       "explanation": "Then squeeze the mucus out onto a tissue and do the other nostril. Wash in soapy water, then chlorine for 20 minutes."
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p189-1.jpg",
+       "caption": "",
+       "page": 189
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Suction machine</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "heading",
+       "text": "Standard operation Procedure"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Connect to the mains Switch on the unit and occlude distal end with your thumb to check the suction pressure.</li><li>Position a conscious patient in the semi- fowler’s position with the head turned to one side for oral suctioning or with the neck hyper extended for nasal suctioning.</li><li>Position the unconscious patient in the lateral position facing the nurse.</li><li>Do a non-sterile glove on the non-dominant hand and then a sterile glove on the other hand, attach the catheter to suction unit.</li><li>Use disposable suction catheters</li><li>Connect the desired size disposable suction catheter to the suctioning tubing<ul><ul><li>Preterm baby size 4-5 Fr</li><li>Neonate- birth- 28 days 6Fr</li></ul></li></ul></li><li>Ensure the negative pressure does not exceed 100 mm of Hg</li><li>For all suctioning episodes the lowest negative pressure should be used for suctioning, with the smallest catheter and the shortest suctioning time</li><li>Perform suction gently by inserting only 5 cm in mouth and apply pressure while withdrawing.</li><li>Suction only intermittently, Limit suction time to 10-15 seconds.</li><li>Discontinue if heart rate decreases by 20 beats/minute or increase by 40 beats/minute or if any cardiac ectopy is observed.</li><li>Rinse catheter between suctioning.</li><li>Continue doing suction until the airway are clean of accumulated secretions but no more than 4 suctioning be made per episode</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Cleaning and disinfection of Suction Machin"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Disconnect the suction catheter tip from the suction tubing and discard appropriately</li><li>Change suction catheter between patient and patient</li><li>Disinfect the suction pump pressure gauge controls using gauze and 70% alcohol.</li><li>Disinfect collection reservoir after each patient<ul><ul><li><strong>a.</strong> Remove the collection reservoir from suction pump and dispose of contents.</li><li><strong>b.</strong> Wash with detergent from any visible dirt</li><li><strong>c.</strong> soak the bottle in Chlorine solution or 2% glutaraldehyde solution for 20 min</li><li><strong>d.</strong> Take out from disinfection solution and wash under running water</li></ul></li></ul></li><li>Disinfect collection reservoir after each patient<ul><ul><li><strong>a.</strong> Remove the tube from suction pump.</li><li><strong>b.</strong> Wash by Flush the suction tubing by suctioning with clean water</li><li><strong>c.</strong> soak the bottle in Chlorine solution or 2% glutaraldehyde solution for 20 min</li><li><strong>d.</strong> Flush the suction tubing by suctioning with clean water after each use.</li></ul></li></ul></li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Suctioning a newborn: what is the maximum negative pressure, and for how long?",
+       "options": [
+        "Not over 100 mm Hg; 10–15 seconds at a time",
+        "200 mm Hg; 1 minute",
+        "50 mm Hg; continuous",
+        "Any pressure; until clear"
+       ],
+       "answer": 0,
+       "explanation": "Preterm catheter 4–5 Fr; neonate 6 Fr; insert only 5 cm in the mouth. Stop if the heart rate falls by 20 or rises by 40, or with ectopy. No more than 4 suctions per episode."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Suctioning a newborn safely",
+       "caption": "Checking the pressure, catheter size, positioning, gentle intermittent suction of the mouth then nose, watching the heart rate; cleaning the machine.",
+       "script": "SN2.8.7"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p187-1.jpg",
+       "caption": "",
+       "page": 187
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p188-1.jpg",
+       "caption": "",
+       "page": 188
       }
      ],
      "see": [],
@@ -1027,6 +1190,115 @@
        ],
        "answer": 0,
        "explanation": "From the manual's list of warm-chain interventions in the delivery room."
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Radiant warmer</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "paragraph",
+       "text": "Open care system: Overhead quartz heating element produces heat and parabolic reflector reflects the heat to the bassinet. Microprocessor inside control panel processes the desired skin temperature and matches against actual temperature of the baby and sends feedback. Indication"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Newborn Resuscitation</li><li><strong>2.</strong> Short term Procedures</li><li><strong>3.</strong> Severe hypothermia requiring rapid warming</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Items required when using the radiant warmer"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>Machine Preparation Checklist</strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>Baby Preparation Checklist</strong></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Direct power source</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Alcohol based hand rub</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Temperature sensor (probe)</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Medical adhesive tape</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Clean mattress</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> A thermometer</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Linen to cover the mattress</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Plastic Wrap (if below 32 weeks GA)</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Cotton swabs with 70% alcohol</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Items for the specific procedure</td></tr></table>"
+      },
+      {
+       "type": "heading",
+       "text": "Parts of a radiant warmer"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p164-1.jpg",
+       "caption": "",
+       "page": 164
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> bed (for placing the neonate)</li><li><strong>2.</strong> overhead unit (Radiant heat source)</li><li><strong>3.</strong> Skin probe (for measuring baby’s skin temperature)</li><li><strong>4.</strong> Air probe</li><li><strong>5.</strong> Controls panel (Displays and control knobs)</li><li><strong>6.</strong> Storage tray</li><li><strong>7.</strong> Control panel</li><li><strong>8.</strong> X ray tray</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Standard operating Procedure for warmer"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Turn on the warmer 20 min before put baby to pre warm the linen and mattress.</li><li><strong>2.</strong> Ensure the mattress and linen are clean.</li><li><strong>3.</strong> Select the mode<ul><ul><li>Manual mode: Heater output increased or decreased manually, Used for initial preparation of bed and for rapid warming of a severely hypothermic baby, Respond to alarm immediately. Identify the fault and rectify it</li><li>Servo mode: Heater output automatically based on skin temperature.</li></ul></li></ul></li><li><strong>4.</strong> Set the target temperature to 36.5 – 37.0 °C.</li><li><strong>5.</strong> Apply probe over the right hypochondrium in supine position and in flank in prone position</li><li><strong>6.</strong> Connect skin probe to the baby’s abdomen with sticking tape.<ul><ul><li>Check sensor probe regularly to ensure it is in place every 2-3hours</li><li>Check and record the temperature every 2-3 hours and record</li><li>Change probe site once in every 24 hours</li></ul></li></ul></li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Likely Complications and Prevention Measures"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong></strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>Complications</strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>Prevention Measures</strong></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Hypothermia &amp; cold stress</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Patients should never be left unattended under the radiant warmer especially when using the manual mode.<br>Use temperature probe to maintain the temp of 36.5-37.5C.<br>Ensure heater head is directly over the patient (ONE radiant warmer, ONE Baby)</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Hyperthermia &amp; heat stress</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Ensure the temperature probe is well secured to monitor baby’s temperature in baby mode and in manual mode.</td></tr></table>"
+      },
+      {
+       "type": "question",
+       "text": "Where is the radiant warmer's skin probe placed on a baby lying supine, and what is the target temperature?",
+       "options": [
+        "Over the right hypochondrium; 36.5–37.0 °C",
+        "On the forehead; 38 °C",
+        "In the axilla; 35.5 °C",
+        "On the foot; 37.5–38 °C"
+       ],
+       "answer": 0,
+       "explanation": "In prone position the probe goes on the flank. Turn the warmer on 20 minutes before the baby arrives; check the probe every 2–3 hours; change the probe site every 24 hours; one radiant warmer, one baby."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Using a radiant warmer",
+       "caption": "Pre-warming for 20 minutes, choosing manual or servo mode, setting 36.5–37.0 °C, fixing the skin probe over the right hypochondrium, responding to alarms.",
+       "script": "SN2.8.1"
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Radiant warmer: disinfection</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "heading",
+       "text": "Disinfection of Warmer"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">External surfaces</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">cleaned daily with light detergent solution or Soap and then clean by chlorine solution or glutaraldehyde.<br>No spirit or other organic solvent.</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Reusable probe</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">use isopropyl alcohol swab</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">After use</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Clean, disinfect and cover the equipment with linen cover to store properly</td></tr></table>"
+      },
+      {
+       "type": "heading",
+       "text": "Self-Maintenance:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Inspect the heating element weekly.</li><li>The control and power units should be calibrated every 4-6 months and thorough</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "How are the radiant warmer's external surfaces cleaned?",
+       "options": [
+        "Daily with light detergent or soap, then chlorine or glutaraldehyde; no spirit or organic solvent",
+        "With spirit only",
+        "Once a month with water",
+        "Never while in use"
+       ],
+       "answer": 0,
+       "explanation": "The reusable probe is cleaned with an isopropyl alcohol swab. Inspect the heating element weekly."
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p166-2.jpg",
+       "caption": "",
+       "page": 166
       }
      ],
      "see": [],
@@ -1333,6 +1605,129 @@
        "type": "image",
        "path": "ssnb/m1-019.jpg",
        "caption": ""
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Umbilical vein catheterization (UVC)</strong> · from the manual, Module 2, Section 7: Neonatal Procedures"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Indications: Vascular access when the need for IV access is urgent but a peripheral IV line cannot be established quickly.<ul><ul><li>All babies &lt;1000 g</li><li>all preterm infants with a gestational age of equal or less than 28 weeks</li><li>Neonatal with mechanically ventilation or with FiO2 of greater than 40% on continuous positive airway pressure.</li><li>Exchange transfusion.</li><li>Hemodynamic instability</li><li>Administration of hypertonic solutions (e.g. glucose &gt;12.5%, parenteral nutrition or inotropes)</li></ul></li></ul></li><li>Contraindications:<ul><ul><li>Omphalitis</li><li>Peritonitis</li><li>possible/confirmed necrotizing enterocolitis</li><li>intestinal hypoperfusion</li><li>Umbilical sepsis</li></ul></li></ul></li><li>Complications:<ul><ul><li>Infection</li><li>Bleeding</li><li>perforation of vessel</li><li>thrombosis with distal embolization</li><li>ischemia or infarction of lower extremities, bowel, or kidney</li><li>arrhythmia if catheter is in the heart; air embolism.</li></ul></li></ul></li><li>Equipment and supplies<ul><ul><li>High-level disinfected or sterile umbilical catheter or ordinary gastric tube:<ul><ul><li>If the baby weighs less than 1.5 kg, use a 3.5-F catheter</li><li>If the baby weighs 1.5 kg or more, use a 5-F catheter</li></ul></li></ul></li><li>Sterile infusion set with IV fluid (use a micro dropper if one is available)</li><li>Sterile 5- or 10-ml syringe</li><li>Sterile drapes</li><li>Sterile blade</li><li>Cord tie or suture (to control bleeding)</li><li>Sterile forceps</li><li>Sterile suture, adhesive strapping, or thin paper tape (to secure catheter)</li></ul></li></ul></li><li>Preparation :<ul><ul><li>Determine Umbilical venous catheter (UVC) site: lines should be placed in the inferior vena cava above the level of the ductus venosus and the hepatic veins and below the level of the right atrium.</li><li>Determine Catheter length:<ul><ul><li>Determine the length of catheter required using either a standardized graph based on shoulder-umbilical length or</li><li>use distance between xiphisternum and umbilicus +1, plus stump, or</li><li>The following birth weight (BW) regression formula:</li><li><strong>1.</strong> UAC high line (cm) = (3 x BW [kg]) + 9</li><li><strong>2.</strong> UVC length (cm) = 0.5 x UAC high line (cm) + 1</li></ul></li></ul></li></ul></li></ul></li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "PRACTISE THIS SKILL Procedure for UVC line"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Determine the length of the catheter to be inserted</li><li>Restrain infants. Maintain the infant’s temperature during the procedure. Prepare and drape the umbilical cord and adjacent skin using sterile technique.</li><li>Flush the catheter with sterile saline solution before insertion. Ensure that there are no air bubbles in the catheter or attached syringe.</li><li>Tie sterile umbilical tape around the base of the cord, tight enough to prevent bleeding. Cut through the cord horizontally about 1.5 to 2 cm from the skin.</li><li>Isolate the thin-walled UV, clear thrombi with forceps, and insert catheter, aiming the tip toward the right shoulder. Gently advance the catheter to the desired distance. Do not force. If resistance is encountered, try loosening the umbilical tape, applying steady and gentle pressure, or manipulating the angle of the umbilical cord to the skin. Resistance is commonly met at the abdominal wall and again at the portal system. Do not infuse anything into the liver.</li><li>As the catheter is advanced, periodically apply gentle suction with the syringe until blood flows back. Once blood flows back freely through the catheter (usually after the catheter is inserted 5 to 7 cm), do not advance the catheter any further.</li><li>If resistance is encountered while advancing the catheter, especially in the first 2 to 3 cm, do not continue. Remove the catheter and try again.</li><li>Tie the cord tie or suture around the stump of the umbilicus to hold the catheter in place and prevent bleeding around the catheter or from one of the arteries.</li><li>Remove the syringe and connect the infusion set to the catheter, ensuring that there are no air bubbles in the set.</li><li>Secure the catheter with suture material or adhesive tape to prevent it from being dislodged.</li><li>Confirm catheter tip position with x-ray or ultrasound.</li><li>The catheter may be pulled back but not advanced once the sterile field is broken.</li><li>Look for redness and swelling around the umbilicus, which may indicate infection. If redness or swelling is seen at any time, stop the infusion and remove the umbilical vein catheter. Attempt to establish a peripheral IV line again, and treat for infection of the umbilicus</li></ul>"
+      },
+      {
+       "type": "calc",
+       "question": "For the same 2 kg baby (UAC high line 15 cm), how long is the UVC?",
+       "answer": 8.5,
+       "unit": "cm",
+       "explanation": "UVC length (cm) = 0.5 × UAC high line + 1 = 0.5 × 15 + 1 = 8.5 cm."
+      },
+      {
+       "type": "question",
+       "text": "Which of these is a contraindication to umbilical vein catheterization?",
+       "options": [
+        "Omphalitis or suspected NEC",
+        "Weight under 1000 g",
+        "Need for exchange transfusion",
+        "FiO₂ above 40% on CPAP"
+       ],
+       "answer": 0,
+       "explanation": "The other three are indications in the manual. Contraindications: omphalitis, peritonitis, possible or confirmed NEC, intestinal hypoperfusion, umbilical sepsis."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Umbilical vein catheterization (UVC)",
+       "caption": "Isolating the thin-walled vein, advancing until blood flows back freely, securing, connecting the infusion without air, confirming the tip position.",
+       "script": "SN2.7.3"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p132-1.jpg",
+       "caption": "",
+       "page": 132
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Intraosseous access</strong> · from the manual, Module 2, Section 7: Neonatal Procedures"
+      },
+      {
+       "type": "paragraph",
+       "text": "Indications: Establishing intravenous access in a newborn baby can be difficult. In an emergency, a good temporary alternative is the intraosseous route using the bone marrow cavity. Fluid and drugs can be given by this route. Remove the intraosseous line as soon as other IV access is established (within eight hours, if possible)."
+      },
+      {
+       "type": "paragraph",
+       "text": "Contraindication: Do not place an intraosseous line if there is infection at the intended insertion site or if the bone is fractured"
+      },
+      {
+       "type": "heading",
+       "text": "Complications:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Extravasation of fluid from incomplete or through-and-through cortex penetration</li><li>Infection</li><li>Bleeding</li><li>Osteomyelitis</li><li>compartment syndrome</li><li>fat embolism</li><li>Fracture</li><li>epiphyseal injury</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Preparation: Determine Sites of entry (in order of preference):"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><ul><ul><li>Anteromedial surface of the proximal tibia, 1 to 2 cm below and slightly medial to the tibial tuberosity on the flat part of the bone</li><li>Distal femur 3 cm above the lateral condyle in the midline</li><li>Medial surface of the distal tibia 1 to 2 cm above the medial malleolus (may be a more effective site in older children than the distal femur)</li><li>Proximal humerus, 2 cm below the acromion process into the greater tubercle with the arm held in adduction and internal rotation</li><li>Anterior Superior iliac spine at a 90-degree angle to the long axis of the Body</li></ul></li></ul></li><li>Prepare the solution to be infused, ensuring that the entire infusion set is filled with fluid and that there is no air in the infusion set.</li><li>Prepare the skin over the insertion site using a swab or cotton-wool ball soaked in antiseptic solution, and allow it to dry.</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "PRACTISE THIS SKILL Procedure:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Prepare the selected site in a sterile fashion.</li><li>If the child is conscious, anesthetize the puncture site down to the periosteum with 1% lidocaine (optional in emergent situations).</li><li>Position the baby’s leg with the knee bent about 30 degrees and the heel resting on the table. Support the upper tibia with one hand, placed so that the hand is not directly behind the site insertion.</li><li>Insert an 18-gauge (for infants and neonates) IO needle perpendicular to the skin at an angle away from the epiphyseal plate, and advance to the periosteum. With a boring rotary motion, penetrate through the cortex until there is a decrease in resistance, indicating that you have reached the marrow. The needle should stand firmly without support. Secure the needle carefully.</li><li>attempt to aspirate marrow. (Note that it is not necessary to aspirate marrow.) Flush with crystalloid solution. Observe fluid extravasation. Marrow can be sent to determine glucose levels, chemistries, blood types and crossmatches, hemoglobin levels, blood gas analyses, and cultures.</li><li>slowly inject 3 ml of IV fluid to check for proper placement of needle</li><li>Look for swelling (indicating leaking of fluid under the skin) at the front of the leg or in the calf muscle at the back of the leg. If swelling is seen, remove the needle and try again;</li><li>If it is difficult to infuse the fluid but there is no swelling in the calf muscle, the needle may have entered the posterior bone cortex. Withdraw the needle approximately 0.5 cm and cautiously inject IV fluid again.</li><li>If no problems are detected, Secure the IO needle. Attach standard IV tubing.</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Increased pressure (through pressure bag or push) may be necessary for infusion."
+      },
+      {
+       "type": "paragraph",
+       "text": "There is a high risk for obstruction if continuous high-pressure fluids are not flushed through the IO needle."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Remove the intraosseous needle as soon as alternative IV access is available, and within eight hours, if possible.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Where is the first-choice site for intraosseous access in a newborn?",
+       "options": [
+        "The anteromedial proximal tibia, 1–2 cm below and slightly medial to the tibial tuberosity",
+        "The sternum",
+        "The skull",
+        "The heel"
+       ],
+       "answer": 0,
+       "explanation": "Remove the IO line as soon as other IV access is established, within eight hours if possible."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Intraosseous access",
+       "caption": "Positioning the leg, inserting an 18-gauge IO needle with a rotary motion, checking with 3 ml of fluid, looking for swelling, securing.",
+       "script": "SN2.7.5"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p139-1.jpg",
+       "caption": "",
+       "page": 139
       }
      ],
      "see": [],
@@ -1635,6 +2030,55 @@
        "type": "image",
        "path": "ssnb/m1-023.jpg",
        "caption": ""
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Syringe pump</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "heading",
+       "text": "Main part"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p181-1.jpg",
+       "caption": "",
+       "page": 181
+      },
+      {
+       "type": "heading",
+       "text": "PRACTISE THIS SKILL Procedure"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Pump can be used either on any horizontal surface or on the IV pole with pole clamp.</li><li>Plug power cord into a wall outlet</li><li>Turn the power switch on. Follow according to manual of the model.</li><li>Press “Number Set Key” (up and down arrows) to set desired flow rate.</li><li>Load syringe with medication or desired fluid.</li><li>Lift up the Syringe Securing Bar and rotate right 90o .</li><li>Place the syringe into the bed. Be</li><li>sure to insert the nozzle into the syringe slot.</li><li>Then press the release button on the plunger driver block and slide the driver blocks into position so that the end of the syringe plunger can be placed into the slot in the driver block.</li><li>Turn the Syringe Securing Bar to the left 90 degrees to secure the syringe barrel.</li><li>Make sure the syringe barrel is secure.</li><li>Press and hold the PURGE button to purge air from the syringe and associated tubing before connecting to patient.</li><li>Press “RUN” to start infusion.</li><li>After use clean and store in cardboard box if not required for babies.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Before connecting a syringe pump to the baby, what must you do?",
+       "options": [
+        "Press and hold PURGE to remove air from the syringe and tubing",
+        "Press RUN immediately",
+        "Shake the syringe",
+        "Nothing"
+       ],
+       "answer": 0,
+       "explanation": "From the syringe pump procedure."
+      },
+      {
+       "type": "heading",
+       "text": "Cleaning the Syringe pump"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Damp cloth soaked in soap-water used for cleansing panel</li><li><strong>2.</strong> Use disposal syringe and tubing</li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p183-1.jpg",
+       "caption": "",
+       "page": 183
       }
      ],
      "see": [],
@@ -2056,6 +2500,80 @@
       {
        "type": "heading",
        "text": "Phase 1: Immediate Intervention (0-15 minutes)"
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Lumbar puncture</strong> · from the manual, Module 2, Section 7: Neonatal Procedures"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>A.</strong> Indications<ul><li>Lumbar puncture is used to confirm the diagnosis when the baby has signs suggestive of Meningitis.</li></ul></li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Contraindications"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>spina bifida/meningomylocele</li><li>Increased intracranial pressure (ICP):</li><li>Bleeding diathesis: Platelet count greater than 50,000/mm3 is desirable before LP, and correction of any clotting factor deficiencies can minimize the risk for bleeding and subsequent cord or nerve root compression.</li><li>Overlying skin infection may result in inoculation of CSF with organisms.</li><li>A mass or evidence of trauma to lumbar vertebrae</li><li>LP should be deferred in unstable patients, and appropriate therapy should be initiated, including antibiotics, if indicated.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Complications"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Local pain</li><li>apnea due to positioning</li><li>Bleeding</li><li>Infection</li><li>subarachnoid epidermal cyst</li><li>epidural CSF leak</li><li>spinal hematoma, and/or brainstem herniation</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Supplies and material needed"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Sterile Gauze</li><li>Yamidine</li><li>Plaster</li><li>Spinal needle or intravenous needle (22- to 24-gauge)</li><li>Appropriate collection tubes</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Preparation"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Be prepared to resuscitate the baby using a bag and mask, if necessary.</li><li>Place the baby under a radiant warmer, if possible, and undress the baby only when ready to perform the procedure.</li><li>Position the baby:<ul><ul><li>lateral recumbent position, with hips, knees, and neck flexed. Keep shoulders and hips aligned to avoid rotating the spine.</li><li>Have the assistant place one hand behind the baby’s head and neck, and place the other hand behind the baby’s thighs to hold the spine in a flexed position</li><li>Do not compromise a small infant’s cardiorespiratory status with positioning.</li></ul></li></ul></li><li>Locate the desired intervertebral space (either L3 to L4 or L4 to L5) by drawing an imaginary line between the top of the iliac crests. Alternatively, ultrasound can be used to mark the intervertebral space</li><li>Prepare the skin in a sterile fashion. Place sterile drapes over the baby’s body so that only the puncture site is exposed and .make monitoring the infant possible</li><li>Overlying skin and interspinous tissue can be anesthetized with 1% lidocaine or Apply local anesthetic cream if sufficient time is available.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "PRACTISE THIS SKILL Procedure"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Insert the needle in the midline of the vertebrae, angled towards the baby’s umbilicus.</li><li>Slowly advance the needle several millimeters at a time, and withdraw stylet frequently to check for CSF flow. Needle may be advanced without the stylet once it is completely through the skin.</li><li>A slight “pop” may be felt as the needle enters the subarachnoid space. In small infants, one may not feel a change in resistance or “pop”</li><li>If resistance is met initially and the needle cannot be advanced, withdraw the needle to just under the skin surface and redirect the angle of the needle slightly upward while aiming for the baby’s umbilicus.</li><li>If CSF still does not come out, remove the needle and reinsert it between the fourth and fifth lumbar processes;</li><li>If blood is seen in the CSF, the needle probably went through the spinal canal and caused bleeding. If the CSF does not clear, collect enough CSF for culture and sensitivity only.</li><li>Send CSF for appropriate studies. In general, send the first tube for culture and Gram stain, the second tube for measurement of glucose and protein levels, and the last tube for cell count and differential.</li><li>After the CSF is collected, remove the needle. Have an assistant apply gentle pressure to the puncture site with a cotton wool ball until bleeding or leakage of fluid stops and apply an adhesive bandage to the site.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Where is a lumbar puncture done in a newborn?",
+       "options": [
+        "L3–L4 or L4–L5, found on the line between the tops of the iliac crests",
+        "T12–L1",
+        "L1–L2",
+        "The cervical spine"
+       ],
+       "answer": 0,
+       "explanation": "Baby in the lateral position with hips, knees and neck flexed, without compromising breathing. Tube 1 for culture and Gram stain, tube 2 glucose and protein, last tube cell count."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Lumbar puncture in a newborn",
+       "caption": "Positioning and holding the baby, the landmark, sterile preparation, needle angled to the umbilicus, collecting three tubes.",
+       "script": "SN2.7.9"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p155-1.jpg",
+       "caption": "",
+       "page": 155
       }
      ],
      "see": [],
@@ -2578,6 +3096,66 @@
        ],
        "answer": 0,
        "explanation": "From \"Prevent over-heating\" in the manual."
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Embrace portable warmer</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "heading",
+       "text": "Main Part"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Warm Pack: Contains a wax that melts at 37°C and releases heat as it solidifies, maintaining the baby's temperature for 4-6 hour.</li><li>Accu Temp Heater: A small electric heater to prepare the Warm Pack</li><li>Baby Wrap: contained for warm Pack and baby.</li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p166-1.jpg",
+       "caption": "",
+       "page": 166
+      },
+      {
+       "type": "heading",
+       "text": "Standard Operating procedure"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Wash hand and Ensure use clean disinfected BabyWrap</li><li><strong>2.</strong> Plug AccuTemp Heater to power source and put WarmPak inside heater for 30 minutes</li><li><strong>3.</strong> Once warm, place the warmed WarmPak inside a pouch in the BabyWrap</li><li><strong>4.</strong> Place the infant in the sleeping-bag-like garment BabyWrap</li><li><strong>5.</strong> Use the Rainbow sign to monitor target temperature.</li><li><strong>6.</strong> After use clean the BabyWrap and AccuTemp Heater.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Portable warmer Disinfection"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>AccuTemp heater must be disinfect with appropriate solution (spirit or chlorine base solutions) before each use by wiping the devices surface.</li><li>WarmPak: has no direct contact with neonate. It should be cleaned whenever need by wipe using towel immerse in soap and water then wipe by appropriate disinfectant.</li><li>BabyWrap piece should be cleaned with soap and water between patient and patient</li><li>Use chlorine base solution 0.05% for 20 min only if there is blood then thoroughly wash in distil water and dry.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "How long does the Embrace WarmPak keep the baby warm, and how long is it heated?",
+       "options": [
+        "4–6 hours; heated in the AccuTemp heater for 30 minutes",
+        "24 hours; 5 minutes",
+        "1 hour; 2 hours",
+        "It is not heated"
+       ],
+       "answer": 0,
+       "explanation": "The wax melts at 37 °C and releases heat as it solidifies. Use the Rainbow sign to monitor the target temperature."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Using the Embrace portable warmer",
+       "caption": "Heating the WarmPak for 30 minutes, placing it in the BabyWrap pouch, putting the baby in, reading the Rainbow sign, cleaning after use.",
+       "script": "SN2.8.2"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p167-1.jpg",
+       "caption": "",
+       "page": 167
       }
      ],
      "see": [],
@@ -3203,6 +3781,66 @@
        ],
        "answer": 0,
        "explanation": "Method 1 in the manual's list of transport methods."
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Embrace portable warmer</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "heading",
+       "text": "Main Part"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Warm Pack: Contains a wax that melts at 37°C and releases heat as it solidifies, maintaining the baby's temperature for 4-6 hour.</li><li>Accu Temp Heater: A small electric heater to prepare the Warm Pack</li><li>Baby Wrap: contained for warm Pack and baby.</li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p166-1.jpg",
+       "caption": "",
+       "page": 166
+      },
+      {
+       "type": "heading",
+       "text": "Standard Operating procedure"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Wash hand and Ensure use clean disinfected BabyWrap</li><li><strong>2.</strong> Plug AccuTemp Heater to power source and put WarmPak inside heater for 30 minutes</li><li><strong>3.</strong> Once warm, place the warmed WarmPak inside a pouch in the BabyWrap</li><li><strong>4.</strong> Place the infant in the sleeping-bag-like garment BabyWrap</li><li><strong>5.</strong> Use the Rainbow sign to monitor target temperature.</li><li><strong>6.</strong> After use clean the BabyWrap and AccuTemp Heater.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Portable warmer Disinfection"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>AccuTemp heater must be disinfect with appropriate solution (spirit or chlorine base solutions) before each use by wiping the devices surface.</li><li>WarmPak: has no direct contact with neonate. It should be cleaned whenever need by wipe using towel immerse in soap and water then wipe by appropriate disinfectant.</li><li>BabyWrap piece should be cleaned with soap and water between patient and patient</li><li>Use chlorine base solution 0.05% for 20 min only if there is blood then thoroughly wash in distil water and dry.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "How long does the Embrace WarmPak keep the baby warm, and how long is it heated?",
+       "options": [
+        "4–6 hours; heated in the AccuTemp heater for 30 minutes",
+        "24 hours; 5 minutes",
+        "1 hour; 2 hours",
+        "It is not heated"
+       ],
+       "answer": 0,
+       "explanation": "The wax melts at 37 °C and releases heat as it solidifies. Use the Rainbow sign to monitor the target temperature."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Using the Embrace portable warmer",
+       "caption": "Heating the WarmPak for 30 minutes, placing it in the BabyWrap pouch, putting the baby in, reading the Rainbow sign, cleaning after use.",
+       "script": "SN2.8.2"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p167-1.jpg",
+       "caption": "",
+       "page": 167
       }
      ],
      "see": [],

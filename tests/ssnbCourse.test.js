@@ -9,7 +9,7 @@ import { gradeQuiz } from '../src/components/imnci/exercises.jsx';
 
 // The Sick & Small Newborn course files (scripts/ssnb-upload/build): one
 // course per manual module, one app module per manual section.
-const FILES = ['ssnb-module-1-essential-emergency-newborn-care', 'ssnb-module-2-special-newborn-care', 'ssnb-module-3-intensive-newborn-care', 'ssnb-annex-neonatal-procedures-and-equipment'];
+const FILES = ['ssnb-module-1-essential-emergency-newborn-care', 'ssnb-module-2-special-newborn-care', 'ssnb-module-3-intensive-newborn-care'];
 const GUIDE = JSON.parse(fs.readFileSync(path.join(__dirname, '../course-packages/ssnb-facilitator-guide.imnci.json'), 'utf8'));
 const PKGS = FILES.map((f) => JSON.parse(fs.readFileSync(path.join(__dirname, `../course-packages/${f}.imnci.json`), 'utf8')));
 const lessons = (p) => p.modules.flatMap((m) => m.sections);
@@ -22,17 +22,21 @@ describe('Sick & Small Newborn course files', () => {
             expect(check.warnings).toEqual([]);
             expect(p.course).toMatchObject({ category: 'Small & Sick Newborn', modulesAnyOrder: true });
         });
-        expect(PKGS.map((p) => p.modules.length)).toEqual([3, 8, 3, 2]);
+        expect(PKGS.map((p) => p.modules.length)).toEqual([3, 8, 3]);
     });
 
-    it('puts Procedures and Equipment in an open annex course, every lesson open, and carries that into the import', () => {
-        const annex = PKGS[3];
-        expect(annex.course).toMatchObject({ enrolment: 'open', lockOrder: false });
-        expect(annex.modules.every((m) => m.anyOrder)).toBe(true);
-        PKGS.slice(0, 3).forEach((p) => expect(p.course).toMatchObject({ lockOrder: true, enrolment: 'approval' }));
-        const plan = packagePlan(annex);
-        expect(plan.course).toMatchObject({ modulesAnyOrder: true, enrolment: 'open', lockOrder: false });
-        expect(plan.items.filter((i) => i.kind === 'module' && i.anyOrder).length).toBe(2);
+    it('places each procedure and equipment SOP inside the lessons that use it, not in a module of its own', () => {
+        PKGS.forEach((p) => expect(p.course).toMatchObject({ lockOrder: true, enrolment: 'approval' }));
+        const titles = PKGS.flatMap((p) => p.modules.map((m) => m.title)).join(' | ');
+        expect(titles).not.toMatch(/Neonatal Procedures|Equipment Required/);
+        const sopIn = (p, lesson) => lessons(p).find((s) => s.title === lesson).read
+            .filter((b) => b.type === 'note' && b.label === 'Standard operating procedure').map((b) => b.text.replace(/<[^>]*>/g, ''));
+        expect(sopIn(PKGS[0], 'Hypothermia: signs, prevention and the delivery room').join()).toMatch(/Radiant warmer/);
+        expect(sopIn(PKGS[1], 'Treating neonatal sepsis').join()).toMatch(/Lumbar puncture/);
+        expect(sopIn(PKGS[2], 'CPAP: how it works and its parts').join()).toMatch(/Vayu bubble CPAP/);
+        const all = PKGS.flatMap(lessons).flatMap((s) => s.read);
+        expect(all.some((b) => b.type === 'courselink' && /Annex/.test(b.course))).toBe(false);
+        expect(packagePlan(PKGS[1]).items.filter((i) => i.kind === 'module').length).toBe(8);
     });
 
     it('has a facilitator guide for facilitators only, without the resuscitation chapter, linked to the learners\' modules', () => {
@@ -69,7 +73,7 @@ describe('Sick & Small Newborn course files', () => {
             m.sections.forEach((s, k) => items.push({ id: `c${i}m${m.order}s${k}`, kind: 'section', courseId: `c${i}`, moduleId: `c${i}m${m.order}`, title: s.title }));
         }));
         const links = PKGS.flatMap(lessons).flatMap((s) => s.read).filter((b) => b.type === 'courselink');
-        expect(links.length).toBeGreaterThanOrEqual(9);
+        expect(links.length).toBeGreaterThanOrEqual(2); // lesson-to-lesson links; SOPs are placed in full, not linked
         links.forEach((b) => {
             const r = resolveCourseLink(b, courses, items);
             expect(r.section?.title).toBe(b.lesson);

@@ -45,10 +45,6 @@ MODULES = [
     dict(title='Neonatal Sepsis: Surveillance, Management and Prevention', merge=m2_s10.MERGE, merge_titles=m2_s10.MERGE_TITLES, rename=m2_s10.TITLES, split=m2_s10.SPLIT, add=m2_s10.ADD, exercises=m2_s10.EXERCISES),
 ]
 
-# Sections 7 (Procedures) and 8 (Equipment) are taken out of this course into their own open course,
-# the annex: anyone can open it without enrolment approval, every lesson in any order.
-ANNEX = dict(sections=[7, 8], file="ssnb-annex-neonatal-procedures-and-equipment.imnci.json", course={
-    "title": "Sick & Small Newborn · Annex: Neonatal Procedures and Equipment",
-    "description": "Neonatal procedures (pain relief, umbilical catheters, PICC, intraosseous access, intubation, needle thoracotomy, chest tube, lumbar puncture, bladder catheterization and aspiration) and the equipment of the newborn unit (warmers, incubator, bubble CPAP, pulse oximeter, phototherapy, pumps, suction, bag and mask, oxygen), from the Sudan Training Manual for Sick and Small Newborn 2026, Module 2 Sections 7 and 8. Open to everyone; open any lesson in any order. The other Small & Sick Newborn courses link here.",
-    "category": CATEGORY, "subcategory": SUB, "lockOrder": False, "modulesAnyOrder": True, "enrolment": "open",
-})
+# Sections 7 (Procedures) and 8 (Equipment) are not modules of this course: each of their standard operating
+# procedures is placed in full inside the lessons that use it, in any of the three courses (books/sops.py).
+SOP_SECTIONS = [7, 8]

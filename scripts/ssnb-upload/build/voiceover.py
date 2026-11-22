@@ -10,17 +10,15 @@ FILES = {'m1': 'ssnb-module-1-essential-emergency-newborn-care', 'm2': 'ssnb-mod
 
 def where(key):
     out = {}
-    p = os.path.join(ROOT, 'course-packages', FILES[key] + '.imnci.json')
-    if not os.path.exists(p): return out
-    pkgs = [json.load(open(p))]
-    if key == 'm2':
-        pkgs.append(json.load(open(os.path.join(ROOT, 'course-packages', 'ssnb-annex-neonatal-procedures-and-equipment.imnci.json'))))
+    # its own course first; a procedure or equipment SOP (Module 2 Sections 7, 8) can sit in Module 1 or 3 too
+    paths = [os.path.join(ROOT, 'course-packages', f + '.imnci.json') for f in [FILES[key]] + [v for k, v in FILES.items() if k != key]]
+    pkgs = [json.load(open(p)) for p in paths if os.path.exists(p)]
     for pkg in pkgs:
       for m in pkg['modules']:
         for s in m['sections']:
             for b in s['read']:
                 if b['type'] == 'video' and b.get('script'):
-                    out[b['script']] = (pkg['course']['title'], f"{pkg['course']['title'].split('· ')[-1]} → Module {m['order']}: {m['title']}", s['title'], b.get('url', ''))
+                    out.setdefault(b['script'], (pkg['course']['title'], f"{pkg['course']['title'].split('· ')[-1]} → Module {m['order']}: {m['title']}", s['title'], b.get('url', '')))
     return out
 
 def main(out):

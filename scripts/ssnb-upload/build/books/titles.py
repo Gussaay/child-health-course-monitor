@@ -5,10 +5,10 @@ from lib import courselink
 M1 = 'Sick & Small Newborn · Module 1: Essential and Emergency Newborn Care'
 M2 = 'Sick & Small Newborn · Module 2: Special Newborn Care'
 M3 = 'Sick & Small Newborn · Module 3: Intensive Newborn Care'
-# Module 2 Sections 7 and 8 are published as their own open course, the annex every course links to.
-ANNEX = 'Sick & Small Newborn · Annex: Neonatal Procedures and Equipment'
+# Module 2 Sections 7 (Procedures) and 8 (Equipment) are not a module or a course of their own: each standard
+# operating procedure is placed in full inside the lessons that use it (books/sops.py).
 
-# Module 2, Section 7 (Neonatal Procedures) and Section 8 (Equipment): reference modules.
+# Module 2, Section 7 (Neonatal Procedures) and Section 8 (Equipment): the SOP lessons, by their manual title.
 M2_S7 = {
     'Procedure Pain prevention and management': 'Pain prevention and management during procedures',
     'Procedure Pain prevention and management: Environmental and behavioral approaches during procedure': 'Pain prevention: environmental and behavioural approaches',
@@ -42,14 +42,14 @@ M2_S8 = {
 }
 
 def procedure(lesson, text=''):
-    """Link to a lesson of the annex, module 1 (Neonatal Procedures, manual Module 2 Section 7)."""
+    """The standard operating procedure of a neonatal procedure (manual Module 2 Section 7), placed here in full."""
     assert lesson in M2_S7.values(), lesson
-    return courselink(ANNEX, 1, lesson, 'Procedure · Annex, Neonatal Procedures', text)
+    return {'type': '_sop', 'sop': lesson}
 
 def equipment(lesson, text=''):
-    """Link to a lesson of the annex, module 2 (Equipment, manual Module 2 Section 8)."""
+    """The standard operating procedure of a piece of equipment (manual Module 2 Section 8), placed here in full."""
     assert lesson in M2_S8.values(), lesson
-    return courselink(ANNEX, 2, lesson, 'Equipment · Annex, Equipment for Newborn Care', text)
+    return {'type': '_sop', 'sop': lesson}
 
 def lesson_in(course, module, lesson, label, text=''):
     return courselink(course, module, lesson, label, text)

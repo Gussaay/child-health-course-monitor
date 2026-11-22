@@ -21,9 +21,9 @@ const COURSES = {
   ssnb1: { batch: 'ssnb-m1-2026-11-21', file: 'ssnb-module-1-essential-emergency-newborn-care.imnci.json' },
   ssnb2: { batch: 'ssnb-m2-2026-11-21', file: 'ssnb-module-2-special-newborn-care.imnci.json' },
   ssnb3: { batch: 'ssnb-m3-2026-11-21', file: 'ssnb-module-3-intensive-newborn-care.imnci.json' },
-  ssnbannex: { batch: 'ssnb-annex-2026-11-21', file: 'ssnb-annex-neonatal-procedures-and-equipment.imnci.json' },
+  ssnbguide: { batch: 'ssnb-fg-2026-11-21', file: 'ssnb-facilitator-guide.imnci.json' },
 };
-const UPDATE_TAG = 'lesson-update-2026-11-21-ghmp-videos';
+const UPDATE_TAG = 'lesson-update-2026-11-22-sops-in-lessons';
 const CONTENT = ['read', 'see', 'practise'];
 // Lessons edited in the app that may still be overwritten (titles, one per line), after the author agreed.
 const FORCE = (() => { try { return fs.readFileSync(path.join(__dirname, 'force.txt'), 'utf8').split('\n').map((x) => x.trim().toLowerCase()).filter(Boolean); } catch { return []; } })();

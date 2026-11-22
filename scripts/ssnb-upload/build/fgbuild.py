@@ -11,7 +11,7 @@ from assemble import modules_of, to_blocks, split_long, strip_num
 from build import finish, ERRORS, HERE
 import build
 from lib import courselink
-from books.titles import M1, M2, M3, ANNEX
+from books.titles import M1, M2, M3
 
 ROOT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, '..', '..', '..')
 E = json.load(open(os.path.join(HERE, 'sources', 'fgdoc.json')))
@@ -52,8 +52,17 @@ LINKS = {
     '8': [courselink(M2, 5, None, 'Learners\' course · Module 2, Care of the Premature Baby'), courselink(M2, 6, None, 'Learners\' course · Module 2, Kangaroo Mother Care')],
     '9': [courselink(M2, 5, 'Jaundice: physiological or pathological?', 'Learners\' course · Module 2, Jaundice')],
     '10': [courselink(M2, 8, None, 'Learners\' course · Module 2, Neonatal Sepsis')],
-    '11': [courselink(ANNEX, 1, None, 'Learners\' course · Annex, Neonatal Procedures')],
-    '12': [courselink(ANNEX, 2, None, 'Learners\' course · Annex, Equipment')],
+    # Procedures and equipment have no module of their own: each SOP sits inside the lessons that use it (books/sops.py).
+    '11': [courselink(M2, 8, 'Treating neonatal sepsis', 'Learners\' course · Lumbar puncture, in Module 2 Neonatal Sepsis'),
+           courselink(M1, 2, 'Shock: fluids, signs of improvement and antibiotics', 'Learners\' course · UVC and intraosseous access, in Module 1 Shock'),
+           courselink(M2, 4, 'Supporting and monitoring the circulation', 'Learners\' course · Umbilical catheters, in Module 2 The Golden Hour'),
+           courselink(M2, 4, 'Surfactant', 'Learners\' course · Endotracheal intubation, in Module 2 Surfactant'),
+           courselink(M3, 3, 'Complications of mechanical ventilation', 'Learners\' course · Chest tube, in Module 3 Mechanical Ventilation')],
+    '12': [courselink(M2, 4, 'The golden hour, and keeping the baby warm in the SCNU', 'Learners\' course · Radiant warmer, in Module 2 The Golden Hour'),
+           courselink(M2, 4, 'Incubator, radiant warmer or cot?', 'Learners\' course · Infant incubator, in Module 2 The Golden Hour'),
+           courselink(M3, 2, 'CPAP: how it works and its parts', 'Learners\' course · Vayu bubble CPAP, in Module 3 Non-Invasive Ventilation'),
+           courselink(M3, 1, 'Detecting hypoxaemia', 'Learners\' course · Pulse oximeter, in Module 3 Oxygen Therapy'),
+           courselink(M2, 5, 'Jaundice: investigations and treatment; retinopathy of prematurity', 'Learners\' course · Phototherapy, in Module 2 Jaundice')],
     '13': [courselink(M2, 7, None, 'Learners\' course · Module 2, Patient Safety')],
     '14': [courselink(M3, 1, None, 'Learners\' course · Module 3, Oxygen Therapy'), courselink(M3, 2, None, 'Learners\' course · Module 3, Non-Invasive Ventilation')],
     '15': [courselink(M3, 3, None, 'Learners\' course · Module 3, Mechanical Ventilation')],

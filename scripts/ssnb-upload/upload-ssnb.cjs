@@ -9,6 +9,8 @@
 //   node upload-ssnb.cjs --course m1 --replace  the course is already uploaded: swaps its modules and sections
 //                                                (lesson progress resets: use course-lesson-update for a live course)
 //   node upload-ssnb.cjs --course m1 --undo     removes what --commit or --replace wrote (by importBatch), figures included
+//   node upload-ssnb.cjs --course annex --withdraw [--commit]   lists [removes] the course, its lessons and exercises,
+//                                                KEEPING its figures (other courses' lessons show them)
 // KEY_FILE (or --key <file>) is the Firebase service-account JSON.
 const path = require('path'), fs = require('fs');
 const req = (m) => require(require.resolve(m, { paths: [process.cwd(), path.join(__dirname, '..', '..'), __dirname] }));
@@ -16,11 +18,12 @@ const admin = req('firebase-admin');
 const a = process.argv.slice(2);
 const keyPath = a.includes('--key') ? a[a.indexOf('--key') + 1] : process.env.KEY_FILE;
 if (!keyPath || !fs.existsSync(keyPath)) { console.error('Pass --key <service-account.json> or set KEY_FILE'); process.exit(1); }
-const COMMIT = a.includes('--commit'), UNDO = a.includes('--undo'), REPLACE = a.includes('--replace');
+const COMMIT = a.includes('--commit'), UNDO = a.includes('--undo'), REPLACE = a.includes('--replace'), WITHDRAW = a.includes('--withdraw');
 const COURSES = {
   m1: { batch: 'ssnb-m1-2026-11-21', file: 'ssnb-module-1-essential-emergency-newborn-care.imnci.json' },
   m2: { batch: 'ssnb-m2-2026-11-21', file: 'ssnb-module-2-special-newborn-care.imnci.json' },
   m3: { batch: 'ssnb-m3-2026-11-21', file: 'ssnb-module-3-intensive-newborn-care.imnci.json' },
+  // The annex course is withdrawn (its SOPs now sit inside the lessons that use them); kept here only so --undo can remove it.
   annex: { batch: 'ssnb-annex-2026-11-21', file: 'ssnb-annex-neonatal-procedures-and-equipment.imnci.json' },
   guide: { batch: 'ssnb-fg-2026-11-21', file: 'ssnb-facilitator-guide.imnci.json' },
 };
@@ -57,6 +60,22 @@ const exerciseRecord = (e) => ({
 const CONTENT = ['title', 'titleAr', 'subCourse', 'kind', 'formType', 'passMark', 'estimatedMinutes', 'explain',
   'learningPointsJson', 'narrativeJson', 'narrativeArJson', 'expectedJson', 'questionsJson'];
 
+// Withdraws a course this upload wrote: its course, modules, lessons and exercises, by importBatch. Its figures stay
+// in Storage, because the SOP lessons placed inside the other courses show the same figures.
+async function withdraw() {
+  let n = 0;
+  console.log(COMMIT ? 'WITHDRAWING (figures kept):' : 'DRY RUN: would withdraw (figures kept; nothing is written):');
+  for (const col of ['onlineCourses', 'onlineCourseItems', 'exerciseDefinitions']) {
+    const s = await db.collection(col).where('importBatch', '==', BATCH).get();
+    console.log(`  ${col}: ${s.size}` + (col === 'onlineCourses' ? ' ' + s.docs.map((d) => `${d.id} "${d.data().title}"${d.data().isPublished ? ' (PUBLISHED)' : ' (not published)'}`).join(', ') : ''));
+    if (COMMIT) for (let i = 0; i < s.docs.length; i += 400) {
+      const b = db.batch(); s.docs.slice(i, i + 400).forEach((d) => b.delete(d.ref)); await b.commit();
+    }
+    n += s.size;
+  }
+  console.log(COMMIT ? `Withdrawn: ${n} documents removed; figures kept.` : `Would remove ${n} documents; figures kept.`);
+}
+
 async function undo() {
   let n = 0;
   for (const col of ['onlineCourseItems', 'onlineCourses', 'exerciseDefinitions']) {
@@ -75,6 +94,7 @@ async function undo() {
 }
 
 (async () => {
+  if (WITHDRAW) return withdraw();
   if (UNDO) return undo();
   const pkg = JSON.parse(fs.readFileSync(FILE, 'utf8'));
   if (pkg.format !== 'imnci-course-package' || pkg.version !== 1) throw new Error('Not a course file v1');

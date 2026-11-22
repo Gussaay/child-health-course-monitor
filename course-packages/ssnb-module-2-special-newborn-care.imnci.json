@@ -676,6 +676,115 @@
        ],
        "answer": 0,
        "explanation": "The manual: the neutral thermal zone, maintaining between 36.7 and 37.2 °C. Every baby has continuous skin temperature monitoring from admission until swaddled."
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Radiant warmer</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "paragraph",
+       "text": "Open care system: Overhead quartz heating element produces heat and parabolic reflector reflects the heat to the bassinet. Microprocessor inside control panel processes the desired skin temperature and matches against actual temperature of the baby and sends feedback. Indication"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Newborn Resuscitation</li><li><strong>2.</strong> Short term Procedures</li><li><strong>3.</strong> Severe hypothermia requiring rapid warming</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Items required when using the radiant warmer"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>Machine Preparation Checklist</strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>Baby Preparation Checklist</strong></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Direct power source</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Alcohol based hand rub</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Temperature sensor (probe)</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Medical adhesive tape</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Clean mattress</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> A thermometer</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Linen to cover the mattress</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Plastic Wrap (if below 32 weeks GA)</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Cotton swabs with 70% alcohol</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"> Items for the specific procedure</td></tr></table>"
+      },
+      {
+       "type": "heading",
+       "text": "Parts of a radiant warmer"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p164-1.jpg",
+       "caption": "",
+       "page": 164
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> bed (for placing the neonate)</li><li><strong>2.</strong> overhead unit (Radiant heat source)</li><li><strong>3.</strong> Skin probe (for measuring baby’s skin temperature)</li><li><strong>4.</strong> Air probe</li><li><strong>5.</strong> Controls panel (Displays and control knobs)</li><li><strong>6.</strong> Storage tray</li><li><strong>7.</strong> Control panel</li><li><strong>8.</strong> X ray tray</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Standard operating Procedure for warmer"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Turn on the warmer 20 min before put baby to pre warm the linen and mattress.</li><li><strong>2.</strong> Ensure the mattress and linen are clean.</li><li><strong>3.</strong> Select the mode<ul><ul><li>Manual mode: Heater output increased or decreased manually, Used for initial preparation of bed and for rapid warming of a severely hypothermic baby, Respond to alarm immediately. Identify the fault and rectify it</li><li>Servo mode: Heater output automatically based on skin temperature.</li></ul></li></ul></li><li><strong>4.</strong> Set the target temperature to 36.5 – 37.0 °C.</li><li><strong>5.</strong> Apply probe over the right hypochondrium in supine position and in flank in prone position</li><li><strong>6.</strong> Connect skin probe to the baby’s abdomen with sticking tape.<ul><ul><li>Check sensor probe regularly to ensure it is in place every 2-3hours</li><li>Check and record the temperature every 2-3 hours and record</li><li>Change probe site once in every 24 hours</li></ul></li></ul></li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Likely Complications and Prevention Measures"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong></strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>Complications</strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>Prevention Measures</strong></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Hypothermia &amp; cold stress</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Patients should never be left unattended under the radiant warmer especially when using the manual mode.<br>Use temperature probe to maintain the temp of 36.5-37.5C.<br>Ensure heater head is directly over the patient (ONE radiant warmer, ONE Baby)</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Hyperthermia &amp; heat stress</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Ensure the temperature probe is well secured to monitor baby’s temperature in baby mode and in manual mode.</td></tr></table>"
+      },
+      {
+       "type": "question",
+       "text": "Where is the radiant warmer's skin probe placed on a baby lying supine, and what is the target temperature?",
+       "options": [
+        "Over the right hypochondrium; 36.5–37.0 °C",
+        "On the forehead; 38 °C",
+        "In the axilla; 35.5 °C",
+        "On the foot; 37.5–38 °C"
+       ],
+       "answer": 0,
+       "explanation": "In prone position the probe goes on the flank. Turn the warmer on 20 minutes before the baby arrives; check the probe every 2–3 hours; change the probe site every 24 hours; one radiant warmer, one baby."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Using a radiant warmer",
+       "caption": "Pre-warming for 20 minutes, choosing manual or servo mode, setting 36.5–37.0 °C, fixing the skin probe over the right hypochondrium, responding to alarms.",
+       "script": "SN2.8.1"
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Radiant warmer: disinfection</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "heading",
+       "text": "Disinfection of Warmer"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">External surfaces</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">cleaned daily with light detergent solution or Soap and then clean by chlorine solution or glutaraldehyde.<br>No spirit or other organic solvent.</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Reusable probe</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">use isopropyl alcohol swab</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">After use</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Clean, disinfect and cover the equipment with linen cover to store properly</td></tr></table>"
+      },
+      {
+       "type": "heading",
+       "text": "Self-Maintenance:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Inspect the heating element weekly.</li><li>The control and power units should be calibrated every 4-6 months and thorough</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "How are the radiant warmer's external surfaces cleaned?",
+       "options": [
+        "Daily with light detergent or soap, then chlorine or glutaraldehyde; no spirit or organic solvent",
+        "With spirit only",
+        "Once a month with water",
+        "Never while in use"
+       ],
+       "answer": 0,
+       "explanation": "The reusable probe is cleaned with an isopropyl alcohol swab. Inspect the heating element weekly."
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p166-2.jpg",
+       "caption": "",
+       "page": 166
       }
      ],
      "see": [],
@@ -754,18 +863,163 @@
        "explanation": "Incubators: all ≤ 30 weeks and/or ≤ 1000 g, and the admission bed of choice for < 33 weeks or ≤ 1800 g. Respiratory care: open care. Asphyxia: not in an incubator. Stable term: swaddled in a cot."
       },
       {
-       "type": "courselink",
-       "course": "Sick & Small Newborn · Annex: Neonatal Procedures and Equipment",
-       "module": 2,
-       "lesson": "Infant incubator",
-       "label": "Equipment · Annex, Equipment for Newborn Care"
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Infant incubator</strong> · from the manual, Module 2, Section 8: Equipment"
       },
       {
-       "type": "courselink",
-       "course": "Sick & Small Newborn · Annex: Neonatal Procedures and Equipment",
-       "module": 2,
-       "lesson": "Radiant warmer",
-       "label": "Equipment · Annex, Equipment for Newborn Care"
+       "type": "heading",
+       "text": "Main Part"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p168-1.jpg",
+       "caption": "",
+       "page": 168
+      },
+      {
+       "type": "heading",
+       "text": "Standard operating Procedure of Infant Incubator"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Ensure the Incubator clean and disinfected before use</li><li><strong>2.</strong> Connect the device to a reliable power source and ensure the power cable is intact.</li><li><strong>3.</strong> Switch on the incubator using the main power button.</li><li><strong>4.</strong> Select Mode<ul><ul><li><strong>a.</strong> Servo Mode (skin control): Set the temperature to 36.5–37°C.</li><li><strong>b.</strong> Manual Mode (Air Mode): set temperature as follow<ul><ul><li><strong>i.</strong> Extremely preterm (&lt;28 wks.): 34–36°C</li><li><strong>ii.</strong> Very preterm (28–32 wks.): 33–34°C</li><li><strong>iii.</strong> Near-term/term: 32–33°C</li></ul></li></ul></li></ul></li></ul></li><li><strong>5.</strong> Attach the skin temperature probe to the abdomen or back<ul><ul><li><strong>a.</strong> Change probe site every 8–12 hours</li></ul></li></ul></li><li><strong>6.</strong> Ensure water reservoir filled with sterile or distilled water</li><li><strong>7.</strong> Adjust humidity<ul><ul><li><strong>a.</strong> Start usually between 40–70% depending on the infant’s weight and condition. Except ELBW/VLBW (&lt;1500g) → 70–90% in first week</li><li><strong>b.</strong> After 1 week → Gradually reduce to 40–50%</li></ul></li></ul></li><li><strong>8.</strong> Place the infant inside and close all access doors securely.</li><li><strong>9.</strong> Monitor axillary temperature at least 2–4 times/day.</li><li><strong>10.</strong> Minimize opening portholes (prevents heat/humidity loss</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Infant Incubator Disinfection"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Incubators should be cleaned at least every week or Between Patients</li><li><strong>2.</strong> disinfect Frequent touch points e.g., door handles and latches 3 times per day</li><li><strong>3.</strong> Disinfect Hood (external surface) and IV pole daily</li><li><strong>4.</strong> Disinfect Water reservoir, Mattress, Inner double wall weekly</li><li><strong>5.</strong> Change water reservoir for humidification daily with distill water</li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p170-2.jpg",
+       "caption": "",
+       "page": 170
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p170-3.jpg",
+       "caption": "",
+       "page": 170
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p170-4.jpg",
+       "caption": "",
+       "page": 170
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p170-1.jpg",
+       "caption": "",
+       "page": 170
+      },
+      {
+       "type": "paragraph",
+       "text": "Disinfect Soap Wipe (20 Rinse Minutes)"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong></strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>Disinfectant</strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong></strong></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Chlorine Tablet 2.5 mg</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">One tablet In One liter of water</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Chlorine solution 5%</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">20 ml chlorine in 980 ml water</td></tr></table>"
+      },
+      {
+       "type": "paragraph",
+       "text": "PRACTISE THIS SKILL Steps for terminal Disinfection (weekly or between patient)"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Perform hand hygiene and wear the appropriate personal protective equipment (PPE).</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Always wear clean gloves. Sterile gloves are not necessary."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>2.</strong> Disassemble the incubator for optimum cleaning and disinfection.</li><li><strong>3.</strong> Wipe off and remove all accumulated fluids and soiling and debris by wiping with a dampened cloth. Use a soft and neutral detergent like soap if necessary</li><li><strong>4.</strong> Wipe with a disinfectant three times and put parts in disinfection solution for 20 minutes.</li><li><strong>5.</strong> Wipe with a wet cloth to remove residual disinfectant.</li><li><strong>6.</strong> Ensure that clean water is used.</li><li><strong>7.</strong> Ensure that all holes and indentations are cleaned.</li><li><strong>8.</strong> Wait for the product to air dry for 45 minutes.</li><li><strong>9.</strong> If incubators are recurrently positive for microorganisms, especially Pseudomonas-like bacteria, the water source may be contaminated. To decontaminate, it is suggested to pour 250ml of 24% acetic acid once weekly for 10 weeks into sink drains and wait for 30 minutes before flushing</li></ul>"
+      },
+      {
+       "type": "sort",
+       "text": "Manual (air) mode: which incubator air temperature for which baby?",
+       "groups": [
+        "34–36 °C",
+        "33–34 °C",
+        "32–33 °C"
+       ],
+       "items": [
+        {
+         "text": "Extremely preterm (< 28 weeks)",
+         "group": 0
+        },
+        {
+         "text": "Very preterm (28–32 weeks)",
+         "group": 1
+        },
+        {
+         "text": "Near-term or term",
+         "group": 2
+        }
+       ],
+       "explanation": "In servo (skin) mode, set 36.5–37 °C. Humidity 40–70%, or 70–90% in the first week for babies < 1500 g."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Setting up an infant incubator",
+       "caption": "Checking it is clean, power, choosing servo or air mode, skin probe, distilled water in the reservoir, humidity, closing the portholes.",
+       "script": "SN2.8.3"
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Infant incubator: daily cleaning and disinfection</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "heading",
+       "text": "PRACTISE THIS SKILL Steps for daily routine Incubator cleaning"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Change mattress sheets and incubator cover daily or if they are stained with blood.</li><li><strong>2.</strong> Clean high touch surfaces, for example, the door handles and latches at least thrice daily.</li><li><strong>3.</strong> Clean the outer surface of the incubator at least once daily.</li><li><strong>4.</strong> If the humidifier is in use, the reservoir must be cleaned, and sterile water must be changed daily.</li><li><strong>5.</strong> Incubators should be covered after cleaning and if not in use. Store in a dedicated place, away from any potential sources of contamination, such as splashes from sinks.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Infant Incubator Parts Disinfection Frequency"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>Part</strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong></strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>frequency</strong></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Frequent touch points e.g., door handles and latches</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">3 times per day</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Water reservoir for humidification (Always Use sterile water)</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Daily change the water</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">IV pole</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Daily</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Hood (external surface)</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Daily</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Inner double wall</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Weekly</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Water reservoir, heater impeller cover, duct cover assembly</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Weekly</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr></table>"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Gasket, grommets, hand ports, access panel, locking button, sensor module opening</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Weekly</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Mattress, mattress tray, x-ray tray, cover, upper cover, scale, T bars, temperature probes</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Weekly</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Incubator trolley &amp; shell: - Heater well - Controller - Shell - Trolley<br>- Attached trolley parts</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Weekly (Ensure proper disassembly first)</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Heater radiator &amp; fan impeller (Do not immerse the heater assembly in liquid)</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Weekly</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Air inlet filter chamber &amp; cover (Do not attempt to clean the air inlet filter (risk of damage to the filter))</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Every 3 months or following use on an infected baby</td></tr></table>"
+      },
+      {
+       "type": "question",
+       "text": "How often are the incubator door handles and latches disinfected?",
+       "options": [
+        "3 times a day",
+        "Once a week",
+        "Once a month",
+        "Only between patients"
+       ],
+       "answer": 0,
+       "explanation": "From the manual's disinfection frequency table. The humidifier water is changed daily with sterile or distilled water."
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p173-1.jpg",
+       "caption": "",
+       "page": 173
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p174-1.jpg",
+       "caption": "",
+       "page": 174
       }
      ],
      "see": [],
@@ -925,6 +1179,151 @@
        "lesson": "CPAP: how it works and its parts",
        "label": "More in Module 3 · Non-invasive ventilation",
        "text": "CPAP, HFNC and NIPPV in detail."
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Vayu bubble CPAP system</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "heading",
+       "text": "Main Part"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Vayu Blender Pressure Generator</li><li>Humidifier</li><li>Humidifier Tube</li><li>Reusable Filter</li><li>Rotator</li><li>Breathing Tubes and Nasal Prong</li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p174-2.jpg",
+       "caption": "",
+       "page": 174
+      },
+      {
+       "type": "heading",
+       "text": "Standard Operating Procedure of Vayu CPAP"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Ensure all component are clean and disinfected</li><li>Assemble the system according to manufacturer guidance, ensure correct connections.</li><li>Monitor Devices<ul><ul><li>Refill humidifier before water drops below the “REFILL” line</li><li>Refill pressure generator when water drops below “fill mark”</li><li>Replace water in jars every 24 hours</li><li>Replace filter disk Every 24 hours, replace Earlier if discolored or after each patient</li></ul></li></ul></li><li>Ensure continuous bubbling at all times</li><li>Monitor Patient<ul><ul><li>Continuous assessment of: Work of breathing, Oxygen saturation, Heart rate</li><li>Adjust pressure based on clinical response</li></ul></li></ul></li><li>Confirm oxygen cylinder pressure regularly</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Vayu CPAP Disinfection"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Empty the jars, remove any gross soiling then fully disassemble the device</li><li><strong>2.</strong> Soak in clean water until ready to reprocess</li><li><strong>3.</strong> Clean with enzymatic detergent or dish soap, Use a soft-bristled brush or sponge</li><li><strong>4.</strong> Brush lumens AND Flush lumens 3 times</li><li><strong>5.</strong> Rinse all components</li><li><strong>6.</strong> High-level Disinfection<ul><ul><li>flushing each lumen with disinfectant at least 3 times.</li><li>fully immerse all components in the disinfectant, making sure all lumens are completely filled.</li><li>Use 0.5% chlorine solution (soak for 10 min) or 2.5%-3.5% glutaraldehyde (soak for 40 min)</li><li>Do not autoclave, boil, steam sterilize</li><li>Rinse AND flush lumens 3 times with high volumes of water to remove disinfectant residues</li></ul></li></ul></li><li><strong>7.</strong> Air dry or wipe dry with gauze</li><li><strong>8.</strong> Store the device in its pre-assembled form in a clean container out of direct sunlight</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "How often are the Vayu CPAP water jars and filter disk replaced?",
+       "options": [
+        "Every 24 hours (the filter earlier if discoloured or after each patient)",
+        "Every week",
+        "Every month",
+        "Only when empty"
+       ],
+       "answer": 0,
+       "explanation": "Ensure continuous bubbling at all times. High-level disinfection: 0.5% chlorine for 10 minutes or 2.5–3.5% glutaraldehyde for 40 minutes; never autoclave or boil."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Vayu bubble CPAP: assembly and disinfection",
+       "caption": "Identifying the parts, assembling, filling the humidifier and pressure generator to their marks, then disassembly, cleaning and high-level disinfection.",
+       "script": "SN2.8.4"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p176-1.jpg",
+       "caption": "",
+       "page": 176
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p177-1.jpg",
+       "caption": "",
+       "page": 177
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Oxygen concentrator and oxygen blender</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "paragraph",
+       "text": "Oxygen concentrators are machines that extract nitrogen from atmospheric air, resulting in an output of almost pure oxygen."
+      },
+      {
+       "type": "paragraph",
+       "text": "Position the concentrator so that it is at least 30 cm away from walls or curtains, so that the inlet at the back is not obstructed."
+      },
+      {
+       "type": "paragraph",
+       "text": "Plug the power cord into the mains electricity supply"
+      },
+      {
+       "type": "paragraph",
+       "text": "Turn on the concentrator (switch on the console). A green light should come on when a sufficiently high oxygen concentration is reached, usually within 10 min"
+      },
+      {
+       "type": "paragraph",
+       "text": "Adjust the flow meter to the flow required for the patient or, if using a flow splitter, the number of patients receiving oxygen."
+      },
+      {
+       "type": "heading",
+       "text": "Disinfection"
+      },
+      {
+       "type": "paragraph",
+       "text": "Concentrators have a large particulate filter over the air inlet (usually at the back of freestanding or portable models) to stop dust and other airborne particles from entering the unit."
+      },
+      {
+       "type": "paragraph",
+       "text": "The filter should be removed and cleaned in warm soapy water, dried with an absorbent towel and replaced."
+      },
+      {
+       "type": "paragraph",
+       "text": "The exterior of the oxygen concentrator should be cleaned with a mild disinfecting cleaning agent or a diluted solution of bleach (5.25% sodium hypochlorite)"
+      },
+      {
+       "type": "paragraph",
+       "text": "Allow the solution to remain on the surface for 10 min, and then rinse off and dry."
+      },
+      {
+       "type": "question",
+       "text": "How far from walls or curtains is an oxygen concentrator placed?",
+       "options": [
+        "At least 30 cm, so the air inlet is not blocked",
+        "Against the wall",
+        "In a closed cupboard",
+        "It does not matter"
+       ],
+       "answer": 0,
+       "explanation": "A green light shows when a high enough oxygen concentration is reached, usually within 10 minutes. Clean the inlet filter in warm soapy water."
+      },
+      {
+       "type": "heading",
+       "text": "Oxygen Blender"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p193-1.jpg",
+       "caption": "",
+       "page": 193
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p193-2.jpg",
+       "caption": "",
+       "page": 193
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p194-1.jpg",
+       "caption": "",
+       "page": 194
       }
      ],
      "see": [],
@@ -1015,6 +1414,86 @@
        ],
        "answer": 1,
        "explanation": "Correct answer: B"
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Endotracheal tube (ETT) insertion</strong> · from the manual, Module 2, Section 7: Neonatal Procedures"
+      },
+      {
+       "type": "paragraph",
+       "text": "Indications for intubation Neonatal tracheal intubation is required during the golden hour for a number of reasons, including"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> airway management,</li><li><strong>2.</strong> surfactant administration and</li><li><strong>3.</strong> assisting ventilation in respiratory insufficiency.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "PRACTISE THIS SKILL Steps of intubation"
+      },
+      {
+       "type": "paragraph",
+       "text": "Here is a summary of the steps for intubation according to NRP:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Assessment: Assess the need for intubation based on the newborn's clinical condition and response to initial resuscitation measures.</li><li><strong>2.</strong> Gather equipment: Ensure all necessary equipment for intubation, including a laryngoscope, endotracheal tube, suction, and securing devices, is readily available and prepared.</li><li><strong>3.</strong> The intubation set for emergency intubation in the delivery room should always be ready and checked before receiving the baby.</li><li><strong>4.</strong> For equipment preparation, see the setup equipment in the mechanical ventilation section</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "LARYNGOSCOPY & ET TUBE INSERTION"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Holding the laryngoscope in the left hand, use the right hand to open the mouth wide (premedication can cause some spasm that may need to be overcome)</li><li><strong>2.</strong> Gently insert the blade to push the tongue to the left and advance towards the throat</li><li><strong>3.</strong> Use the uvula to help maintain position in the midline. If the uvula is not in the midline, reposition the scope is usually heading to the left</li><li><strong>4.</strong> Advance the blade forward gently Lift the laryngoscope handle in a forward and upward motion</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Avoid a levering action against the top gum"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>5.</strong> Instructors' hands on the infant's neck can feel the blade tip (to help guide if the scope is too far in or not far enough)</li><li><strong>6.</strong> Cricoid pressure can be applied using the little finger of the left hand, or by an assistant (care should be taken not to exert excessive pressure)</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "(With the video laryngoscope, an airway assistant may also lift the top lip of the infant to allow more space if obtaining a direct airway view and to allow more space for insertion of the ET tube in the mouth."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>7.</strong> Use suction only if secretions are impairing the view</li><li><strong>8.</strong> Bring the posterior larynx and vocal cords into view, as shown below:</li><li><strong>9.</strong> Hold the tube high up and with the natural slope facing forward, as it is easier to direct</li><li><strong>10.</strong> Feed the tube in from the side to allow visualisation of it passing through the cords</li><li><strong>11.</strong> Use the black marker near the tip of the tube as a guide to the depth of insertion initially</li><li><strong>12.</strong> Adjust to the previously measured naso-tragal +1cm measurement</li><li><strong>13.</strong> Be cautious as to how far to insert the tube, as it is often too far in.</li><li><strong>14.</strong> Secure the ETT tube against the roof of the palate or firmly at the lips</li><li><strong>15.</strong> Carefully remove the laryngoscope and introducer (if used)</li><li><strong>16.</strong> Confirm ETT position: chest rise, auscultate for air entry, and connect the CO2 detector and ventilation circuit to confirm correct ETT position.</li><li><strong>17.</strong> Secure ET with an appropriate fixation device, ensuring a good seal to the skin and avoiding traction on the ETT</li><li><strong>18.</strong> Provide IPPV once the ET position is confirmed and throughout the securing process</li><li><strong>19.</strong> Attach the ETT to the ventilator and adjust settings as required</li><li><strong>20.</strong> Move the infant back into position carefully, ensuring ET is secure when moving the infant and using a 2-person technique to avoid accidental extubation</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Post-intubation care: Continuously monitor the newborn's vital signs, oxygenation, and ventilation after successful intubation. It's important to note that intubation is an advanced procedure that should be performed by trained healthcare providers with expertise in neonatal airway management and in accordance with NRP guidelines and protocols."
+      },
+      {
+       "type": "paragraph",
+       "text": "Post-intubation procedure"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Chest x-ray is the gold standard in confirming the correct ETT position; the ET tip should be visible 1cm above carina (T2-T3)</li><li><strong>2.</strong> Consider shortening the ETT to minimise dead space</li><li><strong>3.</strong> Ensure blades are sent for sterilisation as per unit protocol</li><li><strong>4.</strong> Ensure accurate documentation of the procedure, including the position of the ETT on chest x-ray and whether or not adjustments were made</li><li><strong>5.</strong> Update parents</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "What is the gold standard to confirm the ETT position, and where should the tip be?",
+       "options": [
+        "Chest X-ray; tip 1 cm above the carina (T2–T3)",
+        "Listening only; tip at T8",
+        "Saturation only; anywhere in the trachea",
+        "CO₂ detector only; at the vocal cords"
+       ],
+       "answer": 0,
+       "explanation": "At the bedside: chest rise, air entry on auscultation and a CO₂ detector."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Endotracheal intubation of a newborn",
+       "caption": "Laryngoscope in the left hand, blade pushing the tongue left, lifting forward and up, tube passed through the cords from the side, depth by the naso-tragal measurement + 1 cm, confirmation.",
+       "script": "SN2.7.6"
       }
      ],
      "see": [],
@@ -1099,6 +1578,100 @@
        ],
        "answer": 0,
        "explanation": "From \"Arterial blood gas analysis\" in the manual."
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Umbilical artery and umbilical vein catheterization</strong> · from the manual, Module 2, Section 7: Neonatal Procedures"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Indications: blood pressure, monitoring (via umbilical artery [UA]), or blood gas monitoring (via UA) in critically ill neonates</li><li>Complications: Infection; bleeding; perforation of vessel; thrombosis with distal embolization, schemia or infarction of lower extremities, bowel, or kidney; arrhythmia if catheter is in the heart; air embolus</li><li>Contraindications: Omphalitis, peritonitis, possible/confirmed necrotizing enterocolitis, intestinal hypo perfusion.</li><li>Equipment and supplies<ul><ul><li>High-level disinfected or sterile umbilical catheter or ordinary gastric tube:<ul><ul><li>If the baby weighs less than 1.5 kg, use a 3.5-F catheter</li><li>If the baby weighs 1.5 kg or more, use a 5-F catheter</li></ul></li></ul></li><li>Sterile infusion set with IV fluid (use a micro dropper if one is available)</li><li>Sterile 5 or 10 ml syringe</li><li>Sterile drapes</li><li>Sterile blade</li><li>Cord tie or suture (to control bleeding)</li><li>Sterile forceps</li><li>Sterile suture, adhesive strapping, or thin paper tape (to secure catheter)</li></ul></li></ul></li><li>Line placement :<ul><ul><li>Low line: Tip of catheter should lie just above the aortic Bifurcation between L3 and L4.</li><li>High line: Tip of catheter should be above the diaphragm between T6 and T9. A high line has fewer complications and lesser need for replacement than a low line.</li></ul></li></ul></li><li>Catheter length: Determine the length of catheter required using following birth weight (BW) regression formula: UAC high line (cm) = (3 x BW [kg]) t 9</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "PRACTISE THIS SKILL Procedure for UAC line"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Determine the length of the catheter to be inserted for either high (T6 to T9) or low (L3 to L4) position.</li><li>Restrain infant. Maintain the infant’s temperature during the procedure. Prepare and drape the umbilical cord and adjacent skin using sterile technique.</li><li>Flush the catheter with sterile saline solution before insertion. Ensure that there are no air bubbles in the catheter or attached syringe.</li><li>Tie sterile umbilical tape around the base of the cord, tight enough to prevent bleeding. Cut through the cord horizontally about 1.5 to 2 cm from the skin.</li><li>Identify the one large, thin-walled UV and two smaller, thick-walled arteries. Use one tip of open, curved forceps to gently probe and</li><li>Dilate one artery. Then use both points of closed forceps and dilate artery by allowing forceps to open gently.</li><li>Grasp the catheter 1 cm from its tip with toothless forceps and insert the catheter into the lumen of the artery. Aim the tip toward the feet and gently advance the catheter to the desired distance. Do not force.</li><li>If resistance is encountered, try loosening umbilical tape, applying steady and gentle pressure, or manipulating the angle of the umbilical cord to the skin. Often the catheter cannot be advanced because of the creation of a “false luminal tract.”</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "There should be good blood return when the catheter enters the iliac artery."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Confirm catheter tip position with x-ray or ultrasound. Secure catheter with a suture through the cord, a marker tape, and a tape bridge. The catheter may be pulled back but not advanced once the sterile field is broken.</li><li>Observe for complications: Blanching or cyanosis of lower extremities, perforation, thrombosis, embolism, or infection. If any complications occur, the catheter should be removed.</li><li>Use isotonic fluids containing heparin per institutional policy. Never use hypoosmolar fluids in the UA.</li></ul>"
+      },
+      {
+       "type": "calc",
+       "question": "A baby weighs 2 kg. Using the manual's formula, how long is the UAC high line?",
+       "answer": 15,
+       "unit": "cm",
+       "explanation": "UAC high line (cm) = (3 × BW in kg) + 9 = 3 × 2 + 9 = 15 cm. The high line tip lies between T6 and T9."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Umbilical artery catheterization",
+       "caption": "Measuring, preparing the cord, identifying the two arteries and the vein, dilating an artery, advancing the catheter, confirming the tip by X-ray, securing.",
+       "script": "SN2.7.2"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p128-1.jpg",
+       "caption": "",
+       "page": 128
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Umbilical vein catheterization (UVC)</strong> · from the manual, Module 2, Section 7: Neonatal Procedures"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Indications: Vascular access when the need for IV access is urgent but a peripheral IV line cannot be established quickly.<ul><ul><li>All babies &lt;1000 g</li><li>all preterm infants with a gestational age of equal or less than 28 weeks</li><li>Neonatal with mechanically ventilation or with FiO2 of greater than 40% on continuous positive airway pressure.</li><li>Exchange transfusion.</li><li>Hemodynamic instability</li><li>Administration of hypertonic solutions (e.g. glucose &gt;12.5%, parenteral nutrition or inotropes)</li></ul></li></ul></li><li>Contraindications:<ul><ul><li>Omphalitis</li><li>Peritonitis</li><li>possible/confirmed necrotizing enterocolitis</li><li>intestinal hypoperfusion</li><li>Umbilical sepsis</li></ul></li></ul></li><li>Complications:<ul><ul><li>Infection</li><li>Bleeding</li><li>perforation of vessel</li><li>thrombosis with distal embolization</li><li>ischemia or infarction of lower extremities, bowel, or kidney</li><li>arrhythmia if catheter is in the heart; air embolism.</li></ul></li></ul></li><li>Equipment and supplies<ul><ul><li>High-level disinfected or sterile umbilical catheter or ordinary gastric tube:<ul><ul><li>If the baby weighs less than 1.5 kg, use a 3.5-F catheter</li><li>If the baby weighs 1.5 kg or more, use a 5-F catheter</li></ul></li></ul></li><li>Sterile infusion set with IV fluid (use a micro dropper if one is available)</li><li>Sterile 5- or 10-ml syringe</li><li>Sterile drapes</li><li>Sterile blade</li><li>Cord tie or suture (to control bleeding)</li><li>Sterile forceps</li><li>Sterile suture, adhesive strapping, or thin paper tape (to secure catheter)</li></ul></li></ul></li><li>Preparation :<ul><ul><li>Determine Umbilical venous catheter (UVC) site: lines should be placed in the inferior vena cava above the level of the ductus venosus and the hepatic veins and below the level of the right atrium.</li><li>Determine Catheter length:<ul><ul><li>Determine the length of catheter required using either a standardized graph based on shoulder-umbilical length or</li><li>use distance between xiphisternum and umbilicus +1, plus stump, or</li><li>The following birth weight (BW) regression formula:</li><li><strong>1.</strong> UAC high line (cm) = (3 x BW [kg]) + 9</li><li><strong>2.</strong> UVC length (cm) = 0.5 x UAC high line (cm) + 1</li></ul></li></ul></li></ul></li></ul></li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "PRACTISE THIS SKILL Procedure for UVC line"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Determine the length of the catheter to be inserted</li><li>Restrain infants. Maintain the infant’s temperature during the procedure. Prepare and drape the umbilical cord and adjacent skin using sterile technique.</li><li>Flush the catheter with sterile saline solution before insertion. Ensure that there are no air bubbles in the catheter or attached syringe.</li><li>Tie sterile umbilical tape around the base of the cord, tight enough to prevent bleeding. Cut through the cord horizontally about 1.5 to 2 cm from the skin.</li><li>Isolate the thin-walled UV, clear thrombi with forceps, and insert catheter, aiming the tip toward the right shoulder. Gently advance the catheter to the desired distance. Do not force. If resistance is encountered, try loosening the umbilical tape, applying steady and gentle pressure, or manipulating the angle of the umbilical cord to the skin. Resistance is commonly met at the abdominal wall and again at the portal system. Do not infuse anything into the liver.</li><li>As the catheter is advanced, periodically apply gentle suction with the syringe until blood flows back. Once blood flows back freely through the catheter (usually after the catheter is inserted 5 to 7 cm), do not advance the catheter any further.</li><li>If resistance is encountered while advancing the catheter, especially in the first 2 to 3 cm, do not continue. Remove the catheter and try again.</li><li>Tie the cord tie or suture around the stump of the umbilicus to hold the catheter in place and prevent bleeding around the catheter or from one of the arteries.</li><li>Remove the syringe and connect the infusion set to the catheter, ensuring that there are no air bubbles in the set.</li><li>Secure the catheter with suture material or adhesive tape to prevent it from being dislodged.</li><li>Confirm catheter tip position with x-ray or ultrasound.</li><li>The catheter may be pulled back but not advanced once the sterile field is broken.</li><li>Look for redness and swelling around the umbilicus, which may indicate infection. If redness or swelling is seen at any time, stop the infusion and remove the umbilical vein catheter. Attempt to establish a peripheral IV line again, and treat for infection of the umbilicus</li></ul>"
+      },
+      {
+       "type": "calc",
+       "question": "For the same 2 kg baby (UAC high line 15 cm), how long is the UVC?",
+       "answer": 8.5,
+       "unit": "cm",
+       "explanation": "UVC length (cm) = 0.5 × UAC high line + 1 = 0.5 × 15 + 1 = 8.5 cm."
+      },
+      {
+       "type": "question",
+       "text": "Which of these is a contraindication to umbilical vein catheterization?",
+       "options": [
+        "Omphalitis or suspected NEC",
+        "Weight under 1000 g",
+        "Need for exchange transfusion",
+        "FiO₂ above 40% on CPAP"
+       ],
+       "answer": 0,
+       "explanation": "The other three are indications in the manual. Contraindications: omphalitis, peritonitis, possible or confirmed NEC, intestinal hypoperfusion, umbilical sepsis."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Umbilical vein catheterization (UVC)",
+       "caption": "Isolating the thin-walled vein, advancing until blood flows back freely, securing, connecting the infusion without air, confirming the tip position.",
+       "script": "SN2.7.3"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p132-1.jpg",
+       "caption": "",
+       "page": 132
       }
      ],
      "see": [],
@@ -1276,6 +1849,42 @@
        "title": "Working out fluids and the glucose infusion rate",
        "caption": "On a whiteboard: day-1 fluids by birth weight, then the GIR formula worked through for a 2 kg baby.",
        "script": "SN2.4.2"
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Infusion pump</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Connect IV set to the solution container.</li><li>Fill the solution into the drop chamber up to one third.</li><li>Infused volume by purge is included total infused volume.</li><li>Attaching the tube to the pump<ul><ul><li>Open the door and push the release lever to the right to release the tube clamp.</li><li>Place tube correctly, make sure that the tube places in the air bubble detector and lay down straightly on the peristaltic finger part and the occlusion detector.</li><li>Make sure that the occlusion detector moves smoothly when it is pushed.</li><li>Close the door and lock the door lock lever.</li><li>Attach the drop sensor vertically on the drop chamber on IV set, by squeezing the drop sensor with fingers, do not attach the drop sensor when it is not used.</li></ul></li></ul></li><li>SETUP FLOW RATE (ml/h)<ul><ul><li>Press FLOW RATE (ml/h) button, then setup desired value with numeral buttons.</li><li>Delete previous digit in order with button</li><li>Save the setup value with SET button</li></ul></li></ul></li><li>SET UP DELIVERY VOLUME (ml)<ul><ul><li>Delivery volume range is 1~9999ml.</li><li>Press DELIVERY VOLUME (ml) button, then setup desired value with numeral buttons</li></ul></li></ul></li><li>SETUP DELIVERY TIME (hour)</li><li>Set up delivery time with numerical buttons and save it.</li><li>START INFUSION</li><li>STOP INFUSION</li><li>Press [STOP] button to stop infusion during the operation.</li><li>Before restart infusion, FLOW RATE, DELIVERY VOLUME, the amount of solution volume should be confirmed.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Infusion Pump Disinfection"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Before cleaning the pump, make sure to power off the pump and disconnect the AC power cord.</li><li>Do not immerse the pump in water.</li><li>Do not immerse the pump in any liquid nor allow any liquid to leak into the pump.</li><li>Do not use alcohol, thinner, benzene, ammonia, acetone or any other organic solvents.</li><li>Do not sterilize the pump.</li><li>When the pump casing is stained, use a gauze cloth or similar, moistened with cold or tepid water and let it dry, especially the AC power inlet before use.</li><li>When the Air-In-Line detector or Occlusion detector is stained, use a swab moistened with warm water and let it dry before use.</li><li>Do not use something rigid or sharp like tweezers to clean the detectors</li><li>Before cleaning the drop sensor, make sure to disconnect the drop sensor completely from the pump.</li><li>When the drop sensor is stained, use a gauze cloth or similar, moistened with cold or tepid water and let it dry.</li><li>Do not allow any solution to splash on the drip sensor connector. If it is wetted, dry it before use.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "How is the infusion pump cleaned?",
+       "options": [
+        "Power off, unplug, and wipe with gauze moistened with cold or tepid water; never immerse it or use alcohol or solvents",
+        "Immerse it in chlorine",
+        "Wipe with acetone",
+        "Autoclave it"
+       ],
+       "answer": 0,
+       "explanation": "From \"Infusion pump disinfection\"."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Setting up syringe and infusion pumps",
+       "caption": "Loading a syringe, purging, setting the rate; loading an infusion set, drop sensor, flow rate and volume.",
+       "script": "SN2.8.6"
       }
      ],
      "see": [],
@@ -1423,6 +2032,66 @@
        ],
        "answer": 2,
        "explanation": "Correct Answer: C"
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Peripherally inserted central catheter (PICC)</strong> · from the manual, Module 2, Section 7: Neonatal Procedures"
+      },
+      {
+       "type": "paragraph",
+       "text": "Indications."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>When intravenous access is anticipated for an extended period. The Centers for Disease Control and Prevention (CDC) recommends placing PICC access if therapy is needed for &gt;6 days.</li><li>High-risk patient populations (surgical).</li><li>In low birthweight infants when it is anticipated that full enteral feedings will not be achieved within a short period.</li><li>Fluid delivery, nutritional solutions, and medications when other venous access is not acceptable or able to be obtained (eg, hypertonic intravenous [IV] solutions).</li><li>Common sites of PICC line insertion</li><li>There are multiple potential sites for PICC line insertion.</li><li>The most commonly used are the antecubital and basilic veins in the upper limbs and the long saphenous veins in the lower limbs.</li><li>Axillary and scalp veins may also be used.</li><li>The operator should take time to identify the most suitable point for venous cannulation</li><li>A number of suitable veins lie in close proximity to arteries risking inadvertent cannulation of an artery. See later section – Specific risks of malposition</li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p133-1.jpg",
+       "caption": "",
+       "page": 133
+      },
+      {
+       "type": "heading",
+       "text": "Preparation:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Examine the infant to identify a suitable vein</li><li>Measure the maximum insertion distance<ul><ul><li>Upper limbs/ head &amp; neck: Measure from the likely entry point to the supra-sternal notch.</li><li>Lower limbs: Measure from the entry site to the umbilicus</li></ul></li></ul></li><li>If perfusion is poor it may be necessary to correct this prior to line insertion.</li><li>It is appropriate to correct any significant coagulopathy before commencing the procedure however there is no requirement to routinely check FBC and coagulation profile if there is no evidence of a bleeding tendency.<ul><ul><li>Consider platelet transfusion before the line is placed, particularly if the Platelet count is &lt;50 or there is evidence of excess bleeding from venipuncture sites</li></ul></li></ul></li><li>If the infant is known, or strongly suspected to be septic, it may be wise to delay the placement of a PICC line until the sepsis is under control. PICC lines may easily become colonized with micro-organisms which may then prove difficult to eradicate whilst the line remains in situ.</li><li>Where possible veins suitable for PICC lines (e.g. saphenous vein) should not be used for peripheral cannulation and venesection in the first few days to leave them available for this purpose.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Placing PICC"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>PICC line placement should be performed, or directly supervised, by an operator experienced in their insertion</li><li>Full aseptic precautions must be observed. A gown and sterile gloves must be worn and a surgical (hernia) towel used</li><li>Use the drapes to cover the infant from head to toe</li><li>The line should be flushed with 0.9% sodium chloride for injection prior to placement and the clamp closed. This will help prevent occlusion whilst awaiting an X-ray. Use a 10ml syringe</li><li>Sterilise the skin around the insertion site according to standard sterile technique. Allow the sterilising solution to dry completely before commencing insertion. Contact with antiseptic solutions may weaken the lines and cause premature failure. If there is any residual antiseptic solution pooling around the limb this should be cleaned off with a saline soaked swab before the procedure.</li><li>Insert the introducer until flashback is noted or free-flowing blood is obtained</li><li>Insert the long line and use non-toothed forceps to gently advance the line</li><li>Do not insert the line further than the optimum insertion distance measured before the procedure</li><li>If the line will not advance to the measured distance, the tip may have entered the start of an adjoining vessel. Attempts can be made to bypass this by withdrawing the line and then attempting further advancement. Do not leave the tip sitting against such an obstruction.</li><li>Once successfully inserted, remove the introducer and apply gentle pressure to the insertion site until all oozing of blood around the PICC line has stopped</li><li>Secure the line in place with a steristrip close to the entry site then cover the line with a Tegaderm dressing (or similar semi-permeable clear dressing) ensuring that all of the polyurethane part of the catheter is covered. This will involve looping the redundant portion around the entry site NB Ensure the junction between the polyurethane part of the catheter and the wider bore section is covered by the dressing as this is a site which is prone to snapping if not supported</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "When does the CDC recommend PICC access?",
+       "options": [
+        "When therapy is needed for more than 6 days",
+        "For every admission",
+        "Only for blood sampling",
+        "Only in term babies"
+       ],
+       "answer": 0,
+       "explanation": "Upper limb insertions are measured to the suprasternal notch; lower limb insertions to the umbilicus."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Inserting a PICC line",
+       "caption": "Measuring the insertion distance, full aseptic technique, introducer, advancing with non-toothed forceps, securing with steristrip and transparent dressing.",
+       "script": "SN2.7.4"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p136-1.jpg",
+       "caption": "",
+       "page": 136
       }
      ],
      "see": [],
@@ -1457,6 +2126,55 @@
       {
        "type": "rich",
        "text": "<ul><li>The Golden Minute after Birth – Beyond Resuscitation, Girish, Meenakshi; Subramaniam, Girish1, International Journal of Advanced Medical and Health Research 6(2):p 41-45, Jul–Dec 2019. | DOI: 10.4103/IJAMR.IJAMR_89_19 J Multidiscip Healthc. 2020; 13: 943–952.Published online 2020 Sep<ul><li><strong>17.</strong> doi: 10.2147/JMDH.S268959</li></ul></li><li>The first golden minute — Is it relevant?, Tonia Branche,a,b Marta Perez,a,b and Ola D. Saugstadb,c,*. John Madar, Charles C.Roehr, Sean Ainsworth Berndt Urlesberger Dominic Wilkinson Jonathan P. Wyllie Published:March 24, 2021 BJA Educ. 2021 Dec; 21(12): 479–485. Published online 2021 Sep 15. doi: 10.1016/j.bjae.2021.07.008 PMCID: PMC8606598 PMID: 34840820</li><li>Textbook of Neonatal Resuscitation (8th Edition) Edited by Gary M. Weiner, MD, FAAP; Jeanette Zaichkin, RN, MN, NNP-BC American Academy of Pediatrics DOI: https://doi.org/10.1542/9781610025256 ISBN electronic: 978-1-61002-525-6 ISBN print: 978-1-61002-524-9 Publication date: June 2021</li><li>Matern Health Neonatol Perinatol. 2016; 2: 4. Published online 2016 Jun<ul><li><strong>13.</strong> doi: 10.1186/s40748-016-0032-y PMCID: PMC4904360 PMID: 27298730, The timing of umbilical cord clamping at birth: physiological considerations</li></ul></li><li>2023 American Heart Association and American Academy of Pediatrics Focused Update on Neonatal Resuscitation: An Update to the American Heart Association Guidelines for Cardiopulmonary Resuscitation and Emergency Cardiovascular Care https://doi.org/10.1161/CIR.0000000000001181Circulation. 2024;149:e157–e166</li><li>Sudomotor function, thermoregulation and electrodermal control in the human brain Laura Crucianelli, ... Hugo Critchley, in Reference Module in Neuroscience and Biobehavioral Psychology, 2024 BMC Pediatr. 2022; 22: 447. Published online 2022 Jul 25. doi: 10.1186/s12887-022-03512-x PMCID: PMC9316355 PMID: 35879708 Factors associated with hypothermia within the first 6 hours of life in infants born at ≥340 weeks’ gestation: a multivariable analysis/</li><li>Delivery Room Interventions for Hypothermia in Preterm Neonates: A Systematic Review and Network Meta-analysis Thangaraj Abiramalatha et al. JAMA Pediatr.2021.</li></ul>"
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Syringe pump</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "heading",
+       "text": "Main part"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p181-1.jpg",
+       "caption": "",
+       "page": 181
+      },
+      {
+       "type": "heading",
+       "text": "PRACTISE THIS SKILL Procedure"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Pump can be used either on any horizontal surface or on the IV pole with pole clamp.</li><li>Plug power cord into a wall outlet</li><li>Turn the power switch on. Follow according to manual of the model.</li><li>Press “Number Set Key” (up and down arrows) to set desired flow rate.</li><li>Load syringe with medication or desired fluid.</li><li>Lift up the Syringe Securing Bar and rotate right 90o .</li><li>Place the syringe into the bed. Be</li><li>sure to insert the nozzle into the syringe slot.</li><li>Then press the release button on the plunger driver block and slide the driver blocks into position so that the end of the syringe plunger can be placed into the slot in the driver block.</li><li>Turn the Syringe Securing Bar to the left 90 degrees to secure the syringe barrel.</li><li>Make sure the syringe barrel is secure.</li><li>Press and hold the PURGE button to purge air from the syringe and associated tubing before connecting to patient.</li><li>Press “RUN” to start infusion.</li><li>After use clean and store in cardboard box if not required for babies.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Before connecting a syringe pump to the baby, what must you do?",
+       "options": [
+        "Press and hold PURGE to remove air from the syringe and tubing",
+        "Press RUN immediately",
+        "Shake the syringe",
+        "Nothing"
+       ],
+       "answer": 0,
+       "explanation": "From the syringe pump procedure."
+      },
+      {
+       "type": "heading",
+       "text": "Cleaning the Syringe pump"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Damp cloth soaked in soap-water used for cleansing panel</li><li><strong>2.</strong> Use disposal syringe and tubing</li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p183-1.jpg",
+       "caption": "",
+       "page": 183
       }
      ],
      "see": [],
@@ -1939,6 +2657,68 @@
       {
        "type": "rich",
        "text": "<ul><li><strong>1.</strong> Posture: Observe the posture. Handling the infant may improve the assessment</li><li><strong>2.</strong> Square Window: Flex the hand at the wrist. Exert pressure sufficient to get as much flexion as possible. The angle between the hypothenar eminence and the anterior aspect of the forearm is measured and scored.</li><li><strong>3.</strong> Arm Recoil: Fully flex the forearms with the hands at the shoulders for 5 seconds, then fully extend by pulling the hands. Release as soon as the elbows are fully extended, and observe the recoil (degree of flexion at the elbows).</li></ul>"
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Bag and mask</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Fit the mask over the nose and mouth. Press firmly to prevent air leaks.</li><li>Hold with the thumb on one side and the index and middle fingers on the other.</li><li>With the other hand, squeeze the bag at a rate of 30 to 60 breaths/minute for 60 seconds. Ventilation is effective if the chest rises and falls.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "IMPORTANT"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>excessive ventilation pressure can cause a pneumothorax.<ul><li>If the chest fails to rise:<ul><ul><li>Check the connection between the bag and the mask.</li><li>Correct the position of the mask on the face.</li><li>Correct the head position.</li></ul></li></ul></li><li>Check every minute for spontaneous respiratory effort (look for chest movement); do not take the mask off the neonate’s face to check for spontaneous breathing.</li><li>Continue manual ventilation until there is spontaneous respiratory effort.</li></ul></li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p190-1.jpg",
+       "caption": "",
+       "page": 190
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p190-2.jpg",
+       "caption": "",
+       "page": 190
+      },
+      {
+       "type": "heading",
+       "text": "Bag and Mask Disinfection"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Rinse the components under running (tap) water to remove gross soil.</li><li>soak the device in in soupy solution, for the removal of residues of dried blood with using a soft brush until all visible soil is removed.</li><li>Rinse the components with running (tap) water for one minute.</li><li>Fully immerse the device in disinfection solution for the 20 minutes</li><li>Rinse the device by fully immersing it in distill water and repeat for a total of 3 rinses using a fresh batch of distill water each time.</li><li>Dry the device using a sterile cloth.</li><li>Autoclave can be used with running a full cycle at 134 – 135 °C with an exposure time of 10 minutes and a dry time of 45 minutes.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Bag and mask ventilation: what rate, and how do you know it is effective?",
+       "options": [
+        "30–60 breaths a minute; the chest rises and falls",
+        "100 breaths a minute; the baby cries",
+        "10 breaths a minute; the bag empties",
+        "60–80 a minute; the saturation is 100%"
+       ],
+       "answer": 0,
+       "explanation": "If the chest does not rise: check the bag–mask connection, the mask position and the head position. Excessive pressure can cause a pneumothorax."
+      },
+      {
+       "type": "video",
+       "url": "https://www.youtube.com/watch?v=0clo9Lvpv7Y",
+       "title": "Helping Babies Breathe at Birth - Newborn Care Series",
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
+       "script": "SN2.8.8"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p191-1.jpg",
+       "caption": "",
+       "page": 191
       }
      ],
      "see": [],
@@ -2672,11 +3452,41 @@
        "script": "SN2.5.2"
       },
       {
-       "type": "courselink",
-       "course": "Sick & Small Newborn · Annex: Neonatal Procedures and Equipment",
-       "module": 2,
-       "lesson": "Phototherapy machine",
-       "label": "Equipment · Annex, Equipment for Newborn Care"
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Phototherapy machine</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Phototherapy involves exposure of the skin of the jaundiced baby to blue light of wave length 450-460nm.</li><li>Distance between surface of the baby and light source is kept about 45 cm.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "PRACTISE THIS SKILL Procedure"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Follow hand hygiene protocol</li><li>Ensure baby warm AND Take the neonate’s axillary temperature at least every 2-4 hours</li><li>Remove all the baby’s clothes except for a small size diaper with cover of eyes and gonads</li><li>Position the phototherapy lights above the baby’s cot/incubator/radiant warmer</li><li>Place the baby in the center of the cot/incubator/radiant warmer</li><li>Continue frequent breast feeding</li><li>change position of the baby After each feed or 2 hourlies</li><li>Monitor temperature of baby every two hour</li><li>Monitor bilirubin level at least once in 24 hours</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "How far is the phototherapy light from the baby's skin in the manual?",
+       "options": [
+        "About 45 cm",
+        "5 cm",
+        "1 metre",
+        "2 metres"
+       ],
+       "answer": 0,
+       "explanation": "Blue light 450–460 nm. Only a small diaper; cover the eyes and gonads; turn the baby after each feed or 2-hourly; continue frequent breastfeeding."
+      },
+      {
+       "type": "heading",
+       "text": "Disinfection"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Clean with detergent before and after each use</li><li>Keep covered with linen if not in use.</li></ul>"
       },
       {
        "type": "paragraph",
@@ -3678,6 +4488,154 @@
        ],
        "answer": 0,
        "explanation": "From \"Laboratory confirmed neonatal sepsis by common commensals\". A recognised pathogen (e.g. E. coli, GBS) from one culture is enough."
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Urinary bladder catheterization</strong> · from the manual, Module 2, Section 7: Neonatal Procedures"
+      },
+      {
+       "type": "heading",
+       "text": "Indications:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>To obtain urine for urinalysis and sterile culture</li><li>to accurately monitor hydration status</li><li>bladder decompression</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Complications:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Hematuria</li><li>Infection</li><li>trauma to urethra or bladder,</li><li>intravesical knot of catheter (rarely occurs)</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Contraindications:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Pelvic fractures</li><li>known trauma to the urethra, or blood at the meatus</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Catheter selection: :"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>6 Fr for newborns</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Preparation :"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Prepare the urethral opening using sterile technique.</li><li>For collection of urinalysis and/or urine culture, the infant should not have voided within 1 hour of procedure.</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "PRACTISE THIS SKILL Procedure:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>In males, apply gentle traction to the penis to straighten the urethra.</li><li>In uncircumcised male infants, expose the meatus with gentle retraction of the foreskin. The foreskin must be retracted only far enough to visualize the meatus.</li><li>In females, the urethral orifice may be difficult to visualize but is usually immediately superoanterior to the vaginal orifice.</li><li>Gently insert a lubricated catheter into the urethra. Slowly advance catheter until resistance is met at the external sphincter. Continued pressure will overcome this resistance, and the catheter will enter the bladder. Only a few centimeters of advancement are required to reach the bladder in females. In males, insert a few centimeters longer than the shaft of the penis.</li><li>Carefully remove the catheter once specimen is obtained, and cleanse skin of iodine.</li><li>If indwelling Foley catheter is inserted, inflate balloon with sterile water or saline as indicated on bulb, then connect catheter to drainage tubing attached to urine drainage bag. Secure catheter tubing to inner thigh.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "What catheter size is used for a newborn's urinary catheterization?",
+       "options": [
+        "6 Fr",
+        "12 Fr",
+        "3.5 Fr",
+        "16 Fr"
+       ],
+       "answer": 0,
+       "explanation": "For urine culture, the baby should not have voided within 1 hour."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Urinary bladder catheterization",
+       "caption": "Sterile preparation; male and female technique; advancing the lubricated catheter; collecting the specimen.",
+       "script": "SN2.7.10"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p158-1.jpg",
+       "caption": "",
+       "page": 158
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Suprapubic bladder aspiration</strong> · from the manual, Module 2, Section 7: Neonatal Procedures"
+      },
+      {
+       "type": "heading",
+       "text": "Indications:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>To obtain urine in a sterile manner for urinalysis and culture</li><li>Bladder decompression.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Contraindication"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Neonate with genitourinary track anomalies</li><li>Coagulopathy</li><li>intestinal obstruction</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Complications:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Infection (cellulitis)</li><li>hematuria (usually microscopic),</li><li>intestinal perforation preparation:</li><li>Prepare suprapupic area in a sterile fashion.</li><li>Child should not have voided within 1 hour of procedure.</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "PRACTISE THIS SKILL Procedure:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Determine the site for puncture : 1 to 2 cm above the symphysis pubis in the midline</li><li>Anterior rectal pressure in females or gentle penile pressure in males may be used to prevent urination during the procedure. Restrain child in the supine, frog leg position.</li><li>Use a syringe with a 22-gauge, 1.5-inch needle, and puncture at a 10- to 20-degree angle to the perpendicular, aiming slightly caudad.</li><li>Gently exert suction as the needle is advanced until urine enters syringe. The needle should not be advanced more than 3 cm.</li><li>Aspirate urine with gentle suction.</li><li>Remove needle, cleanse skin of iodine, and apply a sterile bandage.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Where is suprapubic aspiration done?",
+       "options": [
+        "1–2 cm above the symphysis pubis in the midline",
+        "5 cm above the umbilicus",
+        "In the flank",
+        "At the umbilicus"
+       ],
+       "answer": 0,
+       "explanation": "A 22-gauge 1.5-inch needle, 10–20 degrees from the perpendicular, aiming slightly caudad, not more than 3 cm deep."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Suprapubic bladder aspiration",
+       "caption": "Frog-leg position, the landmark, needle angle, gentle suction until urine enters the syringe.",
+       "script": "SN2.7.11"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p160-1.jpg",
+       "caption": "",
+       "page": 160
+      },
+      {
+       "type": "paragraph",
+       "text": "Reference"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><ul><li>Harriet lane 2023</li><li>Neonatal guideline 2022 -204</li><li>SPECIAL CARE NEWBORN UNIT (SCNU) training Manual (ethiopia)</li></ul></li><li>Ref: chest tube insertion in neonate: https://www.ncbi.nlm.nih.gov/books/NBK604214/</li></ul>"
       }
      ],
      "see": [],
@@ -3733,6 +4691,129 @@
        ],
        "answer": 0,
        "explanation": "LP is not routine for early-onset sepsis screening; it is done if the blood culture is positive, with strong clinical suspicion, or with seizures, apnoea or depressed sensorium."
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Pain prevention and management during procedures</strong> · from the manual, Module 2, Section 7: Neonatal Procedures"
+      },
+      {
+       "type": "heading",
+       "text": "Introduction:"
+      },
+      {
+       "type": "paragraph",
+       "text": "This chapter encompasses a range of interventions and procedures that are important for emergency and ongoing care of neonate at. Mastery of these skills by healthcare professionals is essential to provide timely, effective, and safe care to neonates, ultimately improving neonatal outcomes and reducing the burden of neonatal morbidity and mortality."
+      },
+      {
+       "type": "paragraph",
+       "text": "This chapter aims to"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Standardize neonatal care practices</li><li>Enhance the competency of healthcare personnel</li><li>Ultimately improve neonatal outcomes.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "PRACTISE THIS SKILL Procedure Documentation"
+      },
+      {
+       "type": "paragraph",
+       "text": "It is important that the physician performing the procedure document the informed consent process. Include the date, time, additional providers present (if applicable), brief summary of the consent conversation, the diagnosis, recommended procedure, specific risks and benefits, and alternative treatments."
+      },
+      {
+       "type": "paragraph",
+       "text": "It is equally important to document if a patient refuses a procedure and that the risks associated with refusal were discussed."
+      },
+      {
+       "type": "heading",
+       "text": "Risks of procedures"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> All invasive procedures involve pain, risk for infection and bleeding, and potential injury to neighboring structures.</li><li><strong>2.</strong> Sedation and analgesia should be planned, and the risks of such explained to the parent and/or patient as appropriate.</li><li><strong>3.</strong> Universal precautions and proper sterile technique should be followed for all patient contact that exposes the healthcare provider to bodily fluids.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "What must the physician document before an invasive procedure?",
+       "options": [
+        "The informed consent process: date, time, who was present, the conversation, diagnosis, procedure, risks, benefits and alternatives",
+        "Only the time",
+        "Nothing if the baby is very sick",
+        "Only the result"
+       ],
+       "answer": 0,
+       "explanation": "A refusal, and the risks of refusing that were discussed, are documented too."
+      },
+      {
+       "type": "heading",
+       "text": "7.1 Procedure Pain prevention and management"
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Pain prevention: environmental and behavioural approaches</strong> · from the manual, Module 2, Section 7: Neonatal Procedures"
+      },
+      {
+       "type": "heading",
+       "text": "Environmental and behavioral approaches during procedure"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Clustering painful interventions prior to a comforting events (e.g. feeding or holding)</li><li>Swaddling (tightly wrapping with cloth) during the procedure</li><li>Non-nutritive sucking: pacifier</li><li>Change diaper</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Following the procedure"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Reducing noise and light</li><li>Touch or massage</li><li>Skin to skin contact (Kangaroo Mother Care)</li><li>Holding the baby using blanket rolls</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Physiological interventions"
+      },
+      {
+       "type": "heading",
+       "text": "Glucose analgesia: -"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>25 % - 30% sucrose ( glucose) 1.5 – 3 ml PO ~ 2 minutes prior to the procedure for term newborns</li><li>25 % sucrose (glucose) 0.5 – 1.5 ml PO ~2 minutes prior to the procedure for preterm NB</li><li>Suckling a nipple used as analgesia for peripheral venous punctures.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Competitive stimulation"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Gentile rubbing, taping or vibrating one extremity before and during painful stimulus to another extremity</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "How much 25% sucrose is given to a preterm newborn before a painful procedure, and when?",
+       "options": [
+        "0.5–1.5 ml by mouth about 2 minutes before",
+        "5 ml after the procedure",
+        "10 ml IV",
+        "None: sucrose is only for term babies"
+       ],
+       "answer": 0,
+       "explanation": "Term newborns: 25–30% sucrose 1.5–3 ml about 2 minutes before. Add swaddling, non-nutritive sucking, and skin-to-skin after."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Preventing pain during procedures",
+       "caption": "Clustering care, swaddling, non-nutritive sucking, oral sucrose 2 minutes before a heel prick, and skin-to-skin after.",
+       "script": "SN2.7.1"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p125-1.jpg",
+       "caption": "",
+       "page": 125
       }
      ],
      "see": [],
@@ -3784,6 +4865,80 @@
       {
        "type": "rich",
        "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong></strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>Case</strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong></strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>Features</strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong></strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>Mnanagment</strong></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Suspected staphylococcal sepsis:</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Suspected staphylococcal sepsis:</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• skin infection<br>• pustules<br>• omphalitis<br>• abscesses</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• skin infection<br>• pustules<br>• omphalitis<br>• abscesses</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• cloxacillin IM/IV 50 mg/kg every 12 hours in the first week of life and every 8 hours after the first week of life for a total of at least 10 days plus<br>• gentamicin IM/IV 5 mg/kg once a day in the first week of life and 7.5 mg/kg once a day after the first week of life for a total of at least 10 days.</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Suspected meningitis :</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• drowsiness or unconsciousness<br>• lethargy<br>• convulsions<br>• bulging fontanelle<br>• irritability<br>• high-pitched cry</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• Ampicillin IM/IV 50 mg/kg every 12 hours in the first week of life and every 8 hours after the first week of life for a total of at least three weeks,<br>• cefotaxime IM/IV 50 mg/kg every 12 hours in the first week of life and every 6 hours after the first week of life for a total of at least three weeks, plus<br>• gentamicin IM/IV 5 mg/kg once a day in the first week of life and 7.5 mg/kg once a day after the first week of life for a total of at least three weeks.</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Suspected pneumonia:</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">■ fast breathing (≥ 60 breaths per minute) in infants aged 0–6 days<br>■ fast breathing (≥ 50 breaths per minute) in infants aged 7–59 days<br>■ chest indrawing<br>■ grunting<br>■ central cyanosis<br>■ hypoxaemia</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• ampicillin IM/IV 50 mg/kg every 12 hours in the first week of life and every 8 hours after the first week of life for a total of at least 7 days plus gentamicin IM/IV 5 mg/kg once a day in the first week of life and 7.5 mg/kg once a day after the first week of life for a total of at least 7 days.</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Suspected staphylococcal pneumonia:</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Addition of:<br>■ skin infection<br>■ pustules<br>■ omphalitis<br>■ abscesses</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• cloxacillin IM/IV 50 mg/kg every 12 hours in the first week of life and every 8 hours after the first week of life for a total of at least 7 days plus<br>• gentamicin IM/IV 5 mg/kg once a day in the first week of life and 7.5 mg/kg once a day after the first week of life for a total of at least 7 days.</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr></table>"
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Lumbar puncture</strong> · from the manual, Module 2, Section 7: Neonatal Procedures"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>A.</strong> Indications<ul><li>Lumbar puncture is used to confirm the diagnosis when the baby has signs suggestive of Meningitis.</li></ul></li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Contraindications"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>spina bifida/meningomylocele</li><li>Increased intracranial pressure (ICP):</li><li>Bleeding diathesis: Platelet count greater than 50,000/mm3 is desirable before LP, and correction of any clotting factor deficiencies can minimize the risk for bleeding and subsequent cord or nerve root compression.</li><li>Overlying skin infection may result in inoculation of CSF with organisms.</li><li>A mass or evidence of trauma to lumbar vertebrae</li><li>LP should be deferred in unstable patients, and appropriate therapy should be initiated, including antibiotics, if indicated.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Complications"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Local pain</li><li>apnea due to positioning</li><li>Bleeding</li><li>Infection</li><li>subarachnoid epidermal cyst</li><li>epidural CSF leak</li><li>spinal hematoma, and/or brainstem herniation</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Supplies and material needed"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Sterile Gauze</li><li>Yamidine</li><li>Plaster</li><li>Spinal needle or intravenous needle (22- to 24-gauge)</li><li>Appropriate collection tubes</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Preparation"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Be prepared to resuscitate the baby using a bag and mask, if necessary.</li><li>Place the baby under a radiant warmer, if possible, and undress the baby only when ready to perform the procedure.</li><li>Position the baby:<ul><ul><li>lateral recumbent position, with hips, knees, and neck flexed. Keep shoulders and hips aligned to avoid rotating the spine.</li><li>Have the assistant place one hand behind the baby’s head and neck, and place the other hand behind the baby’s thighs to hold the spine in a flexed position</li><li>Do not compromise a small infant’s cardiorespiratory status with positioning.</li></ul></li></ul></li><li>Locate the desired intervertebral space (either L3 to L4 or L4 to L5) by drawing an imaginary line between the top of the iliac crests. Alternatively, ultrasound can be used to mark the intervertebral space</li><li>Prepare the skin in a sterile fashion. Place sterile drapes over the baby’s body so that only the puncture site is exposed and .make monitoring the infant possible</li><li>Overlying skin and interspinous tissue can be anesthetized with 1% lidocaine or Apply local anesthetic cream if sufficient time is available.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "PRACTISE THIS SKILL Procedure"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Insert the needle in the midline of the vertebrae, angled towards the baby’s umbilicus.</li><li>Slowly advance the needle several millimeters at a time, and withdraw stylet frequently to check for CSF flow. Needle may be advanced without the stylet once it is completely through the skin.</li><li>A slight “pop” may be felt as the needle enters the subarachnoid space. In small infants, one may not feel a change in resistance or “pop”</li><li>If resistance is met initially and the needle cannot be advanced, withdraw the needle to just under the skin surface and redirect the angle of the needle slightly upward while aiming for the baby’s umbilicus.</li><li>If CSF still does not come out, remove the needle and reinsert it between the fourth and fifth lumbar processes;</li><li>If blood is seen in the CSF, the needle probably went through the spinal canal and caused bleeding. If the CSF does not clear, collect enough CSF for culture and sensitivity only.</li><li>Send CSF for appropriate studies. In general, send the first tube for culture and Gram stain, the second tube for measurement of glucose and protein levels, and the last tube for cell count and differential.</li><li>After the CSF is collected, remove the needle. Have an assistant apply gentle pressure to the puncture site with a cotton wool ball until bleeding or leakage of fluid stops and apply an adhesive bandage to the site.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Where is a lumbar puncture done in a newborn?",
+       "options": [
+        "L3–L4 or L4–L5, found on the line between the tops of the iliac crests",
+        "T12–L1",
+        "L1–L2",
+        "The cervical spine"
+       ],
+       "answer": 0,
+       "explanation": "Baby in the lateral position with hips, knees and neck flexed, without compromising breathing. Tube 1 for culture and Gram stain, tube 2 glucose and protein, last tube cell count."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Lumbar puncture in a newborn",
+       "caption": "Positioning and holding the baby, the landmark, sterile preparation, needle angled to the umbilicus, collecting three tubes.",
+       "script": "SN2.7.9"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p155-1.jpg",
+       "caption": "",
+       "page": 155
       }
      ],
      "see": [],
@@ -4335,6 +5490,94 @@
        "path": "ssnb/m2-p232-1.jpg",
        "caption": "",
        "page": 232
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Radiant warmer: disinfection</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "heading",
+       "text": "Disinfection of Warmer"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">External surfaces</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">cleaned daily with light detergent solution or Soap and then clean by chlorine solution or glutaraldehyde.<br>No spirit or other organic solvent.</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Reusable probe</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">use isopropyl alcohol swab</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">After use</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Clean, disinfect and cover the equipment with linen cover to store properly</td></tr></table>"
+      },
+      {
+       "type": "heading",
+       "text": "Self-Maintenance:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Inspect the heating element weekly.</li><li>The control and power units should be calibrated every 4-6 months and thorough</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "How are the radiant warmer's external surfaces cleaned?",
+       "options": [
+        "Daily with light detergent or soap, then chlorine or glutaraldehyde; no spirit or organic solvent",
+        "With spirit only",
+        "Once a month with water",
+        "Never while in use"
+       ],
+       "answer": 0,
+       "explanation": "The reusable probe is cleaned with an isopropyl alcohol swab. Inspect the heating element weekly."
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p166-2.jpg",
+       "caption": "",
+       "page": 166
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Infant incubator: daily cleaning and disinfection</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "heading",
+       "text": "PRACTISE THIS SKILL Steps for daily routine Incubator cleaning"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Change mattress sheets and incubator cover daily or if they are stained with blood.</li><li><strong>2.</strong> Clean high touch surfaces, for example, the door handles and latches at least thrice daily.</li><li><strong>3.</strong> Clean the outer surface of the incubator at least once daily.</li><li><strong>4.</strong> If the humidifier is in use, the reservoir must be cleaned, and sterile water must be changed daily.</li><li><strong>5.</strong> Incubators should be covered after cleaning and if not in use. Store in a dedicated place, away from any potential sources of contamination, such as splashes from sinks.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Infant Incubator Parts Disinfection Frequency"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>Part</strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong></strong></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"><strong>frequency</strong></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Frequent touch points e.g., door handles and latches</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">3 times per day</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Water reservoir for humidification (Always Use sterile water)</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Daily change the water</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">IV pole</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Daily</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Hood (external surface)</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Daily</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Inner double wall</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Weekly</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Water reservoir, heater impeller cover, duct cover assembly</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Weekly</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr></table>"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Gasket, grommets, hand ports, access panel, locking button, sensor module opening</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Weekly</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Mattress, mattress tray, x-ray tray, cover, upper cover, scale, T bars, temperature probes</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Weekly</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Incubator trolley &amp; shell: - Heater well - Controller - Shell - Trolley<br>- Attached trolley parts</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Weekly (Ensure proper disassembly first)</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Heater radiator &amp; fan impeller (Do not immerse the heater assembly in liquid)</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Weekly</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Air inlet filter chamber &amp; cover (Do not attempt to clean the air inlet filter (risk of damage to the filter))</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\"></td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Every 3 months or following use on an infected baby</td></tr></table>"
+      },
+      {
+       "type": "question",
+       "text": "How often are the incubator door handles and latches disinfected?",
+       "options": [
+        "3 times a day",
+        "Once a week",
+        "Once a month",
+        "Only between patients"
+       ],
+       "answer": 0,
+       "explanation": "From the manual's disinfection frequency table. The humidifier water is changed daily with sterile or distilled water."
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p173-1.jpg",
+       "caption": "",
+       "page": 173
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p174-1.jpg",
+       "caption": "",
+       "page": 174
       }
      ],
      "see": [],

@@ -110,12 +110,78 @@
        "script": "SN3.1.1"
       },
       {
-       "type": "courselink",
-       "course": "Sick & Small Newborn · Annex: Neonatal Procedures and Equipment",
-       "module": 2,
-       "lesson": "Pulse oximeter",
-       "label": "Equipment · Annex, Equipment for Newborn Care",
-       "text": "The device, its parts and its standard operating procedure."
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Pulse oximeter</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "paragraph",
+       "text": "It is a simple, non-invasive and portable method to monitor oxygen saturation and heart rate with good accuracy."
+      },
+      {
+       "type": "heading",
+       "text": "Main Part"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p178-1.jpg",
+       "caption": "",
+       "page": 178
+      },
+      {
+       "type": "heading",
+       "text": "Situations in which pulse-oximetry does not work"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Hypovolemic states or low perfusion states</li><li>Dyshemoglobinemias – COHb, Meth Hb</li><li>Optical interference from external light sources (phototherapy unit, fluorescent light, sunlight.)</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Standard operating Procedure"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Hand Hygiene</li><li>Clean the probe with spirit and alcohol and let it dry</li><li>Switch on the pulse oximeter</li><li>Apply the probe to the site which is warm and well perfused</li><li>Ensure both the sides of probe are directly opposite each other</li><li>Secure probe in place</li><li>Set high and low alarms limits for saturation and heart rate.</li><li>Observer and change site every 6-8 hourly (If applied continuously)</li><li>After use switch it off.</li><li>Clean the probe with spirit and keep covered if not required for any baby.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Clean/Disinfect"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Clean with spirit swab and let it dry before and after any using.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Which of these can make the pulse oximeter reading unreliable?",
+       "options": [
+        "Low perfusion, abnormal haemoglobins, or light from a phototherapy unit",
+        "A warm, well-perfused hand",
+        "A probe with both sides facing each other",
+        "Alarm limits set"
+       ],
+       "answer": 0,
+       "explanation": "Change the probe site every 6–8 hours if it is on continuously."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Pulse oximeter: standard operating procedure",
+       "caption": "Hand hygiene, cleaning the probe, choosing a warm well-perfused site, the two sides facing each other, securing the probe, setting the alarm limits.",
+       "script": "SN2.8.5"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p179-1.jpg",
+       "caption": "",
+       "page": 179
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p180-1.jpg",
+       "caption": "",
+       "page": 180
       }
      ],
      "see": [],
@@ -212,11 +278,83 @@
        "explanation": "Breathing pure oxygen can harm the lungs (BPD) and the eyes (retinopathy of prematurity)."
       },
       {
-       "type": "courselink",
-       "course": "Sick & Small Newborn · Annex: Neonatal Procedures and Equipment",
-       "module": 2,
-       "lesson": "Oxygen concentrator and oxygen blender",
-       "label": "Equipment · Annex, Equipment for Newborn Care"
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Oxygen concentrator and oxygen blender</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "paragraph",
+       "text": "Oxygen concentrators are machines that extract nitrogen from atmospheric air, resulting in an output of almost pure oxygen."
+      },
+      {
+       "type": "paragraph",
+       "text": "Position the concentrator so that it is at least 30 cm away from walls or curtains, so that the inlet at the back is not obstructed."
+      },
+      {
+       "type": "paragraph",
+       "text": "Plug the power cord into the mains electricity supply"
+      },
+      {
+       "type": "paragraph",
+       "text": "Turn on the concentrator (switch on the console). A green light should come on when a sufficiently high oxygen concentration is reached, usually within 10 min"
+      },
+      {
+       "type": "paragraph",
+       "text": "Adjust the flow meter to the flow required for the patient or, if using a flow splitter, the number of patients receiving oxygen."
+      },
+      {
+       "type": "heading",
+       "text": "Disinfection"
+      },
+      {
+       "type": "paragraph",
+       "text": "Concentrators have a large particulate filter over the air inlet (usually at the back of freestanding or portable models) to stop dust and other airborne particles from entering the unit."
+      },
+      {
+       "type": "paragraph",
+       "text": "The filter should be removed and cleaned in warm soapy water, dried with an absorbent towel and replaced."
+      },
+      {
+       "type": "paragraph",
+       "text": "The exterior of the oxygen concentrator should be cleaned with a mild disinfecting cleaning agent or a diluted solution of bleach (5.25% sodium hypochlorite)"
+      },
+      {
+       "type": "paragraph",
+       "text": "Allow the solution to remain on the surface for 10 min, and then rinse off and dry."
+      },
+      {
+       "type": "question",
+       "text": "How far from walls or curtains is an oxygen concentrator placed?",
+       "options": [
+        "At least 30 cm, so the air inlet is not blocked",
+        "Against the wall",
+        "In a closed cupboard",
+        "It does not matter"
+       ],
+       "answer": 0,
+       "explanation": "A green light shows when a high enough oxygen concentration is reached, usually within 10 minutes. Clean the inlet filter in warm soapy water."
+      },
+      {
+       "type": "heading",
+       "text": "Oxygen Blender"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p193-1.jpg",
+       "caption": "",
+       "page": 193
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p193-2.jpg",
+       "caption": "",
+       "page": 193
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p194-1.jpg",
+       "caption": "",
+       "page": 194
       },
       {
        "type": "image",
@@ -743,12 +881,70 @@
        "script": "SN3.2.1"
       },
       {
-       "type": "courselink",
-       "course": "Sick & Small Newborn · Annex: Neonatal Procedures and Equipment",
-       "module": 2,
-       "lesson": "Vayu bubble CPAP system",
-       "label": "Equipment · Annex, Equipment for Newborn Care",
-       "text": "The CPAP device used in Sudan: its parts, set-up and disinfection."
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Vayu bubble CPAP system</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "heading",
+       "text": "Main Part"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Vayu Blender Pressure Generator</li><li>Humidifier</li><li>Humidifier Tube</li><li>Reusable Filter</li><li>Rotator</li><li>Breathing Tubes and Nasal Prong</li></ul>"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p174-2.jpg",
+       "caption": "",
+       "page": 174
+      },
+      {
+       "type": "heading",
+       "text": "Standard Operating Procedure of Vayu CPAP"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Ensure all component are clean and disinfected</li><li>Assemble the system according to manufacturer guidance, ensure correct connections.</li><li>Monitor Devices<ul><ul><li>Refill humidifier before water drops below the “REFILL” line</li><li>Refill pressure generator when water drops below “fill mark”</li><li>Replace water in jars every 24 hours</li><li>Replace filter disk Every 24 hours, replace Earlier if discolored or after each patient</li></ul></li></ul></li><li>Ensure continuous bubbling at all times</li><li>Monitor Patient<ul><ul><li>Continuous assessment of: Work of breathing, Oxygen saturation, Heart rate</li><li>Adjust pressure based on clinical response</li></ul></li></ul></li><li>Confirm oxygen cylinder pressure regularly</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Vayu CPAP Disinfection"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Empty the jars, remove any gross soiling then fully disassemble the device</li><li><strong>2.</strong> Soak in clean water until ready to reprocess</li><li><strong>3.</strong> Clean with enzymatic detergent or dish soap, Use a soft-bristled brush or sponge</li><li><strong>4.</strong> Brush lumens AND Flush lumens 3 times</li><li><strong>5.</strong> Rinse all components</li><li><strong>6.</strong> High-level Disinfection<ul><ul><li>flushing each lumen with disinfectant at least 3 times.</li><li>fully immerse all components in the disinfectant, making sure all lumens are completely filled.</li><li>Use 0.5% chlorine solution (soak for 10 min) or 2.5%-3.5% glutaraldehyde (soak for 40 min)</li><li>Do not autoclave, boil, steam sterilize</li><li>Rinse AND flush lumens 3 times with high volumes of water to remove disinfectant residues</li></ul></li></ul></li><li><strong>7.</strong> Air dry or wipe dry with gauze</li><li><strong>8.</strong> Store the device in its pre-assembled form in a clean container out of direct sunlight</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "How often are the Vayu CPAP water jars and filter disk replaced?",
+       "options": [
+        "Every 24 hours (the filter earlier if discoloured or after each patient)",
+        "Every week",
+        "Every month",
+        "Only when empty"
+       ],
+       "answer": 0,
+       "explanation": "Ensure continuous bubbling at all times. High-level disinfection: 0.5% chlorine for 10 minutes or 2.5–3.5% glutaraldehyde for 40 minutes; never autoclave or boil."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Vayu bubble CPAP: assembly and disinfection",
+       "caption": "Identifying the parts, assembling, filling the humidifier and pressure generator to their marks, then disassembly, cleaning and high-level disinfection.",
+       "script": "SN2.8.4"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p176-1.jpg",
+       "caption": "",
+       "page": 176
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p177-1.jpg",
+       "caption": "",
+       "page": 177
       },
       {
        "type": "image",
@@ -1143,6 +1339,86 @@
        "type": "reveal",
        "text": "What is the responsibility of the intensivist in mechanical ventilation, according to the manual?",
        "answer": "To optimize ventilation and prevent the harmful effect of over- or under-ventilation."
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Endotracheal tube (ETT) insertion</strong> · from the manual, Module 2, Section 7: Neonatal Procedures"
+      },
+      {
+       "type": "paragraph",
+       "text": "Indications for intubation Neonatal tracheal intubation is required during the golden hour for a number of reasons, including"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> airway management,</li><li><strong>2.</strong> surfactant administration and</li><li><strong>3.</strong> assisting ventilation in respiratory insufficiency.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "PRACTISE THIS SKILL Steps of intubation"
+      },
+      {
+       "type": "paragraph",
+       "text": "Here is a summary of the steps for intubation according to NRP:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Assessment: Assess the need for intubation based on the newborn's clinical condition and response to initial resuscitation measures.</li><li><strong>2.</strong> Gather equipment: Ensure all necessary equipment for intubation, including a laryngoscope, endotracheal tube, suction, and securing devices, is readily available and prepared.</li><li><strong>3.</strong> The intubation set for emergency intubation in the delivery room should always be ready and checked before receiving the baby.</li><li><strong>4.</strong> For equipment preparation, see the setup equipment in the mechanical ventilation section</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "LARYNGOSCOPY & ET TUBE INSERTION"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Holding the laryngoscope in the left hand, use the right hand to open the mouth wide (premedication can cause some spasm that may need to be overcome)</li><li><strong>2.</strong> Gently insert the blade to push the tongue to the left and advance towards the throat</li><li><strong>3.</strong> Use the uvula to help maintain position in the midline. If the uvula is not in the midline, reposition the scope is usually heading to the left</li><li><strong>4.</strong> Advance the blade forward gently Lift the laryngoscope handle in a forward and upward motion</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Avoid a levering action against the top gum"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>5.</strong> Instructors' hands on the infant's neck can feel the blade tip (to help guide if the scope is too far in or not far enough)</li><li><strong>6.</strong> Cricoid pressure can be applied using the little finger of the left hand, or by an assistant (care should be taken not to exert excessive pressure)</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "(With the video laryngoscope, an airway assistant may also lift the top lip of the infant to allow more space if obtaining a direct airway view and to allow more space for insertion of the ET tube in the mouth."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>7.</strong> Use suction only if secretions are impairing the view</li><li><strong>8.</strong> Bring the posterior larynx and vocal cords into view, as shown below:</li><li><strong>9.</strong> Hold the tube high up and with the natural slope facing forward, as it is easier to direct</li><li><strong>10.</strong> Feed the tube in from the side to allow visualisation of it passing through the cords</li><li><strong>11.</strong> Use the black marker near the tip of the tube as a guide to the depth of insertion initially</li><li><strong>12.</strong> Adjust to the previously measured naso-tragal +1cm measurement</li><li><strong>13.</strong> Be cautious as to how far to insert the tube, as it is often too far in.</li><li><strong>14.</strong> Secure the ETT tube against the roof of the palate or firmly at the lips</li><li><strong>15.</strong> Carefully remove the laryngoscope and introducer (if used)</li><li><strong>16.</strong> Confirm ETT position: chest rise, auscultate for air entry, and connect the CO2 detector and ventilation circuit to confirm correct ETT position.</li><li><strong>17.</strong> Secure ET with an appropriate fixation device, ensuring a good seal to the skin and avoiding traction on the ETT</li><li><strong>18.</strong> Provide IPPV once the ET position is confirmed and throughout the securing process</li><li><strong>19.</strong> Attach the ETT to the ventilator and adjust settings as required</li><li><strong>20.</strong> Move the infant back into position carefully, ensuring ET is secure when moving the infant and using a 2-person technique to avoid accidental extubation</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Post-intubation care: Continuously monitor the newborn's vital signs, oxygenation, and ventilation after successful intubation. It's important to note that intubation is an advanced procedure that should be performed by trained healthcare providers with expertise in neonatal airway management and in accordance with NRP guidelines and protocols."
+      },
+      {
+       "type": "paragraph",
+       "text": "Post-intubation procedure"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>1.</strong> Chest x-ray is the gold standard in confirming the correct ETT position; the ET tip should be visible 1cm above carina (T2-T3)</li><li><strong>2.</strong> Consider shortening the ETT to minimise dead space</li><li><strong>3.</strong> Ensure blades are sent for sterilisation as per unit protocol</li><li><strong>4.</strong> Ensure accurate documentation of the procedure, including the position of the ETT on chest x-ray and whether or not adjustments were made</li><li><strong>5.</strong> Update parents</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "What is the gold standard to confirm the ETT position, and where should the tip be?",
+       "options": [
+        "Chest X-ray; tip 1 cm above the carina (T2–T3)",
+        "Listening only; tip at T8",
+        "Saturation only; anywhere in the trachea",
+        "CO₂ detector only; at the vocal cords"
+       ],
+       "answer": 0,
+       "explanation": "At the bedside: chest rise, air entry on auscultation and a CO₂ detector."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Endotracheal intubation of a newborn",
+       "caption": "Laryngoscope in the left hand, blade pushing the tongue left, lifting forward and up, tube passed through the cords from the side, depth by the naso-tragal measurement + 1 cm, confirmation.",
+       "script": "SN2.7.6"
       }
      ],
      "see": [],
@@ -2099,6 +2375,58 @@
        ],
        "answer": 0,
        "explanation": "Inspired oxygen may be harmful to the lung parenchyma after prolonged exposure."
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Suction machine</strong> · from the manual, Module 2, Section 8: Equipment"
+      },
+      {
+       "type": "heading",
+       "text": "Standard operation Procedure"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Connect to the mains Switch on the unit and occlude distal end with your thumb to check the suction pressure.</li><li>Position a conscious patient in the semi- fowler’s position with the head turned to one side for oral suctioning or with the neck hyper extended for nasal suctioning.</li><li>Position the unconscious patient in the lateral position facing the nurse.</li><li>Do a non-sterile glove on the non-dominant hand and then a sterile glove on the other hand, attach the catheter to suction unit.</li><li>Use disposable suction catheters</li><li>Connect the desired size disposable suction catheter to the suctioning tubing<ul><ul><li>Preterm baby size 4-5 Fr</li><li>Neonate- birth- 28 days 6Fr</li></ul></li></ul></li><li>Ensure the negative pressure does not exceed 100 mm of Hg</li><li>For all suctioning episodes the lowest negative pressure should be used for suctioning, with the smallest catheter and the shortest suctioning time</li><li>Perform suction gently by inserting only 5 cm in mouth and apply pressure while withdrawing.</li><li>Suction only intermittently, Limit suction time to 10-15 seconds.</li><li>Discontinue if heart rate decreases by 20 beats/minute or increase by 40 beats/minute or if any cardiac ectopy is observed.</li><li>Rinse catheter between suctioning.</li><li>Continue doing suction until the airway are clean of accumulated secretions but no more than 4 suctioning be made per episode</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Cleaning and disinfection of Suction Machin"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Disconnect the suction catheter tip from the suction tubing and discard appropriately</li><li>Change suction catheter between patient and patient</li><li>Disinfect the suction pump pressure gauge controls using gauze and 70% alcohol.</li><li>Disinfect collection reservoir after each patient<ul><ul><li><strong>a.</strong> Remove the collection reservoir from suction pump and dispose of contents.</li><li><strong>b.</strong> Wash with detergent from any visible dirt</li><li><strong>c.</strong> soak the bottle in Chlorine solution or 2% glutaraldehyde solution for 20 min</li><li><strong>d.</strong> Take out from disinfection solution and wash under running water</li></ul></li></ul></li><li>Disinfect collection reservoir after each patient<ul><ul><li><strong>a.</strong> Remove the tube from suction pump.</li><li><strong>b.</strong> Wash by Flush the suction tubing by suctioning with clean water</li><li><strong>c.</strong> soak the bottle in Chlorine solution or 2% glutaraldehyde solution for 20 min</li><li><strong>d.</strong> Flush the suction tubing by suctioning with clean water after each use.</li></ul></li></ul></li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Suctioning a newborn: what is the maximum negative pressure, and for how long?",
+       "options": [
+        "Not over 100 mm Hg; 10–15 seconds at a time",
+        "200 mm Hg; 1 minute",
+        "50 mm Hg; continuous",
+        "Any pressure; until clear"
+       ],
+       "answer": 0,
+       "explanation": "Preterm catheter 4–5 Fr; neonate 6 Fr; insert only 5 cm in the mouth. Stop if the heart rate falls by 20 or rises by 40, or with ectopy. No more than 4 suctions per episode."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Suctioning a newborn safely",
+       "caption": "Checking the pressure, catheter size, positioning, gentle intermittent suction of the mouth then nose, watching the heart rate; cleaning the machine.",
+       "script": "SN2.8.7"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p187-1.jpg",
+       "caption": "",
+       "page": 187
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p188-1.jpg",
+       "caption": "",
+       "page": 188
       }
      ],
      "see": [],
@@ -2343,6 +2671,157 @@
        ],
        "answer": 0,
        "explanation": "From \"Complications of mechanical ventilation\", E. Air leak risk increases at MAPs over 14 cm H₂O."
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Chest tube insertion</strong> · from the manual, Module 2, Section 7: Neonatal Procedures"
+      },
+      {
+       "type": "paragraph",
+       "text": "Chest tube placement, or thoracostomy, is a critical procedure performed to drain air, fluid, or pus from the pleural space. Indications in the neonate are similar to those in adults. However, the anatomical differences between these populations make neonatal thoracostomy tube placement challenging to the untrained provider."
+      },
+      {
+       "type": "paragraph",
+       "text": "Objectives:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>To Identify the signs and symptoms indicating that a neonate needs chest tube placement.</li><li>To Implement proper techniques when performing chest tube placement in the neonate.</li><li>To Identify chest tube placement complications.</li><li>Collaborate with other healthcare professionals to enhance health outcomes by providing efficient, comprehensive, and coordinated care to neonates requiring a thoracostomy and post-procedure care.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Indications"
+      },
+      {
+       "type": "paragraph",
+       "text": "Chest tube placement has multiple indications in the neonatal population."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>to remove air</li><li>to remove fluids, pus, chyle, blood from the pleural space</li><li>The chest tube is less commonly used to direct fluids or medications into the pleural space</li><li>chest tube placement is usually indicated following emergent needle decompression.</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Contraindications chest tube placement has no absolute contraindications in the neonate. However,"
+      },
+      {
+       "type": "paragraph",
+       "text": "relative contraindications include the presence of;"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>diaphragmatic hernias</li><li>systemic anti-coagulation,</li><li>Special precautions should be undertaken for neonatal patients following cardiac or thoracic surgery, given their unique thoracic anatomy.</li></ul>"
+      },
+      {
+       "type": "heading",
+       "text": "Equipment"
+      },
+      {
+       "type": "paragraph",
+       "text": "The clinician should become familiar with supplies included in chest tube kits at their institution, as instruments included in these kits vary:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Chest tube: 10F to 12F for infants weighing greater than 1500 grams; 8F to 10F for infants weighing less than 1500 grams</li><li>Atrium, sealed, or Pleur-evac® drainage system [16]</li><li>Sterile procedure attire, including gowns, gloves, and hats</li><li>Sterile prep and drapes to ensure a sterile field</li><li>Scalpel for skin incision, either a 15-blade or 11-blade</li><li>Clamp for blunt dissection and pleural entry, either a curved Kelly clamp or mosquito hemostat</li><li>4-0 (or 3-0) silk suture on cutting needle</li><li>Occlusive dressing (Tegaderm, xeroform, 4 x 4 gauze)</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Which chest tube size does the manual give for a baby under 1500 g?",
+       "options": [
+        "8F to 10F",
+        "10F to 12F",
+        "16F",
+        "4F"
+       ],
+       "answer": 0,
+       "explanation": "10F to 12F for infants over 1500 g."
+      },
+      {
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Chest tube insertion: personnel and steps</strong> · from the manual, Module 2, Section 7: Neonatal Procedures"
+      },
+      {
+       "type": "heading",
+       "text": "Personnel:"
+      },
+      {
+       "type": "paragraph",
+       "text": "Only authorized individuals properly trained in placing a chest tube should perform the procedure. An assigned assistant may be present to aid the provider performing the chest tube placement. Depending on the patient's size and age, sedation and analgesia most likely will need to be provided by another physician to ensure limited movement and patient discomfort during the procedure. For neonates and children, the presence of another physician or specialist may be required to ensure that the airway is secure and the patient’s vital signs are properly monitored during chest tube placement. In most small neonates and infants, general anesthesia with endotracheal intubation may be preferred."
+      },
+      {
+       "type": "heading",
+       "text": "Preparation"
+      },
+      {
+       "type": "paragraph",
+       "text": "The patient's vital signs should be carefully monitored to ensure no further clinical compromise occurs, especially if the patient is already has symptoms from the pleural fluid or air."
+      },
+      {
+       "type": "paragraph",
+       "text": "Additionally, a local anesthetic may be injected to minimize procedural discomfort, Administering local anesthetic agents directly under the skin by creating a wheal and in the projected track of the deeper dissection down to the rib can provide additional pain relief."
+      },
+      {
+       "type": "paragraph",
+       "text": "Sterile tools, including sterile towels, gloves, hats, masks, gowns, and equipment. The area of incision will require adequate skin cleansing using surgical antimicrobial skin swabs (eg, Betadine or chlorhexidine)."
+      },
+      {
+       "type": "paragraph",
+       "text": "PRACTISE THIS SKILL Technique of insertion:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Prepare and drape the skin as clean as possible, with goal of sterility.</li><li>Use The appropriately sized chest tube on the affected side</li><li>The primary landmark for insertion is the 4th or 5th intercostal space in the anterior mid-axillary line. (Note that the risk of hitting the liver or spleen increases if the chest tube is placed more inferiorly, and, a more anteriorly placed chest tube poses a higher risk of injuring the thymus, great vessels, or the heart.</li><li>The chest tube is angled postero-inferiorly for fluid collections and antero-superiorly in the chest cavity for pneumothorax.</li><li>An incision is made overlying the skin at the 4th or 5th intercostal space in the anterior mid-axillary line.</li><li>Using a Kelly or mosquito clamp, blunt dissection is performed directly above the rib through the subcutaneous tissue, avoiding injury to the intercostal neurovascular bundle below the superior rib.</li><li>Careful, steady pressure is applied to dissect the pleura bluntly. Bracing the clamp with 2 hands while performing this step may help prevent uncontrolled damage to the mediastinal organs.</li><li>Once inside, the clamp is opened widely to create an entry tract for the chest tube. A rush of air or blood should be noted at this point, depending on the pathology requiring the thoracostostomy.</li><li>The clamp must be retracted with the prongs open to widen the tract.</li><li>A finger is inserted inside the tract to sweep the inside of the thoracic cavity and feel for the lung to confirm entry above the abdominal cavity.</li><li>The chest tube is guided into the thoracic cavity using the Kelly or mosquito clamp.</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "The last hole on the chest tube should be completely within the thorax."
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Depending on the length, the chest tube may need to be trimmed to ensure the most distal hole is within the chest cavity, especially in small children.</li><li>Once the chest tube has been properly positioned, it must be secured to the skin , usually with a nonabsorbable suture (eg, silk or nylon).</li><li>At this point, the chest tube should be connected to the drainage system and wall suction or underwater seal. The indicator on the drainage container should demonstrate that the suction is working properly and set from -10 to -20 mm Hg, depending on physician preference.</li><li>The quality and quantity of the evacuated liquid or air must be monitored. A chest x-ray must be immediately obtained to confirm that the chest tube is correctly placed.</li></ul>"
+      },
+      {
+       "type": "rich",
+       "text": "<table style=\"width: 100%; border-collapse: collapse\"><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Post-insertion Dressing Care</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• Following insertion and suturing to the chest wall, the chest tube should be covered with a nonocclusive dressing. The insertion site must first be covered with Xeroform, followed by gauze and Tegaderm, to create an occlusive dressing. The dressing should remain in place until the chest tube can be removed. Unless it becomes saturated. If warranted, only qualified personnel should change the dressing according to the previously described sequence.</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Post-procedure Infection Control</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• Postprocedure antibiotics are generally not indicated following a chest tube insertion, but their use should be discussed with the attending physician. Infection may be introduced into the chest cavity if the sterile technique is not observed during insertion.<br>• Dressing changes at the chest tube insertion site must be limited to minimize the introduction of infection.</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Collection System Management</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• Following chest tube insertion, approximately 45 cc of sterile water is added into the atrium via the port located on top of the drain until it reaches the 2 cm fill line. The chest drain is then connected to the patient before initiating suctioning if indicated. Afterward, the suction line is connected to the port on the top of the chest drain atrium.<br>• The atrium should be kept in an upright position, with the tubing placed below the level of insertion in the chest cavity.<br>• The chest tube and drainage system must not be stripped. The quality of the output from the chest tube must be checked, with the drainage in the atrium recorded as instructed, no less than every 8 hours per day.</td></tr><tr><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">Termination of Chest Tube Treatment</td><td style=\"padding: 6px; border: 1px solid #cbd5e1; vertical-align: top\">• The chest tube should be removed if occluded or no longer needed once clinical or radiographic evidence of improvement is obtained.<br>• Before chest tube removal, a clamping trial may be indicated to test how the patient responds without the chest tube in place.<br>• Chest tube clamping trial may be performed by placing a Kelly clamp across the tubing that connects the chest tube to the atrium device. The vital signs should be monitored carefully during a clamping trial.</td></tr></table>"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>A low threshold for removing the Kelly clamp should be used during a clamping trial, ensuring that the patient does not desaturate or exhibit worsening chest pain during this time.</li><li>At the end of the clamping trial, a chest x-ray image should be obtained to evaluate for worsening pneumothorax or effusion. If the clamping trial is successful, a discussion should be held to determine the timing of chest tube removal.</li><li>Re-accumulation of pneumothorax or effusion may warrant a longer duration of chest tube therapy.</li><li>The process is initiated by removing the chest tube dressing and taking the chest tube atrium off-suction. Scissors may be used to remove the suture securing the chest tube to the skin surface. The chest tube must be free from all attachments to the patient.</li><li>The patients’ respirations must be observed, noting the timing of peak inspiration or expiration on the monitor.</li><li>The chest tube must be quickly pulled out of the chest cavity once the patient has reached a moment of peak inspiration to prevent pneumothorax.</li><li>Immediately following chest tube removal, another occlusive dressing is placed on the site using Xeroform, 4 x 4 gauze, and Tegaderm. This dressing must be completely secured and occlusive. Otherwise, air may leak into the wound, accumulate, and cause a tension pneumothorax.</li><li>A post-removal chest x-ray is indicated to assess for pneumothorax development.</li></ul>"
+      },
+      {
+       "type": "paragraph",
+       "text": "Complications"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li>Intra-thoracic and intra-abdominal organs injury. In particular, a left-sided chest tube in the neonate carries a high risk of penetrating the pericardium, given these patients' thin chest walls. No differences in mortality have been reported when comparing needle aspiration versus chest tube drainage to manage neonatal pneumothorax.</li><li>Other potential complications include perforation of the lung, diaphragm, or mediastinum. Importantly, complications may not be readily apparent, as clinical findings are often nonspecific despite thoracic or abdominal organ injury.</li><li>chest tubes occupying the right superior pleural space and in contact with the phrenic nerve have a higher risk of diaphragm paralysis.</li><li>premature removal of a chest tube may result in re-accumulation of pleural effusions and may even necessitate reinsertion of a chest tube, thereby increasing hospitalization stay.</li><li>Dislodgement or disconnection of the Tube: The vital signs should be carefully monitored. If time allows, the chest tube must be cleaned with an alcohol wipe before reconnecting to the drainage system. However, if the patient is acutely decompensating and supplies are not immediately available, the chest tube should be connected to the drainage system, and the attending physician should be notified of the incident. A chest x-ray should be obtained to monitor the patient's condition.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Where is the chest tube usually inserted?",
+       "options": [
+        "4th or 5th intercostal space, anterior mid-axillary line",
+        "2nd intercostal space, midclavicular line",
+        "8th intercostal space, posterior",
+        "Just below the nipple, medially"
+       ],
+       "answer": 0,
+       "explanation": "Placing it more inferiorly risks the liver or spleen; more anteriorly risks the thymus, great vessels or heart."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Chest tube insertion and the drainage system",
+       "caption": "Landmark, incision, blunt dissection over the rib, entering the pleura, guiding the tube, securing, connecting to the underwater seal; removal at peak inspiration.",
+       "script": "SN2.7.8"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p151-1.jpg",
+       "caption": "",
+       "page": 151
       }
      ],
      "see": [],
@@ -2384,12 +2863,50 @@
        "script": "SN3.3.3"
       },
       {
-       "type": "courselink",
-       "course": "Sick & Small Newborn · Annex: Neonatal Procedures and Equipment",
-       "module": 1,
-       "lesson": "Needle thoracotomy",
-       "label": "Procedure · Annex, Neonatal Procedures",
-       "text": "If a pneumothorax is the cause."
+       "type": "note",
+       "label": "Standard operating procedure",
+       "text": "<strong>Needle thoracotomy</strong> · from the manual, Module 2, Section 7: Neonatal Procedures"
+      },
+      {
+       "type": "paragraph",
+       "text": "Indications: Evacuation of a tension pneumothorax"
+      },
+      {
+       "type": "paragraph",
+       "text": "Complications: Infection; bleeding; pneumothorax; hemothorax; pulmonary contusion or laceration; puncture of diaphragm, spleen, or liver; or bronchopleural fistula"
+      },
+      {
+       "type": "paragraph",
+       "text": "PRACTISE THIS SKILL Procedure:"
+      },
+      {
+       "type": "rich",
+       "text": "<ul><li><strong>a.</strong> Prepare and drape the skin as clean as possible, with goal of sterility.</li><li><strong>b.</strong> Insert a large-bore angio-catheter (14- to 22-gauge, based on patient size and likely depth of the chest wall) into the anterior second intercostal space in the midclavicular line. Insert needle over superior aspect of rib margin to avoid neurovascular structures. If the angiocatheter permits, a 3- to 10-mL syringe with 1 to 2 mL of saline can be connected to it. Aspirating the syringe while inserting the IV will pull air bubbles through the saline if an air collection exists. A rush of bubbles signifies successful access.</li><li><strong>c.</strong> When pleural space is entered, withdraw needle and attach a threeway stopcock and syringe to the catheter, and aspirate air. The stopcock is used to stop air flow through the catheter when sufficient evacuation has been performed.</li><li><strong>d.</strong> Subsequent insertion of a chest tube is necessary for ongoing release of air. It is advised not to completely evacuate chest prior to placement of chest tube to avoid pleural injury.</li></ul>"
+      },
+      {
+       "type": "question",
+       "text": "Where is a needle inserted to relieve a tension pneumothorax?",
+       "options": [
+        "The anterior second intercostal space, midclavicular line, over the top of the rib",
+        "The 8th intercostal space, back",
+        "Below the rib, mid-axillary line",
+        "The fourth space, left sternal edge"
+       ],
+       "answer": 0,
+       "explanation": "Over the superior aspect of the rib margin avoids the neurovascular bundle. A chest tube follows for ongoing air release."
+      },
+      {
+       "type": "video",
+       "url": "",
+       "title": "Needle thoracotomy for tension pneumothorax",
+       "caption": "Landmarks, angiocatheter with a saline-filled syringe, bubbles on entry, three-way stopcock and aspiration.",
+       "script": "SN2.7.7"
+      },
+      {
+       "type": "image",
+       "path": "ssnb/m2-p144-1.jpg",
+       "caption": "",
+       "page": 144
       }
      ],
      "see": [],

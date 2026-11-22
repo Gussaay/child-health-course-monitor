@@ -29,7 +29,7 @@ ADD = [
             ('A baby with suspected perinatal asphyxia (risk of hyperthermia in an incubator)', 'Open care (radiant warmer)'),
             ('A stable term baby', 'Standard cot')],
             'Incubators: all ≤ 30 weeks and/or ≤ 1000 g, and the admission bed of choice for < 33 weeks or ≤ 1800 g. Respiratory care: open care. Asphyxia: not in an incubator. Stable term: swaddled in a cot.'),
-        equipment('Infant incubator'), equipment('Radiant warmer')]),
+        equipment('Infant incubator')]),
     ('Infants with poor growth after transition may require return', [
         q('After moving to a cot, the temperature is below 36.5 °C on 3 hourly checks in a row. What do you do?', ['Return the baby to a pre-warmed incubator', 'Bath the baby to warm him', 'Wait 12 more hours', 'Add a fan'], 0,
           'From "Infant care post crib transfer". Bathing is deferred until the temperature has been ≥ 36.5 °C for at least 12 hours after the move to the cot.'),
