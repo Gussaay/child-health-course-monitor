@@ -78,7 +78,8 @@ const IMNCIRecordingForm = lazy(() => import('./components/imnci').then(m => ({ 
 
 const CertificateVerificationView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.CertificateVerificationView })));
 const PublicCertificateDownloadView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCertificateDownloadView })));
-const PublicCourseCertificatesView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCourseCertificatesView }))); 
+const PublicCourseCertificatesView = lazy(() => import('./components/CertificateGenerator').then(module => ({ default: module.PublicCourseCertificatesView })));
+const PublicCertificateNamesView = lazy(() => import('./components/PublicCertificateNames.jsx')); 
 // Not lazy: it is small, and kept apart from CertificateGenerator so that
 // mounting it on every page no longer downloads jsPDF and html2canvas.
 import { CertificateDownloadBanner } from './components/CertificateDownloadBanner';
@@ -1540,6 +1541,10 @@ export default function App() {
             const certDownloadMatch = path.match(/^\/public\/certificate\/download\/([a-zA-Z0-9_-]+)\/?$/);
             if (certDownloadMatch && certDownloadMatch[1]) { setPublicViewType('certificateDownload'); setPublicViewData({ participantId: certDownloadMatch[1] }); return; }
             
+            // A participant writes their name for the certificate (English / Arabic).
+            const certNamesMatch = path.match(/^\/public\/course\/names\/([a-zA-Z0-9_-]+)\/?$/);
+            if (certNamesMatch && certNamesMatch[1]) { setPublicViewType('certificateNames'); setPublicViewData({ courseId: certNamesMatch[1] }); return; }
+
             const courseCertPageMatch = path.match(/^\/public\/course\/certificates\/([a-zA-Z0-9_-]+)\/?$/);
             if (courseCertPageMatch && courseCertPageMatch[1]) { setPublicViewType('courseCertificatesPage'); setPublicViewData({ courseId: courseCertPageMatch[1] }); return; }
             
@@ -2844,7 +2849,7 @@ case 'meetings':
     // window. Drawn with the full app chrome — header, navigation, bottom bar —
     // the consent card is pushed below the fold of a 600px popup and the window
     // looks empty, which is exactly how it was reported.
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || isBulkUpdateView || publicViewType === 'attendance' || publicViewType === 'dailyEvaluation' || publicViewType === 'onlineExercises' || isPublicRegistrationView || isPublicMeetingView || isPublicProjectsView || !!publicSupervisionFormId || !!publicSurveyId || !!connectClaudeId;
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || publicViewType === 'certificateNames' || isBulkUpdateView || publicViewType === 'attendance' || publicViewType === 'dailyEvaluation' || publicViewType === 'onlineExercises' || isPublicRegistrationView || isPublicMeetingView || isPublicProjectsView || !!publicSupervisionFormId || !!publicSurveyId || !!connectClaudeId;
 
     let mainContent;
 
@@ -2976,7 +2981,7 @@ case 'meetings':
         }
     }
 
-    else if (isPublicReportView || isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || publicViewType === 'attendance' || publicViewType === 'dailyEvaluation' || publicViewType === 'onlineExercises') { 
+    else if (isPublicReportView || isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || publicViewType === 'certificateNames' || publicViewType === 'attendance' || publicViewType === 'dailyEvaluation' || publicViewType === 'onlineExercises') { 
         if (publicViewLoading || ((isVerificationPath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage') && !publicViewData && !sharedViewError)) {
             mainContent = <PageSkeleton />;
         }
@@ -3004,6 +3009,9 @@ case 'meetings':
                     break;
                 case 'courseCertificatesPage':
                     mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicCourseCertificatesView courseId={publicViewData.courseId} /></Suspense> );
+                    break;
+                case 'certificateNames':
+                    mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicCertificateNamesView courseId={publicViewData.courseId} /></Suspense> );
                     break;
                 case 'dailyEvaluation':
                     mainContent = ( <Suspense fallback={<PageSkeleton />}><PublicDailyEvaluationView formId={publicViewData.formId} /></Suspense> );

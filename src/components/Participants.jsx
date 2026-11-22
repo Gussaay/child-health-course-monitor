@@ -16,6 +16,7 @@ import {
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_ETAT, JOB_TITLES_EMONC, JOB_TITLES_SSNC,
     subCourseOfGroup, certificateApprovalState, staleCertificateParticipants, isWithinCoursePeriod,
+    participantNameOnly, hasArabicScript,
     certificateApprovedFor, certificateSubCourseOf
 } from './constants.js';
 import { ParticipantExercisesModal } from './imnci';
@@ -3146,6 +3147,9 @@ const getStrState = (val) => val === 'Yes' ? 'yes' : (val === 'No' ? 'no' : '');
 const parseBool = (val) => val === 'yes' ? true : (val === 'no' ? false : null);
 const parseStr = (val) => val === 'yes' ? 'Yes' : (val === 'no' ? 'No' : '');
 
+import { NameLanguageFields } from './NameLanguageFields';
+export { NameLanguageFields };
+
 export function ParticipantForm({ course, initialData, onCancel, onSave, carryOver = null, existingParticipants = [] }) {
     const { t, i18n: formI18n } = useTranslation();
     // The form follows the app language (it used to be Arabic only).
@@ -3174,6 +3178,10 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
     const [isSaving, setIsSaving] = useState(false);
 
     const [name, setName] = useState(String(initialData?.name || ''));
+    // The name in each language, for the certificate in that language. Left
+    // empty, the language the main name is written in gets the main name.
+    const [nameEn, setNameEn] = useState(String(initialData?.nameEn || ''));
+    const [nameAr, setNameAr] = useState(String(initialData?.nameAr || ''));
     const [email, setEmail] = useState(String(initialData?.email || ''));
     const [state, setState] = useState(initialData?.state || carryOver?.state || course?.state || ''); 
     const [locality, setLocality] = useState(initialData?.locality || carryOver?.locality || course?.locality || ''); 
@@ -3377,7 +3385,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
         setIsEditingExistingWorker(false);
         
         if (!initialData) {
-            setName('');
+            setName(''); setNameEn(''); setNameAr('');
             setJob('');
             setOtherJobTitle('');
             setPhone('');
@@ -3565,10 +3573,18 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
 
             const currentFacilityType = selectedFacility?.['نوع_المؤسسةالصحية'] || initialData?.facility_type || 'no data';
 
+            // Both printed names: what was typed for each language, else the
+            // main name when it is written in that language.
+            const printed = { name: name.trim(), nameEn: nameEn.trim(), nameAr: nameAr.trim() };
+            const finalNameEn = participantNameOnly(printed, 'en');
+            const finalNameAr = participantNameOnly(printed, 'ar');
             const signedApproval = initialData?.certificateApproval;
             const approvalFollowsName = (signedApproval && isWithinCoursePeriod(course)
-                && name.trim() !== signedApproval.name)
-                ? { ...signedApproval, name: name.trim() }
+                && (name.trim() !== signedApproval.name
+                    || (signedApproval.nameEn !== undefined && (signedApproval.nameEn !== (finalNameEn || finalNameAr || name.trim())
+                        || signedApproval.nameAr !== (finalNameAr || finalNameEn || name.trim())))))
+                ? { ...signedApproval, name: name.trim(),
+                    ...(signedApproval.nameEn !== undefined ? { nameEn: finalNameEn || finalNameAr || name.trim(), nameAr: finalNameAr || finalNameEn || name.trim() } : {}) }
                 : null;
 
             // Where the participant comes from. A programme participant has
@@ -3581,7 +3597,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
 
             let p = {
                 ...(initialData || {}), 
-                name: name.trim(), group, state, locality,
+                name: name.trim(), nameEn: finalNameEn, nameAr: finalNameAr, group, state, locality,
                 // Recorded here, for every package, rather than inside the
                 // IMNCI branch below. The group lookup above already runs for
                 // all of them, but only the IMNCI, iCCM and CPCM branches wrote
@@ -3986,6 +4002,8 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                                      <FieldError show={fe('name')}>{reqMsg}</FieldError>
                                 </FormGroup></div>
                             )}
+
+                            <NameLanguageFields name={name} nameEn={nameEn} nameAr={nameAr} setNameEn={setNameEn} setNameAr={setNameAr} disabled={isSaving} L={L} />
 
                             <div {...markWrap('job')}><FormGroup label={L("المسمى الوظيفي", "Job title")}>
                                  <Select disabled={isEditingExistingWorker || isSaving} value={job} onChange={(e) => setJob(e.target.value)}>

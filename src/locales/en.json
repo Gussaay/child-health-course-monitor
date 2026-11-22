@@ -2131,7 +2131,12 @@
       "training_ready": "Practice copy ready: facilities, facilitators, coordinators and partners.",
       "training_prep_failed": "Could not prepare the practice copy now; the first trainee will prepare it instead.",
       "training_preparing_n": "Preparing the practice copy… {{n}} / {{total}} facilities (keep this open)",
-      "training_preparing": "Preparing the practice copy… (keep this open)"
+      "training_preparing": "Preparing the practice copy… (keep this open)",
+      "certificate_names": "Names for certificates",
+      "names_both": "English + Arabic",
+      "names_en": "English only",
+      "names_ar": "Arabic only",
+      "qr_names": "Your name for the certificate: {{type}}"
     },
     "status": {
       "active": "Active",

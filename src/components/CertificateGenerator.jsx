@@ -25,7 +25,7 @@ import {
     getBuiltinSubCourseTypes,
     CERT_LANGUAGES, ALL_SUB_COURSES, NO_SUB_COURSE,
     certificateApprovedFor, certificateApprovedLanguages, certificateFullyApproved,
-    mergeCertificateApprovalScopes
+    mergeCertificateApprovalScopes, participantNameIn
 } from './constants'; 
 import { db } from '../firebase'; 
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc, deleteDoc, serverTimestamp, deleteField, FieldPath } from 'firebase/firestore'; 
@@ -1256,9 +1256,12 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
 
     // Printed name. Normalised by default; `rawParticipantName` opts out for the
     // occasional record whose capitalisation is deliberate.
+    // The name in the certificate's language (English or Arabic), falling back
+    // to the other language, then to the record's name (constants.js).
+    const printedName = participantNameIn(participant, language);
     const participantDisplayName = customConfig.rawParticipantName
-        ? (participant?.name || '')
-        : normalizeParticipantName(participant?.name);
+        ? printedName
+        : normalizeParticipantName(printedName);
 
     const fourthPartyName = isArabic ? signatories.fourthPartyAr : signatories.fourthPartyEn;
     const fourthPartyRole = isArabic ? signatories.fourthPartyRoleAr : signatories.fourthPartyRoleEn;

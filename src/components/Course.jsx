@@ -32,7 +32,7 @@ import TrainingLinkShare from '../training/TrainingLinkShare.jsx';
 const TrainingActivityView = React.lazy(() => import('../training/TrainingActivityView.jsx'));
 import { isTrainingMode } from '../training/trainingSession.js';
 import { isOperationalGuideCourse } from './ExerciseMonitoring.jsx';
-import { ParticipantsView } from './Participants';
+import { ParticipantsView, NameLanguageFields } from './Participants';
 import { CourseTestForm } from './CourseTestForm'; 
 import { CourseExercisesView } from './imnci';
 const CpcmOsceView = React.lazy(() => import('./cpcm/CpcmOsceView')); 
@@ -42,7 +42,7 @@ const FinalReportsDashboard = React.lazy(() => import('./FinalReportManager').th
 import {
     STATE_LOCALITIES, IMNCI_SUBCOURSE_TYPES, JOB_TITLES_SSNC, JOB_TITLES_ETAT, JOB_TITLES_EMONC,
     COURSE_LEVELS, isFederalCourse, isFederalValue, getAllStateOptions, getLocalityOptionsForState,
-    hasMentorshipForm, subCourseOfGroup
+    hasMentorshipForm, subCourseOfGroup, participantNameOnly
 } from './constants.js';
 import { 
     Users, Share2, UserPlus, CheckCircle, 
@@ -400,8 +400,12 @@ const NewbornIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg
 
 
 export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, onSuccess }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const L = (ar, en) => (i18n.language === 'ar' ? ar : en);
     const [name, setName] = useState('');
+    // The name in each language, for the certificate in that language.
+    const [nameEn, setNameEn] = useState('');
+    const [nameAr, setNameAr] = useState('');
     const [phone, setPhone] = useState('');
     const [jobTitle, setJobTitle] = useState('');
     const [group, setGroup] = useState('Group A');
@@ -512,8 +516,11 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
         setIsSaving(true);
         try {
             const place = participantPlace({ fromProgram, centerName: facilityName, programName, facilityId });
+            const printed = { name: name.trim(), nameEn: nameEn.trim(), nameAr: nameAr.trim() };
             const participantData = {
                 name: name.trim(),
+                nameEn: participantNameOnly(printed, 'en'),
+                nameAr: participantNameOnly(printed, 'ar'),
                 phone: phone.trim(),
                 job_title: jobTitle,
                 group: group,
@@ -615,6 +622,9 @@ export const PublicParticipantRegistrationModal = ({ isOpen, onClose, course, on
                     <FormGroup label={t('course_page.registration.phone_number', 'Phone Number')}>
                         <Input disabled={isSaving} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="0xxxxxxxxx" />
                     </FormGroup>
+                    <div className="md:col-span-2">
+                        <NameLanguageFields name={name} nameEn={nameEn} nameAr={nameAr} setNameEn={setNameEn} setNameAr={setNameAr} disabled={isSaving} L={L} />
+                    </div>
                     
                     <FormGroup label={t('course_page.registration.job_title', 'Job Title')}>
                         <Select disabled={isSaving} value={jobTitle} onChange={e => setJobTitle(e.target.value)}>
@@ -1373,6 +1383,23 @@ export function CoursesTable({
                                             const link = `${getBaseUrl()}/public/register/course/${shareModalCourse.id}`;
                                             setQrShareData({ url: link, title: t('course_page.share.qr_registration', 'Registration: {{type}}', { type: shareModalCourse.course_type }) });
                                         }}><QrCode size={14} /> {t('course_page.buttons.share', 'Share')}</Button>
+                                    </div>
+                                </div>
+                                {/* Participants write their own name for the certificate:
+                                    both languages, or only English / only Arabic. */}
+                                <div className="bg-gray-50 p-3 rounded border" data-testid="share-certificate-names">
+                                    <span className="text-sm font-semibold block mb-2">{t('course_page.share.certificate_names', 'Names for certificates')}</span>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            { lang: null, label: t('course_page.share.names_both', 'English + Arabic') },
+                                            { lang: 'en', label: t('course_page.share.names_en', 'English only') },
+                                            { lang: 'ar', label: t('course_page.share.names_ar', 'Arabic only') },
+                                        ].map(({ lang, label }) => (
+                                            <Button key={label} variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
+                                                const link = `${getBaseUrl()}/public/course/names/${shareModalCourse.id}${lang ? `?lang=${lang}` : ''}`;
+                                                setQrShareData({ url: link, title: t('course_page.share.qr_names', 'Your name for the certificate: {{type}}', { type: shareModalCourse.course_type }) });
+                                            }}><QrCode size={14} /> {label}</Button>
+                                        ))}
                                     </div>
                                 </div>
                                 <div className="bg-gray-50 p-3 rounded border">

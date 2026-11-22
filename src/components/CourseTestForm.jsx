@@ -22,6 +22,8 @@ import { textIncludes } from '../utils/textSearch';
 import { participantPlace } from '../utils/participantAffiliation';
 import { isPracticeParticipant } from '../utils/practiceParticipants';
 import FormPdfButton from './FormPdfButton';
+import { NameLanguageFields } from './NameLanguageFields';
+import { participantNameOnly } from './constants';
 
 export const EENC_TEST_QUESTIONS = [
     { id: 'q1', text: '1. Delivering in the supine position during second stage of labour is best.', type: 'mc', options: [{ id: 'a', text: 'True' }, { id: 'b', text: 'False' }], correctAnswer: 'b' },
@@ -1661,7 +1663,8 @@ export function CourseTestForm({
     canManageTests = false,
     testType: initialTestType
 }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const i18nLang = i18n.language;
     const normalizeTestType = normalizeTestTypeValue;
 
     const courseType = course?.course_type;
@@ -1781,6 +1784,9 @@ export function CourseTestForm({
     const [facilitiesInLocality, setFacilitiesInLocality] = useState([]);
     const [isLoadingFacilities, setIsLoadingFacilities] = useState(false);
     const [newParticipantName, setNewParticipantName] = useState('');
+    // The name in each language, for the certificate in that language.
+    const [newNameEn, setNewNameEn] = useState('');
+    const [newNameAr, setNewNameAr] = useState('');
     const [newParticipantPhone, setNewParticipantPhone] = useState('');
     const [newParticipantGroup, setNewParticipantGroup] = useState('Group A');
     const [newParticipantJob, setNewParticipantJob] = useState('');
@@ -1951,7 +1957,7 @@ export function CourseTestForm({
     useEffect(() => {
         setIsParticipantInfoSaved(false); 
         setParticipantNameForDisplay(''); 
-        setNewParticipantName(''); 
+        setNewParticipantName(''); setNewNameEn(''); setNewNameAr(''); 
         setNewParticipantPhone(''); 
         setNewParticipantState((!isFederal && courseStates.length === 1 && !isFederalValue(courseStates[0])) ? courseStates[0] : ''); 
         setNewParticipantLocality((!isFederal && courseLocalities.length === 1 && !isFederalValue(courseLocalities[0])) ? courseLocalities[0] : ''); 
@@ -2055,8 +2061,11 @@ export function CourseTestForm({
                 centerName: newParticipantCenter, programName: newParticipantProgram,
                 facilityId: (isIccm || (selectedFacilityId && selectedFacilityId.startsWith('pending_'))) ? null : selectedFacilityId,
             });
+            const printedNames = { name: newParticipantName.trim(), nameEn: newNameEn.trim(), nameAr: newNameAr.trim() };
             const participantPayload = {
                 name: newParticipantName.trim(),
+                nameEn: participantNameOnly(printedNames, 'en'),
+                nameAr: participantNameOnly(printedNames, 'ar'),
                 phone: newParticipantPhone.trim(),
                 job_title: finalJobTitle,
                 group: newParticipantGroup,
@@ -2638,6 +2647,7 @@ export function CourseTestForm({
                             )}
 
                             <FormGroup label={t('course_tests.tests.participant_name', 'Participant Name')}><Input value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder={t('course_tests.tests.enter_name', 'Enter name')} disabled={!isProgramManagement && !newParticipantLocality} /></FormGroup>
+                            <div className="md:col-span-2"><NameLanguageFields name={newParticipantName} nameEn={newNameEn} nameAr={newNameAr} setNameEn={setNewNameEn} setNameAr={setNewNameAr} disabled={!isProgramManagement && !newParticipantLocality} L={(a, e) => (i18nLang === 'ar' ? a : e)} /></div>
                             <FormGroup label={t('course_tests.tests.phone_number', 'Phone Number')}><Input type="tel" value={newParticipantPhone} onChange={(e) => setNewParticipantPhone(e.target.value)} placeholder="0xxxxxxxxx" /></FormGroup>
                             <FormGroup label={t('course_tests.tests.job_title', 'Job Title')}><Select value={newParticipantJob} onChange={(e) => setNewParticipantJob(e.target.value)}><option value="">{t('course_tests.tests.select_job_option', '— Select Job —')}</option>{jobTitleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}<option value="Other">{t('course_tests.tests.other', 'Other')}</option></Select></FormGroup>
                             {newParticipantJob === 'Other' && (<FormGroup label={t('course_tests.tests.specify_job_title', 'Specify Job Title')}><Input value={newParticipantJobOther} onChange={(e) => setNewParticipantJobOther(e.target.value)} placeholder={t('course_tests.tests.please_specify', 'Please specify')} /></FormGroup>)}

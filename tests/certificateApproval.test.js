@@ -146,7 +146,7 @@ describe('certificateApprovalSnapshot', () => {
 
     it('writes strings, never undefined, so Firestore accepts it', () => {
         const snap = certificateApprovalSnapshot({}, {}, undefined);
-        expect(snap).toEqual({ name: '', subCourse: '', at: snap.at, by: '' });
+        expect(snap).toEqual({ name: '', nameEn: '', nameAr: '', subCourse: '', at: snap.at, by: '' });
     });
 });
 

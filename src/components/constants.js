@@ -1846,6 +1846,41 @@ export const mergeCertificateApprovalScopes = (course, subCourses, languages) =>
     return out;
 };
 
+// --- Participant names in English and Arabic --------------------------------
+//
+// A participant has one `name` (what every list shows) and may have it in both
+// languages, `nameEn` and `nameAr`, for the certificate in each language. A
+// record that has only `name` (every record made before the two fields existed)
+// counts that name as the language it is written in: Arabic letters make it the
+// Arabic name, anything else the English one. Nothing is migrated.
+
+/** True when the text has Arabic letters. */
+export const hasArabicScript = (text) => /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(String(text || ''));
+
+/** The participant's name in one language ('en' | 'ar'), or '' when it is only known in the other. */
+export const participantNameOnly = (participant, language) => {
+    const own = String(participant?.[language === 'ar' ? 'nameAr' : 'nameEn'] || '').trim();
+    if (own) return own;
+    const main = String(participant?.name || '').trim();
+    if (!main) return '';
+    return (language === 'ar') === hasArabicScript(main) ? main : '';
+};
+
+/**
+ * The name printed on a certificate in `language`: the name in that language,
+ * else the one in the other language, else the record's name.
+ */
+export const participantNameIn = (participant, language) =>
+    participantNameOnly(participant, language)
+    || participantNameOnly(participant, language === 'ar' ? 'en' : 'ar')
+    || String(participant?.name || '').trim();
+
+/** Both names, filled from `name` where a language has none ({ nameEn, nameAr }). */
+export const participantNames = (participant) => ({
+    nameEn: participantNameOnly(participant, 'en'),
+    nameAr: participantNameOnly(participant, 'ar'),
+});
+
 /** What a participant's certificate approval snapshot is called on their record. */
 export const CERT_APPROVAL_FIELD = 'certificateApproval';
 
@@ -1898,7 +1933,13 @@ export const certificateApprovalState = (participant, course, language = null) =
     const duringCourse = isWithinCoursePeriod(course);
 
     const changed = [];
-    if (!duringCourse && !samePrintedText(signed.name, participant?.name)) changed.push('name');
+    // An approval recorded since the two names exist holds the name printed in
+    // each language; one recorded before holds only `name`.
+    const langs = language ? [language] : CERT_LANGUAGES;
+    const nameMoved = (signed.nameEn !== undefined || signed.nameAr !== undefined)
+        ? langs.some((l) => !samePrintedText(signed[l === 'ar' ? 'nameAr' : 'nameEn'], participantNameIn(participant, l)))
+        : !samePrintedText(signed.name, participant?.name);
+    if (!duringCourse && nameMoved) changed.push('name');
     if (!samePrintedText(signed.subCourse, certificateSubCourseOf(course, participant))) {
         changed.push('subCourse');
     }
@@ -1927,6 +1968,8 @@ export const staleCertificateParticipants = (participants, course) =>
  */
 export const certificateApprovalSnapshot = (participant, course, approvedBy = '') => ({
     name: participant?.name || '',
+    nameEn: participantNameIn(participant, 'en'),
+    nameAr: participantNameIn(participant, 'ar'),
     subCourse: certificateSubCourseOf(course, participant) || '',
     at: new Date().toISOString(),
     by: approvedBy || '',
