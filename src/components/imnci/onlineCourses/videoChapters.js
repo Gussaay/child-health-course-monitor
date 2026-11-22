@@ -18,7 +18,8 @@ export function sectionWithChapters(section, block, chapters) {
         const i = list.findIndex((b) => same(b, block));
         if (i < 0) continue;
         const clean = (chapters || [])
-            .map((c) => ({ at: Math.max(0, Math.round(Number(c.at) || 0)), label: String(c.label || '').trim() }))
+            .map((c) => ({ at: Math.max(0, Math.round(Number(c.at) || 0)), label: String(c.label || '').trim(),
+                ...(Number(c.end) > Number(c.at) ? { end: Math.round(Number(c.end)) } : {}) }))
             .filter((c) => c.label)
             .sort((x, y) => x.at - y.at);
         const next = [...list];

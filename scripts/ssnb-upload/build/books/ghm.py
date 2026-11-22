@@ -7,7 +7,8 @@ _V = _json.load(open(_os.path.join(_os.path.dirname(_os.path.dirname(_os.path.ab
 def ghm(vid, title):
     b = video(title, GHM_CAPTION, url=f'https://www.youtube.com/watch?v={vid}')
     ch = _V.get('extra_chapters', {}).get(vid)
-    if ch: b['chapters'] = [{'at': int(at), 'label': lab} for at, lab in ch]   # skilltimes.py: jump to the skill
+    # chapters: [[start, label]] or [[start, end, label]] (seconds): a button that plays the skill, pausing at its end
+    if ch: b['chapters'] = [{'at': int(c[0]), **({'end': int(c[1])} if len(c) == 3 else {}), 'label': c[-1]} for c in ch]
     return b
 EXTRA = [
     ('m1', 1, 'All these signs are non-specific', '-6T7f40EB9E', 'The Cold Baby - Newborn Care Series'),

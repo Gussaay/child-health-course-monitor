@@ -52,9 +52,15 @@ const savePref = (k, v) => { try { window.localStorage.setItem(`oc-video-${k}`, 
 
 const fullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
 
-function StreamPlayer({ id, title, startAt, onEnded, onTime = null, clipStart = null, clipEnd = null }) {
+function StreamPlayer({ id, title, startAt, onEnded, onTime = null, clipStart = null, clipEnd = null, pauseAt = null, onPauseAt = null }) {
     const onTimeRef = useRef(onTime);
     onTimeRef.current = onTime;
+    // A skill button ("jump to the skill") plays to the end of that skill and
+    // pauses there; the learner can carry on with the rest of the video.
+    const pauseAtRef = useRef(pauseAt);
+    pauseAtRef.current = pauseAt;
+    const onPauseAtRef = useRef(onPauseAt);
+    onPauseAtRef.current = onPauseAt;
     const { t } = useTranslation();
     const root = useRef(null);
     const frame = useRef(null);
@@ -114,6 +120,12 @@ function StreamPlayer({ id, title, startAt, onEnded, onTime = null, clipStart = 
             const ps = info && typeof info === 'object' ? info.playerState : (data?.event === 'onStateChange' ? info : undefined);
             if (info && typeof info === 'object') {
                 if (typeof info.currentTime === 'number') { timeRef.current = info.currentTime; setTime(info.currentTime); onTimeRef.current?.(info.currentTime); }
+                if (pauseAtRef.current != null && typeof info.currentTime === 'number' && info.currentTime >= pauseAtRef.current
+                    && phaseRef.current === 'playing') {
+                    pauseAtRef.current = null;
+                    send('pauseVideo'); setPhase('paused'); setControls(true);
+                    onPauseAtRef.current?.();
+                }
                 if (typeof info.duration === 'number' && info.duration > 0) setDuration(info.duration);
                 if (typeof info.muted === 'boolean' && phaseRef.current !== 'loading') setMuted(info.muted);
                 if (to != null && typeof info.currentTime === 'number' && info.currentTime >= to - 0.15
@@ -369,7 +381,7 @@ function StreamPlayer({ id, title, startAt, onEnded, onTime = null, clipStart = 
 
 // A video saved on the device plays from there, with the phone's own player.
 // A clip starts at `clipStart` and stops at `clipEnd`.
-function SavedPlayer({ url, id, title, startAt, onEnded, onTime = null, clipStart = null, clipEnd = null }) {
+function SavedPlayer({ url, id, title, startAt, onEnded, onTime = null, clipStart = null, clipEnd = null, pauseAt = null, onPauseAt = null }) {
     const ref = useRef(null);
     const from = clipStart != null ? Math.max(0, Number(clipStart) || 0) : 0;
     const to = clipEnd != null && Number(clipEnd) > from ? Number(clipEnd) : null;
@@ -391,8 +403,9 @@ function SavedPlayer({ url, id, title, startAt, onEnded, onTime = null, clipStar
                 reported.current = false;
                 if (v.currentTime < from - 0.5 || (to != null && v.currentTime >= to - 0.3)) v.currentTime = from;
             }}
-            onTimeUpdate={(to != null || onTime) ? (e) => {
+            onTimeUpdate={(to != null || onTime || pauseAt != null) ? (e) => {
                 onTime?.(e.currentTarget.currentTime);
+                if (pauseAt != null && e.currentTarget.currentTime >= pauseAt) { e.currentTarget.pause(); onPauseAt?.(); return; }
                 if (to != null && e.currentTarget.currentTime >= to) { e.currentTarget.pause(); end(); }
             } : undefined}
             onEnded={end} />

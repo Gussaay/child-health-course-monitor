@@ -8101,7 +8101,10 @@
         "chapter_default": "المهارة",
         "chapter_title": "تحديد بداية المهارة",
         "chapter_remove": "إزالة",
-        "chapter_mark": "حدد بداية المهارة هنا"
+        "chapter_mark": "حدد بداية المهارة هنا",
+        "chapter_plays": "يعرض من {{from}} إلى {{to}} ثم يتوقف",
+        "segment_end": "نهاية \"{{label}}\". يمكنك متابعة بقية الفيديو من هنا.",
+        "segment_continue": "شاهد البقية"
       },
       "look": {
         "module_n": "الوحدة {{n}}",

@@ -192,6 +192,8 @@ export function VideoBlock({ block, activityKey }) {
     const src = videoSource(block.url);
     const [done, markDone] = useActivity(activityKey);
     const [startAt, setStartAt] = useState(null);
+    // The skill being played from its button: { label, end }. The video pauses at `end`.
+    const [segment, setSegment] = useState(null);
     const [stop, setStop] = useState(null);       // index of the stop being asked
     const [passed, setPassed] = useState(() => new Set());
     const [picked, setPicked] = useState(null);
@@ -245,6 +247,8 @@ export function VideoBlock({ block, activityKey }) {
 
     const seek = (sec) => {
         if (src.kind === 'embed') { setStartAt(Math.floor(Number(sec) || 0)); return; }
+        // the same moment twice still starts again
+        if (videoRef.current && Number(sec) === startAt) videoRef.current.currentTime = Number(sec) || 0;
         const v = videoRef.current;
         if (v) { v.currentTime = Number(sec) || 0; v.play?.().catch(() => {}); }
     };
@@ -278,7 +282,8 @@ export function VideoBlock({ block, activityKey }) {
             <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 bg-black shadow-sm"
                 style={{ aspectRatio: '16 / 9' }}>
                 {ytId ? (
-                    <YouTubePlayer id={ytId} title={title} startAt={startAt} onEnded={markDone} onTime={reportTime} clipStart={block.start ?? null} clipEnd={block.end ?? null} />
+                    <YouTubePlayer id={ytId} title={title} startAt={startAt} onEnded={markDone} onTime={reportTime} clipStart={block.start ?? null} clipEnd={block.end ?? null}
+                        pauseAt={segment?.end ?? null} onPauseAt={() => { markDone(); setSegment((s) => (s ? { ...s, finished: true } : s)); }} />
                 ) : src.kind === 'embed' ? (
                     <iframe key={embedSrc} src={embedSrc} title={title || t('imnci_ui.courses.video.video', 'Video')} allowFullScreen
                         className="absolute inset-0 w-full h-full"
@@ -320,14 +325,21 @@ export function VideoBlock({ block, activityKey }) {
                     </div>
                 )}
             </div>
+            {segment?.finished && (
+                <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-sky-50 border border-sky-200 px-3 py-2 text-xs text-sky-900" data-testid="video-segment-end">
+                    <span className="flex-1">{t('imnci_ui.courses.video.segment_end', 'End of "{{label}}". The rest of the video carries on from here.', { label: segment.label })}</span>
+                    <button onClick={() => setSegment(null)} className="font-semibold underline">{t('imnci_ui.courses.video.segment_continue', 'Watch the rest')}</button>
+                </div>
+            )}
             {ytId && <OfflineVideoButton id={ytId} />}
             {(chapters.length > 0 || (canMark && ytId)) && (
                 <div className="flex flex-wrap items-center gap-1.5 mt-2">
                     {chapters.map((c, i) => (
                         <span key={i} className="inline-flex items-center">
-                            <button onClick={() => seek(c.at)} data-testid="video-chapter"
+                            <button onClick={() => { setSegment(c.end ? { label: c.label, end: Number(c.end) } : null); seek(c.at); }} data-testid="video-chapter"
+                                title={c.end ? t('imnci_ui.courses.video.chapter_plays', 'Plays {{from}} to {{to}}, then pauses', { from: clock(c.at), to: clock(c.end) }) : undefined}
                                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-200 bg-white text-xs text-slate-700 hover:border-sky-400 hover:text-sky-700">
-                                <span className="font-mono text-slate-400">{clock(c.at)}</span> {c.label}
+                                <span className="font-mono text-slate-400">{clock(c.at)}{c.end ? `–${clock(c.end)}` : ''}</span> {c.label}
                             </button>
                             {canMark && (
                                 <button onClick={() => removeChapter(c)} aria-label={t('imnci_ui.courses.video.chapter_remove', 'Remove')}

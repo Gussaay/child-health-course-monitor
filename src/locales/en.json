@@ -8090,7 +8090,10 @@
         "chapter_default": "The skill",
         "chapter_title": "Mark the skill start",
         "chapter_remove": "Remove",
-        "chapter_mark": "Mark the skill start here"
+        "chapter_mark": "Mark the skill start here",
+        "chapter_plays": "Plays {{from}} to {{to}}, then pauses",
+        "segment_end": "End of \"{{label}}\". The rest of the video carries on from here.",
+        "segment_continue": "Watch the rest"
       },
       "look": {
         "module_n": "Module {{n}}",
