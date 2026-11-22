@@ -2,8 +2,13 @@
 # (book, section number, anchor text in the lesson, YouTube id, GHMP title). Checked 2026-11-21: GHMP's channel, embeddable.
 from lib import video
 GHM_CAPTION = 'Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.'
+import json as _json, os as _os
+_V = _json.load(open(_os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), 'videos.json')))
 def ghm(vid, title):
-    return video(title, GHM_CAPTION, url=f'https://www.youtube.com/watch?v={vid}')
+    b = video(title, GHM_CAPTION, url=f'https://www.youtube.com/watch?v={vid}')
+    ch = _V.get('extra_chapters', {}).get(vid)
+    if ch: b['chapters'] = [{'at': int(at), 'label': lab} for at, lab in ch]   # skilltimes.py: jump to the skill
+    return b
 EXTRA = [
     ('m1', 1, 'All these signs are non-specific', '-6T7f40EB9E', 'The Cold Baby - Newborn Care Series'),
     ('m1', 3, 'Place used needles in a solid container', 'VAb_zGqiyZg', 'Giving an Intramuscular Injection - Newborn Care Series'),
