@@ -874,6 +874,27 @@ const SectionScoreBreakdown = ({ sectionScores, compact = false }) => {
     );
 };
 
+// Arabic tests (ICCM, ETAT, Program Management, Community Midwives, the SSNB
+// warmer test...) read right to left whatever language the app is set to.
+// Decided from the question text itself, so a test in English stays left to
+// right even when the app is in Arabic, and each question follows its own
+// script when a test mixes the two.
+const ARABIC_RE = /[\u0600-\u06FF]/g;
+const LATIN_RE = /[A-Za-z]/g;
+const scriptCounts = (text) => {
+    const s = String(text || '');
+    return { ar: (s.match(ARABIC_RE) || []).length, lat: (s.match(LATIN_RE) || []).length };
+};
+const questionText = (q) => [q?.text, ...((q?.options || []).map(o => o?.text))].join(' ');
+export const isArabicText = (text) => { const c = scriptCounts(text); return c.ar > 0 && c.ar >= c.lat; };
+export const isArabicQuestionSet = (questions = []) => {
+    const total = (questions || []).reduce((acc, q) => {
+        const c = scriptCounts(questionText(q));
+        return { ar: acc.ar + c.ar, lat: acc.lat + c.lat };
+    }, { ar: 0, lat: 0 });
+    return total.ar > 0 && total.ar >= total.lat;
+};
+
 const resolveTestConfig = (courseType, emoncSubCourse, ssnbSubCourse) => {
     let titles = [];
 
@@ -2342,7 +2363,7 @@ export function CourseTestForm({
     }
 
     const renderQuestion = (q) => (
-            <div key={q.id} className={`p-4 border rounded-md shadow-sm ${isEditing && canManageTests && q.type === 'open' ? 'bg-blue-50/30 border-blue-200' : 'bg-white'}`}>
+            <div key={q.id} dir={isArabicText(questionText(q)) ? 'rtl' : 'ltr'} style={{ textAlign: isArabicText(questionText(q)) ? 'right' : 'left' }} className={`p-4 border rounded-md shadow-sm ${isEditing && canManageTests && q.type === 'open' ? 'bg-blue-50/30 border-blue-200' : 'bg-white'}`}>
                 
                 <div className="flex justify-between items-start mb-3">
                     <label className="block text-base font-semibold text-gray-800 w-3/4">{q.text}</label>
@@ -2406,6 +2427,7 @@ export function CourseTestForm({
             </div>
     );
 
+    const isArabicTest = isArabicQuestionSet(testQuestions);
     if (testQuestions.length === 0) return <Card><div className="p-6">{t('course_tests.tests.no_questions', 'No questions')}</div></Card>;
     const centerNameLabel = isIccm ? t('course_tests.tests.village_name', 'Village Name') : t('course_tests.tests.facility_name', 'Facility Name');
     const showQuestions = !isSetupModalOpen; 
@@ -2717,7 +2739,7 @@ export function CourseTestForm({
             </Modal>
 
             {!isSetupModalOpen && !submissionResult && (
-                <div className="p-6" style={{ direction: 'ltr', textAlign: 'left' }} data-pdf-root="">
+                <div className="p-6" dir={isArabicTest ? 'rtl' : 'ltr'} style={{ direction: isArabicTest ? 'rtl' : 'ltr', textAlign: isArabicTest ? 'right' : 'left' }} data-pdf-root="">
                     <div className="flex flex-wrap justify-between items-start gap-4">
                         <PageHeader 
                             title={isEditing ? t('course_tests.tests.editing_label', 'Editing {{label}}', { label: testTypeLabel(testType, t) }) : t('course_tests.tests.enter_label', 'Enter {{label}}', { label: testTypeLabel(testType, t) })} 
