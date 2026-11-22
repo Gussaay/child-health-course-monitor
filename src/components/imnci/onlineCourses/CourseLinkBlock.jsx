@@ -10,10 +10,16 @@
 // Ids are not known when a course file is written, so the course is found by
 // its title, the module by its number (its order) and the lesson by its title.
 // A link whose target is not in the app yet says so instead of breaking.
-import React from 'react';
+//
+// `popup: true` opens the lesson over the current one instead of going to it
+// (a course annex: a standard operating procedure, a skill checklist), so the
+// learner reads it when needed and closes it to carry on.
+import React, { Suspense, lazy, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowUpRight, BookOpen } from 'lucide-react';
+import { ArrowUpRight, BookOpen, ClipboardList } from 'lucide-react';
 import { useCourseScreen } from './screen';
+
+const AnnexViewer = lazy(() => import('./AnnexViewer'));
 
 const live = (x) => x && x.isDeleted !== true;
 const norm = (s) => String(s || '').trim().toLowerCase();
@@ -53,17 +59,24 @@ export default function CourseLinkBlock({ block }) {
         block.module ? t('imnci_ui.courses.link.module_n', 'Module {{n}}', { n: block.module }) : null,
         block.lesson || null,
     ].filter(Boolean).join(' · ');
+    const [shown, setShown] = useState(false);
     const open = () => {
+        if (found && block.popup) { setShown(true); return; }
         if (!found || !screen?.go) return;
         screen.openFromGuide?.({ moduleId: module.id, sectionId: section?.id || null });
         screen.go({ course: course.id, module: module.id, section: section?.id || null, tab: 'read', book: null });
     };
     return (
         <div className="not-prose my-4" data-testid="course-link" data-found={found ? 'true' : 'false'}>
-            <button type="button" onClick={open} disabled={!found}
+            {shown && (
+                <Suspense fallback={null}>
+                    <AnnexViewer course={course} module={module} section={section} onClose={() => setShown(false)} />
+                </Suspense>
+            )}
+            <button type="button" onClick={open} disabled={!found} aria-haspopup={block.popup ? 'dialog' : undefined}
                 className="w-full text-start flex items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50/70 px-4 py-3 hover:bg-indigo-100 hover:border-indigo-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:bg-indigo-50/70 transition-colors">
                 <span className="w-9 h-9 rounded-lg bg-white border border-indigo-200 text-indigo-700 grid place-items-center shrink-0">
-                    <BookOpen size={17} />
+                    {block.popup ? <ClipboardList size={17} /> : <BookOpen size={17} />}
                 </span>
                 <span className="min-w-0 flex-1">
                     <span className="block text-[11px] font-bold uppercase tracking-wider text-indigo-800">
@@ -77,7 +90,8 @@ export default function CourseLinkBlock({ block }) {
                         </span>
                     )}
                 </span>
-                {found && <ArrowUpRight size={18} className="text-indigo-700 shrink-0 rtl:-scale-x-100" />}
+                {found && !block.popup && <ArrowUpRight size={18} className="text-indigo-700 shrink-0 rtl:-scale-x-100" />}
+                {found && block.popup && <span className="text-xs font-semibold text-indigo-700 shrink-0">{t('imnci_ui.courses.link.open_here', 'Open')}</span>}
             </button>
         </div>
     );

@@ -263,13 +263,17 @@ def finish(cfg, out_mods, exercises):
     return pkg
 
 def sop_blocks(sops, name, section):
-    """The SOP lesson `name` in full, under a card naming it, for placing inside another lesson."""
-    head = {'type': 'note', 'label': 'Standard operating procedure', 'text': f'<strong>{name}</strong> · from the manual, {section}'}
-    return [head] + copy.deepcopy(sops[name])
+    """A button that opens the SOP lesson `name` of the course annexes over the lesson (a popup course link)."""
+    from books.titles import ANNEX
+    from books.sops import PROCEDURES_SECTION
+    module = 1 if section == PROCEDURES_SECTION else 2
+    kind = 'Neonatal procedure' if module == 1 else 'Equipment'
+    return [{'type': 'courselink', 'course': ANNEX, 'module': module, 'lesson': name, 'popup': True,
+             'label': f'Standard operating procedure · {kind}', 'text': f'{name}: open it here when you need it.'}]
 
 def place_sops(books, sops, where_sop):
-    """Each SOP is placed in full inside the lessons that use it: at a lesson's own equipment()/procedure() marker, and
-    at the end of each lesson in books/sops.py PLACES. Returns where each SOP went."""
+    """A button that opens each SOP (kept in the course annexes) is placed in the lessons that use it: at a lesson's own
+    equipment()/procedure() marker, and at the end of each lesson in books/sops.py PLACES. Returns where each went."""
     from books.sops import GROUP, PLACES
     went = {n: [] for n in sops}
     def expand(n): return GROUP.get(n, [n])
@@ -305,21 +309,29 @@ def main():
         cfg, mods, exs, els, used = r
         secs = getattr(cfg, 'SOP_SECTIONS', None)
         if secs:
-            # Sections 7 and 8 are no module of their own: their lessons are the SOPs placed inside other lessons.
+            # Sections 7 and 8 go to the course annexes (their own file); the lessons that use an SOP get a button
+            # that opens it.
             for m in mods:
                 if m['order'] in secs:
                     for L in m['lessons']:
                         sops[L['title']] = [b for b in L['blocks'] if not b['type'].startswith('_')]
                         where_sop[L['title']] = PROCEDURES_SECTION if m['order'] == secs[0] else EQUIPMENT_SECTION
+            annex_mods = [m for m in mods if m['order'] in secs]
             mods = [m for m in mods if m['order'] not in secs]
+            for k, m in enumerate(annex_mods, 1): m['order'] = k; m['anyOrder'] = True
             for k, m in enumerate(mods, 1): m['order'] = k
+            annex_cfg = type('A', (), {'COURSE': cfg.ANNEX['course'], 'BOOK': cfg.BOOK + ', Sections 7 and 8', 'SHORT': 'SSN Annex', 'FILE': cfg.ANNEX['file']})
         built[key] = (cfg, mods, exs)
         words[key] = (els, used)
     went = place_sops({k: (v[0], v[1]) for k, v in built.items()}, sops, where_sop) if sops else {}
     pkgs = {key: finish(cfg, mods, exs) for key, (cfg, mods, exs) in built.items()}
+    if sops:
+        apkg = finish(annex_cfg, annex_mods, [])
+        json.dump(apkg, open(os.path.join(ROOT, 'course-packages', annex_cfg.FILE), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+        print(f"{annex_cfg.FILE}: {len(apkg['modules'])} modules, {sum(len(m['sections']) for m in apkg['modules'])} lessons (course annexes)")
     # word-loss check: every word of the book's elements should be somewhere in the courses (an SOP of Module 2
     # Sections 7 and 8 can sit in Module 1 or 3)
-    text = html.unescape(re.sub(r'</?[a-z][a-z0-9]*[^<>]*>', ' ', json.dumps(list(pkgs.values()), ensure_ascii=False))).lower()
+    text = html.unescape(re.sub(r'</?[a-z][a-z0-9]*[^<>]*>', ' ', json.dumps(list(pkgs.values()) + ([apkg] if sops else []), ensure_ascii=False))).lower()
     have = set(re.findall(r"[a-z]{3,}", text))
     for key, pkg in pkgs.items():
         cfg, els, used = built[key][0], *words[key]

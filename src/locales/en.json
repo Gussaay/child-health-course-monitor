@@ -8150,7 +8150,9 @@
       "link": {
         "module_n": "Module {{n}}",
         "open": "Open in the learners' course",
-        "missing": "This part of \"{{course}}\" is not in the app yet."
+        "missing": "This part of \"{{course}}\" is not in the app yet.",
+        "open_here": "Open",
+        "annex_module": "Open a lesson of this annex from the course page."
       },
       "share": {
         "button": "Share link",
@@ -8510,7 +8512,10 @@
     "manage": {
       "guides_title": "Facilitator guides",
       "guides_hint": "Guidelines for running a course, not courses: facilitators read them in Protocol & Course Management. Edit their text here.",
-      "guide_pill": "Facilitator guide"
+      "guide_pill": "Facilitator guide",
+      "annexes_title": "Course annexes",
+      "annexes_hint": "Standard operating procedures, skill checklists, chart booklet and other material the lessons open with a button when needed. Learners do not see them in the course list.",
+      "annex_pill": "Course annex"
     }
   },
   "theme": {

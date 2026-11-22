@@ -23,7 +23,7 @@ const COURSES = {
   m1: { batch: 'ssnb-m1-2026-11-21', file: 'ssnb-module-1-essential-emergency-newborn-care.imnci.json' },
   m2: { batch: 'ssnb-m2-2026-11-21', file: 'ssnb-module-2-special-newborn-care.imnci.json' },
   m3: { batch: 'ssnb-m3-2026-11-21', file: 'ssnb-module-3-intensive-newborn-care.imnci.json' },
-  // The annex course is withdrawn (its SOPs now sit inside the lessons that use them); kept here only so --undo can remove it.
+  // The course annexes (audience "annex"): the procedures and equipment SOPs the lessons open with a button.
   annex: { batch: 'ssnb-annex-2026-11-21', file: 'ssnb-annex-neonatal-procedures-and-equipment.imnci.json' },
   guide: { batch: 'ssnb-fg-2026-11-21', file: 'ssnb-facilitator-guide.imnci.json' },
 };

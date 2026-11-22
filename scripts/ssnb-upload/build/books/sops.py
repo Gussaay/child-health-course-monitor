@@ -1,10 +1,10 @@
 # Where each standard operating procedure (SOP) of the manual's Module 2 Section 7 (Neonatal Procedures) and
-# Section 8 (Equipment) is placed. Sections 7 and 8 are not a module or a course of their own: each SOP is copied
-# in full into every lesson that uses it, for example the radiant warmer wherever thermal care is taught, the
-# lumbar puncture in sepsis management, and the bubble CPAP where CPAP is used.
+# Section 8 (Equipment) is offered. The SOPs are kept in the course annexes (books/m2.py ANNEX, kind "Course annex");
+# a lesson that uses one shows a button that opens it over the lesson when needed: for example the radiant warmer
+# wherever thermal care is taught, the lumbar puncture in sepsis management, the bubble CPAP where CPAP is used.
 #
-# A lesson's own equipment()/procedure() call (books/titles.py) puts an SOP at that point of the lesson. PLACES adds
-# more: (course key, lesson title, [SOP lessons]). The SOP goes at the end of the lesson.
+# A lesson's own equipment()/procedure() call (books/titles.py) puts the button at that point of the lesson. PLACES adds
+# more: (course key, lesson title, [SOP lessons]); the button goes at the end of the lesson.
 # An SOP named here brings its companion lessons with it (GROUP), e.g. the warmer with its disinfection.
 
 GROUP = {

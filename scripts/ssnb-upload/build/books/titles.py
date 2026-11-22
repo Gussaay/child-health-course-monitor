@@ -5,8 +5,9 @@ from lib import courselink
 M1 = 'Sick & Small Newborn · Module 1: Essential and Emergency Newborn Care'
 M2 = 'Sick & Small Newborn · Module 2: Special Newborn Care'
 M3 = 'Sick & Small Newborn · Module 3: Intensive Newborn Care'
-# Module 2 Sections 7 (Procedures) and 8 (Equipment) are not a module or a course of their own: each standard
-# operating procedure is placed in full inside the lessons that use it (books/sops.py).
+# Module 2 Sections 7 (Procedures) and 8 (Equipment) are the course annexes (kind "Course annex"); the lessons open
+# an SOP with a button (books/sops.py). Module 1: Neonatal procedures; module 2: Equipment.
+ANNEX = 'Sick & Small Newborn · Course annexes'
 
 # Module 2, Section 7 (Neonatal Procedures) and Section 8 (Equipment): the SOP lessons, by their manual title.
 M2_S7 = {

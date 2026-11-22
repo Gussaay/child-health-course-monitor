@@ -5711,38 +5711,10 @@
      "read": [
       {
        "type": "courselink",
-       "course": "Sick & Small Newborn · Module 2: Special Newborn Care",
-       "module": 8,
-       "lesson": "Treating neonatal sepsis",
-       "label": "Learners' course · Lumbar puncture, in Module 2 Neonatal Sepsis"
-      },
-      {
-       "type": "courselink",
-       "course": "Sick & Small Newborn · Module 1: Essential and Emergency Newborn Care",
-       "module": 2,
-       "lesson": "Shock: fluids, signs of improvement and antibiotics",
-       "label": "Learners' course · UVC and intraosseous access, in Module 1 Shock"
-      },
-      {
-       "type": "courselink",
-       "course": "Sick & Small Newborn · Module 2: Special Newborn Care",
-       "module": 4,
-       "lesson": "Supporting and monitoring the circulation",
-       "label": "Learners' course · Umbilical catheters, in Module 2 The Golden Hour"
-      },
-      {
-       "type": "courselink",
-       "course": "Sick & Small Newborn · Module 2: Special Newborn Care",
-       "module": 4,
-       "lesson": "Surfactant",
-       "label": "Learners' course · Endotracheal intubation, in Module 2 Surfactant"
-      },
-      {
-       "type": "courselink",
-       "course": "Sick & Small Newborn · Module 3: Intensive Newborn Care",
-       "module": 3,
-       "lesson": "Complications of mechanical ventilation",
-       "label": "Learners' course · Chest tube, in Module 3 Mechanical Ventilation"
+       "course": "Sick & Small Newborn · Course annexes",
+       "module": 1,
+       "lesson": null,
+       "label": "Course annexes · Neonatal procedures (opened from the lessons)"
       },
       {
        "type": "paragraph",
@@ -6668,38 +6640,10 @@
      "read": [
       {
        "type": "courselink",
-       "course": "Sick & Small Newborn · Module 2: Special Newborn Care",
-       "module": 4,
-       "lesson": "The golden hour, and keeping the baby warm in the SCNU",
-       "label": "Learners' course · Radiant warmer, in Module 2 The Golden Hour"
-      },
-      {
-       "type": "courselink",
-       "course": "Sick & Small Newborn · Module 2: Special Newborn Care",
-       "module": 4,
-       "lesson": "Incubator, radiant warmer or cot?",
-       "label": "Learners' course · Infant incubator, in Module 2 The Golden Hour"
-      },
-      {
-       "type": "courselink",
-       "course": "Sick & Small Newborn · Module 3: Intensive Newborn Care",
+       "course": "Sick & Small Newborn · Course annexes",
        "module": 2,
-       "lesson": "CPAP: how it works and its parts",
-       "label": "Learners' course · Vayu bubble CPAP, in Module 3 Non-Invasive Ventilation"
-      },
-      {
-       "type": "courselink",
-       "course": "Sick & Small Newborn · Module 3: Intensive Newborn Care",
-       "module": 1,
-       "lesson": "Detecting hypoxaemia",
-       "label": "Learners' course · Pulse oximeter, in Module 3 Oxygen Therapy"
-      },
-      {
-       "type": "courselink",
-       "course": "Sick & Small Newborn · Module 2: Special Newborn Care",
-       "module": 5,
-       "lesson": "Jaundice: investigations and treatment; retinopathy of prematurity",
-       "label": "Learners' course · Phototherapy, in Module 2 Jaundice"
+       "lesson": null,
+       "label": "Course annexes · Equipment (opened from the lessons)"
       },
       {
        "type": "paragraph",

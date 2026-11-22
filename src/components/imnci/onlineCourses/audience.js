@@ -12,7 +12,12 @@ export const isFacilitatorRole = (roles) => (roles || []).some((r) => /facilitat
 
 // eslint-disable-next-line no-unused-vars
 export function canSeeCourse(course, { canManage = false, canSeeProgress = false, isFacilitator = false } = {}) {
-    return course?.audience !== 'facilitators' || canManage;
+    // A course annex (standard operating procedures, skill checklists, chart
+    // booklet pages) is opened from the lessons that point to it, not listed.
+    return !['facilitators', 'annex'].includes(course?.audience) || canManage;
 }
+
+/** Course annexes: material the lessons open when needed (SOPs, skill checklists, chart booklet). */
+export const isCourseAnnex = (course) => course?.audience === 'annex';
 
 export const followsAnyLesson = ({ canSeeProgress = false, isFacilitator = false } = {}) => canSeeProgress || isFacilitator;

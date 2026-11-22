@@ -11,7 +11,7 @@ FILES = {'m1': 'ssnb-module-1-essential-emergency-newborn-care', 'm2': 'ssnb-mod
 def where(key):
     out = {}
     # its own course first; a procedure or equipment SOP (Module 2 Sections 7, 8) can sit in Module 1 or 3 too
-    paths = [os.path.join(ROOT, 'course-packages', f + '.imnci.json') for f in [FILES[key]] + [v for k, v in FILES.items() if k != key]]
+    paths = [os.path.join(ROOT, 'course-packages', f + '.imnci.json') for f in [FILES[key]] + [v for k, v in FILES.items() if k != key] + ['ssnb-annex-neonatal-procedures-and-equipment']]
     pkgs = [json.load(open(p)) for p in paths if os.path.exists(p)]
     for pkg in pkgs:
       for m in pkg['modules']:

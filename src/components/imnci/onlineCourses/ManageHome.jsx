@@ -35,7 +35,8 @@ export function ManageHome() {
     } = useCourseScreen();
     const admin = useEnrolmentAdmin();
     const guideDocs = courses.filter((c) => c.audience === 'facilitators');
-    const learnerCourses = courses.filter((c) => c.audience !== 'facilitators');
+    const annexDocs = courses.filter((c) => c.audience === 'annex');
+    const learnerCourses = courses.filter((c) => !['facilitators', 'annex'].includes(c.audience));
 
     const tabs = [
         canManage && { id: 'courses', label: t('imnci_ui.manage.tab_courses', 'Courses'), icon: GraduationCap },
@@ -104,6 +105,18 @@ export function ManageHome() {
                             {/* A facilitator guide is a guideline, not a course: it is read in
                                 Protocol & Course Management > the service > Facilitator guide.
                                 Its text is still edited here. */}
+                            {/* Course annexes: the procedures and equipment SOPs, skill
+                                checklists, chart booklet pages ... that lessons open
+                                with a button when needed. Not listed for learners. */}
+                            {annexDocs.length > 0 && (
+                                <div className="space-y-2" data-testid="manage-annexes">
+                                    <h3 className="text-base font-bold text-slate-900">{t('imnci_ui.manage.annexes_title', 'Course annexes')}</h3>
+                                    <p className="text-sm text-slate-500">{t('imnci_ui.manage.annexes_hint', 'Standard operating procedures, skill checklists, chart booklet and other material the lessons open with a button when needed. Learners do not see them in the course list.')}</p>
+                                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                        {annexDocs.map((c) => <AuthorCourseCard key={c.id} course={c} annex />)}
+                                    </div>
+                                </div>
+                            )}
                             {guideDocs.length > 0 && (
                                 <div className="space-y-2" data-testid="manage-guides">
                                     <h3 className="text-base font-bold text-slate-900">{t('imnci_ui.manage.guides_title', 'Facilitator guides')}</h3>
@@ -135,14 +148,14 @@ export function ManageHome() {
     );
 }
 
-function AuthorCourseCard({ course: c, enrolled, waiting, guide = false }) {
+function AuthorCourseCard({ course: c, enrolled, waiting, guide = false, annex = false }) {
     const { t } = useTranslation();
     const { go, removeCourse, setCourseModal, setTopTab } = useCourseScreen();
     const open = isOpenCourse(c);
     const badge = (
         <>
             {!c.isPublished && <Pill tone="draft">{t('imnci_ui.courses.main.draft', 'draft')}</Pill>}
-            {guide ? <Pill tone="open">{t('imnci_ui.manage.guide_pill', 'Facilitator guide')}</Pill> : open
+            {annex ? <Pill tone="open">{t('imnci_ui.manage.annex_pill', 'Course annex')}</Pill> : guide ? <Pill tone="open">{t('imnci_ui.manage.guide_pill', 'Facilitator guide')}</Pill> : open
                 ? <Pill tone="open"><Unlock size={11} /> {t('imnci_ui.enrol.open', 'Open')}</Pill>
                 : <Pill tone="lock"><Lock size={11} /> {t('imnci_ui.enrol.approval', 'Approval')}</Pill>}
         </>
@@ -151,7 +164,7 @@ function AuthorCourseCard({ course: c, enrolled, waiting, guide = false }) {
         <CourseCardBody course={c} badge={badge}>
             {() => (
                 <div className="flex-1 space-y-2">
-                    {!open && !guide && (
+                    {!open && !guide && !annex && (
                         <button onClick={() => setTopTab('enrolment')} className="text-xs text-slate-500 hover:text-sky-700 inline-flex items-center gap-1">
                             <UserCheck size={12} /> {t('imnci_ui.enrol.counts', '{{n}} enrolled · {{w}} waiting', { n: enrolled, w: waiting })}
                         </button>

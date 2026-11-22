@@ -45,6 +45,18 @@ MODULES = [
     dict(title='Neonatal Sepsis: Surveillance, Management and Prevention', merge=m2_s10.MERGE, merge_titles=m2_s10.MERGE_TITLES, rename=m2_s10.TITLES, split=m2_s10.SPLIT, add=m2_s10.ADD, exercises=m2_s10.EXERCISES),
 ]
 
-# Sections 7 (Procedures) and 8 (Equipment) are not modules of this course: each of their standard operating
-# procedures is placed in full inside the lessons that use it, in any of the three courses (books/sops.py).
+# Sections 7 (Procedures) and 8 (Equipment) are not modules of this course: they are the course annexes (their
+# own file, kind "Course annex" in the Course Manager), which can later hold skill checklists, the chart booklet
+# and other material. The lessons that use an SOP open it with a button (books/sops.py).
 SOP_SECTIONS = [7, 8]
+ANNEX = dict(file="ssnb-annex-neonatal-procedures-and-equipment.imnci.json", course={
+    "title": "Sick & Small Newborn · Course annexes",
+    "audience": "annex",
+    "description": "Course annexes of the Small & Sick Newborn courses, opened from the lessons when needed: the standard operating "
+                   "procedures for neonatal procedures (pain relief, umbilical catheters, PICC, intraosseous access, intubation, needle "
+                   "thoracotomy, chest tube, lumbar puncture, bladder catheterization and aspiration) and for the equipment of the "
+                   "newborn unit (warmers, incubator, bubble CPAP, pulse oximeter, phototherapy, pumps, suction, bag and mask, oxygen), "
+                   "from the Sudan Training Manual for Sick and Small Newborn 2026, Module 2 Sections 7 and 8. Skill checklists, the chart "
+                   "booklet and other material can be added as further modules.",
+    "category": CATEGORY, "subcategory": SUB, "lockOrder": False, "modulesAnyOrder": True, "enrolment": "open",
+})

@@ -9,7 +9,7 @@ import { gradeQuiz } from '../src/components/imnci/exercises.jsx';
 
 // The Sick & Small Newborn course files (scripts/ssnb-upload/build): one
 // course per manual module, one app module per manual section.
-const FILES = ['ssnb-module-1-essential-emergency-newborn-care', 'ssnb-module-2-special-newborn-care', 'ssnb-module-3-intensive-newborn-care'];
+const FILES = ['ssnb-module-1-essential-emergency-newborn-care', 'ssnb-module-2-special-newborn-care', 'ssnb-module-3-intensive-newborn-care', 'ssnb-annex-neonatal-procedures-and-equipment'];
 const GUIDE = JSON.parse(fs.readFileSync(path.join(__dirname, '../course-packages/ssnb-facilitator-guide.imnci.json'), 'utf8'));
 const PKGS = FILES.map((f) => JSON.parse(fs.readFileSync(path.join(__dirname, `../course-packages/${f}.imnci.json`), 'utf8')));
 const lessons = (p) => p.modules.flatMap((m) => m.sections);
@@ -22,21 +22,25 @@ describe('Sick & Small Newborn course files', () => {
             expect(check.warnings).toEqual([]);
             expect(p.course).toMatchObject({ category: 'Small & Sick Newborn', modulesAnyOrder: true });
         });
-        expect(PKGS.map((p) => p.modules.length)).toEqual([3, 8, 3]);
+        expect(PKGS.map((p) => p.modules.length)).toEqual([3, 8, 3, 2]);
     });
 
-    it('places each procedure and equipment SOP inside the lessons that use it, not in a module of its own', () => {
-        PKGS.forEach((p) => expect(p.course).toMatchObject({ lockOrder: true, enrolment: 'approval' }));
-        const titles = PKGS.flatMap((p) => p.modules.map((m) => m.title)).join(' | ');
+    it('keeps the procedure and equipment SOPs in the course annexes and opens them from the lessons with a button', () => {
+        const annex = PKGS[3];
+        expect(annex.course).toMatchObject({ audience: 'annex', enrolment: 'open', lockOrder: false });
+        expect(annex.modules.every((m) => m.anyOrder)).toBe(true);
+        PKGS.slice(0, 3).forEach((p) => expect(p.course).toMatchObject({ lockOrder: true, enrolment: 'approval' }));
+        const titles = PKGS.slice(0, 3).flatMap((p) => p.modules.map((m) => m.title)).join(' | ');
         expect(titles).not.toMatch(/Neonatal Procedures|Equipment Required/);
-        const sopIn = (p, lesson) => lessons(p).find((s) => s.title === lesson).read
-            .filter((b) => b.type === 'note' && b.label === 'Standard operating procedure').map((b) => b.text.replace(/<[^>]*>/g, ''));
-        expect(sopIn(PKGS[0], 'Hypothermia: signs, prevention and the delivery room').join()).toMatch(/Radiant warmer/);
-        expect(sopIn(PKGS[1], 'Treating neonatal sepsis').join()).toMatch(/Lumbar puncture/);
-        expect(sopIn(PKGS[2], 'CPAP: how it works and its parts').join()).toMatch(/Vayu bubble CPAP/);
-        const all = PKGS.flatMap(lessons).flatMap((s) => s.read);
-        expect(all.some((b) => b.type === 'courselink' && /Annex/.test(b.course))).toBe(false);
-        expect(packagePlan(PKGS[1]).items.filter((i) => i.kind === 'module').length).toBe(8);
+        const buttons = (p, lesson) => lessons(p).find((s) => s.title === lesson).read
+            .filter((b) => b.type === 'courselink' && b.popup).map((b) => b.lesson);
+        expect(buttons(PKGS[0], 'Hypothermia: signs, prevention and the delivery room')).toContain('Radiant warmer');
+        expect(buttons(PKGS[1], 'Treating neonatal sepsis')).toContain('Lumbar puncture');
+        expect(buttons(PKGS[2], 'CPAP: how it works and its parts')).toContain('Vayu bubble CPAP system');
+        // the SOP text itself is only in the annexes
+        const inLessons = JSON.stringify(PKGS.slice(0, 3).map((p) => p.modules));
+        expect(inLessons).not.toContain('Turn on the warmer 20 min before');
+        expect(JSON.stringify(annex.modules)).toContain('Turn on the warmer 20 min before');
     });
 
     it('has a facilitator guide for facilitators only, without the resuscitation chapter, linked to the learners\' modules', () => {
@@ -73,7 +77,7 @@ describe('Sick & Small Newborn course files', () => {
             m.sections.forEach((s, k) => items.push({ id: `c${i}m${m.order}s${k}`, kind: 'section', courseId: `c${i}`, moduleId: `c${i}m${m.order}`, title: s.title }));
         }));
         const links = PKGS.flatMap(lessons).flatMap((s) => s.read).filter((b) => b.type === 'courselink');
-        expect(links.length).toBeGreaterThanOrEqual(2); // lesson-to-lesson links; SOPs are placed in full, not linked
+        expect(links.length).toBeGreaterThanOrEqual(20); // lesson links and the SOP buttons into the course annexes
         links.forEach((b) => {
             const r = resolveCourseLink(b, courses, items);
             expect(r.section?.title).toBe(b.lesson);
