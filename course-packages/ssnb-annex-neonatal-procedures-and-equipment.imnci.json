@@ -1693,7 +1693,19 @@
        "url": "https://www.youtube.com/watch?v=0clo9Lvpv7Y",
        "title": "Helping Babies Breathe at Birth - Newborn Care Series",
        "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
-       "script": "SN2.8.8"
+       "script": "SN2.8.8",
+       "chapters": [
+        {
+         "at": 86,
+         "end": 149,
+         "label": "Checking the bag and mask"
+        },
+        {
+         "at": 292,
+         "end": 450,
+         "label": "Ventilating with bag and mask: seal, chest rise, 40 breaths a minute"
+        }
+       ]
       },
       {
        "type": "image",

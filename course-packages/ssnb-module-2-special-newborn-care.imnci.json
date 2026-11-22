@@ -926,7 +926,19 @@
        "type": "video",
        "url": "https://www.youtube.com/watch?v=MYCFuEP6Gd4",
        "title": "Breathing Problems - Newborn Care Series",
-       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel."
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
+       "chapters": [
+        {
+         "at": 60,
+         "end": 123,
+         "label": "Counting breaths and signs of breathing difficulty"
+        },
+        {
+         "at": 123,
+         "end": 207,
+         "label": "Examples of babies with breathing difficulty"
+        }
+       ]
       },
       {
        "type": "question",
@@ -1207,13 +1219,27 @@
        "type": "video",
        "url": "https://www.youtube.com/watch?v=V2N6MXL3RrE",
        "title": "Inserting a Nasogastric Tube - Small Baby Series",
-       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel."
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
+       "chapters": [
+        {
+         "at": 124,
+         "end": 290,
+         "label": "Measuring, inserting, checking and taping the tube"
+        }
+       ]
       },
       {
        "type": "video",
        "url": "https://www.youtube.com/watch?v=aTjymWCGHdc",
        "title": "Feeding with a Nasogastric Tube - Small Baby Series",
-       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel."
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
+       "chapters": [
+        {
+         "at": 84,
+         "end": 297,
+         "label": "Checking the tube and giving the feed by gravity"
+        }
+       ]
       },
       {
        "type": "rich",
@@ -1822,7 +1848,19 @@
        "type": "video",
        "url": "https://www.youtube.com/watch?v=OkhSJ16FHfY",
        "title": "Cup Feeding - Small Baby Series",
-       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel."
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
+       "chapters": [
+        {
+         "at": 84,
+         "end": 198,
+         "label": "Teaching the mother to cup feed"
+        },
+        {
+         "at": 397,
+         "end": 448,
+         "label": "Three safety tips"
+        }
+       ]
       },
       {
        "type": "question",
@@ -2684,7 +2722,19 @@
        "type": "video",
        "url": "https://www.youtube.com/watch?v=RRV-9Jf0eI0",
        "title": "Jaundice - Newborn Care Series",
-       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel."
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
+       "chapters": [
+        {
+         "at": 120,
+         "end": 203,
+         "label": "Checking for jaundice: from the face to the palms and soles"
+        },
+        {
+         "at": 260,
+         "end": 322,
+         "label": "Serious jaundice: who to refer"
+        }
+       ]
       },
       {
        "type": "sort",
@@ -3317,7 +3367,24 @@
        "url": "https://www.youtube.com/watch?v=Ue5iaa8lulM",
        "title": "Carrying Your Baby Skin-to-Skin - Small Baby Series",
        "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
-       "script": "SN2.6.1"
+       "script": "SN2.6.1",
+       "chapters": [
+        {
+         "at": 81,
+         "end": 251,
+         "label": "Positioning and wrapping the baby"
+        },
+        {
+         "at": 453,
+         "end": 481,
+         "label": "Skin-to-skin day and night"
+        },
+        {
+         "at": 492,
+         "end": 516,
+         "label": "Taking the baby out of the wrap"
+        }
+       ]
       },
       {
        "type": "heading",
@@ -3683,7 +3750,19 @@
        "type": "video",
        "url": "https://www.youtube.com/watch?v=MdDD9n7Cz-o",
        "title": "Sepsis - Newborn Care Series",
-       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel."
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
+       "chapters": [
+        {
+         "at": 60,
+         "end": 147,
+         "label": "Assessing the baby for sepsis"
+        },
+        {
+         "at": 147,
+         "end": 199,
+         "label": "Other danger signs that point to sepsis"
+        }
+       ]
       },
       {
        "type": "sort",
@@ -3835,7 +3914,24 @@
        "url": "https://www.youtube.com/watch?v=5FfVjiou_YE",
        "title": "Taking a Venous Blood Sample - Newborn Care Series",
        "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
-       "script": "SN2.10.1"
+       "script": "SN2.10.1",
+       "chapters": [
+        {
+         "at": 88,
+         "end": 200,
+         "label": "Open needle method (not for blood cultures)"
+        },
+        {
+         "at": 210,
+         "end": 306,
+         "label": "Sterile needle and syringe (for blood cultures)"
+        },
+        {
+         "at": 306,
+         "end": 408,
+         "label": "Butterfly needle"
+        }
+       ]
       },
       {
        "type": "heading",
@@ -3891,13 +3987,37 @@
        "type": "video",
        "url": "https://www.youtube.com/watch?v=exbaCZhzsfo",
        "title": "Preparing Ampicillin and Gentamicin for Injection - Newborn Care Series",
-       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel."
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
+       "chapters": [
+        {
+         "at": 88,
+         "end": 199,
+         "label": "Drawing up gentamicin"
+        },
+        {
+         "at": 219,
+         "end": 315,
+         "label": "Mixing and drawing up ampicillin"
+        }
+       ]
       },
       {
        "type": "video",
        "url": "https://www.youtube.com/watch?v=Z54GscbV440",
        "title": "Managing Severe Infection in Newborns - Newborn Care Series",
-       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel."
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
+       "chapters": [
+        {
+         "at": 47,
+         "end": 325,
+         "label": "The five signs of severe infection"
+        },
+        {
+         "at": 325,
+         "end": 463,
+         "label": "Treatment when referral is possible, and when it is not"
+        }
+       ]
       },
       {
        "type": "question",
@@ -4054,7 +4174,19 @@
        "url": "https://www.youtube.com/watch?v=gUOyzA64_iU",
        "title": "Protecting Small Babies from Infection - Small Baby Series",
        "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
-       "script": "SN2.10.2"
+       "script": "SN2.10.2",
+       "chapters": [
+        {
+         "at": 38,
+         "end": 120,
+         "label": "Handwashing (40–60 seconds) and hand rub (20–30 seconds)"
+        },
+        {
+         "at": 120,
+         "end": 164,
+         "label": "The five moments for hand hygiene"
+        }
+       ]
       },
       {
        "type": "image",
@@ -4468,7 +4600,24 @@
        "url": "https://www.youtube.com/watch?v=35Sf5_D9kv0",
        "title": "Cleaning Resuscitation Equipment with a Chemical Solution - Newborn Care Series",
        "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
-       "script": "SN2.10.3"
+       "script": "SN2.10.3",
+       "chapters": [
+        {
+         "at": 54,
+         "end": 144,
+         "label": "Preparing: protective clothing, 0.5% chlorine"
+        },
+        {
+         "at": 318,
+         "end": 442,
+         "label": "Disinfecting in 0.5% chlorine for 20 minutes and rinsing"
+        },
+        {
+         "at": 461,
+         "end": 624,
+         "label": "Reassembling and testing the bag and suction"
+        }
+       ]
       },
       {
        "type": "image",

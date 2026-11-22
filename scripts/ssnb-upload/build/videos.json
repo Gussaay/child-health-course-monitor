@@ -3,60 +3,388 @@
  "videos": {
   "SN1.1.2": {
    "id": "WZz8Yysq5mo",
-   "title": "Preparing the Birth Room - Childbirth Series"
+   "title": "Preparing the Birth Room - Childbirth Series",
+   "chapters": [
+    [
+     29,
+     260,
+     "Supplies and equipment for the birth room"
+    ],
+    [
+     86,
+     111,
+     "Resuscitation equipment: bag, two masks, suction"
+    ]
+   ]
   },
   "SN1.1.3": {
    "id": "0clo9Lvpv7Y",
-   "title": "Helping Babies Breathe at Birth - Newborn Care Series"
+   "title": "Helping Babies Breathe at Birth - Newborn Care Series",
+   "chapters": [
+    [
+     149,
+     207,
+     "The golden minute at birth"
+    ],
+    [
+     215,
+     278,
+     "Drying, opening the airway and stimulating, in detail"
+    ]
+   ]
   },
   "SN1.1.4": {
    "id": "BAX4gB48Ewk",
-   "title": "Keeping the Baby Warm - Newborn Care Series"
+   "title": "Keeping the Baby Warm - Newborn Care Series",
+   "chapters": [
+    [
+     44,
+     128,
+     "Warm room, drying and skin-to-skin at birth"
+    ],
+    [
+     150,
+     233,
+     "Delaying the bath, then bathing safely"
+    ],
+    [
+     265,
+     319,
+     "Cold feet: rewarming skin-to-skin"
+    ]
+   ]
   },
   "SN1.1.5": {
    "id": "hs7ai466toE",
-   "title": "Early Initiation of Breastfeeding - Breastfeeding Series"
+   "title": "Early Initiation of Breastfeeding - Breastfeeding Series",
+   "chapters": [
+    [
+     72,
+     247,
+     "The baby on the mother in the first hour"
+    ],
+    [
+     474,
+     495,
+     "Other newborn care after the first hour"
+    ]
+   ]
   },
   "SN1.2.2": {
    "id": "MieKJa5YJd4",
-   "title": "Taking a Heel Blood Sample - Newborn Care Series"
+   "title": "Taking a Heel Blood Sample - Newborn Care Series",
+   "chapters": [
+    [
+     31,
+     138,
+     "Taking the heel sample"
+    ]
+   ]
   },
   "SN1.3.1": {
    "id": "5xUY7SlGxfM",
-   "title": "Care of the Cord - Newborn Care Series"
+   "title": "Care of the Cord - Newborn Care Series",
+   "chapters": [
+    [
+     129,
+     208,
+     "Tying or clamping and cutting the cord"
+    ],
+    [
+     208,
+     235,
+     "Nothing on the cord; checking for bleeding"
+    ],
+    [
+     325,
+     386,
+     "Cord care at home"
+    ],
+    [
+     424,
+     524,
+     "Chlorhexidine where it is recommended"
+    ]
+   ]
   },
   "SN1.3.2": {
    "id": "y--syZR0u1E",
-   "title": "Breastfeeding Attachment - Breastfeeding Series"
+   "title": "Breastfeeding Attachment - Breastfeeding Series",
+   "chapters": [
+    [
+     241,
+     340,
+     "Positioning and attaching the baby"
+    ],
+    [
+     389,
+     510,
+     "Signs of good attachment and good suckling"
+    ]
+   ]
   },
   "SN1.3.3": {
    "id": "31Fw-XHQdwQ",
-   "title": "Expressing and Storing Breastmilk - Breastfeeding Series"
+   "title": "Expressing and Storing Breastmilk - Breastfeeding Series",
+   "chapters": [
+    [
+     103,
+     341,
+     "Hand expression of breast milk"
+    ],
+    [
+     385,
+     468,
+     "Storing breast milk safely"
+    ]
+   ]
   },
   "SN1.3.4": {
    "id": "nhWYqF6lDW4",
-   "title": "Referring a Sick Baby - Newborn Care Series"
+   "title": "Referring a Sick Baby - Newborn Care Series",
+   "chapters": [
+    [
+     26,
+     77,
+     "Explaining the referral and notifying the facility"
+    ],
+    [
+     105,
+     152,
+     "Preparing the baby for the journey and the referral note"
+    ]
+   ]
   },
   "SN2.6.1": {
    "id": "Ue5iaa8lulM",
-   "title": "Carrying Your Baby Skin-to-Skin - Small Baby Series"
+   "title": "Carrying Your Baby Skin-to-Skin - Small Baby Series",
+   "chapters": [
+    [
+     81,
+     251,
+     "Positioning and wrapping the baby"
+    ],
+    [
+     453,
+     481,
+     "Skin-to-skin day and night"
+    ],
+    [
+     492,
+     516,
+     "Taking the baby out of the wrap"
+    ]
+   ]
   },
   "SN2.10.1": {
    "id": "5FfVjiou_YE",
-   "title": "Taking a Venous Blood Sample - Newborn Care Series"
+   "title": "Taking a Venous Blood Sample - Newborn Care Series",
+   "chapters": [
+    [
+     88,
+     200,
+     "Open needle method (not for blood cultures)"
+    ],
+    [
+     210,
+     306,
+     "Sterile needle and syringe (for blood cultures)"
+    ],
+    [
+     306,
+     408,
+     "Butterfly needle"
+    ]
+   ]
   },
   "SN2.10.2": {
    "id": "gUOyzA64_iU",
-   "title": "Protecting Small Babies from Infection - Small Baby Series"
+   "title": "Protecting Small Babies from Infection - Small Baby Series",
+   "chapters": [
+    [
+     38,
+     120,
+     "Handwashing (40–60 seconds) and hand rub (20–30 seconds)"
+    ],
+    [
+     120,
+     164,
+     "The five moments for hand hygiene"
+    ]
+   ]
   },
   "SN2.10.3": {
    "id": "35Sf5_D9kv0",
-   "title": "Cleaning Resuscitation Equipment with a Chemical Solution - Newborn Care Series"
+   "title": "Cleaning Resuscitation Equipment with a Chemical Solution - Newborn Care Series",
+   "chapters": [
+    [
+     54,
+     144,
+     "Preparing: protective clothing, 0.5% chlorine"
+    ],
+    [
+     318,
+     442,
+     "Disinfecting in 0.5% chlorine for 20 minutes and rinsing"
+    ],
+    [
+     461,
+     624,
+     "Reassembling and testing the bag and suction"
+    ]
+   ]
   },
   "SN2.8.8": {
    "id": "0clo9Lvpv7Y",
-   "title": "Helping Babies Breathe at Birth - Newborn Care Series"
+   "title": "Helping Babies Breathe at Birth - Newborn Care Series",
+   "chapters": [
+    [
+     86,
+     149,
+     "Checking the bag and mask"
+    ],
+    [
+     292,
+     450,
+     "Ventilating with bag and mask: seal, chest rise, 40 breaths a minute"
+    ]
+   ]
   }
  },
- "extra_chapters": {}
+ "extra_chapters": {
+  "-6T7f40EB9E": [
+   [
+    35,
+    145,
+    "Assessing a cold baby"
+   ],
+   [
+    145,
+    187,
+    "Rewarming skin-to-skin and checking again"
+   ],
+   [
+    223,
+    267,
+    "Referral with first doses of antibiotics"
+   ]
+  ],
+  "VAb_zGqiyZg": [
+   [
+    50,
+    236,
+    "Drawing up and giving an IM injection in the outer thigh"
+   ]
+  ],
+  "8foaEYKfDRo": [
+   [
+    85,
+    204,
+    "Observation and vital signs"
+   ],
+   [
+    204,
+    393,
+    "Head-to-toe examination"
+   ]
+  ],
+  "_uhWHZOtq2U": [
+   [
+    40,
+    158,
+    "Assessing a hot baby"
+   ],
+   [
+    158,
+    180,
+    "Cooling the baby; no paracetamol or sponging"
+   ]
+  ],
+  "MYCFuEP6Gd4": [
+   [
+    60,
+    123,
+    "Counting breaths and signs of breathing difficulty"
+   ],
+   [
+    123,
+    207,
+    "Examples of babies with breathing difficulty"
+   ]
+  ],
+  "V2N6MXL3RrE": [
+   [
+    124,
+    290,
+    "Measuring, inserting, checking and taping the tube"
+   ]
+  ],
+  "aTjymWCGHdc": [
+   [
+    84,
+    297,
+    "Checking the tube and giving the feed by gravity"
+   ]
+  ],
+  "OkhSJ16FHfY": [
+   [
+    84,
+    198,
+    "Teaching the mother to cup feed"
+   ],
+   [
+    397,
+    448,
+    "Three safety tips"
+   ]
+  ],
+  "RRV-9Jf0eI0": [
+   [
+    120,
+    203,
+    "Checking for jaundice: from the face to the palms and soles"
+   ],
+   [
+    260,
+    322,
+    "Serious jaundice: who to refer"
+   ]
+  ],
+  "MdDD9n7Cz-o": [
+   [
+    60,
+    147,
+    "Assessing the baby for sepsis"
+   ],
+   [
+    147,
+    199,
+    "Other danger signs that point to sepsis"
+   ]
+  ],
+  "Z54GscbV440": [
+   [
+    47,
+    325,
+    "The five signs of severe infection"
+   ],
+   [
+    325,
+    463,
+    "Treatment when referral is possible, and when it is not"
+   ]
+  ],
+  "exbaCZhzsfo": [
+   [
+    88,
+    199,
+    "Drawing up gentamicin"
+   ],
+   [
+    219,
+    315,
+    "Mixing and drawing up ampicillin"
+   ]
+  ]
+ }
 }

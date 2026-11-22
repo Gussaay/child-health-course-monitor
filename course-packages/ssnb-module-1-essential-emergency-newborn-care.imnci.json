@@ -555,7 +555,19 @@
        "url": "https://www.youtube.com/watch?v=WZz8Yysq5mo",
        "title": "Preparing the Birth Room - Childbirth Series",
        "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
-       "script": "SN1.1.2"
+       "script": "SN1.1.2",
+       "chapters": [
+        {
+         "at": 29,
+         "end": 260,
+         "label": "Supplies and equipment for the birth room"
+        },
+        {
+         "at": 86,
+         "end": 111,
+         "label": "Resuscitation equipment: bag, two masks, suction"
+        }
+       ]
       },
       {
        "type": "courselink",
@@ -633,7 +645,19 @@
        "url": "https://www.youtube.com/watch?v=0clo9Lvpv7Y",
        "title": "Helping Babies Breathe at Birth - Newborn Care Series",
        "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
-       "script": "SN1.1.3"
+       "script": "SN1.1.3",
+       "chapters": [
+        {
+         "at": 149,
+         "end": 207,
+         "label": "The golden minute at birth"
+        },
+        {
+         "at": 215,
+         "end": 278,
+         "label": "Drying, opening the airway and stimulating, in detail"
+        }
+       ]
       },
       {
        "type": "image",
@@ -961,7 +985,24 @@
        "url": "https://www.youtube.com/watch?v=BAX4gB48Ewk",
        "title": "Keeping the Baby Warm - Newborn Care Series",
        "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
-       "script": "SN1.1.4"
+       "script": "SN1.1.4",
+       "chapters": [
+        {
+         "at": 44,
+         "end": 128,
+         "label": "Warm room, drying and skin-to-skin at birth"
+        },
+        {
+         "at": 150,
+         "end": 233,
+         "label": "Delaying the bath, then bathing safely"
+        },
+        {
+         "at": 265,
+         "end": 319,
+         "label": "Cold feet: rewarming skin-to-skin"
+        }
+       ]
       },
       {
        "type": "paragraph",
@@ -996,7 +1037,24 @@
        "type": "video",
        "url": "https://www.youtube.com/watch?v=-6T7f40EB9E",
        "title": "The Cold Baby - Newborn Care Series",
-       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel."
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
+       "chapters": [
+        {
+         "at": 35,
+         "end": 145,
+         "label": "Assessing a cold baby"
+        },
+        {
+         "at": 145,
+         "end": 187,
+         "label": "Rewarming skin-to-skin and checking again"
+        },
+        {
+         "at": 223,
+         "end": 267,
+         "label": "Referral with first doses of antibiotics"
+        }
+       ]
       },
       {
        "type": "question",
@@ -1147,7 +1205,19 @@
        "url": "https://www.youtube.com/watch?v=hs7ai466toE",
        "title": "Early Initiation of Breastfeeding - Breastfeeding Series",
        "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
-       "script": "SN1.1.5"
+       "script": "SN1.1.5",
+       "chapters": [
+        {
+         "at": 72,
+         "end": 247,
+         "label": "The baby on the mother in the first hour"
+        },
+        {
+         "at": 474,
+         "end": 495,
+         "label": "Other newborn care after the first hour"
+        }
+       ]
       },
       {
        "type": "image",
@@ -1624,7 +1694,14 @@
        "url": "https://www.youtube.com/watch?v=MieKJa5YJd4",
        "title": "Taking a Heel Blood Sample - Newborn Care Series",
        "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
-       "script": "SN1.2.2"
+       "script": "SN1.2.2",
+       "chapters": [
+        {
+         "at": 31,
+         "end": 138,
+         "label": "Taking the heel sample"
+        }
+       ]
       },
       {
        "type": "image",
@@ -2510,7 +2587,14 @@
        "type": "video",
        "url": "https://www.youtube.com/watch?v=VAb_zGqiyZg",
        "title": "Giving an Intramuscular Injection - Newborn Care Series",
-       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel."
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
+       "chapters": [
+        {
+         "at": 50,
+         "end": 236,
+         "label": "Drawing up and giving an IM injection in the outer thigh"
+        }
+       ]
       },
       {
        "type": "calc",
@@ -2536,7 +2620,29 @@
        "url": "https://www.youtube.com/watch?v=5xUY7SlGxfM",
        "title": "Care of the Cord - Newborn Care Series",
        "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
-       "script": "SN1.3.1"
+       "script": "SN1.3.1",
+       "chapters": [
+        {
+         "at": 129,
+         "end": 208,
+         "label": "Tying or clamping and cutting the cord"
+        },
+        {
+         "at": 208,
+         "end": 235,
+         "label": "Nothing on the cord; checking for bleeding"
+        },
+        {
+         "at": 325,
+         "end": 386,
+         "label": "Cord care at home"
+        },
+        {
+         "at": 424,
+         "end": 524,
+         "label": "Chlorhexidine where it is recommended"
+        }
+       ]
       }
      ],
      "see": [],
@@ -2558,7 +2664,19 @@
        "type": "video",
        "url": "https://www.youtube.com/watch?v=8foaEYKfDRo",
        "title": "Newborn Physical Exam - Newborn Care Series",
-       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel."
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
+       "chapters": [
+        {
+         "at": 85,
+         "end": 204,
+         "label": "Observation and vital signs"
+        },
+        {
+         "at": 204,
+         "end": 393,
+         "label": "Head-to-toe examination"
+        }
+       ]
       },
       {
        "type": "sort",
@@ -2646,7 +2764,19 @@
        "type": "video",
        "url": "https://www.youtube.com/watch?v=_uhWHZOtq2U",
        "title": "The Hot Baby - Newborn Care Series",
-       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel."
+       "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
+       "chapters": [
+        {
+         "at": 40,
+         "end": 158,
+         "label": "Assessing a hot baby"
+        },
+        {
+         "at": 158,
+         "end": 180,
+         "label": "Cooling the baby; no paracetamol or sponging"
+        }
+       ]
       },
       {
        "type": "question",
@@ -2790,7 +2920,19 @@
        "url": "https://www.youtube.com/watch?v=y--syZR0u1E",
        "title": "Breastfeeding Attachment - Breastfeeding Series",
        "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
-       "script": "SN1.3.2"
+       "script": "SN1.3.2",
+       "chapters": [
+        {
+         "at": 241,
+         "end": 340,
+         "label": "Positioning and attaching the baby"
+        },
+        {
+         "at": 389,
+         "end": 510,
+         "label": "Signs of good attachment and good suckling"
+        }
+       ]
       }
      ],
      "see": [],
@@ -2921,7 +3063,19 @@
        "url": "https://www.youtube.com/watch?v=31Fw-XHQdwQ",
        "title": "Expressing and Storing Breastmilk - Breastfeeding Series",
        "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
-       "script": "SN1.3.3"
+       "script": "SN1.3.3",
+       "chapters": [
+        {
+         "at": 103,
+         "end": 341,
+         "label": "Hand expression of breast milk"
+        },
+        {
+         "at": 385,
+         "end": 468,
+         "label": "Storing breast milk safely"
+        }
+       ]
       },
       {
        "type": "image",
@@ -3198,7 +3352,19 @@
        "url": "https://www.youtube.com/watch?v=nhWYqF6lDW4",
        "title": "Referring a Sick Baby - Newborn Care Series",
        "caption": "Global Health Media Project (globalhealthmedia.org), shown whole as published on their YouTube channel.",
-       "script": "SN1.3.4"
+       "script": "SN1.3.4",
+       "chapters": [
+        {
+         "at": 26,
+         "end": 77,
+         "label": "Explaining the referral and notifying the facility"
+        },
+        {
+         "at": 105,
+         "end": 152,
+         "label": "Preparing the baby for the journey and the referral note"
+        }
+       ]
       },
       {
        "type": "paragraph",

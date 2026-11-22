@@ -15,7 +15,17 @@ def clock(sec):
 
 def main(folder, out):
     vj = json.load(open(os.path.join(HERE, 'videos.json')))
-    skills = vj.get('skill_times', {})          # title -> [[start, end, label], ...]
+    # the skills each lesson points to, by video name: the slot videos (videos.json "videos") and the extra
+    # lesson videos (books/ghm.py EXTRA, chapters in videos.json "extra_chapters")
+    from books.ghm import EXTRA
+    skills = {}
+    for v in vj.get('videos', {}).values():
+        for c in v.get('chapters', []):
+            skills.setdefault(v['title'].split(' - ')[0].strip(), set()).add(tuple(c))
+    for _, _, _, vid, title in EXTRA:
+        for c in vj.get('extra_chapters', {}).get(vid, []):
+            skills.setdefault(title.split(' - ')[0].strip(), set()).add(tuple(c))
+    skills = {k: sorted(v) for k, v in skills.items()}
     d = docx.Document()
     st = d.styles['Normal']; st.font.name = 'Calibri'; st.font.size = Pt(10.5)
     d.add_heading('Global Health Media Project videos: transcripts and skill times', 0)

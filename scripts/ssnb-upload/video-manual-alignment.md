@@ -1,61 +1,50 @@
-# Sick & Small Newborn: GHMP videos against the manual — differences and how to align them
+# Sick & Small Newborn: GHMP videos against the manual — checked against the transcripts
 
-Checked 22 Nov 2026. 25 Global Health Media Project (GHMP) videos in 24 lessons of Modules 1–3.
-
-**How this was checked.** The manual's side is the lesson text the video sits in, word for word. The video's side
-could not be read from a transcript: GHMP publishes only a one-line summary, and YouTube captions could not be
-fetched here. It is the teaching of each film as published (GHMP follows the WHO guideline the film names). So every
-"video" point below **must be confirmed by watching the film** (or automatically, once the video files are
-available: `build/skilltimes.py` transcribes them and can print the narration beside the manual).
-
-Kinds of finding:
-- **Contradiction**: the video teaches something the manual says differently.
-- **Manual inconsistent**: the manual says two different things itself; the video agrees with one of them.
-- **Gap**: the video shows a step or a number the manual leaves out (not wrong, but learners will ask).
-- **Different setting**: the video is for a first-level facility or the home; the lesson is for the SCNU/NICU.
+Checked 22 Nov 2026. The 25 Global Health Media Project (GHMP) videos were downloaded under the Level 1 licence and
+transcribed (Whisper, with times). Each "video" point below quotes the narration, with the time it is spoken
+(video name, m:ss). Full transcripts: Drive › Training manual small and sick newborn › videos and trascribe ›
+"GHMP video transcripts and skill times.docx".
 
 ## Contradictions (decide first)
 
-| # | Lesson (video) | Manual says | Video teaches | Suggested alignment |
+| # | Lesson (video) | Manual says | The video says | Suggested alignment |
 |---|---|---|---|---|
-| 1 | M2 · KMC step by step (*Carrying Your Baby Skin-to-Skin*) | "Leave mother and baby in kangaroo care for 30 minutes once a day initially, then 2–3 times a day 2–3 hours" | Kangaroo position for as many hours as possible, day and night (WHO 2022: start immediately, continuous, ideally 24 h, at least 8 h/day) | **Update the manual** to WHO 2022 immediate, continuous KMC; keep "start with short sessions" only for babies not yet stable. Until then, a note under the video: "Sudan: aim for continuous KMC as soon as the baby is stable." |
-| 2 | M2 · Treating neonatal sepsis (*Managing Severe Infection in Newborns*) | Hospital regimen only: ampicillin + gentamicin IV/IM, 7–10 days, stop at 72 h if culture negative | The 2015 WHO update for when **referral is not possible**: gentamicin IM + oral amoxicillin for 7 days at the first-level facility, and outpatient amoxicillin for fast breathing alone (7–59 days) | **Different setting, not wrong.** Add a note under the video: "This film shows WHO's regimen for when a sick young infant cannot be referred. In the SCNU, follow the manual's regimen above." Or move the video to Module 1 (Referring a newborn). |
-| 3 | M2 · Treating neonatal sepsis (*Preparing Ampicillin and Gentamicin*) | Gentamicin 5 mg/kg once daily in week 1, 7.5 mg/kg after | WHO weight-band doses: gentamicin in week 1 is **3 mg/kg for low birth weight**, 5 mg/kg for normal weight | **Add the low-birth-weight dose** to the manual (or state Sudan's choice), so the film's dose table and the lesson agree. Check the film's table against the national formulary. |
+| 1 | M2 · KMC step by step (*Carrying Your Baby Skin-to-Skin*) | "Leave mother and baby in kangaroo care for 30 minutes once a day initially, then 2–3 times a day 2–3 hours" | "Keep your baby with you in skin to skin contact as continuously as possible day and night, except for changing her diaper or attending to your own personal needs" (7:33); "Sleep with your baby in the wrap" (8:01) | **Update the manual** to WHO 2022 continuous KMC (start as soon as the baby is stable, as many hours as possible, ideally day and night). |
+| 2 | M2 · Decontamination station (*Cleaning Resuscitation Equipment with a Chemical Solution*) | Station: chlorine **0.1%**, 20 minutes, then sterile/filtered water | "Be sure to dilute the chlorine properly to make a **0.5%** solution. Make it fresh that day" (5:25); "Soak the pieces for **20 minutes**" (6:15); rinse in "three buckets of boiled and cooled water" (5:40) | **One national standard**: 0.5% chlorine, fresh daily, 20 minutes, three rinses in boiled cooled water. The CPAP lesson's "0.5% for 10 minutes" should give the same time. |
+| 3 | M2 · Treating neonatal sepsis; M1 · cold baby, breathing (*Managing Severe Infection*, *The Cold Baby*, *Breathing Problems*, *Sepsis*) | SCNU regimen only (ampicillin + gentamicin IV/IM, 7–10 days) | "If referral is not possible … IM gentamicin once daily for seven days plus amoxicillin by mouth twice daily for seven days" or gentamicin "for just two days" (Managing Severe Infection 6:22–6:56; same in Cold Baby 4:40, Breathing Problems 5:02, Sepsis 4:16) | **Different setting, not wrong.** Add under these videos: "This shows WHO's treatment when a baby cannot be referred. In the SCNU follow the regimen in this lesson." |
 
-## The manual says two things (the video agrees with one)
+## The manual says two things (the videos agree with one)
 
-| # | Topic (video) | Manual, place 1 | Manual, place 2 | Video | Suggested alignment |
+| # | Topic | Manual, place 1 | Manual, place 2 | The video says | Suggested alignment |
 |---|---|---|---|---|---|
-| 4 | First bath (*Keeping the Baby Warm*) | M1 Skin-to-skin and the warm chain: "Delay bathing until 6–8 hrs or when stable" | M1 Temperature problems: "Delay bathing for 24 hours after birth" | At least 24 hours | One rule everywhere: **delay the bath 24 hours; if not possible for cultural reasons, at least 6 hours** (WHO). |
-| 5 | Fever (*Sepsis*, *The Hot Baby*) | Triage: fever above 37.5 °C | Sepsis signs: ≥ 38 °C; case definition > 38 °C; "Temp 35.5–38" at 90 minutes | WHO young-infant sign as the film shows it (≥ 37.5 °C) | Keep **37.5 °C** as the bedside danger sign (IMNCI); keep > 38 °C only in the surveillance case definition and say so there. |
-| 6 | Bag-and-mask rate (*Helping Babies Breathe at Birth*) | Bag-and-mask SOP: 30–60 breaths/min | NRP lessons: 40–60 breaths/min | 40 breaths/min ("breathe-two-three") | Change the SOP to **40–60 per minute** (NRP), which includes HBB's 40. |
-| 7 | Cord clamping (*Helping Babies Breathe at Birth*, *Preparing the Birth Room*) | EENC: after pulsations stop, usually 1–3 minutes | NRP: ≥ 30 seconds; ROP lesson: 60–90 seconds | Clamp at 1–3 minutes in a breathing baby; a baby not breathing: clamp, cut and ventilate | One sentence in the manual: **breathing baby: not before 1 minute (1–3 min); baby needing ventilation: start within the golden minute** (cut the cord unless ventilation with the cord intact is possible). |
-| 8 | Disinfecting resuscitation equipment (*Cleaning Resuscitation Equipment with a Chemical Solution*) | Decontamination station: chlorine **0.1%**, 20 minutes | CPAP lesson: chlorine **0.5%**, 10 minutes; bag/bulb SOPs: "disinfection solution" / "chlorine", 20 minutes, no strength | A chlorine solution of a stated strength and soaking time (check the film) | **One national standard** for high-level disinfection of resuscitation equipment (strength, time, rinse), written the same in every SOP; check the film uses it. |
+| 4 | First bath | M1 Warm chain: "Delay bathing until 6–8 hrs or when stable" | M1 Temperature problems: "Delay bathing for 24 hours" | "A bath can make the newborn dangerously cold. **Wait at least a day.** Wait longer if the baby is sick, very small, or the environment is cold" (Keeping the Baby Warm 2:37); "Wait at least a day before giving a bath" (Early Initiation 8:15) | One rule: **at least 24 hours** (longer if sick, small or cold). |
+| 5 | Bag-and-mask rate | Bag-and-mask SOP: 30–60 breaths/min | NRP lessons: 40–60 | "Breathe, two, three … squeeze the bag on breathe and release on two, three" = 40/min (Helping Babies Breathe 6:12–6:23) | SOP to **40–60 per minute**. |
+| 6 | Cord clamping | EENC: after pulsations stop (1–3 min) | NRP ≥ 30 s; ROP lesson 60–90 s | "Delay cutting the cord until it has stopped pulsating, a few minutes after birth" (Care of the Cord 1:49); a baby not breathing: "Cut the cord now, to move the baby to a separate area for ventilation" (HBB 4:38) | One sentence: breathing baby, **not before 1 minute (1–3 min)**; baby needing ventilation: start within the golden minute. |
 
-## Gaps: the video shows what the lesson does not say
+## Temperature thresholds (not a contradiction, but say it the same way)
 
-| # | Lesson (video) | Gap | Suggestion |
+The videos use three numbers, each for a different purpose: normal **36.5–37.5 °C** (Cold Baby 1:43, Hot Baby 1:46,
+Physical Exam 2:31); "more than 37.5 is too high" (Hot Baby 0:14); **danger signs < 35.5 °C and ≥ 38 °C**
+(Managing Severe Infection 2:58, 3:44). The manual has the same numbers in different places (hypothermia < 36.5,
+triage fever > 37.5, sepsis ≥ 38, < 35.5). Suggest one small table in the thermal-care lesson with all three, so a
+learner never meets them as a conflict.
+
+## Gaps: the video shows what the lesson does not say (now confirmed)
+
+| # | Lesson (video) | The video says | Suggestion |
 |---|---|---|---|
-| 9 | M1 · Measuring glucose (*Taking a Heel Blood Sample*) | Manual: warm heel, wipe first drop. Not where on the heel. | Add "the outer or inner side of the heel, never the back or the centre". |
-| 10 | M2 · Nutrition (*Inserting / Feeding with a Nasogastric Tube*) | Manual has no measuring or placement check for the tube. | Add the SOP the film shows: measure, mark, insert, check position before every feed; and Sudan's feed-volume steps (manual: increase by up to 30 mL/kg/day; check the film's numbers match). |
-| 11 | M1 · Essential care at 60–90 min (*Care of the Cord*) | Manual: "nothing on the cord unless recommended by your health authority". | State **Sudan's policy** (dry cord care in facilities; chlorhexidine 7.1% for home births if adopted), because the film discusses chlorhexidine. |
-| 12 | M1 · Discharge (*Expressing and Storing Breastmilk*) | The film gives storage times; the manual gives none. | Add storage times from the national IYCF guidance, the same as the film's (check). |
-| 13 | M1 · Referring a newborn (*Referring a Sick Baby*) | The film keeps the baby skin-to-skin on the mother during transport and gives the first antibiotic dose before referral. | Make sure the transport lessons say both (the manual has "keep warm", a transport device, and pre-referral treatment). |
+| 7 | M1 · Measuring glucose (*Taking a Heel Blood Sample*) | "Clean the skin on the sides of the heel … puncture the side of the heel firmly" (1:12–1:22); squeeze gently, "not too much, that can prevent accurate results" (2:03) | Add "the side of the heel". |
+| 8 | M2 · Nutrition (*Inserting / Feeding with a Nasogastric Tube*) | 5–6 Fr; measure "tip of the nose to the earlobe to a point halfway between the tip of the breastbone and the umbilicus" (2:07); check by drawing back gastric fluid (4:22); change every 7 days (5:19); feed by gravity over 10–15 minutes, never push the plunger (4:43, 5:08) | Add this SOP to the nutrition lesson or the annexes. |
+| 9 | M1 · Essential care (*Care of the Cord*) | "Do not put anything on the cord stump unless advised by your country's practice" (3:28); chlorhexidine "recommended for babies born at home … single application or every day for seven days according to your national guidelines" (7:04–7:23) | State **Sudan's policy** on chlorhexidine. |
+| 10 | M1 · Discharge (*Expressing and Storing Breastmilk*) | Room: "about 6 hours … as long as the room is not very hot" (6:54); refrigerator "up to 5 days" (7:10); frozen "2 weeks or longer" (7:24) | Add storage times (as the national IYCF guidance gives them). |
+| 11 | M1 · Referring (*Referring a Sick Baby*) | First doses of antibiotics, breastfeed or expressed milk, "positioning the baby skin to skin will keep him warm during the journey", referral note (1:45–2:12) | Make sure the transport lessons say skin-to-skin during the journey. |
 
 ## Agree (no action)
 
-Skin-to-skin for at least 60 minutes and breastfeeding in the first hour; vitamin K 1 mg IM in the front outer thigh
-after the first hour (0.5 mg < 1500 g); normal temperature 36.5–37.5 °C; hypothermia < 36.5 °C; room ≥ 25 °C; fast
-breathing ≥ 60/min in the first week; jaundice on day 1 or on palms and soles is a danger sign; no routine suction of
-a vigorous baby or for meconium; hand hygiene 40–60 s with soap, 20–30 s with rub; nasal prong oxygen 0.5–1 L/min and
-oxygen below SpO₂ 90%; ampicillin 50 mg/kg every 12 h in week 1, every 8 h after.
+Gentamicin 5 mg/kg (IM video: 40 mg/2 mL, 3 kg baby 0.8 mL; preparation video: 80 mg/2 mL, 3.2 kg 0.4 mL) and
+ampicillin about 50 mg/kg (0.6 mL of 500 mg in 1.8 mL for 3.2 kg) agree with the manual. IM injection in the outer
+thigh at 90°, never the buttocks. Skin-to-skin at least an hour, vitamin K and eye care after the first feed. Fast
+breathing > 60; normal 30–60 breaths, heart rate 100–160, birth weight 2.5–4 kg. Jaundice on day 1 or on palms and
+soles is serious. Handwashing 40–60 s, hand rub 20–30 s, the five moments. Room at least 25 °C.
 
-## How to apply it in the courses
-
-1. **Clinical decisions** (rows 1–8): the national team chooses the rule; I then change the lesson text and the
-   quiz questions that test it, rebuild, and update the live lessons in place (learners keep their progress).
-2. **Notes under videos** (rows 2, 3 and any row not yet decided): a short "In Sudan …" box under the video, so the
-   learner is never left with two answers. These can go live now without changing the manual.
-3. **Gaps** (rows 9–13): add the missing step to the lesson as a "Key point" box, quoting the national source.
-4. **Confirm the video side**: send the GHMP files (licence Level 1, free); the transcripts are compared with the
-   lessons automatically and any row above that the film does not actually say is dropped.
+The earlier draft's point about a low-birth-weight gentamicin dose is withdrawn: neither video shows one.
