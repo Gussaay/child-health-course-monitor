@@ -49,6 +49,7 @@ import {
     downloadJobs, announceJobs, nextCertificateJobId,
     subscribeCertificateDownloads, cancelCertificateDownload, dismissCertificateDownload,
 } from '../utils/certificateDownloads';
+import { courseStateText, courseLocationText } from './constants';
 export { subscribeCertificateDownloads, cancelCertificateDownload, dismissCertificateDownload };
 
 // -----------------------------------------------------------------------------
@@ -1151,6 +1152,9 @@ const CertificateTemplate = React.memo(function CertificateTemplate({
     } else {
         if (course.states && Array.isArray(course.states)) stateDisplay = course.states.join(', ');
     }
+
+    // A course in more than one state is printed as "Multiple states".
+    if (courseStateText(course, 'en') === 'Multiple states') stateDisplay = courseStateText(course, isArabic ? 'ar' : 'en');
 
     const hallDisplay = (!isArabic && course.hall_english) ? course.hall_english : (course.hall || '');
     const computedLocation = hallDisplay ? `${stateDisplay} - ${hallDisplay}` : stateDisplay;
@@ -3720,7 +3724,7 @@ export function CertificateDesigner({
                         <Layers className="inline h-3 w-3 mr-0.5 -mt-0.5" />{scopeLabel}
                     </span>
                     {!isTemplateScope && (course?.state || course?.locality) && (
-                        <span className="text-gray-400 truncate hidden md:inline">— {course?.state} {course?.locality}</span>
+                        <span className="text-gray-400 truncate hidden md:inline">— {courseLocationText(course, ' ')}</span>
                     )}
                 </nav>
 
@@ -4956,7 +4960,7 @@ export function CertificateVerificationView({ participant, course }) {
             <h3 className="text-2xl font-black text-sky-700 mb-2">{participant.name}</h3>
             <p className="text-sm text-gray-500 mb-6 font-semibold uppercase tracking-wider">{t('certificates.verify.for_completing', 'For completing: {{type}}', { type: course.course_type })}</p>
             <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 text-left text-sm text-gray-700 space-y-2">
-                <p className="flex justify-between border-b border-gray-200 pb-2"><strong className="text-gray-500 uppercase tracking-wide text-xs">{t('certificates.verify.location', 'Course Location:')}</strong> <span className="font-bold">{course.state} - {course.locality}</span></p>
+                <p className="flex justify-between border-b border-gray-200 pb-2"><strong className="text-gray-500 uppercase tracking-wide text-xs">{t('certificates.verify.location', 'Course Location:')}</strong> <span className="font-bold">{courseLocationText(course)}</span></p>
                 <p className="flex justify-between"><strong className="text-gray-500 uppercase tracking-wide text-xs">{t('certificates.verify.date', 'Date:')}</strong> <span className="font-bold">{course.start_date}</span></p>
             </div>
         </div>
@@ -5099,7 +5103,7 @@ export function PublicCourseCertificatesView({ courseId }) {
 
     return (
         <Card className="p-4 sm:p-6">
-            <PageHeader title={t('certificates.public.course_certificates', 'Course Certificates')} subtitle={`${data.course.course_type} - ${data.course.state} / ${data.course.locality}`} />
+            <PageHeader title={t('certificates.public.course_certificates', 'Course Certificates')} subtitle={`${data.course.course_type} - ${courseLocationText(data.course, ' / ')}`} />
             
             <div className="bg-sky-50 text-sky-800 p-4 rounded-lg text-sm border border-sky-100 mb-6 flex items-start">
                 <Award className="w-5 h-5 mr-3 shrink-0" />

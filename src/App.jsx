@@ -198,6 +198,7 @@ import { publicBaseUrl } from './utils/publicLink';
 import { DataAssistantCard, PageAddButton } from './components/DataAssistantLauncher';
 import { ScanQrCard } from './components/QrScanLauncher';
 import { isPublicAppPath, parseScannedCode } from './utils/appLinks';
+import { courseLocationText } from './components/constants';
 import GetAppBanner from './components/GetAppBanner';
 import { shareApp } from './utils/shareApp';
 import { findLinkedParticipant, rememberLinkedParticipant } from './utils/linkedParticipant';
@@ -3149,7 +3150,7 @@ case 'meetings':
     const pageSubtitle = (() => {
         if (view === 'facilitatorReport' || view === 'facilitatorForm') return selectedFacilitator?.name || '';
         const course = view === 'finalReport' ? (finalReportCourse || selectedCourse) : selectedCourse;
-        const courseLine = course ? [course.course_type, [course.state, course.locality].filter(Boolean).join(' / ')].filter(Boolean).join(' · ') : '';
+        const courseLine = course ? [course.course_type, courseLocationText(course, ' / ')].filter(Boolean).join(' · ') : '';
         if (['participantReport', 'observe', 'monitoring'].includes(view)) {
             const participant = (courseDetails.participants || []).find(p => p.id === selectedParticipantId);
             return [participant?.name, courseLine].filter(Boolean).join(' · ');

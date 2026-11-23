@@ -36,6 +36,7 @@ import {
 } from './CourseTestForm'; 
 import { notify } from './dialogs';
 import { useTranslation } from 'react-i18next';
+import { courseLocationText } from './constants';
 
 // EmONC test parts: colours used in the report (Part 1 EENC / Part 2 Newborn or Maternal)
 const REPORT_SECTION_STYLES = {
@@ -231,7 +232,7 @@ export function ReportsView({ course, participants, allObs: propAllObs, allCases
             `}
             </style>
 
-            {!hideHeader && <PageHeader title={t('reports_views.reports.title', 'Individual Participant Report')} subtitle={`${course.course_type} - ${course.state} / ${course.locality}`} className="print-hide" />}
+            {!hideHeader && <PageHeader title={t('reports_views.reports.title', 'Individual Participant Report')} subtitle={`${course.course_type} - ${courseLocationText(course, ' / ')}`} className="print-hide" />}
             
             {hasTestReports && (
                 <div className="flex gap-2 mb-6 print-hide">
@@ -473,7 +474,7 @@ function CourseTestReports({ course, participants, allTests }) {
         <div className="mt-6 printable-area" id="test-report-container">
             <div className="report-header mb-4 p-4" id="test-report-header">
                 <h2 className="text-2xl font-bold">{t('reports_views.reports.test.title', 'Individual Participant Report (Test Scores)')}</h2>
-                <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
+                <h3 className="text-lg text-gray-700">{courseLocationText(course, ' / ')}</h3>
                 <h4 className="text-md text-gray-600">{t('reports_views.reports.test.report_type', 'Report Type: {{type}}', { type: tab === 'summary' ? t('reports_views.reports.tabs.score_summary', 'Score Summary') : t('reports_views.reports.test.detailed_matrix_type', 'Detailed Matrix ({{testType}})', { testType: testTypeFilter === 'pre-test' ? t('reports_views.reports.pre_test', 'Pre-Test') : t('reports_views.reports.post_test', 'Post-Test') }) })}</h4>
                 {isEmonc && <h4 className="text-md font-semibold text-gray-700">{t('reports_views.reports.test.module', 'Module: {{module}}', { module: getEmoncModuleLabel(moduleFilter) })}</h4>}
             </div>
@@ -810,7 +811,7 @@ function ImnciReports({ course, participants, allObs, allCases }) {
         <div className="mt-6 printable-area" id="imnci-report-container">
             <div className="report-header mb-4 px-1" id="imnci-report-header">
                 <h2 className="text-2xl font-bold">{t('reports_views.reports.title', 'Individual Participant Report')}</h2>
-                <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
+                <h3 className="text-lg text-gray-700">{courseLocationText(course, ' / ')}</h3>
                 <h4 className="text-md text-gray-600">{t('reports_views.reports.imnci.age_group_label', 'Age Group: {{age}}', { age: age === 'LT2M' ? t('reports_views.reports.imnci.age_0_2', '0-2 months') : t('reports_views.reports.imnci.age_2_59', '2-59 months') })}</h4>
             </div>
 
@@ -981,7 +982,7 @@ function EtatReports({ course, participants, allObs, allCases }) {
         <div className="mt-6 printable-area" id="etat-report-container">
             <div className="report-header mb-4 px-1" id="etat-report-header">
                 <h2 className="text-2xl font-bold">{t('reports_views.reports.title', 'Individual Participant Report')}</h2>
-                <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
+                <h3 className="text-lg text-gray-700">{courseLocationText(course, ' / ')}</h3>
             </div>
 
             <div className="flex flex-wrap gap-3 mb-4 print-hide"><Button variant={tab === 'case' ? 'primary' : 'secondary'} onClick={() => setTab('case')}>{t('reports_views.reports.tabs.case_summary', 'Case Summary')}</Button><Button variant={tab === 'class' ? 'primary' : 'secondary'} onClick={() => setTab('class')}>{t('reports_views.reports.tabs.class_summary', 'Classification Summary')}</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>{t('reports_views.reports.tabs.detailed_report', 'Detailed Report')}</Button></div>
@@ -1187,7 +1188,7 @@ function IccmReports({ course, participants, allObs, allCases }) {
         <div className="mt-6 printable-area" id="iccm-report-container">
             <div className="report-header mb-4 px-1" id="iccm-report-header">
                 <h2 className="text-2xl font-bold">{t('reports_views.reports.title', 'Individual Participant Report')}</h2>
-                <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
+                <h3 className="text-lg text-gray-700">{courseLocationText(course, ' / ')}</h3>
             </div>
 
             <div className="flex flex-wrap gap-3 mb-4 print-hide"><Button variant={tab === 'case' ? 'primary' : 'secondary'} onClick={() => setTab('case')}>{t('reports_views.reports.tabs.case_summary', 'Case Summary')}</Button><Button variant={tab === 'class' ? 'primary' : 'secondary'} onClick={() => setTab('class')}>{t('reports_views.reports.tabs.class_summary', 'Classification Summary')}</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>{t('reports_views.reports.tabs.detailed_report', 'Detailed Report')}</Button></div>
@@ -1481,7 +1482,7 @@ function EencReports({ course, participants, allObs, allCases }) {
         <div className="mt-6 printable-area" id="eenc-report-container">
             <div className="report-header mb-4 px-1" id="eenc-report-header">
                 <h2 className="text-2xl font-bold">{t('reports_views.reports.title', 'Individual Participant Report')}</h2>
-                <h3 className="text-lg text-gray-700">{course.state} / {course.locality}</h3>
+                <h3 className="text-lg text-gray-700">{courseLocationText(course, ' / ')}</h3>
             </div>
 
             <div className="flex flex-wrap gap-3 mb-4 print-hide"><Button variant={tab === 'summary' ? 'primary' : 'secondary'} onClick={() => setTab('summary')}>{t('reports_views.reports.tabs.score_summary', 'Score Summary')}</Button><Button variant={tab === 'matrix' ? 'primary' : 'secondary'} onClick={() => setTab('matrix')}>{t('reports_views.reports.tabs.detailed_skill', 'Detailed Skill Report')}</Button></div>
@@ -1694,7 +1695,7 @@ function MentorshipReports({ course, participants, allObs, allCases }) {
         <div className="grid gap-4 printable-area">
             <div className="report-header">
                 <h3>{subCourse || t('reports_views.reports.mentor.title', '{{service}} Mentorship', { service })}</h3>
-                <h4>{course.state} / {course.locality}</h4>
+                <h4>{courseLocationText(course, ' / ')}</h4>
             </div>
 
             <div className="flex flex-wrap gap-2 items-end print-hide">

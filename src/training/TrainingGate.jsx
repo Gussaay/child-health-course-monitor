@@ -25,6 +25,7 @@ import {
 } from './trainingProgress.js';
 import { suggestParticipant, autoLinkParticipant, norm, digits } from './trainingRows.js';
 import { seedSandbox, refreshDeviceCache, SEED_VERSION } from './trainingSeed.js';
+import { courseStateText } from '../components/constants';
 
 const SEEDED_KEY = 'chm_training_seeded';
 
@@ -63,7 +64,7 @@ export function TrainingClosed({ status, course }) {
                     'This link is for training and practice only. It never saves real data.')}
             </p>
             {course?.course_type && (
-                <p className="text-sm text-slate-600 mb-1">{L('الدورة', 'Course')}: <strong>{course.course_type}</strong>{course.state ? ` · ${course.state}` : ''}</p>
+                <p className="text-sm text-slate-600 mb-1">{L('الدورة', 'Course')}: <strong>{course.course_type}</strong>{courseStateText(course) ? ` · ${courseStateText(course)}` : ''}</p>
             )}
             <p className="text-sm text-slate-600 mb-5">
                 {notStarted

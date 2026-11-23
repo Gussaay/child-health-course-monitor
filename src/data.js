@@ -43,6 +43,7 @@ import { DuplicatePhoneError, findPhoneConflict, duplicatePhoneMessage, normaliz
 import {
     recordOperation, takePending, restorePending, hasPending, monthlyPayload, monthKey,
 } from './utils/usageLedger';
+import { courseStateText, courseLocalityText } from './components/constants';
 
 // The collection a reference or query touches, for the usage ledger.
 const collectionOf = (ref) => {
@@ -1792,7 +1793,7 @@ export async function requestParticipantReadd({ course, existing, participantDat
     const cleanData = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined));
     const request = {
         courseId: course.id,
-        courseLabel: [course.course_type, course.state, course.locality].filter(Boolean).join(' - '),
+        courseLabel: [course.course_type, courseStateText(course), courseLocalityText(course)].filter(Boolean).join(' - '),
         phone: cleanData.phone || existing.phone || '',
         name: cleanData.name || '',
         existingParticipantId: existing.id,

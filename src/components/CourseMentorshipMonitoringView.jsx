@@ -37,6 +37,7 @@ import {
 } from '../data.js';
 import { notify, confirmDialog } from './dialogs';
 import { useTranslation } from 'react-i18next';
+import { courseStateText, courseLocalityText } from './constants';
 
 // The field forms, imported exactly as SkillsMentorshipView imports them. They
 // are lazy-loaded because the course tab is itself lazy-loaded and most courses
@@ -192,9 +193,9 @@ const resolveCourseService = (course, participant) => {
 // keep in localStorage.
 const buildTrainingFacility = (course, participant) => ({
     id: `course-${course?.id || 'unknown'}`,
-    'اسم_المؤسسة': `${course?.course_type || 'Course'} training — ${course?.locality || ''}`.trim(),
-    'الولاية': course?.state || 'N/A',
-    'المحلية': course?.locality || 'N/A',
+    'اسم_المؤسسة': `${course?.course_type || 'Course'} training — ${courseLocalityText(course)}`.trim(),
+    'الولاية': courseStateText(course) || 'N/A',
+    'المحلية': courseLocalityText(course) || 'N/A',
     'نوع_المؤسسةالصحية': 'Training course',
     project_name: 'Course practice',
     // The IMNCI visit report reads each of these to pre-fill its equipment

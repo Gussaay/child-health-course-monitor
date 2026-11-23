@@ -18,6 +18,7 @@ import { Card, Button, FormGroup, Input, EmptyState, PageSkeleton } from './Comm
 import { getCourseById, getCachedParticipants, upsertParticipant } from '../data';
 import { participantNameOnly, hasArabicScript } from './constants';
 import { NameLanguageFields } from './Participants';
+import { courseStateText } from './constants';
 
 /** The language the link asks for: 'en', 'ar' or null for both. */
 export const namesLinkLanguage = (search = (typeof window !== 'undefined' ? window.location.search : '')) => {
@@ -109,7 +110,7 @@ export default function PublicCertificateNamesView({ courseId }) {
                 <div className="text-center">
                     <div className="mx-auto h-16 w-16 bg-sky-100 rounded-full flex items-center justify-center mb-3"><UserCheck className="h-8 w-8 text-sky-600" /></div>
                     <h1 className="text-xl font-bold text-gray-900">{heading}</h1>
-                    <p className="text-sm text-gray-600 mt-1">{course.course_type}{course.state ? ` · ${course.state}` : ''}{course.start_date ? ` · ${course.start_date}` : ''}</p>
+                    <p className="text-sm text-gray-600 mt-1">{course.course_type}{courseStateText(course) ? ` · ${courseStateText(course)}` : ''}{course.start_date ? ` · ${course.start_date}` : ''}</p>
                     <p className="text-xs text-gray-500 mt-2">{L('اكتب اسمك كما تريده أن يُطبع على الشهادة.', 'Write your name exactly as it should be printed on your certificate.')}</p>
                 </div>
 

@@ -77,6 +77,7 @@ import { participantPlace } from '../utils/participantAffiliation';
 import { withoutPractice } from '../utils/practiceParticipants';
 import { IS_EMONC_SITE } from '../siteMode';
 import { usePageAddButton } from '../utils/pageChrome';
+import { courseStateText, courseLocationText } from './constants';
 
 const CourseTypeReportView = React.lazy(() => import('./CourseTypeReportView.jsx'));
 const DeletedItemsPanel = React.lazy(() => import('./DeletedItemsPanel.jsx'));
@@ -788,7 +789,7 @@ export function PublicParticipantRegistrationView({ courseId }) {
                 </div>
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('course_page.registration.course_registration', 'Course Registration')}</h1>
                 <p className="text-lg text-gray-600 mb-1">{course.course_type}</p>
-                <p className="text-sm text-gray-500 mb-8">{course.state} - {course.locality} ({course.start_date})</p>
+                <p className="text-sm text-gray-500 mb-8">{courseLocationText(course)} ({course.start_date})</p>
 
                 <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-6 text-start text-sm text-blue-800">
                     <p><strong>{t('course_page.registration.note', 'Note:')}</strong> {t('course_page.registration.note_text', 'Use this form to register yourself or a participant if you are not already on the list.')}</p>
@@ -1001,12 +1002,6 @@ const formatDateRange = (start, end) => {
     return `${start.getDate()} ${mon(start)} – ${full(end)}`;
 };
 
-const formatLocation = (locationStr) => {
-    if (!locationStr) return 'N/A';
-    const parts = String(locationStr).split(',').map(s => s.trim()).filter(Boolean);
-    return parts.length > 1 ? `${parts[0]}, etc.` : parts[0] || 'N/A';
-};
-
 export function CoursesTable({ 
     courses, onOpen, onEdit, onDelete, onOpenReport, onOpenTestForm, 
     canEditDeleteActiveCourse, canEditDeleteInactiveCourse, userStates, userLocalities, onAddFinalReport, canManageFinalReport,
@@ -1211,7 +1206,7 @@ export function CoursesTable({
                                         <div className="flex flex-col gap-0.5">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-bold text-gray-900 text-[13px] whitespace-nowrap">
-                                                    {formatLocation(c.state)} - {formatLocation(c.locality)}
+                                                    {courseLocationText(c) || 'N/A'}
                                                 </span>
                                                 {isPendingDeletion && <span className="text-xs text-red-600 font-bold whitespace-nowrap">{t('course_page.table.deleting', '(Deleting)')}</span>}
                                             </div>
@@ -1263,7 +1258,7 @@ export function CoursesTable({
                                             <Button variant="secondary" className="px-2.5 py-1 text-xs text-gray-600 flex items-center gap-1" onClick={() => onEdit(c)} disabled={!canEdit || isPendingDeletion || isProcessing}>
                                                 <Edit size={12} /> {t('course_page.buttons.edit', 'Edit')}
                                             </Button>
-                                            <Button variant="danger" className="px-2.5 py-1 text-xs bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent flex items-center gap-1" onClick={async () => { if(await confirmDialog(t('course_page.table.confirm_delete', 'Are you sure you want to delete {{type}} ({{state}})? It will be moved to Deleted Courses.', { type: c.course_type, state: c.state }))) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
+                                            <Button variant="danger" className="px-2.5 py-1 text-xs bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-transparent flex items-center gap-1" onClick={async () => { if(await confirmDialog(t('course_page.table.confirm_delete', 'Are you sure you want to delete {{type}} ({{state}})? It will be moved to Deleted Courses.', { type: c.course_type, state: courseStateText(c) }))) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
                                                 <Trash2 size={12} /> {t('course_page.buttons.delete', 'Delete')}
                                             </Button>
                                         </div>
@@ -1308,7 +1303,7 @@ export function CoursesTable({
                             >
                                 <div className="min-w-0 flex-1">
                                     <div className="truncate text-base font-bold text-slate-900">
-                                        {formatLocation(c.state)} - {formatLocation(c.locality)}
+                                        {courseLocationText(c) || 'N/A'}
                                     </div>
                                     <div className="mt-1 flex items-center gap-3 text-sm text-slate-500 whitespace-nowrap overflow-hidden">
                                         {hasDates && <span className="flex items-center gap-1 shrink-0"><CalendarDays size={14} className="text-slate-400" />{formatDateRange(startDate, endDate)}</span>}
@@ -1344,7 +1339,7 @@ export function CoursesTable({
                                             <FileSignature size={16} /> {t('course_page.buttons.final_report', 'Final report')}
                                         </Button>
                                     )}
-                                    <Button variant="danger" className="w-full px-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white" onClick={async () => { if(await confirmDialog(t('course_page.table.confirm_delete', 'Are you sure you want to delete {{type}} ({{state}})? It will be moved to Deleted Courses.', { type: c.course_type, state: c.state }))) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
+                                    <Button variant="danger" className="w-full px-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white" onClick={async () => { if(await confirmDialog(t('course_page.table.confirm_delete', 'Are you sure you want to delete {{type}} ({{state}})? It will be moved to Deleted Courses.', { type: c.course_type, state: courseStateText(c) }))) onDelete(c.id); }} disabled={!canDelete || isPendingDeletion || isProcessing}>
                                         <Trash2 size={16} /> {t('course_page.buttons.delete', 'Delete')}
                                     </Button>
                                 </div>
@@ -1415,7 +1410,7 @@ export function CoursesTable({
                                                 ].map(({ module, label }) => (
                                                     <Button key={module} variant="secondary" size="sm" className="flex items-center gap-1 justify-center" onClick={() => {
                                                         const link = `${getBaseUrl()}/monitor/course/${shareModalCourse.id}?module=${module}`;
-                                                        const text = `*Course Monitoring - ${label}*\nCourse: ${shareModalCourse.course_type}\nLocation: ${shareModalCourse.state} - ${shareModalCourse.locality}\n\nAccess monitoring dashboard here:\n${link}`;
+                                                        const text = `*Course Monitoring - ${label}*\nCourse: ${shareModalCourse.course_type}\nLocation: ${courseLocationText(shareModalCourse, " - ", "en")}\n\nAccess monitoring dashboard here:\n${link}`;
                                                         shareViaWhatsApp(text, t('course_page.share.module_link_copied', '{{label}} monitoring link copied!', { label }));
                                                     }}><Eye size={14} /> {label}</Button>
                                                 ))}
@@ -1426,7 +1421,7 @@ export function CoursesTable({
                                             <span className="text-sm font-semibold">{t('course_page.share.course_monitoring', 'Course Monitoring')}</span>
                                             <Button variant="secondary" size="sm" className="flex items-center gap-1" onClick={() => {
                                                 const link = `${getBaseUrl()}/monitor/course/${shareModalCourse.id}`;
-                                                const text = `*Course Monitoring*\nCourse: ${shareModalCourse.course_type}\nLocation: ${shareModalCourse.state} - ${shareModalCourse.locality}\n\nAccess monitoring dashboard here:\n${link}`;
+                                                const text = `*Course Monitoring*\nCourse: ${shareModalCourse.course_type}\nLocation: ${courseLocationText(shareModalCourse, " - ", "en")}\n\nAccess monitoring dashboard here:\n${link}`;
                                                 shareViaWhatsApp(text, t('course_page.share.monitoring_link_copied', 'Monitoring link copied!'));
                                             }}><Eye size={14} /> {t('course_page.buttons.share', 'Share')}</Button>
                                         </div>
@@ -1590,7 +1585,7 @@ export function CoursesTable({
 
                         <Button variant="secondary" className="flex items-center gap-3 p-4 justify-start" onClick={() => {
                             const link = `${getBaseUrl()}/public/report/course/${reportModalCourse.id}`;
-                            const text = `*Course Report*\nCourse: ${reportModalCourse.course_type}\nLocation: ${reportModalCourse.state} - ${reportModalCourse.locality}\n\nView the comprehensive course report here:\n${link}`;
+                            const text = `*Course Report*\nCourse: ${reportModalCourse.course_type}\nLocation: ${courseLocationText(reportModalCourse, " - ", "en")}\n\nView the comprehensive course report here:\n${link}`;
                             shareViaWhatsApp(text, t('course_page.reports.link_copied', 'Report link copied to clipboard!'));
                         }}>
                             <div className="bg-indigo-100 p-2 rounded-full"><LinkIcon className="text-indigo-600" size={20} /></div>
@@ -1664,7 +1659,7 @@ function DeletedCoursesView({ courses, onRestore, onPermanentDelete, isProcessin
                                     
                                     <td className="p-3 align-middle border-b border-slate-200">
                                         <div className="font-semibold text-gray-800 whitespace-nowrap">
-                                            {formatLocation(c.state)} - {formatLocation(c.locality)}
+                                            {courseLocationText(c) || 'N/A'}
                                         </div>
                                         <div className="text-xs text-gray-500 whitespace-nowrap">{t('course_page.table.started', 'Started: {{date}}', { date: c.start_date })}</div>
                                     </td>
@@ -1743,7 +1738,7 @@ function CourseApprovalsView({ courses, onApproveCourse, onRejectCourse, isProce
                                     
                                     <td className="p-3 align-middle border-b border-slate-200">
                                         <div className="font-semibold text-gray-800 whitespace-nowrap">
-                                            {formatLocation(c.state)} - {formatLocation(c.locality)}
+                                            {courseLocationText(c) || 'N/A'}
                                         </div>
                                         <div className="text-xs text-gray-500 whitespace-nowrap">{t('course_page.table.started', 'Started: {{date}}', { date: c.start_date })}</div>
                                     </td>
@@ -3743,7 +3738,7 @@ export function PublicCourseMonitoringView({ course, allParticipants }) {
                                 <span className="font-semibold text-gray-900">{course.course_type}</span>
                                 <span className="mx-2">•</span>
                                 {/* The operational guide course gathers several localities; its link shows the state only. */}
-                                <span>{isOperationalGuideCourse(course) ? course.state : `${course.state} - ${course.locality}`}</span>
+                                <span>{isOperationalGuideCourse(course) ? courseStateText(course) : courseLocationText(course)}</span>
                              </div>
                         </div>
                     

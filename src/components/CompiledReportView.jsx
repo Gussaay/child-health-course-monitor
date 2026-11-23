@@ -18,6 +18,7 @@ import { useDataCache } from '../DataContext';
 import { notify } from './dialogs';
 import { useTranslation } from 'react-i18next';
 import { countsForCoverage } from '../utils/coverageEligibility';
+import { courseStateText, courseLocalityText } from './constants';
 
 // --- Helper Components ---
 const Select = (props) => <select {...props} className={`border border-gray-300 rounded-md p-2 text-sm w-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 ${props.className || ''}`}>{props.children}</select>;
@@ -367,8 +368,8 @@ export default function CompiledReportView({ allCourses, allParticipants, allHea
             return {
                 id: c.id,
                 type: c.course_type,
-                state: cStates.join(', '),
-                locality: cLocalities.join(', '),
+                state: courseStateText(c),
+                locality: courseLocalityText(c),
                 date: c.start_date,
                 partner: c.funded_by || 'N/A',
                 budget: Number(c.course_budget) || 0,

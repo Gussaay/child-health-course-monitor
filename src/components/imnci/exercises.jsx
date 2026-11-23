@@ -55,6 +55,7 @@ import {
 } from './exercises';
 import { findLinkedParticipant } from '../../utils/linkedParticipant';
 import { QuestionVideo } from './onlineCourses/questionVideo';
+import { courseLocationText } from '../constants';
 
 export {
     ONLINE_SUB_COURSE, EXERCISES, ALL_SECTIONS, SECTION_LABELS,
@@ -1835,7 +1836,7 @@ export function PublicExerciseView({ courseId, user = null }) {
                         </div>
                         <h1 className="text-xl font-bold text-slate-900">{t('imnci_ui.exercises.public.title', 'IMNCI Online Exercises')}</h1>
                         <p className="text-sm text-slate-500 mt-1">{course.course_type}</p>
-                        <p className="text-xs text-slate-400">{course.state} — {course.locality} ({course.start_date})</p>
+                        <p className="text-xs text-slate-400">{courseLocationText(course, ' — ')} ({course.start_date})</p>
                     </div>
                     <FormGroup label={t('imnci_ui.exercises.public.find_name', 'Find your name to begin')}>
                         <Select value={pickId} onChange={(e) => setPickId(e.target.value)}>

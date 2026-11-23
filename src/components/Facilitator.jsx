@@ -33,6 +33,7 @@ import { notify } from './dialogs';
 import { useTranslation } from 'react-i18next';
 import { publicBaseUrl, publicCurrentUrl } from '../utils/publicLink';
 import { usePageAddButton } from '../utils/pageChrome';
+import { courseStateText } from './constants';
 
 // --- Helper Functions ---
 const getBaseUrl = () => publicBaseUrl();
@@ -1498,8 +1499,8 @@ export function FacilitatorReportView({ facilitator, allCourses, onBack, isShare
             </div>
             
             <div className="grid md:grid-cols-2 gap-6">
-                 <Card><CardHeader>{t('facilitators_page.report.directed_courses', 'Directed Courses')}</CardHeader><CardBody><Table headers={[t('facilitators_page.common.course', 'Course'), t('facilitators_page.common.date', 'Date'), t('facilitators_page.common.location', 'Location')]}>{directedCourses.length > 0 ? directedCourses.map(c => <tr key={c.id}><td className="p-2">{c.course_type}</td><td className="p-2">{c.start_date}</td><td className="p-2">{c.state}</td></tr>) : <EmptyState message={t('facilitators_page.report.no_directed', 'No courses directed.')} colSpan={3} />}</Table></CardBody></Card>
-                 <Card><CardHeader>{t('facilitators_page.report.facilitated_courses', 'Facilitated Courses')}</CardHeader><CardBody><Table headers={[t('facilitators_page.common.course', 'Course'), t('facilitators_page.common.date', 'Date'), t('facilitators_page.common.location', 'Location')]}>{facilitatedCourses.length > 0 ? facilitatedCourses.map(c => <tr key={c.id}><td className="p-2">{c.course_type}</td><td className="p-2">{c.start_date}</td><td className="p-2">{c.state}</td></tr>) : <EmptyState message={t('facilitators_page.report.no_facilitated', 'No courses facilitated.')} colSpan={3} />}</Table></CardBody></Card>
+                 <Card><CardHeader>{t('facilitators_page.report.directed_courses', 'Directed Courses')}</CardHeader><CardBody><Table headers={[t('facilitators_page.common.course', 'Course'), t('facilitators_page.common.date', 'Date'), t('facilitators_page.common.location', 'Location')]}>{directedCourses.length > 0 ? directedCourses.map(c => <tr key={c.id}><td className="p-2">{c.course_type}</td><td className="p-2">{c.start_date}</td><td className="p-2">{courseStateText(c)}</td></tr>) : <EmptyState message={t('facilitators_page.report.no_directed', 'No courses directed.')} colSpan={3} />}</Table></CardBody></Card>
+                 <Card><CardHeader>{t('facilitators_page.report.facilitated_courses', 'Facilitated Courses')}</CardHeader><CardBody><Table headers={[t('facilitators_page.common.course', 'Course'), t('facilitators_page.common.date', 'Date'), t('facilitators_page.common.location', 'Location')]}>{facilitatedCourses.length > 0 ? facilitatedCourses.map(c => <tr key={c.id}><td className="p-2">{c.course_type}</td><td className="p-2">{c.start_date}</td><td className="p-2">{courseStateText(c)}</td></tr>) : <EmptyState message={t('facilitators_page.report.no_facilitated', 'No courses facilitated.')} colSpan={3} />}</Table></CardBody></Card>
             </div>
         </div>
     );

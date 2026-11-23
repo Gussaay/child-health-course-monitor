@@ -36,6 +36,7 @@ import { notify } from './dialogs';
 import { useTranslation } from 'react-i18next';
 import { publicBaseUrl } from '../utils/publicLink';
 import { countsForCoverage } from '../utils/coverageEligibility';
+import { courseStateText, courseLocalityText } from './constants';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, ChartDataLabels);
 
@@ -543,7 +544,7 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
     };
     const profile = qualityProfiles[quality] || qualityProfiles.print;
     const doc = new jsPDF('portrait', 'mm', 'a4');
-    const fileName = `Course_Report_${course.course_type}_${course.state}.pdf`;
+    const fileName = `Course_Report_${course.course_type}_${courseStateText(course, 'en')}.pdf`;
     
     doc.addFileToVFS('Amiri-Regular.ttf', amiriFontBase64);
     doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
@@ -618,7 +619,7 @@ const generateFullCourseReportPdf = async (course, quality, onSuccess, onError, 
 
     try {
         doc.setFontSize(20); doc.setFont('Amiri', 'normal');
-        doc.text(`Full Course Report: ${course.course_type} - ${course.state}`, margin, y, { align: 'left' });
+        doc.text(`Full Course Report: ${course.course_type} - ${courseStateText(course, 'en')}`, margin, y, { align: 'left' });
         y += 10;
 
         // Sequence matches UI flow
@@ -836,7 +837,7 @@ const generateExerciseReportPdf = async (course, quality, onSuccess, onError, re
     // Landscape: the per-participant table has one column per exercise, and in
     // portrait those columns collapse to an unreadable width.
     const doc = new jsPDF('landscape', 'mm', 'a4');
-    const fileName = `Exercise_Report_${course.course_type}_${course.state}.pdf`;
+    const fileName = `Exercise_Report_${course.course_type}_${courseStateText(course, 'en')}.pdf`;
 
     doc.addFileToVFS('Amiri-Regular.ttf', amiriFontBase64);
     doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
@@ -906,10 +907,10 @@ const generateExerciseReportPdf = async (course, quality, onSuccess, onError, re
         const { exercises, perExercise, perParticipant, missed, kpis, roster, scoredFirsts } = reportData;
 
         doc.setFontSize(18); doc.setFont('Amiri', 'normal');
-        doc.text(`Interactive Exercise Report: ${course.course_type} - ${course.state}`, margin, y, { align: 'left' });
+        doc.text(`Interactive Exercise Report: ${course.course_type} - ${courseStateText(course, 'en')}`, margin, y, { align: 'left' });
         y += 7;
         doc.setFontSize(9); doc.setTextColor(120);
-        doc.text(`${course.locality || ''} · started ${course.start_date || ''} · ${kpis.totalAttempts} attempts from ${kpis.started} of ${roster.length} participants`, margin, y);
+        doc.text(`${courseLocalityText(course, 'en')} · started ${course.start_date || ''} · ${kpis.totalAttempts} attempts from ${kpis.started} of ${roster.length} participants`, margin, y);
         doc.setTextColor(0);
         y += 8;
 
@@ -1093,7 +1094,7 @@ export function CourseReportView({ isLoadingData = false, loadFailed = false, on
         <div className="flex flex-col gap-6 w-full max-w-full min-w-0">
             <PageHeader
                 title={t('course_report.title', 'Course Report')}
-                subtitle={`${course?.course_type || ''} - ${course?.state || ''}`}
+                subtitle={`${course?.course_type || ''} - ${courseStateText(course)}`}
                 actions={!isSharedView && onBack ? <Button onClick={onBack} className="w-full sm:w-auto mt-4 sm:mt-0">{t('course_report.buttons.back_to_list', 'Back to List')}</Button> : null}
             />
             <Card>
@@ -1828,7 +1829,7 @@ function CourseReportBody({
                     : activeTab === 'exercise-report' ? t('course_report.tabs.interactive_exercise_report', 'Interactive Exercise Report')
                     : activeTab === 'daily-evaluation' ? t('course_report.tabs.daily_evaluation', 'Daily Evaluation')
                     : t('course_report.tabs.individual_participant_report', 'Individual Participant Report')} 
-                subtitle={`${course.course_type} - ${course.state}`} 
+                subtitle={`${course.course_type} - ${courseStateText(course)}`} 
                 actions={
                     activeTab === 'full-course-report' ? (
                         isSharedView ? (
@@ -1960,7 +1961,7 @@ function CourseReportBody({
                         {!isSharedView && <button onClick={() => handleCopyAsImage('course-info-card')} className="copy-button absolute top-0 right-0 m-2 p-1 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-colors" title={t('course_report.copy_as_image', 'Copy as Image')}><CopyIcon /></button>}
                         <h3 className="text-xl font-bold mb-4">{t('course_report.info.title', 'Course Information')}</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                            <div><strong>{t('course_report.info.state', 'State:')}</strong> {course.state}</div> <div><strong>{t('course_report.info.locality', 'Locality:')}</strong> {course.locality}</div>
+                            <div><strong>{t('course_report.info.state', 'State:')}</strong> {courseStateText(course)}</div> <div><strong>{t('course_report.info.locality', 'Locality:')}</strong> {courseLocalityText(course)}</div>
                             {course.course_type === 'IMNCI' && course.imci_sub_type && <div><strong>{t('course_report.info.imnci_course_type', 'IMNCI Course Type:')}</strong> {course.imci_sub_type}</div>}
                             <div><strong>{t('course_report.info.hall', 'Hall:')}</strong> {course.hall}</div> <div><strong>{t('course_report.info.start_date', 'Start Date:')}</strong> {course.start_date}</div> <div><strong>{t('course_report.info.participants_count', '# Participants:')}</strong> {reportParticipants.length}</div>
                             <div><strong>{t('course_report.info.coordinator', 'Coordinator:')}</strong> {course.coordinator}</div> <div><strong>{t('course_report.info.director', 'Director:')}</strong> {course.director}</div>

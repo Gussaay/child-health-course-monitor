@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { findLinkedParticipant } from '../utils/linkedParticipant';
 import { textIncludes } from '../utils/textSearch';
 import { withoutPractice } from '../utils/practiceParticipants';
+import { courseStateText, courseLocalityText } from './constants';
 
 // --- Helper Functions ---
 
@@ -86,7 +87,7 @@ const generateAttendanceReportPdf = async (course, participants, columns, onSucc
             : course.course_type;
 
         // --- Large Centered Header ---
-        const headerTitle = `${courseDisplay} - ${course.state || ''} - ${facilityDisplay}`;
+        const headerTitle = `${courseDisplay} - ${courseStateText(course, 'en')} - ${facilityDisplay}`;
 
         doc.setFontSize(18);
         doc.setTextColor(40); 
@@ -94,7 +95,7 @@ const generateAttendanceReportPdf = async (course, participants, columns, onSucc
         
         doc.setFontSize(11);
         doc.setTextColor(100);
-        doc.text(`Attendance Report | Start Date: ${course.start_date || '-'} | Locality: ${course.locality || '-'}`, pageWidth / 2, 28, { align: 'center' });
+        doc.text(`Attendance Report | Start Date: ${course.start_date || '-'} | Locality: ${courseLocalityText(course, 'en') || '-'}`, pageWidth / 2, 28, { align: 'center' });
         
         // Create headers combining Session number and Date
         const dateHeaders = columns.map((date, index) => `S${index + 1}\n${date}`);
@@ -222,7 +223,7 @@ const generateAttendanceReportPdf = async (course, participants, columns, onSucc
         const sanitizeForFilename = (str) => (str || '').toString().replace(/[\/\\]/g, '-').replace(/\s+/g, '_');
         
         const safeCourseDisplay = sanitizeForFilename(courseDisplay);
-        const safeState = sanitizeForFilename(course.state);
+        const safeState = sanitizeForFilename(courseStateText(course, 'en'));
         const safeFacility = sanitizeForFilename(facilityDisplay);
         const safeDate = sanitizeForFilename(course.start_date);
         
@@ -452,7 +453,7 @@ export function AttendanceManagerView({ course, onClose }) {
             <div className="p-2 md:p-4 border-b flex flex-wrap justify-between items-center bg-gray-50 gap-2 md:gap-4">
                 <div>
                     <h3 className="text-base md:text-lg font-bold text-gray-800">{t('course_tests.attendance.dashboard_title', 'Attendance Dashboard')}</h3>
-                    <p className="text-xs md:text-sm text-gray-500">{course.course_type} - {course.state}</p>
+                    <p className="text-xs md:text-sm text-gray-500">{course.course_type} - {courseStateText(course)}</p>
                 </div>
                 <div className="flex items-center gap-1 md:gap-2">
                     <div className="relative">
@@ -670,7 +671,7 @@ export function PublicAttendanceView({ courseId, user = null }) {
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-4">
                         <div>
                             <h1 className="text-xl md:text-2xl font-bold text-gray-900">{t('course_tests.attendance.public_title', 'Training Attendance')}</h1>
-                            <p className="text-sm md:text-base text-gray-600">{course.course_type} - {course.state}</p>
+                            <p className="text-sm md:text-base text-gray-600">{course.course_type} - {courseStateText(course)}</p>
                         </div>
                         <div className="text-right bg-blue-50 px-3 py-1.5 md:px-4 md:py-2 rounded-lg border border-blue-100">
                             <span className="block text-xs text-blue-600 font-bold ">{t('course_tests.attendance.date', 'Date')}</span>

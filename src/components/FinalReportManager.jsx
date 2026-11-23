@@ -12,6 +12,7 @@ import { attachFinalReportPdf, removeFinalReportPdf, getFinalReportByCourseId, l
 import html2canvas from '../utils/html2canvasLight'; // <-- Added proper import
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
+import { courseStateText, courseLocalityText } from './constants';
 
 // --- Shared Utility: Copy as Image ---
 const copyAsImage = async (ref, t) => {
@@ -676,7 +677,7 @@ export function SignAndStampModal({ isOpen, onClose, source, course, initialLayo
             }
             pdf.setModificationDate(new Date());
             const bytes = await pdf.save();
-            const name = `Final_Report_Signed_${course?.course_type || 'Course'}_${course?.state || ''}.pdf`
+            const name = `Final_Report_Signed_${course?.course_type || 'Course'}_${courseStateText(course, 'en')}.pdf`
                 .replace(/[^\w.-]+/g, '_');
             const layout = {
                 items: await Promise.all(items.map(compactItem)),
@@ -1203,7 +1204,7 @@ export const currentReportDocument = (report, course) => {
     const signed = !!report?.signedPdfUrl;
     const url = signed ? report.signedPdfUrl : report?.pdfUrl;
     if (!url) return null;
-    const fileName = `Final_Report${signed ? '_Signed' : ''}_${course?.course_type || 'Course'}_${course?.state || ''}.pdf`
+    const fileName = `Final_Report${signed ? '_Signed' : ''}_${course?.course_type || 'Course'}_${courseStateText(course, 'en')}.pdf`
         .replace(/[^\w.-]+/g, '_');
     return { url, signed, fileName };
 };
@@ -1315,7 +1316,7 @@ export function ReportDocumentCard({ report, course, children }) {
                         </Button>
                         <Button variant="secondary" className="justify-center text-sm" disabled={!!busy}
                             onClick={run('share', () => shareReportPdf(docInfo.url, docInfo.fileName,
-                                `Final report — ${course?.course_type || ''} ${course?.state || ''}`.trim()))}>
+                                `Final report — ${course?.course_type || ''} ${courseStateText(course)}`.trim()))}>
                             {busy === 'share' ? <Spinner size="sm" /> : <><Share2 className="w-4 h-4 me-1" />{t('final_report.buttons.share', 'Share')}</>}
                         </Button>
                     </div>
@@ -1510,7 +1511,7 @@ export function FinalReportQuickModal({ course, isOpen, onClose, onOpenFullRepor
     }, [isOpen, course?.id]); // eslint-disable-line react-hooks/exhaustive-deps -- the cache is read once per open
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={t('final_report.quick.title', 'Final report — {{type}} {{state}}', { type: course?.course_type || '', state: course?.state ? `(${course.state})` : '' })}>
+        <Modal isOpen={isOpen} onClose={onClose} title={t('final_report.quick.title', 'Final report — {{type}} {{state}}', { type: course?.course_type || '', state: courseStateText(course) ? `(${courseStateText(course)})` : '' })}>
             <div className="space-y-4">
                 {loadError && report === undefined ? (
                     <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2">{loadError}</div>
@@ -1557,7 +1558,7 @@ const courseDateOf = (c) => {
     const d = c?.start_date ? new Date(c.start_date) : null;
     return d && !isNaN(d) ? d : null;
 };
-const courseLabelOf = (c) => `${c.state || '—'}${c.locality ? ` - ${c.locality}` : ''}`;
+const courseLabelOf = (c) => `${courseStateText(c) || '—'}${courseLocalityText(c) ? ` - ${courseLocalityText(c)}` : ''}`;
 
 /**
  * @param courses         the courses of the package (already location-filtered)
@@ -2220,8 +2221,8 @@ export function FinalReportManager({
         return (
             <Card>
                 <PageHeader title={initialData
-                    ? t('final_report.editor.edit_title', 'Edit Final Report for {{type}} - {{state}}', { type: course.course_type, state: course.state })
-                    : t('final_report.editor.create_title', 'Create Final Report for {{type}} - {{state}}', { type: course.course_type, state: course.state })} subtitle={t('final_report.editor.subtitle', 'Complete the final report for this course.')} />
+                    ? t('final_report.editor.edit_title', 'Edit Final Report for {{type}} - {{state}}', { type: course.course_type, state: courseStateText(course) })
+                    : t('final_report.editor.create_title', 'Create Final Report for {{type}} - {{state}}', { type: course.course_type, state: courseStateText(course) })} subtitle={t('final_report.editor.subtitle', 'Complete the final report for this course.')} />
                 <div className="space-y-6 mt-6 p-6">
                     <FormGroup label={t('final_report.course_summary', 'Course Summary')}><Textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows="5" /></FormGroup>
                     
@@ -2313,7 +2314,7 @@ export function FinalReportManager({
                                     {existingPdfUrl ? (
                                         <div className="flex flex-wrap gap-2">
                                             <a href={existingPdfUrl} target="_blank" rel="noopener noreferrer"><Button variant="info">{t('final_report.buttons.view', 'View')}</Button></a>
-                                            <Button variant="primary" onClick={() => handleForceDownload(existingPdfUrl, `Final_Report_${course.course_type}_${course.state}.pdf`)} disabled={isDownloading}>{isDownloading ? <Spinner size="sm" /> : t('final_report.buttons.download', 'Download')}</Button>
+                                            <Button variant="primary" onClick={() => handleForceDownload(existingPdfUrl, `Final_Report_${course.course_type}_${courseStateText(course, 'en')}.pdf`)} disabled={isDownloading}>{isDownloading ? <Spinner size="sm" /> : t('final_report.buttons.download', 'Download')}</Button>
                                             <Button variant="danger" onClick={() => { setExistingPdfUrl(null); setPdfFile(null); setFileName(null); }}>{t('final_report.buttons.delete', 'Delete')}</Button>
                                         </div>
                                     ) : ( <div className="flex flex-col sm:flex-row sm:items-center gap-2"><input type="file" accept=".pdf" onChange={handleFileUpload} />{fileName && <p className="text-sm text-gray-500 break-all">{t('final_report.editor.file_selected', 'File selected: {{name}}', { name: fileName })}</p>}</div> )}
@@ -2377,7 +2378,7 @@ export function FinalReportManager({
     return (
         <Card>
             <PageHeader 
-                title={t('final_report.view.title', 'Final Report for {{type}} - {{state}}', { type: course.course_type, state: course.state })} 
+                title={t('final_report.view.title', 'Final Report for {{type}} - {{state}}', { type: course.course_type, state: courseStateText(course) })} 
                 subtitle={t('final_report.view.subtitle', 'Review the summary, recommendations, and documents for this course.')} 
                 actions={canUseFederalManagerAdvancedFeatures && <Button onClick={() => setIsEditing(true)}>{t('final_report.view.edit_report', 'Edit Report')}</Button>} 
             />

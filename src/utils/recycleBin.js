@@ -15,6 +15,8 @@
 // deletes it for good, together with the pictures in Storage, and knows which
 // pictures other sections still share.
 
+import { courseStateText, courseLocalityText } from '../components/constants';
+
 export const RECYCLE_BIN_TYPES = [
     {
         collection: 'courses', cacheKey: 'courses', label: 'Courses', group: 'Courses',
@@ -80,7 +82,7 @@ export function recordTitle(item) {
         item.name, item.title, item.participantName, item.participant_name, item.facilityName,
         item.facility_name, item['اسم_المؤسسة'], item.healthWorkerName, item.health_worker_name,
         item.item_name, item.itemName, item.meetingTitle, item.subject, item.projectName,
-        item.course_type && [item.course_type, item.state, item.locality].filter(Boolean).join(' - '),
+        item.course_type && [item.course_type, courseStateText(item), courseLocalityText(item)].filter(Boolean).join(' - '),
         item.village && [item.village, item.adminUnit, item.localityKey].filter(Boolean).join(' - '),
     ) || item.id || '';
 }

@@ -10,6 +10,7 @@
 // Kept free of React and Firebase so it can be tested on its own.
 
 export const ALL = 'All';
+import { courseStateText, courseLocalityText } from './constants';
 
 const isDeleted = (x) => x?.isDeleted === true || x?.isDeleted === 'true';
 const isTrue = (v) => v === true || v === 'true';
@@ -490,8 +491,8 @@ export const buildCourseTypeReport = ({ courses = [], participants = [], observa
             ...finishBucket(c.id, b),
             id: c.id,
             date: courseDate(c),
-            state: getCourseStates(c).join(', '),
-            locality: getCourseLocalities(c).join(', '),
+            state: courseStateText(c),
+            locality: courseLocalityText(c),
             subTypes: getCourseSubTypes(c).join(', '),
             project: c.course_project || '',
             partner: c.funded_by || '',

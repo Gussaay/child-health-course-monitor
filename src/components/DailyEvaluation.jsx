@@ -13,6 +13,7 @@ import { publicBaseUrl } from '../utils/publicLink';
 import { getCourseById, getDailyEvalForm, listDailyEvalForms, listDailyEvalResponses, saveDailyEvalForm, submitDailyEvalResponse } from '../data.js';
 import { Button, Card, CardBody, CardFooter, EmptyState, Input, Modal, PageSkeleton, Select, Spinner, Textarea } from './CommonComponents';
 import FormPdfButton from './FormPdfButton';
+import { courseStateText } from './constants';
 
 export const evalFormId = (courseId, date) => `${courseId}_${date}`;
 
@@ -156,7 +157,7 @@ export const DailyEvaluationShare = ({ course, canEdit = true }) => {
         } finally { setBusy(false); }
     };
 
-    const message = (s) => `*استمارة التقييم اليومي — اليوم ${s.dayNumber}*\nورشة الدليل التشغيلي لتطبيق العلاج المتكامل${course.state ? ` - ${course.state}` : ''}\n${s.date}\n\nلا تكتب اسمك، التقييم مجهول:\n${s.url}`;
+    const message = (s) => `*استمارة التقييم اليومي — اليوم ${s.dayNumber}*\nورشة الدليل التشغيلي لتطبيق العلاج المتكامل${courseStateText(course) ? ` - ${courseStateText(course)}` : ''}\n${s.date}\n\nلا تكتب اسمك، التقييم مجهول:\n${s.url}`;
     const copy = async (text, note) => {
         try { await navigator.clipboard.writeText(text); notify(note); } catch { notify(t('course_page.share.copy_failed', 'Failed to copy link.')); }
     };
@@ -267,7 +268,7 @@ export const DailyEvaluationShare = ({ course, canEdit = true }) => {
                         <CardBody className="flex flex-col items-center gap-4">
                             <div className="text-center">
                                 <div className="text-sm font-semibold text-slate-800">{t('daily_eval.title', 'Daily Evaluation')} · {t('daily_eval.day_n', 'Day {{n}}', { n: shared.dayNumber })}</div>
-                                <div className="text-xs text-slate-500 tabular-nums">{shared.date}{course.state ? ` · ${course.state}` : ''} · {t('daily_eval.n_answers', '{{n}} answers', { n: counts[shared.formId] || 0 })}</div>
+                                <div className="text-xs text-slate-500 tabular-nums">{shared.date}{courseStateText(course) ? ` · ${courseStateText(course)}` : ''} · {t('daily_eval.n_answers', '{{n}} answers', { n: counts[shared.formId] || 0 })}</div>
                             </div>
                             <div ref={qrRef} className="bg-white p-4 rounded-xl border border-slate-200">
                                 <QRCodeCanvas value={shared.url} size={200} level="M" includeMargin={false} />
