@@ -5177,7 +5177,8 @@
       "update_case": "تحديث الحالة",
       "submit_case": "إرسال الحالة",
       "cancel_edit": "إلغاء التعديل",
-      "discard_case": "تجاهل الحالة"
+      "discard_case": "تجاهل الحالة",
+      "ssnb_checklist": "قائمة التحقق"
     },
     "common": {
       "select_participant": "اختر المشارك",
@@ -5294,6 +5295,10 @@
       "save_session": "حفظ الجلسة",
       "cancel_edit": "إلغاء التعديل",
       "discard_session": "تجاهل الجلسة"
+    },
+    "ssnb": {
+      "warmer_use": "الدفاية المحمولة: الاستخدام",
+      "warmer_cleaning": "الدفاية المحمولة: التنظيف والتطهير"
     }
   },
   "facilities_page": {

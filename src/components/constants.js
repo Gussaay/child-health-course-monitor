@@ -317,6 +317,80 @@ export const EENC_DOMAINS_BREATHING = Object.keys(SKILLS_EENC_BREATHING);
 export const EENC_DOMAIN_LABEL_NOT_BREATHING = { pre_birth: "Pre-birth preparations", eenc_initial: "Initial EENC Steps (40 sec)", if_not_breathing: "If baby not crying or not breathing", resuscitation: "Resuscitation", if_breathing_starts: "If baby starts breathing well", post_resuscitation: "Post-resuscitation care", if_not_breathing_after_10_min: "If baby not breathing after 10 minutes" };
 export const EENC_DOMAINS_NOT_BREATHING = Object.keys(SKILLS_EENC_NOT_BREATHING);
 
+// Small & Sick Newborn · Portable warmer training: the two checklists a
+// facilitator fills while watching a participant, from the national portable
+// warmer SOP (AccuTemp heater, WarmPak, BabyWrap). Scored like EENC:
+// Yes 2, Partial 1, No 0.
+// 1. Using the portable warmer for a baby.
+export const SKILLS_WARMER_USE = {
+    prepare: [
+        { text: "Washed hands before handling the warmer and the baby" },
+        { text: "Checked that the BabyWrap is clean and disinfected" },
+        { text: "Wiped the AccuTemp heater surface with disinfectant (spirit or chlorine-based) before use" },
+    ],
+    warm: [
+        { text: "Plugged the AccuTemp heater into the power source" },
+        { text: "Put the WarmPak inside the heater" },
+        { text: "Left the WarmPak in the heater for 30 minutes until warm" },
+    ],
+    place: [
+        { text: "Placed the warmed WarmPak inside the pouch of the BabyWrap" },
+        { text: "Placed the baby in the BabyWrap (sleeping-bag-like garment) and closed it" },
+        { text: "Explained to the mother what is being done and why" },
+    ],
+    monitor: [
+        { text: "Used the Rainbow sign to check the target temperature" },
+        { text: "Checked the baby's temperature (normal 36.5–37.5 °C) and acted on a low or high reading" },
+    ],
+    after: [
+        { text: "Took the baby and the WarmPak out of the BabyWrap after use" },
+        { text: "Cleaned the BabyWrap and the AccuTemp heater after use" },
+        { text: "Recorded the use in the portable warmer register" },
+    ],
+};
+export const WARMER_USE_DOMAIN_LABEL = {
+    prepare: "Prepare", warm: "Warm the WarmPak", place: "Place the baby in the BabyWrap",
+    monitor: "Monitor the temperature", after: "After use",
+};
+export const WARMER_USE_DOMAINS = Object.keys(SKILLS_WARMER_USE);
+
+// 2. Cleaning and disinfecting the portable warmer.
+export const SKILLS_WARMER_CLEANING = {
+    hygiene: [
+        { text: "Washed hands before and after cleaning" },
+        { text: "Wore gloves when handling a soiled BabyWrap" },
+    ],
+    heater: [
+        { text: "Unplugged the AccuTemp heater before cleaning it" },
+        { text: "Wiped the heater surface with spirit or a chlorine-based solution before each use" },
+    ],
+    warmpak: [
+        { text: "Wiped the WarmPak with a towel soaked in soap and water" },
+        { text: "Then wiped the WarmPak with an appropriate disinfectant" },
+    ],
+    babywrap: [
+        { text: "Cleaned the BabyWrap with soap and water between one baby and the next" },
+        { text: "If there was blood: soaked the BabyWrap in 0.05% chlorine solution for 20 minutes only" },
+        { text: "After chlorine: washed the BabyWrap thoroughly in distilled water" },
+        { text: "Dried the BabyWrap completely before the next use" },
+    ],
+    store: [
+        { text: "Stored the clean parts together, ready for the next baby" },
+    ],
+};
+export const WARMER_CLEANING_DOMAIN_LABEL = {
+    hygiene: "Hand hygiene and gloves", heater: "AccuTemp heater", warmpak: "WarmPak",
+    babywrap: "BabyWrap", store: "Storage",
+};
+export const WARMER_CLEANING_DOMAINS = Object.keys(SKILLS_WARMER_CLEANING);
+
+// The Small & Sick Newborn checklists, by the scenario the facilitator picks
+// (saved on the case as age_group `SSNB_<id>`).
+export const SSNB_CHECKLISTS = {
+    warmer_use: { label: "Portable warmer: use", skills: SKILLS_WARMER_USE, domains: WARMER_USE_DOMAINS, labels: WARMER_USE_DOMAIN_LABEL },
+    warmer_cleaning: { label: "Portable warmer: cleaning and disinfection", skills: SKILLS_WARMER_CLEANING, domains: WARMER_CLEANING_DOMAINS, labels: WARMER_CLEANING_DOMAIN_LABEL },
+};
+
 // ============================================================================
 // GROUPING
 //

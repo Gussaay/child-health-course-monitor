@@ -5181,7 +5181,8 @@
       "update_case": "Update Case",
       "submit_case": "Submit Case",
       "cancel_edit": "Cancel Edit",
-      "discard_case": "Discard Case"
+      "discard_case": "Discard Case",
+      "ssnb_checklist": "Checklist"
     },
     "common": {
       "select_participant": "Select participant",
@@ -5298,6 +5299,10 @@
       "save_session": "Save session",
       "cancel_edit": "Cancel edit",
       "discard_session": "Discard session"
+    },
+    "ssnb": {
+      "warmer_use": "Portable warmer: use",
+      "warmer_cleaning": "Portable warmer: cleaning and disinfection"
     }
   },
   "facilities_page": {

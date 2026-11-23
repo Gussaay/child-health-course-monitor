@@ -11,6 +11,7 @@ import {
     SKILLS_EENC_BREATHING, SKILLS_EENC_NOT_BREATHING, EENC_DOMAINS_BREATHING, EENC_DOMAINS_NOT_BREATHING,
     EENC_DOMAIN_LABEL_BREATHING, EENC_DOMAIN_LABEL_NOT_BREATHING,
     SKILLS_ETAT, ETAT_DOMAINS, ETAT_DOMAIN_LABEL,
+    SSNB_CHECKLISTS,
     DOMAINS_BY_AGE_IMNCI, DOMAIN_LABEL_IMNCI, getClassListImnci,
     SKILLS_ICCM, ICCM_DOMAINS, ICCM_DOMAIN_LABEL,
     getMentorshipSubType, getCourseMentorshipService,
@@ -96,6 +97,8 @@ function ActionToggle({ options, currentValue, onClick }) {
 // The community midwives course has no observation grid: its clinical skills
 // are checked with the OSCE checklists, so monitoring (tab, page or public
 // link) opens those instead.
+const isSsnbCourse = (course) => course?.course_type === 'Small & Sick Newborn' || course?.course_type === 'SSNC';
+
 export function ObservationView(props) {
     if (props.course?.course_type === CPCM_COURSE_TYPE) {
         return <CpcmOsceView participants={props.participants || []} selectedParticipantId={props.participant?.id} canEdit lockParticipant />;
@@ -123,6 +126,7 @@ function ClinicalObservationView({ course, participant, participants, onChangePa
     const [buffer, setBuffer] = useState({});
     const [editingCase, setEditingCase] = useState(null);
     const [eencScenario, setEencScenario] = useState('breathing');
+    const [ssnbScenario, setSsnbScenario] = useState('warmer_use');
     const [isSaving, setIsSaving] = useState(false);
     
     const [showSetupModal, setShowSetupModal] = useState(true);
@@ -133,6 +137,8 @@ function ClinicalObservationView({ course, participant, participants, onChangePa
     const isEenc = course.course_type === 'EENC' || course.course_type === 'EmONC';
     const isLegalEtat = course.course_type === 'ETAT';
     const isIccm = course.course_type === 'ICCM';
+    // Small & Sick Newborn: the portable warmer checklists (use; cleaning).
+    const isSsnb = isSsnbCourse(course);
 
     const handleEditCase = (caseToEdit, allObservations) => {
         if (!caseToEdit || !allObservations) return;
@@ -141,6 +147,7 @@ function ClinicalObservationView({ course, participant, participants, onChangePa
         setDayOfCourse(caseToEdit.day_of_course);
         if (isImnci) { setSetting(caseToEdit.setting); setAge(caseToEdit.age_group); }
         if (isEenc) { setEencScenario((caseToEdit.age_group || 'EENC_breathing').replace('EENC_', '')); }
+        if (isSsnb) { setSsnbScenario((caseToEdit.age_group || 'SSNB_warmer_use').replace('SSNB_', '')); }
         
         const caseObs = allObservations.filter(o => o.caseId === caseToEdit.id);
         const newBuffer = {};
@@ -219,9 +226,10 @@ function ClinicalObservationView({ course, participant, participants, onChangePa
         setIsSaving(true);
         const entries = Object.entries(buffer);
 
-        if (isEenc) {
+        if (isEenc || isSsnb) {
             let skillsMap;
-            if (eencScenario === 'breathing') skillsMap = SKILLS_EENC_BREATHING;
+            if (isSsnb) skillsMap = SSNB_CHECKLISTS[ssnbScenario]?.skills;
+            else if (eencScenario === 'breathing') skillsMap = SKILLS_EENC_BREATHING;
             else if (eencScenario === 'not_breathing') skillsMap = SKILLS_EENC_NOT_BREATHING;
 
             const totalSkills = Object.values(skillsMap || {}).reduce((acc, domain) => acc + domain.length, 0);
@@ -244,6 +252,7 @@ function ClinicalObservationView({ course, participant, participants, onChangePa
         let ageGroup;
         if (isImnci) ageGroup = age;
         else if (isEenc) ageGroup = `EENC_${eencScenario}`;
+        else if (isSsnb) ageGroup = `SSNB_${ssnbScenario}`;
         else if (isLegalEtat) ageGroup = 'ETAT';
         else if (isIccm) ageGroup = 'ICCM';
         else ageGroup = 'N/A';
@@ -267,6 +276,7 @@ function ClinicalObservationView({ course, participant, participants, onChangePa
             let ageGroupForObs;
             if (isImnci) ageGroupForObs = age;
             else if (isEenc) ageGroupForObs = eencScenario;
+            else if (isSsnb) ageGroupForObs = ssnbScenario;
             if (ageGroupForObs) observationData.age_group = ageGroupForObs;
             
             if (caseAgeMonths !== '' && caseAgeMonths !== null) {
@@ -374,6 +384,11 @@ function ClinicalObservationView({ course, participant, participants, onChangePa
                                 <option value="not_breathing">{t('monitoring_page.observation.enc_not_breathing_full', 'Essential Newborn Care (Not Breathing)')}</option>
                             </Select>
                         </FormGroup>}
+                        {isSsnb && <FormGroup label={t('monitoring_page.observation.ssnb_checklist', 'Checklist')}>
+                            <Select value={ssnbScenario} onChange={(e) => setSsnbScenario(e.target.value)} disabled={!!editingCase}>
+                                {Object.entries(SSNB_CHECKLISTS).map(([id, c]) => <option key={id} value={id}>{t(`monitoring_page.ssnb.${id}`, c.label)}</option>)}
+                            </Select>
+                        </FormGroup>}
                         <FormGroup label={t('monitoring_page.observation.encounter_date', 'Encounter Date')}><Input type="date" value={encounterDate} onChange={(e) => setEncounterDate(e.target.value)} /></FormGroup>
                         <FormGroup label={t('monitoring_page.observation.course_day', 'Course Day')}><Select value={dayOfCourse} onChange={(e) => setDayOfCourse(Number(e.target.value))}>{[1, 2, 3, 4, 5, 6, 7].map(d => <option key={d} value={d}>{d}</option>)}</Select></FormGroup>
                         <FormGroup label={isImnci && age === 'LT2M' ? t('monitoring_page.observation.age_wks', 'Age (wks)') : t('monitoring_page.observation.age_mos', 'Age (mos)')}>
@@ -412,6 +427,7 @@ function ClinicalObservationView({ course, participant, participants, onChangePa
                                     <span><span className="font-semibold">{t('monitoring_page.common.setting_label', 'Setting:')}</span> {setting}</span>
                                     <span><span className="font-semibold">{t('monitoring_page.observation.age_label', 'Age:')}</span> {age === 'LT2M' ? '0-59d' : '2-59m'}</span>
                                 </>}
+                                {isSsnb && <span><span className="font-semibold">{t('monitoring_page.common.scenario_label', 'Scenario:')}</span> {t(`monitoring_page.ssnb.${ssnbScenario}`, SSNB_CHECKLISTS[ssnbScenario]?.label || ssnbScenario)}</span>}
                                 {isEenc && <span><span className="font-semibold">{t('monitoring_page.common.scenario_label', 'Scenario:')}</span> {
                                     eencScenario === 'breathing' ? t('monitoring_page.common.enc_breathing', 'ENC (Breathing)') :
                                     eencScenario === 'not_breathing' ? t('monitoring_page.common.enc_not_breathing', 'ENC (Not Breathing)') :
@@ -428,6 +444,7 @@ function ClinicalObservationView({ course, participant, participants, onChangePa
                     <div className="rounded-lg border border-slate-300">
                         {isImnci && <ImnciMonitoringGrid age={age} buffer={buffer} toggle={toggle} />}
                         {isEenc && <EencMonitoringGrid scenario={eencScenario} buffer={buffer} toggle={toggle} />}
+                        {isSsnb && <EencMonitoringGrid checklist={SSNB_CHECKLISTS[ssnbScenario]} buffer={buffer} toggle={toggle} />}
                         {isLegalEtat && <EtatMonitoringGrid buffer={buffer} toggle={toggle} />}
                         {isIccm && <IccmMonitoringGrid buffer={buffer} toggle={toggle} />}
                     </div>
@@ -596,11 +613,17 @@ function EtatMonitoringGrid({ buffer, toggle }) {
     );
 }
 
-function EencMonitoringGrid({ scenario, buffer, toggle }) {
+// Also draws any other Yes / Partial / No checklist passed as `checklist`
+// ({ domains, skills, labels }), e.g. the portable warmer ones.
+function EencMonitoringGrid({ scenario, checklist, buffer, toggle }) {
     const { t } = useTranslation();
     let domains, skillsMap, labelsMap;
 
-    if (scenario === 'not_breathing') {
+    if (checklist) {
+        domains = checklist.domains;
+        skillsMap = checklist.skills;
+        labelsMap = checklist.labels;
+    } else if (scenario === 'not_breathing') {
         domains = EENC_DOMAINS_NOT_BREATHING;
         skillsMap = SKILLS_EENC_NOT_BREATHING;
         labelsMap = EENC_DOMAIN_LABEL_NOT_BREATHING;
@@ -760,7 +783,8 @@ function IccmMonitoringGrid({ buffer, toggle }) {
 function SubmittedCases({ course, participant, observations, cases, onEditCase, onDeleteCase }) {
     const { t } = useTranslation();
     const isImnci = course.course_type === 'IMNCI';
-    const isEenc = course.course_type === 'EENC' || course.course_type === 'EmONC';
+    // The portable warmer checklists are scored like EENC (Yes 2, Partial 1, No 0).
+    const isEenc = course.course_type === 'EENC' || course.course_type === 'EmONC' || isSsnbCourse(course);
 
     const [dayFilter, setDayFilter] = useState('all');
     const [settingFilter, setSettingFilter] = useState('all');
@@ -797,6 +821,10 @@ function SubmittedCases({ course, participant, observations, cases, onEditCase, 
 
     const getAgeLabel = (age) => {
         if (isImnci) return age === 'LT2M' ? '0-59 d' : '2-59 m';
+        if (age?.startsWith('SSNB_')) {
+            const id = age.replace('SSNB_', '');
+            return t(`monitoring_page.ssnb.${id}`, SSNB_CHECKLISTS[id]?.label || id);
+        }
         if (isEenc) {
             if (age?.includes('breathing') && !age.includes('not_')) return t('monitoring_page.common.enc_breathing', 'ENC (Breathing)');
             if (age?.includes('not_breathing')) return t('monitoring_page.common.enc_not_breathing', 'ENC (Not Breathing)');
