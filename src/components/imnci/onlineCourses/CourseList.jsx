@@ -12,13 +12,12 @@ import {
 import { Card, CardBody, PageHeader, Button, Spinner, PageTabs, IS_NATIVE, useInPageBack } from '../../CommonComponents';
 import { useFormTitle } from '../../../utils/pageChrome';
 import { notify } from '../../dialogs';
-import { MyProgress } from './lazyParts';
+import { MyProgress, ChHomeHero } from './lazyParts';
 import { useCourseScreen } from './screen';
 import { groupCourses } from './categories';
 import { areaOf, coursesByArea } from './areas';
 import { canStudy, groupName } from './enrolment';
 import { IS_CH_SITE } from '../../../siteMode';
-import { ChHomeHero } from './ChHomeHero';
 
 export function CourseList() {
     const { t } = useTranslation();
@@ -26,7 +25,7 @@ export function CourseList() {
     const shownTab = topTab === 'mine' ? 'mine' : 'courses';
     return (
         <div className="space-y-4">
-            {IS_CH_SITE && <ChHomeHero />}
+            {IS_CH_SITE && (<Suspense fallback={null}><ChHomeHero /></Suspense>)}
             <PageHeader
                 title={t('imnci_ui.courses.main.page_title', 'Online Courses')}
                 subtitle={t('imnci_ui.courses.main.page_subtitle', 'Self-paced training')}
