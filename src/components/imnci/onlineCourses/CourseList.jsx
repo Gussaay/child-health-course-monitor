@@ -12,11 +12,12 @@ import {
 import { Card, CardBody, PageHeader, Button, Spinner, PageTabs, IS_NATIVE, useInPageBack } from '../../CommonComponents';
 import { useFormTitle } from '../../../utils/pageChrome';
 import { notify } from '../../dialogs';
-import { MyProgress } from './lazyParts';
+import { MyProgress, ChHomeHero } from './lazyParts';
 import { useCourseScreen } from './screen';
 import { groupCourses } from './categories';
 import { areaOf, coursesByArea } from './areas';
 import { canStudy, groupName } from './enrolment';
+import { IS_CH_SITE } from '../../../siteMode';
 
 export function CourseList() {
     const { t } = useTranslation();
@@ -24,6 +25,7 @@ export function CourseList() {
     const shownTab = topTab === 'mine' ? 'mine' : 'courses';
     return (
         <div className="space-y-4">
+            {IS_CH_SITE && (<Suspense fallback={null}><ChHomeHero /></Suspense>)}
             <PageHeader
                 title={t('imnci_ui.courses.main.page_title', 'Online Courses')}
                 subtitle={t('imnci_ui.courses.main.page_subtitle', 'Self-paced training')}
@@ -85,6 +87,10 @@ function useAreaPlace() {
 // Course cards drawn as rows of a list (the service page) rather than tiles.
 const RowLayout = React.createContext(false);
 
+// The ch-sudan refresh gives each service its own colour, used for the
+// icon tint on that site only; the main site keeps the slate chip.
+const AREA_COLORS = { imnci: '#0284c7', etat: '#dc2626', newborn: '#db2777', adolescent: '#16a34a', program: '#7c3aed', other: '#475569' };
+
 /**
  * The services (areas.js) and their courses, one page each:
  *   the services page: a card per service with its icon and full name
@@ -140,11 +146,13 @@ export function GroupedCourses({ render, list }) {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" data-testid="course-areas">
                 {areas.map(({ area, courses: cs }) => {
                     const Icon = area.icon;
+                    const color = AREA_COLORS[area.id] || AREA_COLORS.other;
                     return (
                         <button key={area.id} type="button" data-testid="course-area"
                             onClick={() => open(area.id)} disabled={!cs.length}
                             className="text-start rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-400 disabled:opacity-50 disabled:hover:border-slate-200 flex flex-col">
-                            <span className="w-11 h-11 rounded-lg grid place-items-center bg-slate-100 text-slate-700">
+                            <span className="w-11 h-11 rounded-lg grid place-items-center bg-slate-100 text-slate-700"
+                                style={IS_CH_SITE ? { backgroundColor: `${color}1A`, color } : undefined}>
                                 <Icon size={24} strokeWidth={1.75} />
                             </span>
                             <span className="block mt-3 text-base font-bold text-slate-900 leading-tight">{name(area)}</span>

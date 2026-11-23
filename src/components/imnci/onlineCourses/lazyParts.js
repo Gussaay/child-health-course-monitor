@@ -21,3 +21,6 @@ export const ProtocolEditor = lazy(() => import('../protocol'));
 export const ProgressDashboard = lazy(() => import('./ProgressDashboard').then((m) => ({ default: m.ProgressDashboard })));
 export const MyProgress = lazy(() => import('./MyProgress').then((m) => ({ default: m.MyProgress })));
 export const CopyLessonModal = lazy(() => import('./CopyLessonModal'));
+// The ch-sudan home hero: shown only on that site, and lazy so its progress
+// maths stays out of the first-load payload budget.
+export const ChHomeHero = lazy(() => import('./ChHomeHero').then((m) => ({ default: m.ChHomeHero })));
