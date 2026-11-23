@@ -270,3 +270,20 @@ html.form-focus { --bottom-nav: 0px; }
 html.form-focus main { padding-top: 0 !important; }
 html.form-focus .app-backbar { position: sticky; top: 0; z-index: 45; }
 html.form-focus { --app-topbar: 3rem; }
+
+/* ch-sudan home hero (design refresh, modelled on the BNMB banking app):
+   a deep navy gradient with a soft sky bloom, and the frosted-glass tiles
+   that sit on it. These classes are used only by ChHomeHero.jsx, which
+   renders only on the ch-sudan site and its Android app, so the other
+   sites are untouched. */
+.ch-hero {
+  background:
+    radial-gradient(120% 90% at 85% 0%, rgba(56, 189, 248, 0.28), transparent 55%),
+    linear-gradient(160deg, #0f172a 0%, #1e293b 48%, #334155 100%);
+}
+.ch-glass {
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}

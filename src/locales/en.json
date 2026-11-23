@@ -7747,6 +7747,15 @@
       "lessons_done": "{{done}} of {{total}} lessons finished",
       "n_started": "{{n}} started"
     },
+    "ch_hero": {
+      "greeting_morning": "Good morning",
+      "greeting_evening": "Good evening",
+      "overall": "Overall progress",
+      "continue": "Continue learning",
+      "start": "Start learning",
+      "courses_done": "Courses finished",
+      "tagline": "Your training, in one place"
+    },
     "my_progress": {
       "tab": "My progress",
       "tab_short": "Mine",

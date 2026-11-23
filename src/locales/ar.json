@@ -7749,6 +7749,15 @@
       "lessons_done": "أكمل {{done}} من {{total}} درساً",
       "n_started": "{{n}} قيد التقدّم"
     },
+    "ch_hero": {
+      "greeting_morning": "صباح الخير",
+      "greeting_evening": "مساء الخير",
+      "overall": "التقدّم العام",
+      "continue": "تابع التعلّم",
+      "start": "ابدأ التعلّم",
+      "courses_done": "الدورات المنتهية",
+      "tagline": "تدريبك، في مكان واحد"
+    },
     "my_progress": {
       "tab": "تقدّمي",
       "tab_short": "تقدّمي",
