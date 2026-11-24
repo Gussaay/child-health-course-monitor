@@ -10,6 +10,28 @@
 
 export const isFacilitatorRole = (roles) => (roles || []).some((r) => /facilitator|trainer/i.test(String(r)));
 
+export const normaliseEmail = (email) => String(email || '').trim().toLowerCase();
+
+/**
+ * A draft (unpublished) course may name testers by email (`course.testers`):
+ * while the course is unpublished, they alone — besides the people who
+ * manage courses — can see it in the course list and open it, so the course
+ * can be tried out before it is published.
+ */
+export const isCourseTester = (course, email) => {
+    const mine = normaliseEmail(email);
+    if (!mine) return false;
+    return (Array.isArray(course?.testers) ? course.testers : []).some((x) => normaliseEmail(x) === mine);
+};
+
+export const isDraftCourse = (course) => course?.isPublished === false;
+
+/** May this person open the course while it is still a draft? */
+export const canAccessDraft = (course, { canManage = false, email = '' } = {}) => {
+    if (!isDraftCourse(course)) return false;
+    return !!canManage || isCourseTester(course, email);
+};
+
 // eslint-disable-next-line no-unused-vars
 export function canSeeCourse(course, { canManage = false, canSeeProgress = false, isFacilitator = false } = {}) {
     // A course annex (standard operating procedures, skill checklists, chart

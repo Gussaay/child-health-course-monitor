@@ -271,7 +271,11 @@ function LearnerCourseCard({ course: c }) {
             notify(t('imnci_ui.enrol.request_failed', 'Could not send your request. Check your connection and try again.'), 'error');
         } finally { setBusy(false); }
     };
-    const badge = access === 'open'
+    const badge = access === 'soon'
+        ? <Pill tone="wait"><Clock size={11} /> {t('imnci_ui.courses.main.available_soon', 'Will be available soon')}</Pill>
+        : !c.isPublished
+        ? <Pill tone="draft">{t('imnci_ui.courses.main.draft_testing', 'Draft — for testing')}</Pill>
+        : access === 'open'
         ? <Pill tone="open"><Unlock size={11} /> {t('imnci_ui.enrol.open', 'Open')}</Pill>
         : access === 'requested' ? <Pill tone="wait"><Clock size={11} /> {t('imnci_ui.enrol.waiting', 'Waiting for approval')}</Pill>
             : access === 'none' || access === 'declined' ? <Pill tone="lock"><Lock size={11} /> {t('imnci_ui.enrol.needs_enrolment', 'Enrolment needed')}</Pill>
@@ -286,7 +290,11 @@ function LearnerCourseCard({ course: c }) {
                             {group.facilitator?.name && <> · {t('imnci_ui.groups.facilitator', 'Facilitator')}: {group.facilitator.name}</>}
                         </div>
                     )}
-                    {canStudy(access) ? (
+                    {access === 'soon' ? (
+                        <Button variant="secondary" className="w-full justify-center" onClick={() => notify(t('imnci_ui.courses.soon.text', 'This course is still being prepared. It will open here as soon as it is published.'), 'info')}>
+                            <Clock size={15} /> {t('imnci_ui.courses.main.available_soon', 'Will be available soon')}
+                        </Button>
+                    ) : canStudy(access) ? (
                         <Button className="w-full justify-center" onClick={open}>
                             {done ? t('imnci_ui.courses.main.continue', 'Continue') : t('imnci_ui.courses.main.start', 'Start')}
                         </Button>
