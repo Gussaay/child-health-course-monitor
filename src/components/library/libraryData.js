@@ -3,7 +3,7 @@
 // federal managers and super users write (firestore.rules / storage.rules).
 import { db, storage } from '../../firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { safeFileName } from '../../utils/uploadValidation';
 import { LIBRARY_COLLECTION, LIBRARY_REQUESTS_COLLECTION, validateLibraryFile } from './libraryModel';
 
@@ -37,20 +37,50 @@ async function shrinkPhoto(file, maxWidth = 1200, quality = 0.82) {
     }
 }
 
+/**
+ * Starts uploading a photo ('image') or content file ('file') and returns a
+ * handle to watch and control it: { promise, pause, resume, cancel }.
+ * `promise` resolves { url, path } when the upload completes and rejects on
+ * failure — with code 'storage/canceled' when cancelled. `onProgress` is
+ * called with the fraction uploaded (0 to 1). The form starts uploads as
+ * soon as a file is picked, so they run while the rest is filled in.
+ */
+export function startLibraryUpload(original, kind, onProgress) {
+    let task = null;
+    let cancelled = false;
+    const promise = (async () => {
+        const problem = validateLibraryFile(original, kind);
+        if (problem) throw new Error(problem);
+        const file = kind === 'image' ? await shrinkPhoto(original) : original;
+        if (kind === 'image' && file.size >= 5 * 1024 * 1024) throw new Error('The photo is too large (limit 5 MB).');
+        if (cancelled) {
+            const error = new Error('Upload cancelled.');
+            error.code = 'storage/canceled';
+            throw error;
+        }
+        const path = kind === 'image'
+            ? `uploads/library_${Date.now()}_${safeFileName(file.name)}`
+            : `library/files/${Date.now()}_${safeFileName(file.name)}`;
+        task = uploadBytesResumable(ref(storage, path), file, { contentType: file.type });
+        await new Promise((resolve, reject) => {
+            task.on('state_changed',
+                (snap) => { if (onProgress && snap.totalBytes) onProgress(snap.bytesTransferred / snap.totalBytes); },
+                reject,
+                resolve);
+        });
+        return { url: await getDownloadURL(task.snapshot.ref), path };
+    })();
+    return {
+        promise,
+        pause: () => { try { task?.pause(); } catch { /* not started yet */ } },
+        resume: () => { try { task?.resume(); } catch { /* not started yet */ } },
+        cancel: () => { cancelled = true; try { task?.cancel(); } catch { /* not started yet */ } },
+    };
+}
+
 /** Uploads a photo ('image') or content file ('file'); returns { url, path }. */
 export async function uploadLibraryFile(original, kind) {
-    const problem = validateLibraryFile(original, kind);
-    if (problem) throw new Error(problem);
-    const file = kind === 'image' ? await shrinkPhoto(original) : original;
-    // Photos go to the app's public uploads/ folder (images up to 5 MB, readable
-    // by anyone), which needs no rules of its own; content files, which can be
-    // larger and of more types, go to library/ (storage.rules).
-    if (kind === 'image' && file.size >= 5 * 1024 * 1024) throw new Error('The photo is too large (limit 5 MB).');
-    const path = kind === 'image'
-        ? `uploads/library_${Date.now()}_${safeFileName(file.name)}`
-        : `library/files/${Date.now()}_${safeFileName(file.name)}`;
-    const snapshot = await uploadBytes(ref(storage, path), file, { contentType: file.type });
-    return { url: await getDownloadURL(snapshot.ref), path };
+    return startLibraryUpload(original, kind).promise;
 }
 
 export async function removeLibraryFile(path) {

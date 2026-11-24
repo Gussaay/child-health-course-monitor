@@ -9,7 +9,7 @@
 // Open to everyone, signed in or not (/public/library). Federal managers and
 // super users add, edit and remove content: name, description, a photo
 // (uploaded or a direct link) and the content (an uploaded file or a link).
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Activity, Baby, Bell, BookOpen, ClipboardList, ExternalLink, FileText, GraduationCap, HeartPulse,
@@ -21,11 +21,11 @@ import {
 import { notify, confirmDialog } from '../dialogs';
 import {
     LIBRARY_CATEGORIES, LIBRARY_SERVICES, LIBRARY_FILE_TYPES, LIBRARY_IMAGE_TYPES,
-    LIBRARY_ERROR_TEXT, canManageLibrary, countBy, isDraftItem, itemsFor, libraryPath, validateLibraryItem,
+    LIBRARY_ERROR_TEXT, canManageLibrary, countBy, isDraftItem, itemsFor, libraryPath, validateLibraryFile, validateLibraryItem,
 } from './libraryModel';
 import { shareLibraryLink } from './libraryShare';
 import {
-    addLibraryItem, addLibraryRequest, deleteLibraryItem, listLibraryItems, listLibraryRequests, removeLibraryFile, updateLibraryItem, uploadLibraryFile,
+    addLibraryItem, addLibraryRequest, deleteLibraryItem, listLibraryItems, listLibraryRequests, removeLibraryFile, startLibraryUpload, updateLibraryItem,
 } from './libraryData';
 
 const SERVICE_ICONS = {
@@ -422,9 +422,53 @@ function SourceSwitch({ value, onChange, uploadLabel, linkLabel }) {
     );
 }
 
+// One file's upload in the item form. Uploads start when the file is
+// picked, not when Save is pressed, and can be paused, resumed or
+// cancelled while the rest of the form is filled in.
+//   up: { fileName, state, progress (0..1), result: {url, path}|null, error }
+//   state: 'uploading' | 'paused' | 'done' | 'error' | 'canceled' | 'interrupted'
+function UploadBox({ up, onPause, onResume, onCancel, onRemove }) {
+    const { t } = useTranslation();
+    if (!up) return null;
+    const pct = Math.round((up.progress || 0) * 100);
+    return (
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="min-w-0 flex-1 truncate font-semibold text-slate-700">{up.fileName}</span>
+                {up.state === 'done' && <span className="font-semibold text-emerald-700">{t('library.upload.uploaded', 'Uploaded')}</span>}
+                {up.state === 'uploading' && <span className="font-semibold text-slate-600">{t('library.upload.uploading', 'Uploading… {{percent}}%', { percent: pct })}</span>}
+                {up.state === 'paused' && <span className="font-semibold text-slate-600">{t('library.upload.paused', 'Paused')}</span>}
+                {up.state === 'canceled' && <span className="font-semibold text-amber-700">{t('library.upload.canceled', 'Upload cancelled')}</span>}
+                {up.state === 'error' && <span className="font-semibold text-red-700">{t('library.upload.failed', 'Upload failed: {{message}}', { message: up.error || '' })}</span>}
+                {up.state === 'interrupted' && <span className="font-semibold text-amber-700">{t('library.upload.interrupted', 'Still uploading when the form closed — pick the file again.')}</span>}
+            </div>
+            {(up.state === 'uploading' || up.state === 'paused') && (
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+                    <div className={`h-full rounded-full ${up.state === 'paused' ? 'bg-amber-400' : 'bg-sky-500'}`} style={{ width: `${pct}%` }} />
+                </div>
+            )}
+            <div className="mt-2 flex flex-wrap gap-2">
+                {up.state === 'uploading' && <Button variant="secondary" onClick={onPause}>{t('library.upload.pause', 'Pause')}</Button>}
+                {up.state === 'paused' && <Button variant="secondary" onClick={onResume}>{t('library.upload.resume', 'Resume')}</Button>}
+                {(up.state === 'uploading' || up.state === 'paused') && <Button variant="ghost" onClick={onCancel} className="!text-red-700">{t('library.upload.cancel', 'Cancel upload')}</Button>}
+                {(up.state === 'done' || up.state === 'error' || up.state === 'canceled' || up.state === 'interrupted') && <Button variant="ghost" onClick={onRemove}>{t('library.upload.remove', 'Remove')}</Button>}
+            </div>
+        </div>
+    );
+}
+
 function LibraryItemForm({ item, defaults, user, onClose, onSaved }) {
     const { t, serviceShort, categoryLabel } = useLibraryText();
-    const [form, setForm] = useState(() => ({
+    const wipKey = `libraryFormDraft:${item?.id || 'new'}`;
+
+    // The form's progress is kept on this device as it is filled in (see the
+    // effect below), so closing the app loses nothing. That saved progress
+    // is a private working draft only: nothing is published to the library
+    // until Save is pressed.
+    const [wip] = useState(() => {
+        try { return JSON.parse(localStorage.getItem(wipKey) || 'null'); } catch { return null; }
+    });
+    const baseFields = {
         service: item?.service || defaults.service,
         category: item?.category || defaults.category,
         name: item?.name || '',
@@ -432,49 +476,165 @@ function LibraryItemForm({ item, defaults, user, onClose, onSaved }) {
         status: item?.status === 'draft' ? 'draft' : 'final',
         imageMode: item?.imageUrl && !item?.imagePath ? 'link' : 'upload',
         imageLink: item?.imagePath ? '' : (item?.imageUrl || ''),
-        imageFile: null,
-        removeImage: false,
         contentMode: item?.linkUrl && !item?.filePath ? 'link' : 'upload',
         contentLink: item?.filePath ? '' : (item?.linkUrl || ''),
+    };
+    const compareBase = useRef(wip?.form || baseFields);
+    const [wipRestored, setWipRestored] = useState(() => !!wip
+        && (JSON.stringify(wip.form || {}) !== JSON.stringify(baseFields) || !!wip.image || !!wip.content));
+    const [form, setForm] = useState(() => ({
+        ...(wip?.form || baseFields),
+        imageFile: null,
+        removeImage: false,
         contentFile: null,
         existingLinkUrl: item?.filePath ? item.linkUrl : '',
     }));
     const [errors, setErrors] = useState({});
     const [saving, setSaving] = useState(false);
     const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e?.target ? e.target.value : e }));
-    const pickFile = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.files?.[0] || null }));
+
+    // Uploads, kept in a ref (progress updates are frequent) with a version
+    // counter to re-render. ups.current.image / .content hold the state
+    // objects UploadBox renders.
+    const ups = useRef({
+        image: wip?.image ? { fileName: wip.image.fileName, state: wip.image.result ? 'done' : 'interrupted', progress: wip.image.result ? 1 : 0, result: wip.image.result || null, error: '' } : null,
+        content: wip?.content ? { fileName: wip.content.fileName, state: wip.content.result ? 'done' : 'interrupted', progress: wip.content.result ? 1 : 0, result: wip.content.result || null, error: '' } : null,
+    });
+    const handles = useRef({});
+    const [upsVersion, setUpsVersion] = useState(0);
+    const setUp = (kind, up) => { ups.current[kind] = up; setUpsVersion((v) => v + 1); };
+
+    const startUpload = (kind, file) => {
+        if (!file) return;
+        handles.current[kind]?.cancel();
+        const prev = ups.current[kind];
+        if (prev?.result) removeLibraryFile(prev.result.path);
+        const problem = validateLibraryFile(file, kind);
+        if (problem) {
+            setUp(kind, { fileName: file.name, state: 'error', progress: 0, result: null, error: problem });
+            return;
+        }
+        setUp(kind, { fileName: file.name, state: 'uploading', progress: 0, result: null, error: '' });
+        const handle = startLibraryUpload(file, kind, (fraction) => {
+            if (handles.current[kind] !== handle) return;
+            const cur = ups.current[kind];
+            if (cur && cur.state === 'uploading') setUp(kind, { ...cur, progress: fraction });
+        });
+        handles.current[kind] = handle;
+        handle.promise.then((result) => {
+            if (handles.current[kind] !== handle) return;
+            const cur = ups.current[kind];
+            if (cur && (cur.state === 'uploading' || cur.state === 'paused')) setUp(kind, { ...cur, state: 'done', progress: 1, result });
+        }).catch((error) => {
+            if (handles.current[kind] !== handle) return;
+            const cur = ups.current[kind];
+            if (!cur) return;
+            if (error?.code === 'storage/canceled') setUp(kind, { ...cur, state: 'canceled', result: null });
+            else setUp(kind, { ...cur, state: 'error', error: error?.message || '', result: null });
+        });
+    };
+    const pauseUpload = (kind) => { handles.current[kind]?.pause(); const cur = ups.current[kind]; if (cur?.state === 'uploading') setUp(kind, { ...cur, state: 'paused' }); };
+    const resumeUpload = (kind) => { handles.current[kind]?.resume(); const cur = ups.current[kind]; if (cur?.state === 'paused') setUp(kind, { ...cur, state: 'uploading' }); };
+    const cancelUpload = (kind) => { handles.current[kind]?.cancel(); };
+    const removeUpload = (kind) => {
+        handles.current[kind]?.cancel();
+        const cur = ups.current[kind];
+        if (cur?.result) removeLibraryFile(cur.result.path);
+        setUp(kind, null);
+        setForm((f) => ({ ...f, [kind === 'image' ? 'imageFile' : 'contentFile']: null }));
+    };
+    const pickFile = (field) => (e) => {
+        const file = e.target.files?.[0] || null;
+        setForm((f) => ({ ...f, [field]: file }));
+        if (file) startUpload(field === 'imageFile' ? 'image' : 'content', file);
+    };
+
+    // Keep the working draft on this device as the form changes. Only the
+    // fields and the finished uploads can be kept — a file still uploading
+    // when the form closes has to be picked again (UploadBox says so).
+    useEffect(() => {
+        const data = {
+            form: {
+                service: form.service, category: form.category, name: form.name, description: form.description,
+                status: form.status, imageMode: form.imageMode, imageLink: form.imageLink,
+                contentMode: form.contentMode, contentLink: form.contentLink,
+            },
+            image: ups.current.image ? { fileName: ups.current.image.fileName, result: ups.current.image.result } : null,
+            content: ups.current.content ? { fileName: ups.current.content.fileName, result: ups.current.content.result } : null,
+            savedAt: Date.now(),
+        };
+        try { localStorage.setItem(wipKey, JSON.stringify(data)); } catch { /* storage unavailable */ }
+    }, [form, wipKey, upsVersion]);
+
+    const discardWip = () => {
+        try { localStorage.removeItem(wipKey); } catch { /* ignore */ }
+        ['image', 'content'].forEach((kind) => {
+            handles.current[kind]?.cancel();
+            if (ups.current[kind]?.result) removeLibraryFile(ups.current[kind].result.path);
+            ups.current[kind] = null;
+        });
+        setUpsVersion((v) => v + 1);
+        compareBase.current = baseFields;
+        setForm({ ...baseFields, imageFile: null, removeImage: false, contentFile: null, existingLinkUrl: item?.filePath ? item.linkUrl : '' });
+        setErrors({});
+        setWipRestored(false);
+    };
 
     const previewUrl = useMemo(() => (form.imageFile ? URL.createObjectURL(form.imageFile) : ''), [form.imageFile]);
     useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
     const currentUploadedImage = item?.imagePath && !form.removeImage ? item.imageUrl : '';
-    const imagePreview = form.imageMode === 'upload' ? (previewUrl || currentUploadedImage) : form.imageLink;
+    const imagePreview = form.imageMode === 'upload'
+        ? (previewUrl || currentUploadedImage || ups.current.image?.result?.url || '')
+        : form.imageLink;
+
+    const formFields = {
+        service: form.service, category: form.category, name: form.name, description: form.description,
+        status: form.status, imageMode: form.imageMode, imageLink: form.imageLink,
+        contentMode: form.contentMode, contentLink: form.contentLink,
+    };
+    const hasProgress = wipRestored || JSON.stringify(formFields) !== JSON.stringify(compareBase.current) || !!ups.current.image || !!ups.current.content;
 
     const save = async () => {
+        // Uploads start when a file is picked; if one is still running (or
+        // paused) when Save is pressed, let it finish first so the saved
+        // item points at the real file.
+        for (const kind of ['image', 'content']) {
+            const cur = ups.current[kind];
+            if (cur && (cur.state === 'uploading' || cur.state === 'paused') && handles.current[kind]) {
+                if (cur.state === 'paused') resumeUpload(kind);
+                try { await handles.current[kind].promise; } catch { /* the state shows the failure */ }
+            }
+        }
+        const imageUp = ups.current.image;
+        const contentUp = ups.current.content;
         const { errors: found, item: clean } = validateLibraryItem(form);
+        // A final item whose content upload never finished has nothing to open.
+        if (!found.content && form.status !== 'draft' && form.contentMode === 'upload' && !contentUp?.result && !item?.filePath) {
+            found.content = 'content';
+        }
         setErrors(found);
         if (Object.keys(found).length) return;
         setSaving(true);
-        const uploaded = [];
+        const usedPaths = new Set();
         try {
             const record = { ...clean, imagePath: '', filePath: '', fileName: '' };
-            // Photo: a new upload, the one already uploaded, or a link (or none).
+            // Photo: this session's finished upload, the one already
+            // uploaded, or a link (or none).
             if (form.imageMode === 'upload') {
-                if (form.imageFile) {
-                    const up = await uploadLibraryFile(form.imageFile, 'image');
-                    uploaded.push(up.path);
-                    Object.assign(record, { imageUrl: up.url, imagePath: up.path });
+                if (imageUp?.result) {
+                    Object.assign(record, { imageUrl: imageUp.result.url, imagePath: imageUp.result.path });
+                    usedPaths.add(imageUp.result.path);
                 } else if (currentUploadedImage) {
                     Object.assign(record, { imageUrl: item.imageUrl, imagePath: item.imagePath });
                 }
             }
-            // Content: a new upload, the file already uploaded, or a link.
+            // Content: this session's finished upload, or the file already there.
             if (form.contentMode === 'upload') {
-                if (form.contentFile) {
-                    const up = await uploadLibraryFile(form.contentFile, 'file');
-                    uploaded.push(up.path);
-                    Object.assign(record, { linkUrl: up.url, filePath: up.path, fileName: form.contentFile.name });
-                } else {
-                    Object.assign(record, { linkUrl: item?.linkUrl || '', filePath: item?.filePath || '', fileName: item?.fileName || '' });
+                if (contentUp?.result) {
+                    Object.assign(record, { linkUrl: contentUp.result.url, filePath: contentUp.result.path, fileName: contentUp.fileName });
+                    usedPaths.add(contentUp.result.path);
+                } else if (item?.filePath) {
+                    Object.assign(record, { linkUrl: item.linkUrl, filePath: item.filePath, fileName: item.fileName || '' });
                 }
             }
 
@@ -482,15 +642,17 @@ function LibraryItemForm({ item, defaults, user, onClose, onSaved }) {
             if (id) await updateLibraryItem(id, record, user);
             else id = await addLibraryItem(record, user);
 
-            // Old uploads this save replaced are no longer used.
+            // Old uploads this save replaced are no longer used, and neither
+            // are this session's uploads the saved record does not point at.
             if (item?.imagePath && item.imagePath !== record.imagePath) removeLibraryFile(item.imagePath);
             if (item?.filePath && item.filePath !== record.filePath) removeLibraryFile(item.filePath);
+            [imageUp, contentUp].forEach((u) => { if (u?.result && !usedPaths.has(u.result.path)) removeLibraryFile(u.result.path); });
+            try { localStorage.removeItem(wipKey); } catch { /* ignore */ }
 
             notify(t('library.saved', 'Saved to the library.'), 'success');
             onSaved({ ...item, ...record, id, createdAt: item?.createdAt || { seconds: Date.now() / 1000 } });
         } catch (error) {
             console.error('Library save failed:', error);
-            uploaded.forEach((p) => removeLibraryFile(p));
             notify(t('library.save_failed', 'Could not save: {{message}}', { message: error?.message || '' }), 'error');
         } finally {
             setSaving(false);
@@ -505,6 +667,18 @@ function LibraryItemForm({ item, defaults, user, onClose, onSaved }) {
     return (
         <Modal isOpen onClose={saving ? () => {} : onClose} title={item ? t('library.edit_title', 'Edit library content') : t('library.add_title', 'Add library content')}>
             <div className="space-y-4 p-4 md:p-6">
+                {hasProgress && (
+                    <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs leading-relaxed text-sky-900">
+                        {wipRestored && <p className="font-semibold">{t('library.wip.restored', 'Restored your unfinished draft from {{time}}.', { time: wip?.savedAt ? new Date(wip.savedAt).toLocaleString() : '' })}</p>}
+                        <p>{t('library.wip.progress_saved', 'Your progress is saved on this device as you go. You can close this form and continue later — nothing is published until you press Save.')}</p>
+                        {wipRestored && (
+                            <button type="button" className="mt-1 font-semibold text-red-700 hover:underline" onClick={discardWip}>
+                                {t('library.wip.discard', 'Discard draft')}
+                            </button>
+                        )}
+                    </div>
+                )}
+
                 <div className="grid gap-3 sm:grid-cols-2">
                     <div>
                         <label className={label} htmlFor="lib-service">{t('library.form.service', 'Service')}</label>
@@ -549,13 +723,16 @@ function LibraryItemForm({ item, defaults, user, onClose, onSaved }) {
                     <span className={label}>{t('library.form.photo', 'Photo')}</span>
                     <SourceSwitch value={form.imageMode} onChange={set('imageMode')} uploadLabel={t('library.form.upload', 'Upload')} linkLabel={t('library.form.direct_link', 'Direct link')} />
                     {form.imageMode === 'upload' ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                            <input type="file" accept={LIBRARY_IMAGE_TYPES.join(',')} onChange={pickFile('imageFile')} className={fileInput} />
-                            {currentUploadedImage && !form.imageFile && (
-                                <button type="button" className="text-xs font-semibold text-red-700 hover:underline" onClick={() => setForm((f) => ({ ...f, removeImage: true }))}>
-                                    {t('library.form.remove_photo', 'Remove photo')}
-                                </button>
-                            )}
+                        <div className="space-y-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <input type="file" accept={LIBRARY_IMAGE_TYPES.join(',')} onChange={pickFile('imageFile')} className={fileInput} />
+                                {currentUploadedImage && !form.imageFile && (
+                                    <button type="button" className="text-xs font-semibold text-red-700 hover:underline" onClick={() => setForm((f) => ({ ...f, removeImage: true }))}>
+                                        {t('library.form.remove_photo', 'Remove photo')}
+                                    </button>
+                                )}
+                            </div>
+                            <UploadBox up={ups.current.image} onPause={() => pauseUpload('image')} onResume={() => resumeUpload('image')} onCancel={() => cancelUpload('image')} onRemove={() => removeUpload('image')} />
                         </div>
                     ) : (
                         <input type="url" inputMode="url" dir="ltr" className={field} placeholder="https://..." value={form.imageLink} onChange={set('imageLink')} />
@@ -569,13 +746,14 @@ function LibraryItemForm({ item, defaults, user, onClose, onSaved }) {
                     <span className={label}>{t('library.form.content', 'Content')}</span>
                     <SourceSwitch value={form.contentMode} onChange={set('contentMode')} uploadLabel={t('library.form.upload_file', 'Upload file')} linkLabel={t('library.form.direct_link', 'Direct link')} />
                     {form.contentMode === 'upload' ? (
-                        <>
+                        <div className="space-y-2">
                             <input type="file" accept={LIBRARY_FILE_TYPES.join(',')} onChange={pickFile('contentFile')} className={fileInput} />
+                            <UploadBox up={ups.current.content} onPause={() => pauseUpload('content')} onResume={() => resumeUpload('content')} onCancel={() => cancelUpload('content')} onRemove={() => removeUpload('content')} />
                             {form.existingLinkUrl && !form.contentFile && (
                                 <p className="text-xs text-slate-600">{t('library.form.current_file', 'Current file: {{name}}', { name: item?.fileName || '' })}</p>
                             )}
                             <p className="text-xs text-slate-500">{t('library.form.file_hint', 'PDF, Word, PowerPoint, Excel, MP4 video or image, up to 50 MB.')}</p>
-                        </>
+                        </div>
                     ) : (
                         <input type="url" inputMode="url" dir="ltr" className={field} placeholder="https://..." value={form.contentLink} onChange={set('contentLink')} />
                     )}
@@ -590,4 +768,3 @@ function LibraryItemForm({ item, defaults, user, onClose, onSaved }) {
         </Modal>
     );
 }
-

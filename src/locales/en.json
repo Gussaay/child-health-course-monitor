@@ -9369,6 +9369,23 @@
     "draft_note": "This book is still being prepared, so it cannot be opened yet. Leave your email address and we will send it to you as soon as it is final.",
     "notify_me": "Notify me",
     "waiting": "{{count}} people waiting for this book",
+    "upload": {
+      "uploaded": "Uploaded",
+      "uploading": "Uploading… {{percent}}%",
+      "paused": "Paused",
+      "pause": "Pause",
+      "resume": "Resume",
+      "cancel": "Cancel upload",
+      "canceled": "Upload cancelled",
+      "failed": "Upload failed: {{message}}",
+      "interrupted": "Still uploading when the form closed — pick the file again.",
+      "remove": "Remove"
+    },
+    "wip": {
+      "restored": "Restored your unfinished draft from {{time}}.",
+      "progress_saved": "Your progress is saved on this device as you go. You can close this form and continue later — nothing is published until you press Save.",
+      "discard": "Discard draft"
+    },
     "notify": {
       "title": "Get this book by email",
       "text": "\"{{name}}\" is still being prepared. Leave your details and we will email you the book as soon as it is final.",
