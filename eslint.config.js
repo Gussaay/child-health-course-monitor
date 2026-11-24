@@ -13,7 +13,7 @@ export default [
   {
     ignores: [
       'dist/**', 'dist-emonc/**', 'dist-apps/**', 'android/**', 'ios/**', 'node_modules/**', 'public/**',
-      '.firebase/**', 'src/components/AmiriFont.js', 'codemod-*.cjs',
+      '.firebase/**', 'src/components/AmiriFont.js', 'codemod-*.cjs', 'functions/generated/**',
     ],
   },
   js.configs.recommended,
