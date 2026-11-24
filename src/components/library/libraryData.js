@@ -7,9 +7,24 @@ import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebas
 import { safeFileName } from '../../utils/uploadValidation';
 import { LIBRARY_COLLECTION, LIBRARY_REQUESTS_COLLECTION, validateLibraryFile } from './libraryModel';
 
+// The catalogue is kept on the device after every successful load, so the
+// library's pages (services, sections, books) open and can be browsed with
+// no connection at all; the next successful load replaces the copy.
+const ITEMS_CACHE_KEY = 'libraryItemsCache.v1';
+
 export async function listLibraryItems() {
-    const snap = await getDocs(collection(db, LIBRARY_COLLECTION));
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    try {
+        const snap = await getDocs(collection(db, LIBRARY_COLLECTION));
+        const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        try { localStorage.setItem(ITEMS_CACHE_KEY, JSON.stringify(items)); } catch { /* private mode */ }
+        return items;
+    } catch (error) {
+        try {
+            const cached = JSON.parse(localStorage.getItem(ITEMS_CACHE_KEY) || 'null');
+            if (Array.isArray(cached)) return cached;
+        } catch { /* no cache */ }
+        throw error;
+    }
 }
 
 // A photo is shrunk to at most 1200 px wide as a JPEG before upload: it is the

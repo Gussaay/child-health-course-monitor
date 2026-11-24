@@ -57,6 +57,63 @@ export const LIBRARY_FILE_TYPES = [
     ...LIBRARY_IMAGE_TYPES,
 ];
 
+// ---- Downloads -------------------------------------------------------------
+// A book can be kept on the device when its content is a file (an uploaded
+// file, or a direct link to a document). The on-device copy's name is stable
+// per item, so the app can tell a book is already downloaded and never
+// fetches it twice (libraryDownload.js does the keeping).
+export const LIBRARY_DOWNLOAD_EXTENSIONS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'epub', 'zip', 'mp4', 'mp3', 'txt', 'odt', 'ods', 'odp'];
+
+const extensionOf = (nameOrUrl) => {
+    const clean = String(nameOrUrl || '').split(/[?#]/)[0];
+    const base = clean.substring(clean.lastIndexOf('/') + 1);
+    const dot = base.lastIndexOf('.');
+    return dot > 0 ? base.substring(dot + 1).toLowerCase() : '';
+};
+
+export const bookExtension = (item) => extensionOf(item?.fileName) || extensionOf(item?.linkUrl);
+
+/** A final item whose content is a file the app can download and keep. */
+export const isDownloadableBook = (item) => {
+    if (!item || isDraftItem(item) || !item.linkUrl) return false;
+    if (item.filePath) return true;
+    return LIBRARY_DOWNLOAD_EXTENSIONS.includes(bookExtension(item));
+};
+
+const safeDownloadName = (name) => String(name || 'book').replace(/[\\/:*?"<>|#]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'book';
+
+/** The on-device file name of a book's downloaded copy: stable per item. */
+export function downloadedFileName(item) {
+    const ext = bookExtension(item);
+    let base = '';
+    if (item?.fileName) base = String(item.fileName).replace(/\.[^.]+$/, '');
+    if (!base && item?.linkUrl) {
+        const seg = String(item.linkUrl).split(/[?#]/)[0].split('/').pop() || '';
+        try { base = decodeURIComponent(seg).replace(/\.[^.]+$/, ''); } catch { base = seg.replace(/\.[^.]+$/, ''); }
+    }
+    if (!base) base = item?.name || 'book';
+    return `lib_${String(item?.id || 'book').slice(0, 8)}_${safeDownloadName(base)}${ext ? `.${ext}` : ''}`;
+}
+
+const MIME_BY_EXTENSION = {
+    pdf: 'application/pdf',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls: 'application/vnd.ms-excel',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ppt: 'application/vnd.ms-powerpoint',
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    epub: 'application/epub+zip',
+    zip: 'application/zip',
+    mp4: 'video/mp4',
+    mp3: 'audio/mpeg',
+    txt: 'text/plain',
+    odt: 'application/vnd.oasis.opendocument.text',
+    ods: 'application/vnd.oasis.opendocument.spreadsheet',
+    odp: 'application/vnd.oasis.opendocument.presentation',
+};
+export const bookMimeType = (item) => MIME_BY_EXTENSION[bookExtension(item)] || '*/*';
+
 export const isLibraryService = (key) => LIBRARY_SERVICES.some((s) => s.key === key);
 export const isLibraryCategory = (key) => LIBRARY_CATEGORIES.some((c) => c.key === key);
 
