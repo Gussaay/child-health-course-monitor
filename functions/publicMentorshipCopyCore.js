@@ -19,7 +19,7 @@
 // deletes, a weekly full rebuild.
 
 const crypto = require("crypto");
-const { makeCore, toMillis } = require("./facilityDashboardCopyCore");
+const { makeCore, toMillis, slimFacility } = require("./facilityDashboardCopyCore");
 const { categorizeProblem } = require("./problemCategoriesCore");
 
 // Any key whose name says it holds a person's details or free text.
@@ -89,12 +89,32 @@ function makePublicMentorshipCopy({ db, Timestamp, now, log = () => {}, tally = 
     collection, slim: slimPublic, markField: "lastUpdatedAt", storeId: `public_mentorship_${key}`,
     minRefreshMs: 5 * 60 * 1000, countEveryMs: 30 * 60 * 1000, persistEveryMs: 30 * 60 * 1000,
   })]));
+  // The facilities the dashboard needs (name, state, locality, type,
+  // project, tools...), so the public page does not download the whole
+  // facility list. Facility records are public already (firestore.rules);
+  // staff lists and the other fields slimFacility drops are left out.
+  const facilities = makeCore({
+    db, Timestamp, now, log, tally,
+    collection: "healthFacilities", slim: slimFacility, markField: "lastSnapshotAt", storeId: "public_mentorship_facilities",
+    minRefreshMs: 5 * 60 * 1000, countEveryMs: 30 * 60 * 1000, persistEveryMs: 30 * 60 * 1000,
+  });
+
   /** `known`: { submissions: version, ... } the browser already holds. */
   async function answer(known = {}) {
     const out = {};
     for (const key of Object.keys(COLLECTIONS)) {
       out[key] = await cores[key].answer(typeof known[key] === "string" ? known[key] : null);
     }
+    // Only the facilities that some visit or visit report names.
+    const ids = new Set();
+    Object.keys(COLLECTIONS).forEach((key) => (out[key].items || []).forEach((r) => {
+      const id = r && (r.facilityId || (r.fullData && r.fullData.facilityId));
+      if (id) ids.add(id);
+    }));
+    await facilities.answer(null);
+    const st = facilities._state();
+    const items = st ? Array.from(st.items.values()).filter((f) => ids.has(f.id) && f.isDeleted !== true && f.isDeleted !== "true") : [];
+    out.facilities = { count: items.length, items };
     return out;
   }
   return { answer };

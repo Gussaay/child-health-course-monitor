@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { slimPublic, anonCode, COLLECTIONS } = require('../functions/publicMentorshipCopyCore.js');
+const { slimPublic, anonCode, COLLECTIONS, makePublicMentorshipCopy } = require('../functions/publicMentorshipCopyCore.js');
 
 const ts = (ms) => ({ toMillis: () => ms });
 
@@ -54,5 +54,41 @@ describe('public mentorship copy', () => {
 
     it('covers the visits and both kinds of visit report', () => {
         expect(Object.values(COLLECTIONS).sort()).toEqual(['eencVisitReports', 'imnciVisitReports', 'skillMentorship']);
+    });
+
+    it('sends the visits with only the facilities they name, never the whole list', async () => {
+        const data = {
+            skillMentorship: new Map([['s1', { ...visit, lastUpdatedAt: ts(1000) }], ['s2', { facilityId: 'f9', healthWorkerName: 'B', isDeleted: true, lastUpdatedAt: ts(1000) }]]),
+            imnciVisitReports: new Map([['r1', { facilityId: 'f2', challenges_table: [], lastUpdatedAt: ts(1000) }]]),
+            eencVisitReports: new Map(),
+            healthFacilities: new Map([
+                ['f1', { 'اسم_المؤسسة': 'Bahri PHC', 'الولاية': 'Khartoum', imnci_staff: [{ name: 'Amna Ali', phone: '0912' }], lastSnapshotAt: ts(1000) }],
+                ['f2', { 'اسم_المؤسسة': 'Sinja H', lastSnapshotAt: ts(1000) }],
+                ['f3', { 'اسم_المؤسسة': 'Not visited', lastSnapshotAt: ts(1000) }],
+                ['f9', { 'اسم_المؤسسة': 'Only a deleted visit', lastSnapshotAt: ts(1000) }],
+            ]),
+        };
+        const markOf = (d) => (d.lastUpdatedAt || d.lastSnapshotAt).toMillis();
+        const docs = (map) => Array.from(map.entries()).map(([id, d]) => ({ id, data: () => d }));
+        const store = new Map();
+        const storeDoc = (p) => ({ get: async () => ({ exists: store.has(p), data: () => store.get(p) }), collection: (n) => ({ doc: (id) => storeDoc(`${p}/${n}/${id}`) }), path: p });
+        const db = {
+            collection: (name) => {
+                if (name === '_dashboardCopies') return { doc: (id) => storeDoc(id) };
+                const map = data[name];
+                return {
+                    get: async () => ({ size: map.size, docs: docs(map) }),
+                    where: (_f, _op, since) => ({ get: async () => { const d = docs(map).filter((x) => markOf(x.data()) > since.ms); return { size: d.length, docs: d }; } }),
+                    count: () => ({ get: async () => ({ data: () => ({ count: map.size }) }) }),
+                };
+            },
+            batch: () => { const ops = []; return { set: (ref, v) => ops.push([ref.path, v]), delete: () => {}, commit: async () => ops.forEach(([p, v]) => store.set(p, v)) }; },
+        };
+        const copy = makePublicMentorshipCopy({ db, Timestamp: { fromMillis: (ms) => ({ ms }) }, now: () => 10_000_000 });
+        const res = await copy.answer({});
+        expect(res.submissions.items.map((r) => r.id)).toEqual(['s1']);
+        expect(res.imnci.items.map((r) => r.id)).toEqual(['r1']);
+        expect(res.facilities.items.map((f) => f.id).sort()).toEqual(['f1', 'f2']);
+        expect(JSON.stringify(res)).not.toMatch(/Amna Ali|0912|imnci_staff/);
     });
 });

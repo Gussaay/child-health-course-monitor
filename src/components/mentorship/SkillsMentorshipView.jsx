@@ -2293,12 +2293,16 @@ const SkillsMentorshipView = ({
 
     const language = i18n.language;
 
+    // The public dashboard gets its facilities in the same package as the
+    // visits (only the visited ones), never the full facility list.
+    const usesPublicPackage = publicDashboardMode && !publicDashboardParams?.isRecordView;
     useEffect(() => {
+        if (usesPublicPackage) return;
         if (healthFacilities) {
             setLocalHealthFacilities(healthFacilities);
             if (healthFacilities.length > 0) setFacilitiesLoadError(false);
         }
-    }, [healthFacilities]);
+    }, [healthFacilities, usesPublicPackage]);
 
     // If the setup popup is opened while the facility list is still empty (e.g. the user
     // landed here directly), load it here instead of waiting for whichever other page
@@ -2330,6 +2334,7 @@ const SkillsMentorshipView = ({
             const items = (part) => (part && Array.isArray(part.items) ? part.items : []);
             if (['submissions', 'imnci', 'eenc'].some((k) => res[k]?.tooLarge)) throw new Error('The dashboard data is too large to send.');
             if (!publicMountedRef.current) return;
+            setLocalHealthFacilities(items(res.facilities));
             setPublicData({ submissions: items(res.submissions), imnci: items(res.imnci), eenc: items(res.eenc) });
             setPublicError('');
             try { localStorage.setItem('publicDashboardLastSync', String(Date.now())); } catch { /* storage off */ }
@@ -2376,8 +2381,9 @@ const SkillsMentorshipView = ({
 
     useEffect(() => {
         // Mirror the result locally as well, so an empty/stale context state never leaves
-        // this screen without a facility list.
-        loadFacilities(false);
+        // this screen without a facility list. (Not for the public dashboard:
+        // its facilities come with the visits.)
+        if (!usesPublicPackage) loadFacilities(false);
 
         if (!publicDashboardMode) {
             fetchSkillMentorshipSubmissions(false);
@@ -2385,7 +2391,7 @@ const SkillsMentorshipView = ({
             if (fetchEENCVisitReports) fetchEENCVisitReports(false);
             updateLastSyncTime();
         }
-    }, [loadFacilities, fetchSkillMentorshipSubmissions, fetchIMNCIVisitReports, fetchEENCVisitReports, publicDashboardMode, updateLastSyncTime]);
+    }, [loadFacilities, fetchSkillMentorshipSubmissions, fetchIMNCIVisitReports, fetchEENCVisitReports, publicDashboardMode, usesPublicPackage, updateLastSyncTime]);
 
     const [viewingSubmission, setViewingSubmission] = useState(null);
     const [editingSubmission, setEditingSubmission] = useState(null);
@@ -3105,7 +3111,6 @@ const SkillsMentorshipView = ({
         setIsRefreshing(true);
         try {
             if (publicDashboardMode) {
-                if (fetchHealthFacilities) fetchHealthFacilities({}, true);
                 await loadPublicCopy();
             } else {
                 const promises = [
