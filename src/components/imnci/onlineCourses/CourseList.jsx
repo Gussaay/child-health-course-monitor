@@ -271,7 +271,9 @@ function LearnerCourseCard({ course: c }) {
             notify(t('imnci_ui.enrol.request_failed', 'Could not send your request. Check your connection and try again.'), 'error');
         } finally { setBusy(false); }
     };
-    const badge = access === 'open'
+    const badge = !c.isPublished
+        ? <Pill tone="draft">{t('imnci_ui.courses.main.draft_testing', 'Draft — for testing')}</Pill>
+        : access === 'open'
         ? <Pill tone="open"><Unlock size={11} /> {t('imnci_ui.enrol.open', 'Open')}</Pill>
         : access === 'requested' ? <Pill tone="wait"><Clock size={11} /> {t('imnci_ui.enrol.waiting', 'Waiting for approval')}</Pill>
             : access === 'none' || access === 'declined' ? <Pill tone="lock"><Lock size={11} /> {t('imnci_ui.enrol.needs_enrolment', 'Enrolment needed')}</Pill>

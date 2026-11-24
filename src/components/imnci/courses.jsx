@@ -45,7 +45,7 @@ import { ModulePage } from './onlineCourses/ModulePage';
 import { CoursePage } from './onlineCourses/CoursePage';
 import { CourseList } from './onlineCourses/CourseList';
 import { BuilderPane } from './onlineCourses/BuilderPane';
-import { canSeeCourse, followsAnyLesson, isFacilitatorRole } from './onlineCourses/audience';
+import { canAccessDraft, canSeeCourse, followsAnyLesson, isFacilitatorRole } from './onlineCourses/audience';
 import { categoryOf } from './onlineCourses/categories';
 import { useMyEnrolments, courseAccess, canStudy } from './onlineCourses/enrolment';
 import { EnrolGate } from './onlineCourses/EnrolGate';
@@ -197,15 +197,16 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
 
     const courses = useMemo(() => (onlineCourses || [])
         .filter((c) => c.isDeleted !== true)
-        // An unpublished course is a draft; only the people who can publish it see it.
-        .filter((c) => (inManageArea && canManage) || c.isPublished)
+        // An unpublished course is a draft: besides the people who manage
+        // courses, only the testers it names by email see it (to try it out).
+        .filter((c) => (inManageArea && canManage) || c.isPublished || canAccessDraft(c, { canManage, email: user?.email }))
         // A course for facilitators (the facilitator guide, with answer keys
         // and the examination) is not shown to learners.
         .filter((c) => canSeeCourse(c, { canManage, canSeeProgress, isFacilitator }))
         .filter((c) => !focusId || c.id === focusId)
         .filter((c) => !category || categoryOf(c) === category)
         .sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.title).localeCompare(String(b.title))),
-    [onlineCourses, canManage, canSeeProgress, isFacilitator, inManageArea, focusId, category]);
+    [onlineCourses, canManage, canSeeProgress, isFacilitator, inManageArea, focusId, category, user?.email]);
 
     // Old copies left on this device by an upload's replace are dropped here.
     const currentItems = useMemo(() => dropReplacedLeftovers(onlineCourseItems || []), [onlineCourseItems]);
@@ -232,8 +233,12 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
         return out;
     }, [progress, sectionCourse]);
     const accessOf = useCallback((c) => (inManageArea ? 'enrolled'
-        : courseAccess(c, enrolments.byCourse[c?.id], { canManage: false, started: startedCourses.has(c?.id) })),
-    [inManageArea, enrolments.byCourse, startedCourses]);
+        : courseAccess(c, enrolments.byCourse[c?.id], {
+            canManage: false,
+            started: startedCourses.has(c?.id),
+            draftAccess: canAccessDraft(c, { canManage, email: user?.email }),
+        })),
+    [inManageArea, enrolments.byCourse, startedCourses, canManage, user?.email]);
 
     const modules = useMemo(() => items
         .filter((i) => i.kind === 'module' && i.courseId === openCourseId)

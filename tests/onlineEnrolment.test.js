@@ -40,6 +40,11 @@ describe('course access', () => {
     it('keeps the place of someone who started before enrolment existed', () => {
         expect(courseAccess(course, null, { started: true })).toBe('enrolled');
     });
+    it('opens a draft to a manager or an invited tester, and to nobody else', () => {
+        expect(courseAccess(course, null, { draftAccess: true })).toBe('enrolled');
+        expect(courseAccess(course, null, { draftAccess: false })).toBe('none');
+        expect(courseAccess(course, { status: 'requested' }, { draftAccess: true })).toBe('enrolled');
+    });
 });
 
 describe('onlineEnrolment function helpers', () => {

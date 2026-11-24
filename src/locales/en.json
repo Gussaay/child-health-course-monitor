@@ -7909,6 +7909,9 @@
         "n_found": "Sections found: {{n}}"
       },
       "course_modal": {
+      "testers": "Testers (invited by email)",
+      "testers_placeholder": "One email address per line",
+      "testers_hint": "While this course is a draft, only managers and these people can see and open it, so it can be tested before publishing. They sign in with this email address. Publishing the course opens it to everyone as usual.",
         "add": "Add course",
         "edit": "Edit course",
         "enter_title": "Enter a course title.",
@@ -8017,6 +8020,7 @@
         "any_order_help": "For procedures or equipment that other lessons link to."
       },
       "main": {
+      "draft_testing": "Draft — for testing",
         "tab_courses": "Courses",
         "page_title": "Online Courses",
         "page_subtitle": "Self-paced training",

@@ -26,9 +26,12 @@ export const isOpenCourse = (course) => course?.enrolment === 'open';
  * Someone who had already started a course before enrolment existed keeps
  * their place in it (`started`).
  */
-export function courseAccess(course, enrolment, { canManage = false, started = false } = {}) {
+export function courseAccess(course, enrolment, { canManage = false, started = false, draftAccess = false } = {}) {
     if (!course) return 'none';
     if (canManage) return 'enrolled';
+    // A manager, or a tester invited by email, opens a draft course to try
+    // it before it is published — no enrolment needed (audience.canAccessDraft).
+    if (draftAccess) return 'enrolled';
     if (isOpenCourse(course)) return 'open';
     if (enrolment?.status === 'approved') return 'enrolled';
     if (started) return 'enrolled';
