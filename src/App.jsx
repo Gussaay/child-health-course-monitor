@@ -2756,7 +2756,7 @@ export default function App() {
                 // filters, and the Admin tab for those allowed); everyone else the
                 // public one, from anonymous data (functions/publicMentorshipCopy.js).
                 return permissions.canViewSkillsMentorship ? (
-                    <SkillsMentorshipView key="mentorshipDashboard" openDashboard setToast={setToast} permissions={permissions} userRoles={userRoles} userStates={userStates} userLocalities={userLocalities} canBulkUploadMentorships={permissions.canUseSuperUserAdvancedFeatures} />
+                    <SkillsMentorshipView key="mentorshipDashboard" openDashboard onExitToMain={() => navigate('landing')} setToast={setToast} permissions={permissions} userRoles={userRoles} userStates={userStates} userLocalities={userLocalities} canBulkUploadMentorships={permissions.canUseSuperUserAdvancedFeatures} />
                 ) : (
                     <SkillsMentorshipView key="mentorshipDashboardPublic" setToast={setToast} permissions={{ canViewSkillsMentorship: true, manageScope: 'none' }} userStates={[]} userLocalities={[]} publicDashboardMode publicDashboardParams={{}} />
                 );

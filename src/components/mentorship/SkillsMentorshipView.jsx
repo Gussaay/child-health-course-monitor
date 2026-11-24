@@ -2064,7 +2064,8 @@ const SkillsMentorshipView = ({
     publicDashboardMode = false, 
     publicDashboardParams = null,
     userRoles = [],
-    openDashboard = false
+    openDashboard = false,
+    onExitToMain = null
 }) => {
     const { t, i18n } = useTranslation();
     // An account assigned to "Federal" is not limited to a state: "Federal"
@@ -4163,12 +4164,12 @@ const SkillsMentorshipView = ({
     };
 
     // Android app: the top-bar arrow steps back from the records list to the service menu.
-    // Opened from the main page's Mentorship Dashboard tile: back from the
-    // dashboard goes to the service's Skills Mentorship list, not the main page.
+    // Opened from the main page's Mentorship Dashboard tile: back goes
+    // straight to the main page.
     const backFromHistory = useCallback(() => {
-        if (openDashboard && activeTab === 'dashboard') setActiveTab('skills_list');
+        if (openDashboard && onExitToMain) onExitToMain();
         else setCurrentView('action_menu');
-    }, [openDashboard, activeTab]);
+    }, [openDashboard, onExitToMain]);
     useInPageBack(backFromHistory, currentView === 'history' && !publicDashboardMode);
 
     if (currentView === 'service_selection') {
@@ -4245,7 +4246,7 @@ const SkillsMentorshipView = ({
                         <div className="flex flex-wrap justify-between items-center gap-2 md:gap-3 mb-3 md:mb-6 border-b border-gray-200 pb-2">
                             <div className="flex flex-wrap items-center gap-2 md:gap-4 min-w-0">
                                 {!publicDashboardMode && (
-                                    <BackArrow onClick={backFromHistory} label={openDashboard && activeTab === 'dashboard' ? t('mentorship_page.buttons.back_to_list', 'Back to the mentorship list') : t('mentorship_page.buttons.back_to_main_menu', 'Back to Main Menu')} className="-ms-2" />
+                                    <BackArrow onClick={backFromHistory} label={openDashboard && onExitToMain ? t('mentorship_page.buttons.back_to_main_page', 'Back to the main page') : t('mentorship_page.buttons.back_to_main_menu', 'Back to Main Menu')} className="-ms-2" />
                                 )}
 
                                 {!publicDashboardMode && <PullToRefresh onRefresh={handleRefresh} disabled={isRefreshing} />}

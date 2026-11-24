@@ -5012,7 +5012,8 @@
       "assign_projects_title": "Give each past visit the project that covered its facility on the visit date",
       "assigning_projects": "Assigning projects…",
       "assign_projects": "Assign projects to past visits ({{count}})",
-      "back_to_list": "Back to the mentorship list"
+      "back_to_list": "Back to the mentorship list",
+      "back_to_main_page": "Back to the main page"
     },
     "mentor_info": {
       "title": "Mentor Information"
