@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     LIBRARY_SERVICES, LIBRARY_CATEGORIES, canManageLibrary, normaliseLink, validateLibraryFile,
-    validateLibraryItem, itemsFor, countBy,
+    validateLibraryItem, itemsFor, countBy, libraryPath, parseLibraryPath,
 } from '../src/components/library/libraryModel';
 import { parseScannedCode, isPublicAppPath } from '../src/utils/appLinks';
 
@@ -59,5 +59,21 @@ describe('child health library', () => {
     it('is a public page', () => {
         expect(isPublicAppPath('/public/library')).toBe(true);
         expect(parseScannedCode('https://imnci-courses-monitor.web.app/public/library')).toMatchObject({ type: 'app', kind: 'library', public: true });
+    });
+
+    it('builds and reads shareable addresses at every level', () => {
+        expect(libraryPath()).toBe('/public/library');
+        expect(libraryPath({ service: 'Small & Sick Newborn' })).toBe('/public/library/ssnc');
+        expect(libraryPath({ service: 'IMNCI', category: 'training' })).toBe('/public/library/imnci/training');
+        expect(libraryPath({ itemId: 'abc123' })).toBe('/public/library/item/abc123');
+        expect(parseLibraryPath('/public/library')).toEqual({ service: null, category: null, itemId: null });
+        expect(parseLibraryPath('/public/library/ssnc/')).toEqual({ service: 'Small & Sick Newborn', category: null, itemId: null });
+        expect(parseLibraryPath('/public/library/imnci/operational')).toEqual({ service: 'IMNCI', category: 'operational', itemId: null });
+        expect(parseLibraryPath('/public/library/item/abc123')).toEqual({ service: null, category: null, itemId: 'abc123' });
+        expect(parseLibraryPath('/public/library/unknown/training')).toEqual({ service: null, category: null, itemId: null });
+        expect(parseLibraryPath('/public/projects')).toBeNull();
+        ['/public/library/imnci', '/public/library/imnci/training', '/public/library/item/x1'].forEach((path) => {
+            expect(parseScannedCode(`https://ch-sudan.web.app${path}`)).toMatchObject({ type: 'app', kind: 'library', public: true });
+        });
     });
 });

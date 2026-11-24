@@ -163,3 +163,51 @@ function toMillis(value) {
     const n = new Date(value).getTime();
     return Number.isFinite(n) ? n : 0;
 }
+
+// --- Shareable links ---------------------------------------------------------
+// Every level of the library has a public address, opened without sign-in:
+//   /public/library                         the whole library
+//   /public/library/<service>               one service (e.g. /public/library/imnci)
+//   /public/library/<service>/<section>     one section (e.g. /public/library/imnci/training)
+//   /public/library/item/<id>               one item
+// A service is named in the address by its short id (titleKey), since keys
+// such as "Small & Sick Newborn" do not belong in a URL.
+
+export const LIBRARY_BASE_PATH = '/public/library';
+
+export function serviceSlug(serviceKey) {
+    return LIBRARY_SERVICES.find((s) => s.key === serviceKey)?.titleKey || '';
+}
+
+export function serviceFromSlug(slug) {
+    const s = String(slug || '').toLowerCase();
+    return LIBRARY_SERVICES.find((x) => x.titleKey === s)?.key || null;
+}
+
+/** The address of the library, a service, a section of a service, or one item. */
+export function libraryPath({ service = null, category = null, itemId = null } = {}) {
+    if (itemId) return `${LIBRARY_BASE_PATH}/item/${encodeURIComponent(itemId)}`;
+    const slug = serviceSlug(service);
+    if (!slug) return LIBRARY_BASE_PATH;
+    if (category && isLibraryCategory(category)) return `${LIBRARY_BASE_PATH}/${slug}/${category}`;
+    return `${LIBRARY_BASE_PATH}/${slug}`;
+}
+
+/**
+ * Reads a library address. Returns { service, category, itemId } (each null
+ * when not given), or null when the path is not a library address. Unknown
+ * services or sections fall back to the level above.
+ */
+export function parseLibraryPath(pathname) {
+    const m = String(pathname || '').match(/^\/public\/library(?:\/([^/]+))?(?:\/([^/]+))?\/?$/);
+    if (!m) return null;
+    const [, first, second] = m;
+    if (first === 'item') {
+        let itemId = null;
+        try { itemId = second ? decodeURIComponent(second) : null; } catch { itemId = null; }
+        return { service: null, category: null, itemId: itemId && /^[\w-]+$/.test(itemId) ? itemId : null };
+    }
+    const service = serviceFromSlug(first);
+    const category = service && isLibraryCategory(second) ? second : null;
+    return { service, category, itemId: null };
+}

@@ -13,7 +13,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Activity, Baby, BookOpen, ClipboardList, ExternalLink, FileText, GraduationCap, HeartPulse,
-    Home, Library, Link2, Pencil, Plus, ScrollText, Search, Shield, Siren, Trash2, Upload, Users,
+    Home, Library, Link2, Pencil, Plus, ScrollText, Search, Share2, Shield, Siren, Trash2, Upload, Users,
 } from 'lucide-react';
 import {
     Button, Card, EmptyState, MenuGrid, MenuTile, Modal, PageHeader, SkeletonCard, Spinner, useInPageBack,
@@ -21,8 +21,9 @@ import {
 import { notify, confirmDialog } from '../dialogs';
 import {
     LIBRARY_CATEGORIES, LIBRARY_SERVICES, LIBRARY_FILE_TYPES, LIBRARY_IMAGE_TYPES,
-    LIBRARY_ERROR_TEXT, canManageLibrary, countBy, itemsFor, validateLibraryItem,
+    LIBRARY_ERROR_TEXT, canManageLibrary, countBy, itemsFor, libraryPath, validateLibraryItem,
 } from './libraryModel';
+import { shareLibraryLink } from './libraryShare';
 import {
     addLibraryItem, deleteLibraryItem, listLibraryItems, removeLibraryFile, updateLibraryItem, uploadLibraryFile,
 } from './libraryData';
@@ -42,14 +43,39 @@ function useLibraryText() {
     return { t, serviceShort, serviceTitle, categoryLabel, categoryHint };
 }
 
-export default function ChildHealthLibraryView({ permissions, user, onBack, isPublic = false }) {
+// The Share button on every level and every card: the link opens without sign-in.
+function useShare() {
+    const { t } = useTranslation();
+    return async (target, title) => {
+        const result = await shareLibraryLink(target, { title });
+        if (result === 'copied') notify(t('library.link_copied', 'Link copied. Anyone can open it without signing in.'), 'success');
+        else if (result === 'failed') notify(t('library.share_failed', 'Could not share the link.'), 'error');
+    };
+}
+
+function ShareButton({ onClick, compact = false }) {
+    const { t } = useTranslation();
+    const label = t('library.share', 'Share link');
+    return (
+        <Button variant="ghost" onClick={onClick} className={compact ? '!px-3' : ''}>
+            <Share2 size={16} /> {compact ? <span className="sr-only">{label}</span> : label}
+        </Button>
+    );
+}
+
+// `initial`: where a shared link opens ({ service, category, itemId }).
+// `syncAddress`: keep the browser address on the level shown, so the address
+// bar itself is always a link to share (the public page only).
+export default function ChildHealthLibraryView({ permissions, user, onBack, isPublic = false, initial = null, syncAddress = false }) {
     const { t, serviceShort, serviceTitle, categoryLabel, categoryHint } = useLibraryText();
     const canManage = !isPublic && canManageLibrary(permissions);
 
     const [items, setItems] = useState(null);
     const [loadError, setLoadError] = useState('');
-    const [service, setService] = useState(null);
-    const [category, setCategory] = useState(null);
+    const [service, setService] = useState(initial?.service || null);
+    const [category, setCategory] = useState(initial?.category || null);
+    const [itemId, setItemId] = useState(initial?.itemId || null);
+    const share = useShare();
     const [search, setSearch] = useState('');
     const [editing, setEditing] = useState(null); // null | {} (new) | item
 
@@ -65,14 +91,28 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
     }, []);
     useEffect(() => { load(); }, [load]);
 
+    // A single shared item: once loaded, the levels above it are its own
+    // service and section, so Back walks up from there.
+    const openItem = useMemo(() => (itemId && items ? items.find((it) => it.id === itemId) || null : null), [itemId, items]);
+    useEffect(() => {
+        if (openItem) { setService(openItem.service); setCategory(openItem.category); }
+    }, [openItem]);
+
+    useEffect(() => {
+        if (!syncAddress) return;
+        const path = libraryPath({ service, category, itemId });
+        if (window.location.pathname !== path) window.history.replaceState(window.history.state, '', path);
+    }, [syncAddress, service, category, itemId]);
+
     const goUp = useCallback(() => {
         setSearch('');
-        if (category) setCategory(null);
+        if (itemId) setItemId(null);
+        else if (category) setCategory(null);
         else if (service) setService(null);
         else onBack?.();
-    }, [category, service, onBack]);
+    }, [itemId, category, service, onBack]);
     // The Android top-bar arrow and the phone's back button step back inside the library first.
-    useInPageBack(goUp, !!service);
+    useInPageBack(goUp, !!(service || itemId));
 
     const serviceObj = LIBRARY_SERVICES.find((s) => s.key === service);
     const categoryObj = LIBRARY_CATEGORIES.find((c) => c.key === category);
@@ -86,6 +126,7 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
         try {
             await deleteLibraryItem(item);
             setItems((prev) => (prev || []).filter((it) => it.id !== item.id));
+            if (itemId === item.id) setItemId(null);
             notify(t('library.deleted', 'Removed from the library.'), 'success');
         } catch (error) {
             notify(t('library.save_failed', 'Could not save: {{message}}', { message: error?.message || '' }), 'error');
@@ -107,6 +148,30 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
     let body;
     if (items === null) {
         body = <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><SkeletonCard /><SkeletonCard /><SkeletonCard /></div>;
+    } else if (itemId) {
+        body = openItem ? (
+            <>
+                <PageHeader
+                    title={openItem.name}
+                    subtitle={[serviceObj && serviceTitle(serviceObj), categoryObj && categoryLabel(categoryObj)].filter(Boolean).join(' · ')}
+                    onBack={goUp}
+                />
+                <div className="mx-auto max-w-xl">
+                    <LibraryCard item={openItem} large canManage={canManage} onShare={() => share({ itemId: openItem.id }, openItem.name)} onEdit={() => setEditing(openItem)} onDelete={() => onDelete(openItem)} />
+                    <div className="mt-4 text-center">
+                        <Button variant="secondary" onClick={() => setItemId(null)} className="mx-auto">
+                            <Library size={16} /> {t('library.more_in_section', 'More in this section')}
+                        </Button>
+                    </div>
+                </div>
+            </>
+        ) : (
+            <EmptyState
+                icon={Library}
+                message={t('library.item_missing', 'This item is no longer in the library.')}
+                action={{ label: t('library.browse', 'Browse the library'), onClick: () => { setItemId(null); setService(null); setCategory(null); } }}
+            />
+        );
     } else if (!service) {
         body = (
             <>
@@ -114,7 +179,7 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
                     title={t('library.title', 'Child Health Library')}
                     subtitle={t('library.subtitle', 'Training materials, guidelines, protocols, operational guides and SOPs for each child health service.')}
                     onBack={onBack}
-                    actions={addButton}
+                    actions={<>{addButton}<ShareButton onClick={() => share({}, t('library.title', 'Child Health Library'))} /></>}
                 />
                 <MenuGrid columns="sm:grid-cols-3 lg:grid-cols-4">
                     {LIBRARY_SERVICES.map((s) => (
@@ -133,7 +198,7 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
     } else if (!category) {
         body = (
             <>
-                <PageHeader title={serviceTitle(serviceObj)} subtitle={t('library.choose_category', 'Choose a section.')} onBack={goUp} actions={addButton} />
+                <PageHeader title={serviceTitle(serviceObj)} subtitle={t('library.choose_category', 'Choose a section.')} onBack={goUp} actions={<>{addButton}<ShareButton onClick={() => share({ service }, `${t('library.title', 'Child Health Library')}: ${serviceTitle(serviceObj)}`)} /></>} />
                 <MenuGrid columns="sm:grid-cols-3">
                     {LIBRARY_CATEGORIES.map((c) => (
                         <MenuTile
@@ -151,7 +216,7 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
     } else {
         body = (
             <>
-                <PageHeader title={categoryLabel(categoryObj)} subtitle={serviceTitle(serviceObj)} onBack={goUp} actions={addButton} />
+                <PageHeader title={categoryLabel(categoryObj)} subtitle={serviceTitle(serviceObj)} onBack={goUp} actions={<>{addButton}<ShareButton onClick={() => share({ service, category }, `${serviceShort(serviceObj)}: ${categoryLabel(categoryObj)}`)} /></>} />
                 <div className="relative mb-4">
                     <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
@@ -172,7 +237,7 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
                 ) : (
                     <div className="grid gap-3 md:gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {shown.map((item) => (
-                            <LibraryCard key={item.id} item={item} canManage={canManage} onEdit={() => setEditing(item)} onDelete={() => onDelete(item)} />
+                            <LibraryCard key={item.id} item={item} canManage={canManage} onShare={() => share({ itemId: item.id }, item.name)} onEdit={() => setEditing(item)} onDelete={() => onDelete(item)} />
                         ))}
                     </div>
                 )}
@@ -202,7 +267,7 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
     );
 }
 
-function LibraryCard({ item, canManage, onEdit, onDelete }) {
+function LibraryCard({ item, canManage, onShare, onEdit, onDelete, large = false }) {
     const { t } = useTranslation();
     const [imageFailed, setImageFailed] = useState(false);
     const open = () => { if (item.linkUrl) window.open(item.linkUrl, '_blank', 'noopener,noreferrer'); };
@@ -217,9 +282,10 @@ function LibraryCard({ item, canManage, onEdit, onDelete }) {
             </button>
             <div className="flex flex-1 flex-col gap-2 p-3 md:p-4">
                 <h3 className="text-base font-bold leading-snug text-slate-800">{item.name}</h3>
-                {item.description && <p className="text-sm leading-relaxed text-slate-600 whitespace-pre-line line-clamp-5">{item.description}</p>}
+                {item.description && <p className={`text-sm leading-relaxed text-slate-600 whitespace-pre-line ${large ? '' : 'line-clamp-5'}`}>{item.description}</p>}
                 <div className="mt-auto flex flex-wrap items-center gap-2 pt-2">
                     <Button onClick={open} disabled={!item.linkUrl}><ExternalLink size={16} /> {t('library.open', 'Open')}</Button>
+                    {onShare && <ShareButton onClick={onShare} compact={!large} />}
                     {canManage && (
                         <>
                             <Button variant="ghost" onClick={onEdit}><Pencil size={16} /> {t('library.edit', 'Edit')}</Button>

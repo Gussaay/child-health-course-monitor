@@ -199,6 +199,7 @@ import { publicBaseUrl } from './utils/publicLink';
 import { DataAssistantCard, PageAddButton } from './components/DataAssistantLauncher';
 import { ScanQrCard } from './components/QrScanLauncher';
 import { LibraryEntryCard } from './components/library/LibraryEntryCard.jsx';
+import { parseLibraryPath } from './components/library/libraryModel';
 import { isPublicAppPath, parseScannedCode } from './utils/appLinks';
 import { courseLocationText } from './components/constants';
 import GetAppBanner from './components/GetAppBanner';
@@ -1219,6 +1220,7 @@ export default function App() {
     const [isPublicProjectsView, setIsPublicProjectsView] = useState(false);
     // /public/library: the Child Health Library, open to everyone.
     const [isPublicLibraryView, setIsPublicLibraryView] = useState(false);
+    const [publicLibraryTarget, setPublicLibraryTarget] = useState(null);
 
     const [operationCounts, setOperationCounts] = useState({ reads: 0, writes: 0 });
     const [isMonitorVisible, setIsMonitorVisible] = useState(true);
@@ -1390,7 +1392,9 @@ export default function App() {
             const connectRequest = searchParamsPath.get('connect_claude');
             if (connectRequest) { setConnectClaudeId(connectRequest); return; }
 
-            if (/^\/public\/library\/?$/.test(path)) {
+            const libraryTarget = parseLibraryPath(path);
+            if (libraryTarget) {
+                setPublicLibraryTarget(libraryTarget);
                 setIsPublicLibraryView(true);
                 return;
             }
@@ -2925,7 +2929,7 @@ case 'meetings':
         mainContent = (
             <Suspense fallback={<PageSkeleton />}>
                 <div className="max-w-6xl mx-auto w-full p-3 md:p-6">
-                    <ChildHealthLibraryView permissions={user ? permissions : {}} user={user} isPublic={!user} onBack={scannedPublicOpen ? leaveScannedPage : undefined} />
+                    <ChildHealthLibraryView key={JSON.stringify(publicLibraryTarget)} permissions={user ? permissions : {}} user={user} isPublic={!user} initial={publicLibraryTarget} syncAddress onBack={scannedPublicOpen ? leaveScannedPage : undefined} />
                 </div>
             </Suspense>
         );

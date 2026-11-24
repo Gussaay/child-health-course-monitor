@@ -9428,6 +9428,12 @@
       "content": "Upload a file or add a direct link to the content.",
       "name_long": "The name is too long (200 characters at most).",
       "link": "Enter a valid web address (https://...)."
-    }
+    },
+    "share": "Share link",
+    "link_copied": "Link copied. Anyone can open it without signing in.",
+    "share_failed": "Could not share the link.",
+    "more_in_section": "More in this section",
+    "item_missing": "This item is no longer in the library.",
+    "browse": "Browse the library"
   }
 }
