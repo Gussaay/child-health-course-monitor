@@ -1486,7 +1486,8 @@
       "about": "The programme team",
       "survey": "Field surveys and mapping",
       "online_courses_manage": "Courses, enrolment, groups and progress",
-      "protocol_manager": "Protocols, facilitator guides and online courses by service"
+      "protocol_manager": "Protocols, facilitator guides and online courses by service",
+      "mentorship_dashboard": "Mentorship results at a glance"
     },
     "welcome": "Welcome",
     "subtitle": "Select a module to get started",
@@ -1518,7 +1519,8 @@
       "monitoring": "Monitoring",
       "survey": "Surveys",
       "online_courses_manage": "Course Manager",
-      "protocol_manager": "Protocol & Course Management"
+      "protocol_manager": "Protocol & Course Management",
+      "mentorship_dashboard": "Mentorship Dashboard"
     }
   },
   "auth": {
@@ -5122,7 +5124,8 @@
     "record_view": {
       "title": "Viewing Individual Record",
       "not_found_or_loading": "Record not found or loading...",
-      "open_in_popup": "The record details are open in the popup window."
+      "open_in_popup": "The record details are open in the popup window.",
+      "sign_in": "Individual health worker and facility records are not shared on the public link. Sign in to the app to open this record."
     },
     "migration": {
       "title": "Backfill Facility Data (Super User)"
@@ -5139,6 +5142,9 @@
       "IPC": "Infection Prevention and Control in Neonatal Units (IPC)",
       "IMNCI_MOTHERS": "Mother's Knowledge & Satisfaction Survey (IMNCI)",
       "EENC_MOTHERS": "Mother's Survey (EENC)"
+    },
+    "public": {
+      "load_failed": "The dashboard data could not be loaded. Check the connection and refresh the page."
     }
   },
   "monitoring_page": {
@@ -9316,5 +9322,28 @@
     "annexes_intro": "Shared by every course of this service. A lesson opens a page with a button: in the lesson editor, add \"Annex (SOP, checklist)\" and pick the page.",
     "annex_kicker": "Course annex · opened from the lessons",
     "annex_edit": "Edit or add pages"
+  },
+  "mentorship_problems": {
+    "title": "Facility problems: overview and categories",
+    "total": "Total problems",
+    "resolved_rate": "Problems resolved: {{pct}}%",
+    "none": "No problems recorded for the selected filters.",
+    "by_category": "Problems by category and status",
+    "cat_line": "{{total}} problems · {{pct}}% resolved",
+    "status": {
+      "pending": "Pending",
+      "in_progress": "In progress",
+      "resolved": "Resolved / done"
+    },
+    "category": {
+      "medicines_supplies": "Medicines & supplies",
+      "staff_training": "Staff & training",
+      "equipment": "Equipment",
+      "infrastructure": "Building & utilities",
+      "records_reporting": "Records & reporting",
+      "funding_logistics": "Funding & transport",
+      "community": "Community & caregivers",
+      "other": "Other"
+    }
   }
 }

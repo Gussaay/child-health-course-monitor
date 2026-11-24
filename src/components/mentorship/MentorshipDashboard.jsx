@@ -243,12 +243,13 @@ const MentorshipDashboard = ({
                 } else locName = r.facilityName || 'Unknown';
 
                 data.challenges_table.forEach(ch => {
-                    if (ch.problem) {
+                    // The public copy sends no problem text, only its category.
+                    if (ch.problem || ch.category) {
                         let combinedSolution = ch.solution || '';
                         if (!combinedSolution && (ch.immediate_solution || ch.long_term_solution)) combinedSolution = [ch.immediate_solution, ch.long_term_solution].filter(Boolean).join(' / ');
                         if (!groupedProblems[locName]) groupedProblems[locName] = [];
                         
-                        groupedProblems[locName].push({ reportId: r.id, challengeId: ch.id, facility: r.facilityName, date: r.visitDate || r.visit_date || r.date, problem: ch.problem, solution: combinedSolution, status: ch.status || ch.immediate_status || 'Pending', person: ch.responsible_person });
+                        groupedProblems[locName].push({ reportId: r.id, challengeId: ch.id, facility: r.facilityName, date: r.visitDate || r.visit_date || r.date, problem: ch.problem || '', category: ch.category || null, solution: combinedSolution, status: ch.status || ch.immediate_status || 'Pending', person: ch.responsible_person });
                         totalProblems++;
                     }
                 });
@@ -930,10 +931,11 @@ const MentorshipDashboard = ({
             
             <FilterSelect label={t('filter.state')} value={activeState} onChange={(v) => { onStateChange(v); onLocalityChange(""); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={stateOptions} defaultOption={t('filter.all.states')} />
             <FilterSelect label={t('filter.locality')} value={activeLocality} onChange={(v) => { onLocalityChange(v); onFacilityIdChange(""); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={localityOptions} disabled={!activeState} defaultOption={t('filter.all.localities')} />
-            <FilterSelect label={t('filter.facility')} value={activeFacilityId} onChange={(v) => { onFacilityIdChange(v); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={facilityOptions} disabled={!activeLocality} defaultOption={t('filter.all.facilities')} />
+            {/* The public link shows no single facility or health worker. */}
+            {!publicDashboardMode && <FilterSelect label={t('filter.facility')} value={activeFacilityId} onChange={(v) => { onFacilityIdChange(v); onProjectChange(""); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={facilityOptions} disabled={!activeLocality} defaultOption={t('filter.all.facilities')} />}
             <FilterSelect label={t('filter.project')} value={activeProject} onChange={(v) => { onProjectChange(v); onWorkerNameChange(""); onWorkerTypeChange?.(""); }} options={projectOptions} defaultOption={t('filter.all.projects')} />
             <FilterSelect label={t('filter.job_title')} value={activeWorkerType || ""} onChange={(v) => { if(onWorkerTypeChange) onWorkerTypeChange(v); onWorkerNameChange(""); }} options={workerTypeOptions || []} defaultOption={t('filter.all.titles')} />
-            <div className="col-span-2 md:contents"><FilterSelect label={t('filter.worker_name')} value={activeWorkerName} onChange={onWorkerNameChange} options={workerOptions} disabled={!activeFacilityId} defaultOption={t('filter.all.workers')} /></div>
+            {!publicDashboardMode && <div className="col-span-2 md:contents"><FilterSelect label={t('filter.worker_name')} value={activeWorkerName} onChange={onWorkerNameChange} options={workerOptions} disabled={!activeFacilityId} defaultOption={t('filter.all.workers')} /></div>}
         </div>
     );
 
@@ -1056,6 +1058,7 @@ const MentorshipDashboard = ({
                         {activeTab === 'visit_reports' && (
                             <VisitReportDashboardTab 
                                 activeService={activeService} visitReportStats={visitReportStats} geographicLevelName={geographicLevelName} dynamicLocationLabel={dynamicLocationLabel} dynamicLocationLevel={dynamicLocationLevel} renderStatusCell={renderStatusCell} IMNCI_SKILL_GROUPS={IMNCI_SKILL_GROUPS} EENC_SKILL_GROUPS={EENC_SKILL_GROUPS} EENC_SKILLS_LABELS={EENC_SKILLS_LABELS} KpiCard={KpiCard} KpiBarChart={KpiBarChart} ScoreText={ScoreText} CopyImageButton={CopyImageButton} scopeTitle={scopeTitle}
+                                publicMode={publicDashboardMode}
                             />
                         )}
 

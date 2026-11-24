@@ -381,3 +381,6 @@ exports.facilityDashboardCopy = require("./facilityDashboardCopy").facilityDashb
 // The main menu's lists as slim copies, so phones do not download every
 // course, participant, visit and facilitator for the greeting numbers.
 exports.homeCopy = require("./homeCopy").homeCopy;
+// The public mentorship dashboard link (opened without signing in): an
+// anonymous copy of the visits and visit reports (publicMentorshipCopy.js).
+exports.publicMentorshipCopy = require("./publicMentorshipCopy").publicMentorshipCopy;

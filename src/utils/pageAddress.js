@@ -20,6 +20,7 @@ const VIEW_SLUGS = {
     imciForm: 'imnci-protocol',
     childHealthServices: 'child-health-services',
     skillsMentorship: 'skills-mentorship',
+    mentorshipDashboard: 'mentorship-dashboard',
     supplyManagement: 'supply',
     supervision: 'supervision',
     survey: 'survey',

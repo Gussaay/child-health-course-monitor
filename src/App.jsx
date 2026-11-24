@@ -425,7 +425,7 @@ function pageTitles(t) {
     return {
     dashboard: t('landing.modules.dashboard', 'Dashboard'), courses: t('landing.modules.courses', 'Courses'),
     humanResources: t('landing.modules.human_resources', 'Human Resources'), childHealthServices: t('landing.modules.facilities', 'Child Health Services'),
-    skillsMentorship: t('landing.modules.mentorship', 'Skills Mentorship'), imciForm: t('landing.modules.imci', 'IMNCI Protocol'),
+    skillsMentorship: t('landing.modules.mentorship', 'Skills Mentorship'), mentorshipDashboard: t('landing.modules.mentorship_dashboard', 'Mentorship Dashboard'), imciForm: t('landing.modules.imci', 'IMNCI Protocol'),
     projects: t('landing.modules.projects', 'Project Tracker'), meetings: t('landing.modules.meetings', 'Meeting Tracker'),
     planning: t('landing.modules.planning', 'Master Plan'), localityPlan: t('landing.modules.locality_plan', 'Bottom-up Planning'),
     supplyManagement: t('landing.modules.supply', 'Supply Management'), supervision: t('landing.modules.supervision', 'Supervision'), survey: t('landing.modules.survey', 'Surveys'),
@@ -448,6 +448,7 @@ function allModules(t, permissions) {
     const tile = (key, fallback) => t(`landing.taglines.${key}`, fallback);
     return [
         { label: t('landing.modules.dashboard', 'Dashboard'), tagline: tile('dashboard', 'Key indicators at a glance'), view: 'dashboard', group: 'services', icon: Home, permission: true },
+        { label: t('landing.modules.mentorship_dashboard', 'Mentorship Dashboard'), tagline: tile('mentorship_dashboard', 'Mentorship results at a glance'), view: 'mentorshipDashboard', group: 'services', icon: TrendingUp, permission: permissions.canViewSkillsMentorship },
         { label: t('landing.modules.courses', 'Courses'), tagline: tile('courses', 'Courses, participants and reports'), view: 'courses', group: 'training', icon: Book, permission: permissions.canViewCourse },
         { label: t('landing.modules.human_resources', 'Human Resources'), tagline: tile('human_resources', 'Facilitators, teams and partners'), view: 'humanResources', group: 'training', icon: Users, permission: permissions.canViewHumanResource },
         { label: t('landing.modules.facilities', 'Child Health Services'), tagline: tile('facilities', 'Facilities and service coverage'), view: 'childHealthServices', group: 'services', icon: Hospital, permission: permissions.canViewFacilities },
@@ -1962,7 +1963,7 @@ export default function App() {
         if (['courseForm', 'humanResources'].includes(view)) fetchFunders();
         if (['courseForm'].includes(view)) fetchCoordinators();
         if (view === 'courses' || view === 'facilitatorReport') fetchCourses();
-        if (view === 'skillsMentorship') { fetchHealthFacilities(); fetchSkillMentorshipSubmissions(); }
+        if (view === 'skillsMentorship' || view === 'mentorshipDashboard') { fetchHealthFacilities(); fetchSkillMentorshipSubmissions(); }
         if (view === 'childHealthServices') fetchHealthFacilities();
         if (view === 'courseReport') fetchHealthFacilities();
     }, [view, isSharedView, user, fetchCourses, fetchFacilitators, fetchFunders, fetchCoordinators, fetchHealthFacilities, fetchSkillMentorshipSubmissions, isPublicMentorshipDashboardView]);
@@ -2221,7 +2222,7 @@ export default function App() {
             'courseForm': permissions.canManageCourse || permissions.canAddCourse, 'participantForm': permissions.canManageCourse, 'facilitatorForm': permissions.canManageHumanResource,
             'courseReport': permissions.canViewCourse, 'participantReport': permissions.canViewCourse, 'facilitatorReport': permissions.canViewHumanResource,
             'finalReport': permissions.canViewCourse, 'participantMigration': permissions.canUseSuperUserAdvancedFeatures, 'childHealthServices': permissions.canViewFacilities,
-            'skillsMentorship': permissions.canViewSkillsMentorship, 'facilitators': permissions.canViewHumanResource, 'programTeams': permissions.canViewHumanResource,
+            'skillsMentorship': permissions.canViewSkillsMentorship, 'mentorshipDashboard': permissions.canViewSkillsMentorship, 'facilitators': permissions.canViewHumanResource, 'programTeams': permissions.canViewHumanResource,
             'partnersPage': permissions.canViewHumanResource, 'attendanceManager': permissions.canManageCourse, 
             'projects': permissions.canUseFederalManagerAdvancedFeatures,
 'meetings': permissions.canUseFederalManagerAdvancedFeatures,
@@ -2262,9 +2263,9 @@ export default function App() {
         if (state.openParticipantReport) { setSelectedParticipantId(state.openParticipantReport); setSelectedCourseId(state.openCourseReport); }
         if (state.caseToEdit) setEditingCaseFromReport(state.caseToEdit);
 
-        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey', 'onlineCourses', 'onlineCoursesManage', 'protocolManager', 'downloads', 'about'].includes(newView)) {
+        if (['courses', 'humanResources', 'dashboard', 'admin', 'landing', 'skillsMentorship', 'mentorshipDashboard', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey', 'onlineCourses', 'onlineCoursesManage', 'protocolManager', 'downloads', 'about'].includes(newView)) {
             setSelectedCourseId(null); setSelectedParticipantId(null); setFinalReportCourse(null);
-            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey', 'onlineCourses', 'onlineCoursesManage', 'protocolManager', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
+            if (['dashboard', 'admin', 'landing', 'skillsMentorship', 'mentorshipDashboard', 'projects', 'planning', 'localityPlan', 'supplyManagement', 'supervision', 'survey', 'onlineCourses', 'onlineCoursesManage', 'protocolManager', 'downloads', 'about'].includes(newView)) setActiveCourseType(null);
         }
         if ((view === 'observe' || view === 'participantReport') && !['observe', 'participantReport'].includes(newView)) setSelectedParticipantId(null);
         return true;
@@ -2746,9 +2747,15 @@ export default function App() {
                     />
                 ) : null;
 
+            case 'mentorshipDashboard':
+                // Straight to the mentorship dashboard: pick a service, see its dashboard.
+                return permissions.canViewSkillsMentorship ? (
+                    <SkillsMentorshipView key="mentorshipDashboard" openDashboard setToast={setToast} permissions={permissions} userRoles={userRoles} userStates={userStates} userLocalities={userLocalities} canBulkUploadMentorships={permissions.canUseSuperUserAdvancedFeatures} />
+                ) : null;
+
             case 'skillsMentorship':
                 return permissions.canViewSkillsMentorship ? (
-                    <SkillsMentorshipView setToast={setToast} permissions={permissions} userStates={userStates} userLocalities={userLocalities} canBulkUploadMentorships={permissions.canUseSuperUserAdvancedFeatures} />
+                    <SkillsMentorshipView key="skillsMentorship" setToast={setToast} permissions={permissions} userRoles={userRoles} userStates={userStates} userLocalities={userLocalities} canBulkUploadMentorships={permissions.canUseSuperUserAdvancedFeatures} />
                 ) : null;
 
            case 'supplyManagement':
@@ -3071,7 +3078,7 @@ case 'meetings':
         } else {
             mainContent = (
                 <SkillsMentorshipView
-                    setToast={setToast} permissions={permissions} userStates={userStates} userLocalities={userLocalities} 
+                    setToast={setToast} permissions={permissions} userRoles={userRoles} userStates={userStates} userLocalities={userLocalities} 
                     publicSubmissionMode={true} publicServiceType={publicMentorshipProps.serviceType} canBulkUploadMentorships={permissions.canUseSuperUserAdvancedFeatures}
                 />
             );

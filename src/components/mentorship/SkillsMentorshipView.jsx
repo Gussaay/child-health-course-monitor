@@ -36,6 +36,8 @@ import AMSAssessmentForm from './AMSAssessmentForm';
 import { useTranslation } from 'react-i18next';
 import { getAuth } from "firebase/auth";
 import { db } from '../../firebase'; 
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useAuth } from '../../hooks/useAuth';
 
 // --- Bulk Upload Modal ---
 import DetailedMentorshipBulkUploadModal from './MentorshipBulkUpload';
@@ -2059,7 +2061,9 @@ const SkillsMentorshipView = ({
     publicServiceType = null,
     canBulkUploadMentorships = false,
     publicDashboardMode = false, 
-    publicDashboardParams = null 
+    publicDashboardParams = null,
+    userRoles = [],
+    openDashboard = false
 }) => {
     const { t, i18n } = useTranslation();
     useEffect(() => {
@@ -2223,17 +2227,29 @@ const SkillsMentorshipView = ({
         publicDashboardMode
     ]);
 
+    // Every role on the account counts, not only the first one: a federal
+    // manager whose account also lists "facilitator" (or "mentor") first used
+    // to be treated as a facilitator here and saw only the visits they had
+    // recorded themselves.
+    const roleList = useMemo(() => {
+        const list = [permissions?.role, ...(Array.isArray(userRoles) ? userRoles : [])]
+            .filter(Boolean).map(r => String(r).toLowerCase());
+        return [...new Set(list)];
+    }, [permissions?.role, userRoles]);
+    const hasRole = useCallback((...names) => names.some(n => roleList.includes(n)), [roleList]);
+
     const canSeeAllMentorshipData = useMemo(() => {
         if (publicDashboardMode || publicSubmissionMode) return true;
         if (permissions?.canUseSuperUserAdvancedFeatures || permissions?.canUseFederalManagerAdvancedFeatures) return true;
-        if (['super_user', 'federal_manager'].includes(permissions?.role)) return true;
-        if (permissions?.manageLocation === 'federal_level' && permissions?.role !== 'facilitator') return true;
+        if (hasRole('super_user', 'federal_manager')) return true;
+        if (permissions?.manageLocation === 'federal_level' && !(roleList.length === 1 && roleList[0] === 'facilitator')) return true;
 
         return false;
-    }, [permissions, publicDashboardMode, publicSubmissionMode]);
+    }, [permissions, publicDashboardMode, publicSubmissionMode, hasRole, roleList]);
 
-    const isLocalityManager = permissions?.manageScope === 'locality' || permissions?.role === 'locality_manager';
-    const isFacilitator = permissions?.role === 'facilitator';
+    const isLocalityManager = !canSeeAllMentorshipData && (permissions?.manageScope === 'locality' || hasRole('locality_manager'));
+    // Only someone who is nothing more than a facilitator is limited to their own visits.
+    const isFacilitator = !canSeeAllMentorshipData && permissions?.role === 'facilitator';
 
     const [activeDashboardState, setActiveDashboardState] = useState(() => {
         if (publicDashboardMode) return publicDashboardParams?.state || '';
@@ -2247,8 +2263,10 @@ const SkillsMentorshipView = ({
         return '';
     });
 
-    const [activeDashboardFacilityId, setActiveDashboardFacilityId] = useState(publicDashboardMode ? publicDashboardParams?.facilityId || '' : '');
-    const [activeDashboardWorkerName, setActiveDashboardWorkerName] = useState(publicDashboardMode ? publicDashboardParams?.workerName || '' : '');
+    // A public link never narrows to one facility or one health worker, even
+    // if the shared address carries one.
+    const [activeDashboardFacilityId, setActiveDashboardFacilityId] = useState('');
+    const [activeDashboardWorkerName, setActiveDashboardWorkerName] = useState('');
     const [activeDashboardProject, setActiveDashboardProject] = useState(publicDashboardMode ? publicDashboardParams?.project || '' : '');
     const [activeDashboardWorkerType, setActiveDashboardWorkerType] = useState(publicDashboardMode ? publicDashboardParams?.workerType || '' : '');
     const [activeDashboardDate, setActiveDashboardDate] = useState(publicDashboardMode ? (publicDashboardParams?.dateFilter || publicDashboardParams?.week || '') : '');
@@ -2298,81 +2316,63 @@ const SkillsMentorshipView = ({
         loadFacilities(false);
     }, [currentView, localHealthFacilities, isFacilitiesReloading, loadFacilities]);
 
-    useEffect(() => {
-        if (publicDashboardMode) {
-            let isMounted = true;
-            const fetchPublicData = async () => {
-                const timeKey = 'publicDashboardLastSync';
-                const lastFetchTime = parseInt(localStorage.getItem(timeKey) || '0', 10);
-                const isStale = (Date.now() - lastFetchTime) > (1 * 60 * 60 * 1000); 
-                
-                let localSubs = [];
-                let localImnci = [];
-                let localEenc = [];
-                let hasLocalData = false;
-
-                try {
-                    const [cachedSubs, cachedImnci, cachedEenc] = await Promise.all([
-                        typeof listMentorshipSessions === 'function' ? listMentorshipSessions({ source: 'cache' }).catch(() => []) : Promise.resolve([]),
-                        typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports({ source: 'cache' }).catch(() => []) : Promise.resolve([]),
-                        typeof listEENCVisitReports === 'function' ? listEENCVisitReports({ source: 'cache' }).catch(() => []) : Promise.resolve([])
-                    ]);
-                    
-                    if (isMounted && cachedSubs !== undefined && cachedImnci !== undefined && cachedEenc !== undefined) {
-                        localSubs = cachedSubs;
-                        localImnci = cachedImnci;
-                        localEenc = cachedEenc;
-                        hasLocalData = true;
-
-                        setPublicData({ submissions: cachedSubs || [], imnci: cachedImnci || [], eenc: cachedEenc || [] });
-                        setPublicLoading(false); 
-                        updateLastSyncTime(); 
-                    }
-                } catch (e) {
-                    console.log("Cache miss or unavailable. Waiting for server data...");
-                }
-
-                if (!hasLocalData || isStale) {
-                    try {
-                        let effectiveLastFetchTime = lastFetchTime;
-                        if (!hasLocalData || localSubs.length === 0) {
-                            effectiveLastFetchTime = 0;
-                        }
-
-                        const [newSubs, newImnci, newEenc] = await Promise.all([
-                            typeof listMentorshipSessions === 'function' ? listMentorshipSessions({ source: 'server' }, effectiveLastFetchTime).catch(() => []) : Promise.resolve([]),
-                            typeof listIMNCIVisitReports === 'function' ? listIMNCIVisitReports({ source: 'server' }, effectiveLastFetchTime).catch(() => []) : Promise.resolve([]),
-                            typeof listEENCVisitReports === 'function' ? listEENCVisitReports({ source: 'server' }, effectiveLastFetchTime).catch(() => []) : Promise.resolve([])
-                        ]);
-
-                        if (isMounted) {
-                            const mergeData = (oldData, newData) => {
-                                if (!newData || newData.length === 0) return oldData || [];
-                                const map = new Map((oldData || []).map(i => [i.id, i]));
-                                newData.forEach(i => map.set(i.id, i));
-                                return Array.from(map.values());
-                            };
-
-                            setPublicData({ 
-                                submissions: mergeData(localSubs, newSubs), 
-                                imnci: mergeData(localImnci, newImnci), 
-                                eenc: mergeData(localEenc, newEenc) 
-                            });
-                            
-                            localStorage.setItem(timeKey, Date.now().toString());
-                            updateLastSyncTime();
-                        }
-                    } catch (e) {
-                        console.error("Failed fetching fresh public data from server", e);
-                    } finally {
-                        if (isMounted) setPublicLoading(false);
-                    }
-                }
-            };
-            fetchPublicData();
-            return () => { isMounted = false; };
+    // The public link is opened without signing in, and the database lets
+    // only signed-in users read mentorship visits (only staff the visit
+    // reports), so reading them directly gave 0 everywhere. It reads the
+    // server's anonymous copy instead (functions/publicMentorshipCopy.js): no
+    // names, phones, emails, notes or problem text.
+    const [publicError, setPublicError] = useState('');
+    const publicMountedRef = useRef(true);
+    const loadPublicCopy = useCallback(async () => {
+        try {
+            const call = httpsCallable(getFunctions(), 'publicMentorshipCopy', { timeout: 110000 });
+            const res = (await call({}))?.data || {};
+            const items = (part) => (part && Array.isArray(part.items) ? part.items : []);
+            if (['submissions', 'imnci', 'eenc'].some((k) => res[k]?.tooLarge)) throw new Error('The dashboard data is too large to send.');
+            if (!publicMountedRef.current) return;
+            setPublicData({ submissions: items(res.submissions), imnci: items(res.imnci), eenc: items(res.eenc) });
+            setPublicError('');
+            try { localStorage.setItem('publicDashboardLastSync', String(Date.now())); } catch { /* storage off */ }
+            updateLastSyncTime();
+        } catch (e) {
+            console.error('Public mentorship data could not be loaded', e);
+            if (publicMountedRef.current) {
+                setPublicData((prev) => ({ submissions: prev.submissions || [], imnci: prev.imnci || [], eenc: prev.eenc || [] }));
+                setPublicError(t('mentorship_page.public.load_failed', 'The dashboard data could not be loaded. Check the connection and refresh the page.'));
+            }
+            throw e;
+        } finally {
+            if (publicMountedRef.current) setPublicLoading(false);
         }
-    }, [publicDashboardMode, updateLastSyncTime]);
+    }, [updateLastSyncTime, t]);
+    // A single-record link (/public/mentorship/record/...) shows one health
+    // worker's or one facility's record, so it is never served from the public
+    // copy: a signed-in staff member (the Admin tab opens these) reads it
+    // directly as before; anyone else is asked to sign in.
+    const { user: authUser, authLoading } = useAuth();
+    const isPublicRecordView = publicDashboardMode && !!publicDashboardParams?.isRecordView;
+    const [recordNeedsSignIn, setRecordNeedsSignIn] = useState(false);
+    useEffect(() => {
+        publicMountedRef.current = true;
+        if (publicDashboardMode && !isPublicRecordView) {
+            loadPublicCopy().catch(() => { /* shown on the page */ });
+        } else if (isPublicRecordView && !authLoading) {
+            if (!authUser) {
+                setRecordNeedsSignIn(true);
+                setPublicLoading(false);
+            } else {
+                setRecordNeedsSignIn(false);
+                Promise.all([
+                    listMentorshipSessions({ source: 'server' }).catch(() => []),
+                    listIMNCIVisitReports({ source: 'server' }).catch(() => []),
+                    listEENCVisitReports({ source: 'server' }).catch(() => []),
+                ]).then(([subs, imnci, eenc]) => {
+                    if (publicMountedRef.current) setPublicData({ submissions: subs || [], imnci: imnci || [], eenc: eenc || [] });
+                }).finally(() => { if (publicMountedRef.current) setPublicLoading(false); });
+            }
+        }
+        return () => { publicMountedRef.current = false; };
+    }, [publicDashboardMode, isPublicRecordView, authLoading, authUser, loadPublicCopy]);
 
     useEffect(() => {
         // Mirror the result locally as well, so an empty/stale context state never leaves
@@ -3105,39 +3105,8 @@ const SkillsMentorshipView = ({
         setIsRefreshing(true);
         try {
             if (publicDashboardMode) {
-                const timeKey = 'publicDashboardLastSync';
-                const lastFetch = parseInt(localStorage.getItem(timeKey) || '0', 10);
-                
-                let effectiveLastFetch = lastFetch;
-                if (!publicData.submissions || publicData.submissions.length === 0) {
-                    effectiveLastFetch = 0;
-                }
-
-                if (fetchHealthFacilities) {
-                    fetchHealthFacilities({}, true);
-                }
-
-                const [newSubs, newImnci, newEenc] = await Promise.all([
-                    listMentorshipSessions({ source: 'server' }, effectiveLastFetch).catch(() => []),
-                    listIMNCIVisitReports({ source: 'server' }, effectiveLastFetch).catch(() => []),
-                    listEENCVisitReports({ source: 'server' }, effectiveLastFetch).catch(() => [])
-                ]);
-
-                const mergeData = (oldData, newData) => {
-                    if (!newData || newData.length === 0) return oldData || [];
-                    const map = new Map((oldData || []).map(i => [i.id, i]));
-                    newData.forEach(i => map.set(i.id, i));
-                    return Array.from(map.values());
-                };
-
-                setPublicData(prev => ({
-                    submissions: mergeData(prev.submissions, newSubs),
-                    imnci: mergeData(prev.imnci, newImnci),
-                    eenc: mergeData(prev.eenc, newEenc)
-                }));
-                
-                localStorage.setItem(timeKey, Date.now().toString());
-
+                if (fetchHealthFacilities) fetchHealthFacilities({}, true);
+                await loadPublicCopy();
             } else {
                 const promises = [
                     fetchSkillMentorshipSubmissions(true),
@@ -3553,7 +3522,7 @@ const SkillsMentorshipView = ({
 
     const handleSelectService = (serviceKey) => {
         setActiveService(serviceKey);
-        if (publicDashboardMode) {
+        if (publicDashboardMode || openDashboard) {
             setCurrentView('history');
             setActiveTab('dashboard');
         } else {
@@ -3809,18 +3778,15 @@ const SkillsMentorshipView = ({
         const baseUrl = `${publicBaseUrl()}/public/mentorship/dashboard/${activeService}`;
         const params = new URLSearchParams();
         
-        const stateToShare = activeDashboardState || selectedState;
-        const localityToShare = activeDashboardLocality || selectedLocality;
-        const facilityToShare = activeDashboardFacilityId || selectedFacilityId;
-        const workerToShare = activeDashboardWorkerName || selectedHealthWorkerName;
-        const projectToShare = activeDashboardProject || projectFilter;
-        const workerTypeToShare = activeDashboardWorkerType || workerTypeFilter;
+        const stateToShare = activeDashboardState;
+        const localityToShare = activeDashboardLocality;
+        // The public link carries no single facility or health worker.
+        const projectToShare = activeDashboardProject;
+        const workerTypeToShare = activeDashboardWorkerType;
         const dateToShare = activeDashboardDate;
 
         if (stateToShare) params.append('state', stateToShare);
         if (localityToShare) params.append('locality', localityToShare);
-        if (facilityToShare) params.append('facilityId', facilityToShare);
-        if (workerToShare) params.append('workerName', workerToShare);
         if (projectToShare) params.append('project', projectToShare);
         if (workerTypeToShare) params.append('workerType', workerTypeToShare);
         if (dateToShare) params.append('dateFilter', dateToShare);
@@ -4170,7 +4136,7 @@ const SkillsMentorshipView = ({
     };
 
     // Android app: the top-bar arrow steps back from the records list to the service menu.
-    useInPageBack(() => setCurrentView('action_menu'), currentView === 'history' && !publicDashboardMode);
+    useInPageBack(() => setCurrentView(openDashboard ? 'service_selection' : 'action_menu'), currentView === 'history' && !publicDashboardMode);
 
     if (currentView === 'service_selection') {
         return <ServiceSelector onSelectService={handleSelectService} />;
@@ -4534,6 +4500,13 @@ const SkillsMentorshipView = ({
                             {activeTab === 'dashboard' && (
                                 publicLoading ? (
                                     <PageSkeleton />
+                                ) : publicDashboardMode && publicError && !publicDashboardParams?.isRecordView ? (
+                                    <div className="m-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{publicError}</div>
+                                ) : publicDashboardParams?.isRecordView && recordNeedsSignIn ? (
+                                    <div className="flex flex-col justify-center items-center p-12 text-slate-500 h-[60vh] text-center">
+                                        <div className="text-xl font-bold text-sky-800 mb-2">{t('mentorship_page.record_view.title', 'Viewing Individual Record')}</div>
+                                        <p>{t('mentorship_page.record_view.sign_in', 'Individual health worker and facility records are not shared on the public link. Sign in to the app to open this record.')}</p>
+                                    </div>
                                 ) : publicDashboardParams?.isRecordView ? (
                                     <div className="flex flex-col justify-center items-center p-12 text-slate-500 h-[60vh]">
                                         <div className="text-xl font-bold text-sky-800 mb-2">{t('mentorship_page.record_view.title', 'Viewing Individual Record')}</div>
@@ -4550,7 +4523,7 @@ const SkillsMentorshipView = ({
                                         canEditStatus={permissions?.manageScope === 'federal' || permissions?.canUseFederalManagerAdvancedFeatures}
                                         onUpdateStatus={handleChallengeStatusUpdate}
 
-                                        activeState={activeDashboardState || selectedState}
+                                        activeState={activeDashboardState}
                                         onStateChange={(value) => {
                                             setActiveDashboardState(value);
                                             setActiveDashboardLocality("");
@@ -4559,7 +4532,7 @@ const SkillsMentorshipView = ({
                                             setActiveDashboardWorkerName("");
                                             setActiveDashboardWorkerType("");
                                         }}
-                                        activeLocality={activeDashboardLocality || selectedLocality}
+                                        activeLocality={activeDashboardLocality}
                                         onLocalityChange={(value) => {
                                             setActiveDashboardLocality(value);
                                             setActiveDashboardFacilityId("");
@@ -4567,7 +4540,7 @@ const SkillsMentorshipView = ({
                                             setActiveDashboardWorkerName("");
                                             setActiveDashboardWorkerType("");
                                         }}
-                                        activeFacilityId={activeDashboardFacilityId || selectedFacilityId}
+                                        activeFacilityId={activeDashboardFacilityId}
                                         onFacilityIdChange={(value) => {
                                             setActiveDashboardFacilityId(value);
                                             setActiveDashboardWorkerName("");
@@ -4581,18 +4554,19 @@ const SkillsMentorshipView = ({
                                             setActiveDashboardWorkerType("");
                                         }}
 
-                                        activeWorkerName={activeDashboardWorkerName || selectedHealthWorkerName}
+                                        activeWorkerName={activeDashboardWorkerName}
                                         onWorkerNameChange={(value) => {
                                             setActiveDashboardWorkerName(value);
                                         }}
 
-                                        activeWorkerType={activeDashboardWorkerType || workerTypeFilter}
+                                        activeWorkerType={activeDashboardWorkerType}
                                         onWorkerTypeChange={(value) => {
                                             setActiveDashboardWorkerType(value);
                                             setActiveDashboardWorkerName("");
                                         }}
                                         dateFilter={activeDashboardDate}
                                         onDateFilterChange={setActiveDashboardDate}
+                                        publicDashboardMode={publicDashboardMode}
                                     />
                                 )
                             )}
@@ -4860,7 +4834,7 @@ const SkillsMentorshipView = ({
                                     canEditStatus={permissions?.manageScope === 'federal' || permissions?.canUseFederalManagerAdvancedFeatures}
                                     onUpdateStatus={handleChallengeStatusUpdate}
 
-                                    activeState={activeDashboardState || selectedState}
+                                    activeState={activeDashboardState}
                                     onStateChange={(value) => {
                                         setActiveDashboardState(value);
                                         setActiveDashboardLocality("");
@@ -4869,7 +4843,7 @@ const SkillsMentorshipView = ({
                                         setActiveDashboardWorkerName("");
                                         setActiveDashboardWorkerType("");
                                     }}
-                                    activeLocality={activeDashboardLocality || selectedLocality}
+                                    activeLocality={activeDashboardLocality}
                                     onLocalityChange={(value) => {
                                         setActiveDashboardLocality(value);
                                         setActiveDashboardFacilityId("");
@@ -4877,7 +4851,7 @@ const SkillsMentorshipView = ({
                                         setActiveDashboardWorkerName("");
                                         setActiveDashboardWorkerType("");
                                     }}
-                                    activeFacilityId={activeDashboardFacilityId || selectedFacilityId}
+                                    activeFacilityId={activeDashboardFacilityId}
                                     onFacilityIdChange={(value) => {
                                         setActiveDashboardFacilityId(value);
                                         setActiveDashboardWorkerName("");
@@ -4891,12 +4865,12 @@ const SkillsMentorshipView = ({
                                         setActiveDashboardWorkerType("");
                                     }}
 
-                                    activeWorkerName={activeDashboardWorkerName || selectedHealthWorkerName}
+                                    activeWorkerName={activeDashboardWorkerName}
                                     onWorkerNameChange={(value) => {
                                         setActiveDashboardWorkerName(value);
                                     }}
 
-                                    activeWorkerType={activeDashboardWorkerType || workerTypeFilter}
+                                    activeWorkerType={activeDashboardWorkerType}
                                     onWorkerTypeChange={(value) => {
                                         setActiveDashboardWorkerType(value);
                                         setActiveDashboardWorkerName("");

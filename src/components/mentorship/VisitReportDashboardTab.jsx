@@ -10,6 +10,7 @@ import {
 import '../chartSetup';
 import { wrapNarrowLabel, ChartEmpty } from './MentorshipDashboardShared';
 import { EmptyState } from '../CommonComponents';
+import { summarizeProblems, categoryInfo, STATUS_BUCKETS } from '../../utils/problemCategories';
 
 ChartJS.register(
     CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler
@@ -214,6 +215,92 @@ const InfoKpiTrendCard = ({
     );
 };
 
+// Facility problems at a glance: overall numbers, the problems sorted into
+// categories (from their own words, utils/problemCategories.js) and where each
+// category stands. The public dashboard shows only this; the app shows the
+// full problem table under it as well.
+const ProblemSummaryPanel = ({ problems, isAr, t, CopyImageButton }) => {
+    const ref = useRef(null);
+    const summary = summarizeProblems(problems);
+    const L = (o) => (isAr ? o.ar : o.en);
+    const title = t('mentorship_problems.title', isAr ? 'مشاكل المؤسسات الصحية: المؤشرات والتصنيف' : 'Facility problems: overview and categories');
+    const kpis = [
+        { label: t('mentorship_problems.total', isAr ? 'إجمالي المشاكل' : 'Total problems'), value: summary.total, color: '#0f172a' },
+        ...STATUS_BUCKETS.map((b) => ({
+            label: t(`mentorship_problems.status.${b.key}`, L(b)),
+            value: summary.byStatus[b.key],
+            sub: summary.total ? `${Math.round((summary.byStatus[b.key] / summary.total) * 100)}%` : '',
+            color: b.color,
+        })),
+    ];
+    return (
+        <div ref={ref} className="mb-8 bg-white rounded-xl border border-slate-200 overflow-hidden relative">
+            <div className="absolute top-4 end-4 z-10"><CopyImageButton targetRef={ref} title={title} /></div>
+            <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-100 pe-14">
+                <h4 className="text-base sm:text-lg font-extrabold text-slate-800 text-start">{title}</h4>
+                {summary.resolvedPct !== null && (
+                    <p className="text-xs font-semibold text-slate-600 mt-1">
+                        {t('mentorship_problems.resolved_rate', isAr ? 'نسبة المشاكل التي تم حلها: {{pct}}%' : 'Problems resolved: {{pct}}%', { pct: summary.resolvedPct })}
+                    </p>
+                )}
+            </div>
+            {summary.total === 0 ? (
+                <EmptyState message={t('mentorship_problems.none', isAr ? 'لا توجد مشاكل مسجلة للفلاتر المختارة.' : 'No problems recorded for the selected filters.')} />
+            ) : (
+                <div className="p-4 sm:p-5 space-y-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        {kpis.map((k) => (
+                            <div key={k.label} className="rounded-xl border border-slate-200 p-4 text-center" style={{ borderTop: `4px solid ${k.color}` }}>
+                                <div className="text-xs font-bold text-slate-600">{k.label}</div>
+                                <div className="text-3xl font-extrabold tabular-nums mt-1" style={{ color: k.color }}>{k.value}</div>
+                                {k.sub && <div className="text-xs font-semibold text-slate-500 tabular-nums">{k.sub}</div>}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div>
+                        <h5 className="text-sm font-extrabold text-slate-800 mb-3 text-start">{t('mentorship_problems.by_category', isAr ? 'المشاكل حسب التصنيف وحالتها' : 'Problems by category and status')}</h5>
+                        <div className="flex flex-wrap gap-3 mb-3 text-xs font-semibold text-slate-600">
+                            {STATUS_BUCKETS.map((b) => (
+                                <span key={b.key} className="inline-flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm" style={{ background: b.color }} />{t(`mentorship_problems.status.${b.key}`, L(b))}</span>
+                            ))}
+                        </div>
+                        <div className="space-y-3">
+                            {summary.categories.map((c) => {
+                                const info = categoryInfo(c.key);
+                                return (
+                                    <div key={c.key} className="rounded-lg border border-slate-200 p-3">
+                                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                            <span className="inline-flex items-center gap-2 text-sm font-bold text-slate-800">
+                                                <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: info.color }} />
+                                                {t(`mentorship_problems.category.${c.key}`, L(info))}
+                                            </span>
+                                            <span className="text-xs font-semibold text-slate-600 tabular-nums">
+                                                {t('mentorship_problems.cat_line', isAr ? '{{total}} مشكلة · {{pct}}% تم حلها' : '{{total}} problems · {{pct}}% resolved', { total: c.total, pct: c.resolvedPct ?? 0 })}
+                                            </span>
+                                        </div>
+                                        <div className="flex h-4 w-full overflow-hidden rounded-full bg-slate-100" role="img"
+                                            aria-label={STATUS_BUCKETS.map((b) => `${L(b)}: ${c[b.key]}`).join(', ')}>
+                                            {STATUS_BUCKETS.map((b) => c[b.key] > 0 && (
+                                                <div key={b.key} style={{ width: `${(c[b.key] / c.total) * 100}%`, background: b.color }} title={`${L(b)}: ${c[b.key]}`} />
+                                            ))}
+                                        </div>
+                                        <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 tabular-nums">
+                                            {STATUS_BUCKETS.map((b) => (
+                                                <span key={b.key}>{t(`mentorship_problems.status.${b.key}`, L(b))}: <b className="text-slate-800">{c[b.key]}</b></span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const VisitReportDashboardTab = ({
     activeService,
     visitReportStats,
@@ -227,7 +314,8 @@ const VisitReportDashboardTab = ({
     KpiCard,
     KpiBarChart,
     ScoreText,
-    CopyImageButton
+    CopyImageButton,
+    publicMode = false
 }) => {
     const { t, i18n } = useTranslation();
     const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
@@ -543,6 +631,14 @@ const VisitReportDashboardTab = ({
                 <KpiBarChart title={`${t('Total Visits by')} ${t(geographicLevelName)}`} chartData={visitReportStats.geographicChartData} dataKey="count" />
             </div>
 
+            <ProblemSummaryPanel
+                problems={Object.values(visitReportStats.groupedProblems || {}).flat()}
+                isAr={isAr} t={t} CopyImageButton={CopyImageButton}
+            />
+
+            {/* The full problem list (with places, solutions and the people
+                responsible) is for the app only, never the public link. */}
+            {!publicMode && (
             <div className="mb-8 bg-white rounded-xl border border-slate-200 overflow-hidden">
                 <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 text-start">
                     <h4 className="text-base sm:text-lg font-extrabold text-slate-800 flex items-center gap-3">
@@ -654,6 +750,7 @@ const VisitReportDashboardTab = ({
                     </table>
                 </div>
             </div>
+            )}
         </div>
     );
 };
