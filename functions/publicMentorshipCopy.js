@@ -12,7 +12,7 @@ const { tallyFor, flushUsage } = require("./usageTally");
 
 let copy = null;
 
-const publicMentorshipCopy = onCall({ timeoutSeconds: 120, memory: "1GiB" }, async (request) => {
+const publicMentorshipCopy = onCall({ timeoutSeconds: 300, memory: "1GiB" }, async (request) => {
   const db = getFirestore();
   if (!copy) copy = makePublicMentorshipCopy({ db, Timestamp, log: (...a) => console.log("[publicMentorship]", ...a), tally: tallyFor("publicMentorshipCopy") });
   const known = request.data && typeof request.data.versions === "object" && request.data.versions ? request.data.versions : {};

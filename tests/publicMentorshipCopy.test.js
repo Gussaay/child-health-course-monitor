@@ -90,5 +90,32 @@ describe('public mentorship copy', () => {
         expect(res.imnci.items.map((r) => r.id)).toEqual(['r1']);
         expect(res.facilities.items.map((f) => f.id).sort()).toEqual(['f1', 'f2']);
         expect(JSON.stringify(res)).not.toMatch(/Amna Ali|0912|imnci_staff/);
+
+        // Asked again with the versions it already holds: nothing is resent,
+        // and the facility list still counts the visits the browser holds.
+        const versions = Object.fromEntries(Object.entries(res).map(([k, v]) => [k, v.version]));
+        const again = await copy.answer(versions);
+        ['submissions', 'imnci', 'eenc', 'facilities'].forEach((k) => expect(again[k]).toEqual({ unchanged: true, version: versions[k] }));
+        const onlyVisits = await copy.answer({ submissions: versions.submissions, imnci: versions.imnci, eenc: versions.eenc });
+        expect(onlyVisits.facilities.items.map((f) => f.id).sort()).toEqual(['f1', 'f2']);
+    });
+});
+
+import { mergePublicPackage } from '../src/utils/publicDashboardStore';
+
+describe('public dashboard package on the device', () => {
+    const held = { submissions: [{ id: 's1' }], imnci: [{ id: 'r1' }], eenc: [], facilities: [{ id: 'f1' }], versions: {} };
+    it('keeps the held lists the server reports unchanged and takes the new ones', () => {
+        const pkg = mergePublicPackage(held, {
+            submissions: { unchanged: true, version: 'a' }, imnci: { version: 'b', items: [{ id: 'r2' }] },
+            eenc: { unchanged: true, version: 'c' }, facilities: { version: 'd', items: [{ id: 'f2' }] },
+        });
+        expect(pkg).toEqual({ submissions: [{ id: 's1' }], imnci: [{ id: 'r2' }], eenc: [], facilities: [{ id: 'f2' }], versions: { submissions: 'a', imnci: 'b', eenc: 'c', facilities: 'd' } });
+    });
+    it('asks again when something reported unchanged is not held', () => {
+        expect(mergePublicPackage(null, { submissions: { unchanged: true, version: 'a' }, imnci: { items: [] }, eenc: { items: [] }, facilities: { items: [] } })).toBe(null);
+    });
+    it('reports a package too large to send', () => {
+        expect(mergePublicPackage(null, { submissions: { tooLarge: true } })).toEqual({ tooLarge: true });
     });
 });

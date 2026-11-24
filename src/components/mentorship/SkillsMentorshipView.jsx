@@ -38,6 +38,7 @@ import { getAuth } from "firebase/auth";
 import { db } from '../../firebase'; 
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useAuth } from '../../hooks/useAuth';
+import { readPublicPackage, savePublicPackage, mergePublicPackage } from '../../utils/publicDashboardStore';
 
 // --- Bulk Upload Modal ---
 import DetailedMentorshipBulkUploadModal from './MentorshipBulkUpload';
@@ -2327,21 +2328,40 @@ const SkillsMentorshipView = ({
     // names, phones, emails, notes or problem text.
     const [publicError, setPublicError] = useState('');
     const publicMountedRef = useRef(true);
+    const showPublicPackage = useCallback((pkg) => {
+        setLocalHealthFacilities(pkg.facilities || []);
+        setPublicData({ submissions: pkg.submissions || [], imnci: pkg.imnci || [], eenc: pkg.eenc || [] });
+    }, []);
     const loadPublicCopy = useCallback(async () => {
+        const PKG_KEY = 'mentorship';
+        let showingHeld = false;
         try {
-            const call = httpsCallable(getFunctions(), 'publicMentorshipCopy', { timeout: 110000 });
-            const res = (await call({}))?.data || {};
-            const items = (part) => (part && Array.isArray(part.items) ? part.items : []);
-            if (['submissions', 'imnci', 'eenc'].some((k) => res[k]?.tooLarge)) throw new Error('The dashboard data is too large to send.');
+            // The last package on this device shows at once; the server then
+            // sends only what changed since.
+            const held = await readPublicPackage(PKG_KEY);
+            if (held && publicMountedRef.current) {
+                showPublicPackage(held);
+                setPublicLoading(false);
+                showingHeld = true;
+            }
+            const call = httpsCallable(getFunctions(), 'publicMentorshipCopy', { timeout: 300000 });
+            let res = (await call({ versions: held?.versions || {} }))?.data || {};
+            let pkg = mergePublicPackage(held, res);
+            if (!pkg) { // something the device did not hold after all: ask for everything
+                res = (await call({}))?.data || {};
+                pkg = mergePublicPackage(null, res);
+            }
+            if (!pkg || pkg.tooLarge) throw new Error('The dashboard data is too large to send.');
             if (!publicMountedRef.current) return;
-            setLocalHealthFacilities(items(res.facilities));
-            setPublicData({ submissions: items(res.submissions), imnci: items(res.imnci), eenc: items(res.eenc) });
+            showPublicPackage(pkg);
+            savePublicPackage(PKG_KEY, pkg);
             setPublicError('');
             try { localStorage.setItem('publicDashboardLastSync', String(Date.now())); } catch { /* storage off */ }
             updateLastSyncTime();
         } catch (e) {
             console.error('Public mentorship data could not be loaded', e);
-            if (publicMountedRef.current) {
+            // Still showing the last saved package: keep it on screen.
+            if (publicMountedRef.current && !showingHeld) {
                 setPublicData((prev) => ({ submissions: prev.submissions || [], imnci: prev.imnci || [], eenc: prev.eenc || [] }));
                 setPublicError(t('mentorship_page.public.load_failed', 'The dashboard data could not be loaded. Check the connection and refresh the page.'));
             }
@@ -2349,7 +2369,7 @@ const SkillsMentorshipView = ({
         } finally {
             if (publicMountedRef.current) setPublicLoading(false);
         }
-    }, [updateLastSyncTime, t]);
+    }, [updateLastSyncTime, t, showPublicPackage]);
     // A single-record link (/public/mentorship/record/...) shows one health
     // worker's or one facility's record, so it is never served from the public
     // copy: a signed-in staff member (the Admin tab opens these) reads it

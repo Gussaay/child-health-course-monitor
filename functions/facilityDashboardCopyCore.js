@@ -213,7 +213,9 @@ function makeCore({
     return { version: s.version, builtAt: now(), count: items.length, items };
   }
 
-  return { answer, _state: () => state };
+  // refresh(): bring the copy up to date without building an answer
+  // (publicMentorshipCopyCore.js sends only part of it).
+  return { answer, refresh: () => (busy || (busy = refresh().finally(() => { busy = null; }))), _state: () => state };
 }
 
 module.exports = { makeCore, slimFacility, toMillis, DROP_KEY, FULL_REBUILD_MS, MAX_ANSWER_CHARS };

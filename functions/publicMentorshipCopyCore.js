@@ -20,6 +20,8 @@
 
 const crypto = require("crypto");
 const { makeCore, toMillis, slimFacility } = require("./facilityDashboardCopyCore");
+// The saved facility copy of facilityDashboardCopy.js (facilityDashboardCopyCore DOC_ID).
+const FACILITY_STORE_ID = "facilities";
 const { categorizeProblem } = require("./problemCategoriesCore");
 
 // Any key whose name says it holds a person's details or free text.
@@ -93,28 +95,48 @@ function makePublicMentorshipCopy({ db, Timestamp, now, log = () => {}, tally = 
   // project, tools...), so the public page does not download the whole
   // facility list. Facility records are public already (firestore.rules);
   // staff lists and the other fields slimFacility drops are left out.
+  // It shares the saved copy the main Dashboard's facility copy keeps
+  // (facilityDashboardCopy.js, same store, same format), so a cold start
+  // restores it instead of reading ~7,000 facilities again.
   const facilities = makeCore({
     db, Timestamp, now, log, tally,
-    collection: "healthFacilities", slim: slimFacility, markField: "lastSnapshotAt", storeId: "public_mentorship_facilities",
+    collection: "healthFacilities", slim: slimFacility, markField: "lastSnapshotAt", storeId: FACILITY_STORE_ID,
     minRefreshMs: 5 * 60 * 1000, countEveryMs: 30 * 60 * 1000, persistEveryMs: 30 * 60 * 1000,
   });
 
-  /** `known`: { submissions: version, ... } the browser already holds. */
+  const live = (r) => r && r.isDeleted !== true && r.isDeleted !== "true";
+
+  /**
+   * `known`: { submissions, imnci, eenc, facilities } versions the browser
+   * already holds; a list still at that version comes back as
+   * { unchanged: true, version }.
+   */
   async function answer(known = {}) {
+    const keys = Object.keys(COLLECTIONS);
+    const v = (k) => (typeof known[k] === "string" ? known[k] : null);
+    // All four are read at the same time (they used to be one after another).
+    const [lists] = await Promise.all([
+      Promise.all(keys.map((k) => cores[k].answer(v(k)))),
+      facilities.refresh(), // the list sent is cut down below
+    ]);
     const out = {};
-    for (const key of Object.keys(COLLECTIONS)) {
-      out[key] = await cores[key].answer(typeof known[key] === "string" ? known[key] : null);
-    }
-    // Only the facilities that some visit or visit report names.
+    keys.forEach((k, i) => { out[k] = lists[i]; });
+
+    // Only the facilities that some visit or visit report names (from the
+    // whole copy, so a list the browser already holds still counts).
     const ids = new Set();
-    Object.keys(COLLECTIONS).forEach((key) => (out[key].items || []).forEach((r) => {
-      const id = r && (r.facilityId || (r.fullData && r.fullData.facilityId));
-      if (id) ids.add(id);
-    }));
-    await facilities.answer(null);
-    const st = facilities._state();
-    const items = st ? Array.from(st.items.values()).filter((f) => ids.has(f.id) && f.isDeleted !== true && f.isDeleted !== "true") : [];
-    out.facilities = { count: items.length, items };
+    keys.forEach((k) => {
+      const st = cores[k]._state();
+      if (st) st.items.forEach((r) => { if (live(r) && r.facilityId) ids.add(r.facilityId); });
+    });
+    const fst = facilities._state();
+    const facVersion = `${fst ? fst.version : "none"}|${ids.size}|${keys.map((k) => out[k].version).join("|")}`;
+    if (v("facilities") === facVersion) {
+      out.facilities = { unchanged: true, version: facVersion };
+    } else {
+      const items = fst ? Array.from(fst.items.values()).filter((f) => ids.has(f.id) && live(f)) : [];
+      out.facilities = { version: facVersion, count: items.length, items };
+    }
     return out;
   }
   return { answer };
