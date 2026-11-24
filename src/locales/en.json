@@ -8019,7 +8019,11 @@
         "any_order": "Reference module: its lessons open in any order",
         "any_order_help": "For procedures or equipment that other lessons link to."
       },
+      "soon": {
+        "text": "This course is still being prepared. It will open here as soon as it is published."
+      },
       "main": {
+      "available_soon": "Will be available soon",
       "draft_testing": "Draft — for testing",
         "tab_courses": "Courses",
         "page_title": "Online Courses",

@@ -19,6 +19,7 @@ export const isOpenCourse = (course) => course?.enrolment === 'open';
 /**
  * What the learner may do with a course:
  *   'open'      no enrolment needed
+ *   'soon'      a draft course shown in the list before it is published
  *   'enrolled'  approved by a manager (or the person writes courses)
  *   'requested' asked to join, waiting for a manager
  *   'declined'  a manager said no
@@ -32,6 +33,9 @@ export function courseAccess(course, enrolment, { canManage = false, started = f
     // A manager, or a tester invited by email, opens a draft course to try
     // it before it is published — no enrolment needed (audience.canAccessDraft).
     if (draftAccess) return 'enrolled';
+    // Everyone else sees a draft course in the list as "will be available
+    // soon" and cannot open it yet, whatever its enrolment setting.
+    if (course.isPublished === false) return 'soon';
     if (isOpenCourse(course)) return 'open';
     if (enrolment?.status === 'approved') return 'enrolled';
     if (started) return 'enrolled';

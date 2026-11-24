@@ -24,9 +24,11 @@ export const isCourseTester = (course, email) => {
     return (Array.isArray(course?.testers) ? course.testers : []).some((x) => normaliseEmail(x) === mine);
 };
 
-/** May this person see and open the course while it is still a draft? */
+export const isDraftCourse = (course) => course?.isPublished === false;
+
+/** May this person open the course while it is still a draft? */
 export const canAccessDraft = (course, { canManage = false, email = '' } = {}) => {
-    if (!course || course.isPublished) return false;
+    if (!isDraftCourse(course)) return false;
     return !!canManage || isCourseTester(course, email);
 };
 

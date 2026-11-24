@@ -64,3 +64,31 @@ export function EnrolGate() {
         </div>
     );
 }
+
+// Shown instead of a draft course for everyone except its managers and the
+// testers invited by email: the course is listed as "will be available
+// soon", and this is what a direct link to it opens.
+export function DraftSoonGate() {
+    const { t } = useTranslation();
+    const { back, openCourse, focusId } = useCourseScreen();
+    useFormTitle(openCourse.title, '');
+    return (
+        <div className="max-w-xl mx-auto space-y-4">
+            {!focusId && (
+                <button onClick={back} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-sky-700">
+                    <ArrowLeft size={15} className="rtl:rotate-180" /> {t('imnci_ui.courses.main.all_courses', 'All courses')}
+                </button>
+            )}
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 text-center space-y-3" data-testid="draft-soon-gate">
+                <span className="mx-auto w-12 h-12 rounded-full grid place-items-center text-white bg-amber-500">
+                    <Clock size={22} />
+                </span>
+                <h1 className="text-xl font-extrabold text-slate-900">{openCourse.title}</h1>
+                {openCourse.description && <p className="text-sm text-slate-600">{openCourse.description}</p>}
+                <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    {t('imnci_ui.courses.soon.text', 'This course is still being prepared. It will open here as soon as it is published.')}
+                </p>
+            </div>
+        </div>
+    );
+}
