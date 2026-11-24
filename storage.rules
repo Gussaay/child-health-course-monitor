@@ -89,3 +89,5 @@ service firebase.storage {
     }
   }
 }
+
+// Redeploy trigger 2026-11-24: storage rules deploy failed in run 45391620679; re-running to publish the library rules.
