@@ -1144,3 +1144,32 @@ describe('facilitySnapshots — signed-in users can read, managers write', () =>
         await assertSucceeds(setDoc(doc(as('statesManager'), 'facilitySnapshots', 's2'), { facilityId: 'f1' }));
     });
 });
+
+describe('libraryItems — public library, federal authors', () => {
+    const item = { service: 'IMNCI', category: 'training', name: 'Chart booklet', linkUrl: 'https://example.org/a.pdf' };
+
+    beforeEach(async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            await setDoc(doc(context.firestore(), 'libraryItems', 'l1'), item);
+        });
+    });
+
+    it('lets anyone, signed in or not, read the library', async () => {
+        await assertSucceeds(getDocs(collection(anonymous(), 'libraryItems')));
+        await assertSucceeds(getDoc(doc(anonymous(), 'libraryItems', 'l1')));
+        await assertSucceeds(getDocs(collection(as('plainUser'), 'libraryItems')));
+    });
+
+    it('lets a federal manager and a super user add, edit and remove', async () => {
+        await assertSucceeds(setDoc(doc(as('federalManager'), 'libraryItems', 'l2'), item));
+        await assertSucceeds(updateDoc(doc(as('superUser'), 'libraryItems', 'l1'), { name: 'New name' }));
+        await assertSucceeds(deleteDoc(doc(as('superUser'), 'libraryItems', 'l2')));
+    });
+
+    it('does NOT let anyone else write', async () => {
+        await assertFails(setDoc(doc(anonymous(), 'libraryItems', 'l3'), item));
+        await assertFails(setDoc(doc(as('plainUser'), 'libraryItems', 'l3'), item));
+        await assertFails(setDoc(doc(as('statesManager'), 'libraryItems', 'l3'), item));
+        await assertFails(deleteDoc(doc(as('facilitator'), 'libraryItems', 'l1')));
+    });
+});
