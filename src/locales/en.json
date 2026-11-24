@@ -9366,6 +9366,24 @@
     "open": "Open",
     "close": "Close",
     "draft_badge": "Draft",
+    "open_interactive": "Open interactive version",
+    "interactive_soon": "The interactive version of this book is coming soon.",
+    "download": {
+      "button": "Download",
+      "downloaded": "Downloaded",
+      "done": "Downloaded. You can read it any time, even without a connection.",
+      "already": "This book is already downloaded on this device.",
+      "failed": "The download could not finish. Check your connection and try again.",
+      "on_device": "This book is saved on this device, so it opens without a connection.",
+      "read": "Read the book",
+      "send": "Send to others",
+      "open_other": "Open in another app",
+      "open_failed": "Could not open the book.",
+      "share_failed": "Could not send the book.",
+      "remove": "Remove download",
+      "removed": "The downloaded copy was removed.",
+      "remove_failed": "Could not remove the download."
+    },
     "draft_note": "This book is still being prepared, so it cannot be opened yet. Leave your email address and we will send it to you as soon as it is final.",
     "notify_me": "Notify me",
     "waiting": "{{count}} people waiting for this book",
@@ -9387,6 +9405,8 @@
       "discard": "Discard draft"
     },
     "notify": {
+      "already": "You are already on the list for this book.",
+      "auto_done": "Done — we will email \"{{name}}\" to {{email}} as soon as it is final.",
       "title": "Get this book by email",
       "text": "\"{{name}}\" is still being prepared. Leave your details and we will email you the book as soon as it is final.",
       "name": "Your name",
