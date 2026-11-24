@@ -48,23 +48,47 @@ export async function savePublicPackage(key, value) {
 export const PACKAGE_PARTS = ['submissions', 'imnci', 'eenc', 'facilities'];
 
 /**
- * The new package from the server's answer and the package held: a part the
- * server reports unchanged keeps the held copy. Returns null when a part is
- * missing from both (the caller then asks again without versions).
+ * Fetches the package: first the manifest (each list's version and page
+ * count, or unchanged for lists the device holds at that version), then the
+ * pages of every changed list, a few at a time. A list that moves on while
+ * its pages arrive is fetched again (at most twice).
+ *   held        the package on the device, or null
+ *   manifestOf  (versions) => manifest
+ *   fetchPage   (list, page, version) => { items } | { stale: true }
  */
-export function mergePublicPackage(held, answer) {
-    const out = { versions: {} };
-    for (const part of PACKAGE_PARTS) {
-        const a = answer?.[part];
-        if (a?.tooLarge) return { tooLarge: true };
-        if (a && Array.isArray(a.items)) {
-            out[part] = a.items;
-        } else if (a?.unchanged && held && Array.isArray(held[part])) {
-            out[part] = held[part];
-        } else {
-            return null;
+export async function fetchPublicPackage({ held, manifestOf, fetchPage, parallel = 4 }) {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+        const manifest = await manifestOf(held?.versions || {});
+        const out = { versions: {} };
+        const jobs = [];
+        let stale = false;
+        for (const list of PACKAGE_PARTS) {
+            const m = manifest?.[list];
+            if (!m) throw new Error(`The dashboard data is incomplete (${list}).`);
+            out.versions[list] = m.version || null;
+            if (m.unchanged && held && Array.isArray(held[list])) { out[list] = held[list]; continue; }
+            if (m.unchanged) { held = null; stale = true; break; } // told unchanged but not held: start over
+            const pages = new Array(Math.max(1, m.pages || 1));
+            out[list] = pages;
+            for (let i = 0; i < pages.length; i += 1) jobs.push({ list, i, version: m.version, pages });
         }
-        out.versions[part] = a.version || null;
+        if (stale) continue;
+        let next = 0;
+        const worker = async () => {
+            while (next < jobs.length && !stale) {
+                const job = jobs[next++];
+                const res = await fetchPage(job.list, job.i, job.version);
+                if (res?.stale) { stale = true; return; }
+                if (!Array.isArray(res?.items)) throw new Error(res?.error || 'The dashboard data could not be loaded.');
+                job.pages[job.i] = res.items;
+            }
+        };
+        await Promise.all(Array.from({ length: Math.min(parallel, jobs.length || 1) }, worker));
+        if (stale) continue;
+        PACKAGE_PARTS.forEach((list) => {
+            if (out[list] !== held?.[list]) out[list] = [].concat(...out[list]);
+        });
+        return out;
     }
-    return out;
+    throw new Error('The dashboard data kept changing while it loaded. Refresh the page.');
 }

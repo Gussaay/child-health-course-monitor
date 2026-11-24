@@ -5144,7 +5144,8 @@
       "EENC_MOTHERS": "Mother's Survey (EENC)"
     },
     "public": {
-      "load_failed": "The dashboard data could not be loaded. Check the connection and refresh the page."
+      "load_failed": "The dashboard data could not be loaded. Check the connection and refresh the page.",
+      "preparing": "Preparing the dashboard… this can take up to a minute the first time. It opens at once on your next visit."
     }
   },
   "monitoring_page": {

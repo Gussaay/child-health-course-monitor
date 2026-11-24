@@ -15,8 +15,13 @@ let copy = null;
 const publicMentorshipCopy = onCall({ timeoutSeconds: 300, memory: "1GiB" }, async (request) => {
   const db = getFirestore();
   if (!copy) copy = makePublicMentorshipCopy({ db, Timestamp, log: (...a) => console.log("[publicMentorship]", ...a), tally: tallyFor("publicMentorshipCopy") });
-  const known = request.data && typeof request.data.versions === "object" && request.data.versions ? request.data.versions : {};
-  const result = await copy.answer(known);
+  const data = request.data && typeof request.data === "object" ? request.data : {};
+  // { list, page, version }: one page of one list. Otherwise the manifest:
+  // each list's version and page count (lists the browser holds at that
+  // version come back { unchanged: true }).
+  const result = typeof data.list === "string"
+    ? await copy.page(data.list, data.page, typeof data.version === "string" ? data.version : null)
+    : await copy.manifest(data.versions && typeof data.versions === "object" ? data.versions : {});
   await flushUsage(db);
   return result;
 });

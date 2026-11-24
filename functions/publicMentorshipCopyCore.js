@@ -29,6 +29,11 @@ const DROP_KEY = /phone|e-?mail|signature|^notes?$|_notes?$|notes$|comment|^ment
 // Facility staff lists, kept on some reports.
 const DROP_EXACT = new Set(["staff", "staffList", "healthWorkers", "attendees", "participants"]);
 
+const LONG_TEXT = 1000;
+// Each page of a list sent to the browser stays under this many characters
+// (a callable answer is limited in size; pages also arrive side by side).
+const PAGE_CHARS = 3 * 1024 * 1024;
+
 const anonCode = (facilityId, name) => {
   const key = `${facilityId || ""}|${String(name || "").trim().toLowerCase()}`;
   return `HW-${crypto.createHash("sha256").update(key).digest("hex").slice(0, 10)}`;
@@ -55,6 +60,9 @@ function clean(value, depth = 0) {
     });
     return out;
   }
+  // Pictures saved inline and long free text: no chart reads them, and they
+  // are most of a record's size.
+  if (typeof value === "string" && (value.startsWith("data:") || value.length > LONG_TEXT)) return null;
   return value;
 }
 
@@ -88,7 +96,7 @@ const COLLECTIONS = {
 function makePublicMentorshipCopy({ db, Timestamp, now, log = () => {}, tally = () => {} }) {
   const cores = Object.fromEntries(Object.entries(COLLECTIONS).map(([key, collection]) => [key, makeCore({
     db, Timestamp, now, log, tally,
-    collection, slim: slimPublic, markField: "lastUpdatedAt", storeId: `public_mentorship_${key}`,
+    collection, slim: slimPublic, markField: "lastUpdatedAt", storeId: `public_mentorship_v2_${key}`,
     minRefreshMs: 5 * 60 * 1000, countEveryMs: 30 * 60 * 1000, persistEveryMs: 30 * 60 * 1000,
   })]));
   // The facilities the dashboard needs (name, state, locality, type,
@@ -105,41 +113,79 @@ function makePublicMentorshipCopy({ db, Timestamp, now, log = () => {}, tally = 
   });
 
   const live = (r) => r && r.isDeleted !== true && r.isDeleted !== "true";
+  const LISTS = [...Object.keys(COLLECTIONS), "facilities"];
+
+  // The list as sent, with its version: visits and reports straight from
+  // their copy; facilities cut down to those some visit or report names.
+  function listNow(list) {
+    if (COLLECTIONS[list]) {
+      const st = cores[list]._state();
+      return { version: st.version, items: Array.from(st.items.values()).filter(live) };
+    }
+    const ids = new Set();
+    Object.keys(COLLECTIONS).forEach((k) => cores[k]._state().items.forEach((r) => { if (live(r) && r.facilityId) ids.add(r.facilityId); }));
+    const fst = facilities._state();
+    const version = `${fst ? fst.version : "none"}|${ids.size}|${Object.keys(COLLECTIONS).map((k) => cores[k]._state().version).join("|")}`;
+    return { version, items: fst ? Array.from(fst.items.values()).filter((f) => ids.has(f.id) && live(f)) : [] };
+  }
+
+  // Pages are worked out once per version of each list.
+  const paged = {};
+  function pagesOf(list) {
+    const { version, items } = listNow(list);
+    if (paged[list] && paged[list].version === version) return paged[list];
+    const pages = [];
+    let cur = [];
+    let size = 0;
+    items.forEach((it) => {
+      const n = JSON.stringify(it).length;
+      if (cur.length && size + n > PAGE_CHARS) { pages.push(cur); cur = []; size = 0; }
+      cur.push(it); size += n;
+    });
+    if (cur.length || !pages.length) pages.push(cur);
+    paged[list] = { version, pages, count: items.length };
+    return paged[list];
+  }
+
+  async function refreshAll() {
+    await Promise.all([...Object.keys(COLLECTIONS).map((k) => cores[k].refresh()), facilities.refresh()]);
+  }
 
   /**
-   * `known`: { submissions, imnci, eenc, facilities } versions the browser
-   * already holds; a list still at that version comes back as
-   * { unchanged: true, version }.
+   * What the browser should fetch: for each list its version and number of
+   * pages, or { unchanged: true } when `known[list]` is already that version.
    */
-  async function answer(known = {}) {
-    const keys = Object.keys(COLLECTIONS);
-    const v = (k) => (typeof known[k] === "string" ? known[k] : null);
-    // All four are read at the same time (they used to be one after another).
-    const [lists] = await Promise.all([
-      Promise.all(keys.map((k) => cores[k].answer(v(k)))),
-      facilities.refresh(), // the list sent is cut down below
-    ]);
+  async function manifest(known = {}) {
+    await refreshAll();
     const out = {};
-    keys.forEach((k, i) => { out[k] = lists[i]; });
-
-    // Only the facilities that some visit or visit report names (from the
-    // whole copy, so a list the browser already holds still counts).
-    const ids = new Set();
-    keys.forEach((k) => {
-      const st = cores[k]._state();
-      if (st) st.items.forEach((r) => { if (live(r) && r.facilityId) ids.add(r.facilityId); });
+    LISTS.forEach((list) => {
+      const p = pagesOf(list);
+      out[list] = known[list] === p.version ? { unchanged: true, version: p.version } : { version: p.version, pages: p.pages.length, count: p.count };
     });
-    const fst = facilities._state();
-    const facVersion = `${fst ? fst.version : "none"}|${ids.size}|${keys.map((k) => out[k].version).join("|")}`;
-    if (v("facilities") === facVersion) {
-      out.facilities = { unchanged: true, version: facVersion };
-    } else {
-      const items = fst ? Array.from(fst.items.values()).filter((f) => ids.has(f.id) && live(f)) : [];
-      out.facilities = { version: facVersion, count: items.length, items };
-    }
     return out;
   }
-  return { answer };
+
+  /** One page of one list; { stale: true } when the list moved on since the manifest. */
+  async function page(list, n, version) {
+    if (!LISTS.includes(list)) return { error: "unknown list" };
+    await refreshAll();
+    const p = pagesOf(list);
+    if (version && version !== p.version) return { stale: true, version: p.version };
+    const i = Number(n) || 0;
+    if (i < 0 || i >= p.pages.length) return { error: "no such page" };
+    return { version: p.version, page: i, pages: p.pages.length, items: p.pages[i] };
+  }
+
+  /** Everything in one answer (tests; small data sets). */
+  async function answer(known = {}) {
+    const m = await manifest(known);
+    const out = {};
+    LISTS.forEach((list) => {
+      out[list] = m[list].unchanged ? m[list] : { version: m[list].version, items: [].concat(...pagesOf(list).pages) };
+    });
+    return out;
+  }
+  return { answer, manifest, page };
 }
 
-module.exports = { makePublicMentorshipCopy, slimPublic, anonCode, COLLECTIONS };
+module.exports = { makePublicMentorshipCopy, slimPublic, anonCode, COLLECTIONS, PAGE_CHARS };

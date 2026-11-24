@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { slimPublic, anonCode, COLLECTIONS, makePublicMentorshipCopy } = require('../functions/publicMentorshipCopyCore.js');
+const { slimPublic, anonCode, COLLECTIONS, makePublicMentorshipCopy, PAGE_CHARS } = require('../functions/publicMentorshipCopyCore.js');
 
 const ts = (ms) => ({ toMillis: () => ms });
 
@@ -98,24 +98,57 @@ describe('public mentorship copy', () => {
         ['submissions', 'imnci', 'eenc', 'facilities'].forEach((k) => expect(again[k]).toEqual({ unchanged: true, version: versions[k] }));
         const onlyVisits = await copy.answer({ submissions: versions.submissions, imnci: versions.imnci, eenc: versions.eenc });
         expect(onlyVisits.facilities.items.map((f) => f.id).sort()).toEqual(['f1', 'f2']);
+
+        // Pages: a big list is split, every page is under the limit, and a
+        // page asked for an old version says so.
+        for (let i = 0; i < 4000; i += 1) data.skillMentorship.set(`b${i}`, { facilityId: 'f1', healthWorkerName: `W${i}`, filler: 'x'.repeat(900), lastUpdatedAt: ts(5000 + i) });
+        const big = makePublicMentorshipCopy({ db, Timestamp: { fromMillis: (ms) => ({ ms }) }, now: () => 20_000_000 });
+        const m = await big.manifest({});
+        expect(m.submissions.pages).toBeGreaterThan(1);
+        let seen = 0;
+        for (let i = 0; i < m.submissions.pages; i += 1) {
+            const pg = await big.page('submissions', i, m.submissions.version);
+            expect(JSON.stringify(pg.items).length).toBeLessThanOrEqual(PAGE_CHARS + pg.items.length + 2);
+            seen += pg.items.length;
+        }
+        expect(seen).toBe(m.submissions.count);
+        expect(await big.page('submissions', 0, 'old')).toEqual({ stale: true, version: m.submissions.version });
+    });
+
+    it('drops pictures saved inline and long free text', () => {
+        const o = slimPublic('x', { inlinePicture: 'data:image/png;base64,AAAA', essay: 'y'.repeat(1500), short: 'ok', lastUpdatedAt: ts(1) });
+        expect(o.inlinePicture).toBe(null);
+        expect(o.essay).toBe(null);
+        expect(o.short).toBe('ok');
     });
 });
 
-import { mergePublicPackage } from '../src/utils/publicDashboardStore';
+import { fetchPublicPackage } from '../src/utils/publicDashboardStore';
 
 describe('public dashboard package on the device', () => {
-    const held = { submissions: [{ id: 's1' }], imnci: [{ id: 'r1' }], eenc: [], facilities: [{ id: 'f1' }], versions: {} };
-    it('keeps the held lists the server reports unchanged and takes the new ones', () => {
-        const pkg = mergePublicPackage(held, {
-            submissions: { unchanged: true, version: 'a' }, imnci: { version: 'b', items: [{ id: 'r2' }] },
-            eenc: { unchanged: true, version: 'c' }, facilities: { version: 'd', items: [{ id: 'f2' }] },
+    const manifestFrom = (m) => async () => m;
+    it('keeps lists held at the current version and joins the pages of the others', async () => {
+        const held = { submissions: [{ id: 's1' }], imnci: [], eenc: [], facilities: [{ id: 'f1' }], versions: { submissions: 'a' } };
+        const asked = [];
+        const pkg = await fetchPublicPackage({
+            held,
+            manifestOf: manifestFrom({ submissions: { unchanged: true, version: 'a' }, imnci: { version: 'b', pages: 2 }, eenc: { version: 'c', pages: 1 }, facilities: { version: 'd', pages: 1 } }),
+            fetchPage: async (list, page) => { asked.push(`${list}:${page}`); return { items: [{ id: `${list}${page}` }] }; },
         });
-        expect(pkg).toEqual({ submissions: [{ id: 's1' }], imnci: [{ id: 'r2' }], eenc: [], facilities: [{ id: 'f2' }], versions: { submissions: 'a', imnci: 'b', eenc: 'c', facilities: 'd' } });
+        expect(pkg.submissions).toBe(held.submissions);
+        expect(pkg.imnci).toEqual([{ id: 'imnci0' }, { id: 'imnci1' }]);
+        expect(pkg.facilities).toEqual([{ id: 'facilities0' }]);
+        expect(pkg.versions).toEqual({ submissions: 'a', imnci: 'b', eenc: 'c', facilities: 'd' });
+        expect(asked.sort()).toEqual(['eenc:0', 'facilities:0', 'imnci:0', 'imnci:1']);
     });
-    it('asks again when something reported unchanged is not held', () => {
-        expect(mergePublicPackage(null, { submissions: { unchanged: true, version: 'a' }, imnci: { items: [] }, eenc: { items: [] }, facilities: { items: [] } })).toBe(null);
-    });
-    it('reports a package too large to send', () => {
-        expect(mergePublicPackage(null, { submissions: { tooLarge: true } })).toEqual({ tooLarge: true });
+    it('starts over when a list moves on while its pages arrive', async () => {
+        let round = 0;
+        const pkg = await fetchPublicPackage({
+            held: null,
+            manifestOf: async () => { round += 1; return Object.fromEntries(['submissions', 'imnci', 'eenc', 'facilities'].map((l) => [l, { version: `v${round}`, pages: 1 }])); },
+            fetchPage: async (list, page, version) => (version === 'v1' && list === 'imnci' ? { stale: true } : { items: [{ id: list }] }),
+        });
+        expect(round).toBe(2);
+        expect(pkg.versions.imnci).toBe('v2');
     });
 });

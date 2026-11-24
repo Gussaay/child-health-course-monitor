@@ -505,6 +505,17 @@ jobs:
             --non-interactive \
             --force
 
+      # The public mentorship dashboard is served from a copy the server builds
+      # on its first request (functions/publicMentorshipCopy.js). Building it
+      # here, right after the deploy, means no visitor waits for that first
+      # build: they get the saved copy in seconds. Never fails the deploy.
+      - name: Build the public mentorship dashboard copy
+        continue-on-error: true
+        run: |
+          curl -sS -o /dev/null -w "publicMentorshipCopy: HTTP %{http_code} in %{time_total}s\n" \
+            -X POST -H "Content-Type: application/json" -d '{"data":{}}' --max-time 320 \
+            https://us-central1-imnci-courses-monitor.cloudfunctions.net/publicMentorshipCopy || true
+
   # ---------------------------------------------------------------------------
   # The APK. Wraps the same dist/ the site was built from, so the two cannot
   # drift apart within a release.

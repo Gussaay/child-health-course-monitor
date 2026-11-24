@@ -38,7 +38,7 @@ import { getAuth } from "firebase/auth";
 import { db } from '../../firebase'; 
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useAuth } from '../../hooks/useAuth';
-import { readPublicPackage, savePublicPackage, mergePublicPackage } from '../../utils/publicDashboardStore';
+import { readPublicPackage, savePublicPackage, fetchPublicPackage } from '../../utils/publicDashboardStore';
 
 // --- Bulk Upload Modal ---
 import DetailedMentorshipBulkUploadModal from './MentorshipBulkUpload';
@@ -2345,13 +2345,8 @@ const SkillsMentorshipView = ({
                 showingHeld = true;
             }
             const call = httpsCallable(getFunctions(), 'publicMentorshipCopy', { timeout: 300000 });
-            let res = (await call({ versions: held?.versions || {} }))?.data || {};
-            let pkg = mergePublicPackage(held, res);
-            if (!pkg) { // something the device did not hold after all: ask for everything
-                res = (await call({}))?.data || {};
-                pkg = mergePublicPackage(null, res);
-            }
-            if (!pkg || pkg.tooLarge) throw new Error('The dashboard data is too large to send.');
+            const fetchPage = async (list, page, version) => (await call({ list, page, version }))?.data || {};
+            const pkg = await fetchPublicPackage({ held, manifestOf: async (versions) => (await call({ versions }))?.data || {}, fetchPage });
             if (!publicMountedRef.current) return;
             showPublicPackage(pkg);
             savePublicPackage(PKG_KEY, pkg);
@@ -4524,7 +4519,14 @@ const SkillsMentorshipView = ({
 
                             {activeTab === 'dashboard' && (
                                 publicLoading ? (
-                                    <PageSkeleton />
+                                    <div>
+                                        {publicDashboardMode && (
+                                            <p className="m-4 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm font-semibold text-sky-800" role="status">
+                                                {t('mentorship_page.public.preparing', 'Preparing the dashboard… this can take up to a minute the first time. It opens at once on your next visit.')}
+                                            </p>
+                                        )}
+                                        <PageSkeleton />
+                                    </div>
                                 ) : publicDashboardMode && publicError && !publicDashboardParams?.isRecordView ? (
                                     <div className="m-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{publicError}</div>
                                 ) : publicDashboardParams?.isRecordView && recordNeedsSignIn ? (
