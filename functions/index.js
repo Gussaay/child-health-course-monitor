@@ -320,6 +320,7 @@ exports.setUserRoles = onCall(async (request) => {
 // same permissions the app applies; see claudeAccess.js.
 // Certificate emails, sent directly instead of through the Trigger Email extension.
 exports.sendCertificateEmails = require("./certificateEmail").sendCertificateEmails;
+exports.libraryNotifyOnPublish = require("./libraryNotify").libraryNotifyOnPublish;
 
 const claudeEndpoints = require("./claudeEndpoints");
 exports.claudeQuery = claudeEndpoints.claudeQuery;

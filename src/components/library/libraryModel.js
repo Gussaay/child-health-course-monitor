@@ -3,7 +3,12 @@
 //
 // An item is one document in `libraryItems`:
 //   { service, category, name, description, imageUrl, imagePath,
-//     linkUrl, filePath, fileName, createdAt, createdBy, updatedAt }
+//     linkUrl, filePath, fileName, status, createdAt, createdBy, updatedAt }
+// `status` is 'final' (the default, and what items saved before it existed
+// are) or 'draft': a draft is listed like any other item but cannot be
+// opened — instead a visitor leaves their name and email address
+// (a document in `libraryRequests`), and when the item is later saved as
+// final the server emails them the link (functions/libraryNotify.js).
 // `imageUrl` is the photo (uploaded, then `imagePath` is its storage path, or a
 // direct link). `linkUrl` is the content itself (an uploaded file, then
 // `filePath` is set, or a direct link to a page, video or document).
@@ -30,6 +35,11 @@ export const LIBRARY_CATEGORIES = [
 ];
 
 export const LIBRARY_COLLECTION = 'libraryItems';
+export const LIBRARY_REQUESTS_COLLECTION = 'libraryRequests';
+
+// An item with no status (saved before drafts existed) counts as final.
+export const itemStatus = (item) => (item?.status === 'draft' ? 'draft' : 'final');
+export const isDraftItem = (item) => itemStatus(item) === 'draft';
 
 // Photos stay small; content files (books, guides) may be larger.
 export const LIBRARY_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
@@ -126,13 +136,16 @@ export function validateLibraryItem(form) {
         if (linkUrl === null) errors.content = 'link';
     }
     const hasUploadedContent = form?.contentMode === 'upload' && (form.contentFile || form.existingLinkUrl);
-    if (!linkUrl && !hasUploadedContent && !errors.content) {
+    // A draft announces a book that is still being prepared, so it does not
+    // need its content yet; a final item must have something to open.
+    const status = form?.status === 'draft' ? 'draft' : 'final';
+    if (status === 'final' && !linkUrl && !hasUploadedContent && !errors.content) {
         errors.content = 'content';
     }
 
     return {
         errors,
-        item: { service: form?.service, category: form?.category, name, description, imageUrl: imageUrl || '', linkUrl: linkUrl || '' },
+        item: { service: form?.service, category: form?.category, name, description, imageUrl: imageUrl || '', linkUrl: linkUrl || '', status },
     };
 }
 

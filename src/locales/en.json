@@ -9364,6 +9364,23 @@
     "edit": "Edit",
     "delete": "Remove",
     "open": "Open",
+    "close": "Close",
+    "draft_badge": "Draft",
+    "draft_note": "This book is still being prepared, so it cannot be opened yet. Leave your email address and we will send it to you as soon as it is final.",
+    "notify_me": "Notify me",
+    "waiting": "{{count}} people waiting for this book",
+    "notify": {
+      "title": "Get this book by email",
+      "text": "\"{{name}}\" is still being prepared. Leave your details and we will email you the book as soon as it is final.",
+      "name": "Your name",
+      "email": "Email address",
+      "phone": "Phone (optional)",
+      "submit": "Notify me",
+      "done": "You are on the list. We will email \"{{name}}\" to {{email}} as soon as it is final.",
+      "name_required": "Enter your name.",
+      "email_invalid": "Enter a valid email address.",
+      "failed": "Could not save your request. Please try again."
+    },
     "save": "Save",
     "cancel": "Cancel",
     "retry": "Try again",
@@ -9417,7 +9434,12 @@
       "photo_hint": "Optional. PNG, JPEG, WebP or GIF, up to 5 MB.",
       "content": "Content",
       "current_file": "Current file: {{name}}",
-      "file_hint": "PDF, Word, PowerPoint, Excel, MP4 video or image, up to 50 MB."
+      "file_hint": "PDF, Word, PowerPoint, Excel, MP4 video or image, up to 50 MB.",
+      "status": "Status",
+      "status_final": "Final — everyone can open it",
+      "status_draft": "Draft — shown, but cannot be opened yet",
+      "status_final_hint": "A final item can be opened by everyone.",
+      "status_draft_hint": "A draft appears in the library with its photo and description, but nobody can open it. Visitors can leave their email address, and the book is emailed to them automatically when you save it as final. Its content file can be added later."
     },
     "errors": {
       "name": "Enter a name.",

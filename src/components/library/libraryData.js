@@ -5,7 +5,7 @@ import { db, storage } from '../../firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { safeFileName } from '../../utils/uploadValidation';
-import { LIBRARY_COLLECTION, validateLibraryFile } from './libraryModel';
+import { LIBRARY_COLLECTION, LIBRARY_REQUESTS_COLLECTION, validateLibraryFile } from './libraryModel';
 
 export async function listLibraryItems() {
     const snap = await getDocs(collection(db, LIBRARY_COLLECTION));
@@ -83,4 +83,26 @@ export async function updateLibraryItem(id, item, user) {
 export async function deleteLibraryItem(item) {
     await deleteDoc(doc(db, LIBRARY_COLLECTION, item.id));
     await Promise.all([removeLibraryFile(item.imagePath), removeLibraryFile(item.filePath)]);
+}
+
+/**
+ * A visitor asking to be emailed when a draft item becomes final. Anyone may
+ * register (firestore.rules checks the fields); the address is only read by
+ * library managers and by the notify function.
+ */
+export async function addLibraryRequest(itemId, { name, email, phone, lang }) {
+    await addDoc(collection(db, LIBRARY_REQUESTS_COLLECTION), {
+        itemId,
+        name: String(name || '').trim(),
+        email: String(email || '').trim(),
+        phone: String(phone || '').trim(),
+        lang: lang === 'ar' ? 'ar' : 'en',
+        createdAt: serverTimestamp(),
+    });
+}
+
+/** Every registration, for the managers' "people waiting" counts. */
+export async function listLibraryRequests() {
+    const snap = await getDocs(collection(db, LIBRARY_REQUESTS_COLLECTION));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
