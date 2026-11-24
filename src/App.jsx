@@ -2251,7 +2251,9 @@ export default function App() {
             'onlineCourses': permissions.canViewOnlineCourses,
             'onlineCoursesManage': permissions.canManageOnlineLearners,
             'protocolManager': permissions.canManageOnlineLearners,
-            'downloads': Capacitor.isNativePlatform(), 'about': true, 
+            'downloads': Capacitor.isNativePlatform(), 'about': true,
+            // The Child Health Library is open to everyone.
+            'library': true,
         };
 
         if (user && !viewPermissions[newView]) {

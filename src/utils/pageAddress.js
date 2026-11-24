@@ -17,6 +17,7 @@ const VIEW_SLUGS = {
     dashboard: 'dashboard',
     admin: 'admin',
     about: 'about',
+    library: 'library',
     imciForm: 'imnci-protocol',
     childHealthServices: 'child-health-services',
     skillsMentorship: 'skills-mentorship',
