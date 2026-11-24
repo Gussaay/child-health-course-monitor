@@ -9376,6 +9376,11 @@
     "draft_badge": "Draft",
     "open_interactive": "Open interactive version",
     "interactive_soon": "The interactive version of this book is coming soon.",
+    "reader": {
+      "page_of": "Page {{current}} of {{count}}",
+      "opening": "Opening the book…",
+      "failed": "This book could not be opened in the app. You can still open it in another app."
+    },
     "download": {
       "button": "Download",
       "downloaded": "Downloaded",
