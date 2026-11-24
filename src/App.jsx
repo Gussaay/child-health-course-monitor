@@ -2752,6 +2752,9 @@ export default function App() {
                 // dashboard. Everyone may open it: people with mentorship access
                 // get the full dashboard, everyone else the public one, which is
                 // built from the anonymous copy (functions/publicMentorshipCopy.js).
+                // Staff with mentorship access get the full dashboard (all
+                // filters, and the Admin tab for those allowed); everyone else the
+                // public one, from anonymous data (functions/publicMentorshipCopy.js).
                 return permissions.canViewSkillsMentorship ? (
                     <SkillsMentorshipView key="mentorshipDashboard" openDashboard setToast={setToast} permissions={permissions} userRoles={userRoles} userStates={userStates} userLocalities={userLocalities} canBulkUploadMentorships={permissions.canUseSuperUserAdvancedFeatures} />
                 ) : (

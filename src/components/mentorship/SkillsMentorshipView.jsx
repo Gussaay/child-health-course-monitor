@@ -27,7 +27,7 @@ import {
     IS_NATIVE, PageTabs, FilterPanel, useInPageBack, PullToRefresh, MenuTile, MenuGrid, BackArrow
 } from '../CommonComponents';
 
-import { STATE_LOCALITIES } from "../constants.js";
+import { STATE_LOCALITIES, isFederalValue } from "../constants.js";
 import SkillsAssessmentForm from './SkillsAssessmentForm';
 import MentorshipDashboard from './MentorshipDashboard';
 import IPCAssessmentForm from './IPCAssessmentForm';
@@ -2056,8 +2056,8 @@ const ServiceSelector = ({ onSelectService }) => {
 const SkillsMentorshipView = ({
     setToast,
     permissions,
-    userStates,
-    userLocalities,
+    userStates: rawUserStates,
+    userLocalities: rawUserLocalities,
     publicSubmissionMode = false,
     publicServiceType = null,
     canBulkUploadMentorships = false,
@@ -2067,6 +2067,12 @@ const SkillsMentorshipView = ({
     openDashboard = false
 }) => {
     const { t, i18n } = useTranslation();
+    // An account assigned to "Federal" is not limited to a state: "Federal"
+    // used to be taken as a state here, so the dashboard opened filtered to
+    // State: Federal / Locality: Federal and showed only part of the data.
+    const assignedFederal = (rawUserStates || []).some(isFederalValue);
+    const userStates = useMemo(() => (rawUserStates || []).filter((v) => !isFederalValue(v)), [rawUserStates]);
+    const userLocalities = useMemo(() => (rawUserLocalities || []).filter((v) => !isFederalValue(v)), [rawUserLocalities]);
     useEffect(() => {
         if (publicDashboardMode) {
             const params = new URLSearchParams(window.location.search);
@@ -2243,10 +2249,11 @@ const SkillsMentorshipView = ({
         if (publicDashboardMode || publicSubmissionMode) return true;
         if (permissions?.canUseSuperUserAdvancedFeatures || permissions?.canUseFederalManagerAdvancedFeatures) return true;
         if (hasRole('super_user', 'federal_manager')) return true;
+        if (assignedFederal && !(roleList.length === 1 && roleList[0] === 'facilitator')) return true;
         if (permissions?.manageLocation === 'federal_level' && !(roleList.length === 1 && roleList[0] === 'facilitator')) return true;
 
         return false;
-    }, [permissions, publicDashboardMode, publicSubmissionMode, hasRole, roleList]);
+    }, [permissions, publicDashboardMode, publicSubmissionMode, hasRole, roleList, assignedFederal]);
 
     const isLocalityManager = !canSeeAllMentorshipData && (permissions?.manageScope === 'locality' || hasRole('locality_manager'));
     // Only someone who is nothing more than a facilitator is limited to their own visits.
@@ -4156,7 +4163,13 @@ const SkillsMentorshipView = ({
     };
 
     // Android app: the top-bar arrow steps back from the records list to the service menu.
-    useInPageBack(() => setCurrentView(openDashboard ? 'service_selection' : 'action_menu'), currentView === 'history' && !publicDashboardMode);
+    // Opened from the main page's Mentorship Dashboard tile: back from the
+    // dashboard goes to the service's Skills Mentorship list, not the main page.
+    const backFromHistory = useCallback(() => {
+        if (openDashboard && activeTab === 'dashboard') setActiveTab('skills_list');
+        else setCurrentView('action_menu');
+    }, [openDashboard, activeTab]);
+    useInPageBack(backFromHistory, currentView === 'history' && !publicDashboardMode);
 
     if (currentView === 'service_selection') {
         return <ServiceSelector onSelectService={handleSelectService} />;
@@ -4232,7 +4245,7 @@ const SkillsMentorshipView = ({
                         <div className="flex flex-wrap justify-between items-center gap-2 md:gap-3 mb-3 md:mb-6 border-b border-gray-200 pb-2">
                             <div className="flex flex-wrap items-center gap-2 md:gap-4 min-w-0">
                                 {!publicDashboardMode && (
-                                    <BackArrow onClick={() => setCurrentView('action_menu')} label={t('mentorship_page.buttons.back_to_main_menu', 'Back to Main Menu')} className="-ms-2" />
+                                    <BackArrow onClick={backFromHistory} label={openDashboard && activeTab === 'dashboard' ? t('mentorship_page.buttons.back_to_list', 'Back to the mentorship list') : t('mentorship_page.buttons.back_to_main_menu', 'Back to Main Menu')} className="-ms-2" />
                                 )}
 
                                 {!publicDashboardMode && <PullToRefresh onRefresh={handleRefresh} disabled={isRefreshing} />}
