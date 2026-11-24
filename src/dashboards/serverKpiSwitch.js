@@ -11,3 +11,11 @@ export const SERVER_KPIS = {
     mentorship: false,
     courses: false,
 };
+
+// Tier "a": a device's FIRST download of these lists comes from a server copy
+// (functions/mentorshipCopy.js) instead of the database; later syncs read
+// changes from the database as before. Falls back to the database read on
+// any failure. Off until reviewed.
+export const SERVER_COPIES = {
+    mentorship: false,
+};

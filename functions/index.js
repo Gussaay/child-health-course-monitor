@@ -388,3 +388,6 @@ exports.publicMentorshipCopy = require("./publicMentorshipCopy").publicMentorshi
 // every record (dashboardKpis.js, docs/server-dashboard-kpis.md). Each page
 // keeps reading the lists itself as a fallback.
 exports.dashboardKpis = require("./dashboardKpis").dashboardKpis;
+// The mentorship lists for a device's first download, from a server copy
+// instead of the database (mentorshipCopy.js); later syncs read changes only.
+exports.mentorshipCopy = require("./mentorshipCopy").mentorshipCopy;

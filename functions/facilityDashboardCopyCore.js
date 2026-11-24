@@ -80,13 +80,18 @@ function makeCore({
   db, Timestamp, now = () => Date.now(), log = () => {}, tally = () => {},
   collection = "healthFacilities", slim = slimFacility, markField = "lastSnapshotAt", storeId = DOC_ID,
   minRefreshMs = 0, countEveryMs = 0, persistEveryMs = 0,
+  // How to read the mark of one copied item, when the copy keeps markField
+  // in another shape than milliseconds (mentorshipCopyCore.js).
+  markOf = null,
 }) {
   let state = null; // { items: Map, mark, fullAt, version }
   let busy = null;
   let refreshedAt = 0;
   let countedAt = 0;
   let persistedAt = 0;
-  const newestMark = newestMarkOf(markField);
+  const newestMark = markOf
+    ? (items) => items.reduce((m, f) => { const t = Number(f && markOf(f)); return Number.isFinite(t) && t > m ? t : m; }, 0)
+    : newestMarkOf(markField);
 
   const col = () => db.collection(collection);
   const store = () => db.collection(STORE).doc(storeId);
