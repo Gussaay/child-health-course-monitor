@@ -4,6 +4,7 @@
     "indexes": "firestore.indexes.json"
   },
   "storage": {
+    "bucket": "imnci-courses-monitor.firebasestorage.app",
     "rules": "storage.rules"
   },
   "emulators": {
