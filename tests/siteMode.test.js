@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { hiddenViewsFor, siteModulesFor, SITE_MODULES, MAIN_SITE_ONLY_VIEWS } from '../src/siteMode';
 
 describe('site modules', () => {
@@ -57,7 +59,15 @@ describe('every module the app has is classified for sites', () => {
     // classified: in a module, main-site-only, or always shown (the home
     // page and the public link pages).
     it('no module tile or nav view in App.jsx is missing from SITE_MODULES', () => {
-        const app = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8');
+        // vitest runs under jsdom here, where import.meta.url is an http URL
+        // rather than a file URL, so fall back to the repo root when needed.
+        let appPath;
+        try {
+            appPath = fileURLToPath(new URL('../src/App.jsx', import.meta.url));
+        } catch {
+            appPath = resolve(process.cwd(), 'src/App.jsx');
+        }
+        const app = readFileSync(appPath, 'utf8');
         const region = (from, to) => {
             const a = app.indexOf(from);
             const b = app.indexOf(to, a);
