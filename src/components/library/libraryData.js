@@ -42,7 +42,13 @@ export async function uploadLibraryFile(original, kind) {
     const problem = validateLibraryFile(original, kind);
     if (problem) throw new Error(problem);
     const file = kind === 'image' ? await shrinkPhoto(original) : original;
-    const path = `library/${kind === 'image' ? 'images' : 'files'}/${Date.now()}_${safeFileName(file.name)}`;
+    // Photos go to the app's public uploads/ folder (images up to 5 MB, readable
+    // by anyone), which needs no rules of its own; content files, which can be
+    // larger and of more types, go to library/ (storage.rules).
+    if (kind === 'image' && file.size >= 5 * 1024 * 1024) throw new Error('The photo is too large (limit 5 MB).');
+    const path = kind === 'image'
+        ? `uploads/library_${Date.now()}_${safeFileName(file.name)}`
+        : `library/files/${Date.now()}_${safeFileName(file.name)}`;
     const snapshot = await uploadBytes(ref(storage, path), file, { contentType: file.type });
     return { url: await getDownloadURL(snapshot.ref), path };
 }
