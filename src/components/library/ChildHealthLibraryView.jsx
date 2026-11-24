@@ -12,7 +12,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Activity, Baby, BookOpen, ClipboardList, ExternalLink, FileText, GraduationCap, HeartPulse,
+    Activity, Baby, Bell, BookOpen, ClipboardList, ExternalLink, FileText, GraduationCap, HeartPulse,
     Home, Library, Link2, Pencil, Plus, ScrollText, Search, Share2, Shield, Siren, Trash2, Upload, Users,
 } from 'lucide-react';
 import {
@@ -21,11 +21,11 @@ import {
 import { notify, confirmDialog } from '../dialogs';
 import {
     LIBRARY_CATEGORIES, LIBRARY_SERVICES, LIBRARY_FILE_TYPES, LIBRARY_IMAGE_TYPES,
-    LIBRARY_ERROR_TEXT, canManageLibrary, countBy, itemsFor, libraryPath, validateLibraryItem,
+    LIBRARY_ERROR_TEXT, canManageLibrary, countBy, isDraftItem, itemsFor, libraryPath, validateLibraryItem,
 } from './libraryModel';
 import { shareLibraryLink } from './libraryShare';
 import {
-    addLibraryItem, deleteLibraryItem, listLibraryItems, removeLibraryFile, updateLibraryItem, uploadLibraryFile,
+    addLibraryItem, addLibraryRequest, deleteLibraryItem, listLibraryItems, listLibraryRequests, removeLibraryFile, updateLibraryItem, uploadLibraryFile,
 } from './libraryData';
 
 const SERVICE_ICONS = {
@@ -78,6 +78,8 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
     const share = useShare();
     const [search, setSearch] = useState('');
     const [editing, setEditing] = useState(null); // null | {} (new) | item
+    const [notifyItem, setNotifyItem] = useState(null); // draft item a visitor is registering for
+    const [requests, setRequests] = useState([]);
 
     const load = useCallback(async () => {
         setLoadError('');
@@ -90,6 +92,19 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
         }
     }, []);
     useEffect(() => { load(); }, [load]);
+
+    // Managers see how many people are waiting for each draft item.
+    useEffect(() => {
+        if (!canManage) return;
+        let alive = true;
+        listLibraryRequests().then((list) => { if (alive) setRequests(list); }).catch(() => {});
+        return () => { alive = false; };
+    }, [canManage]);
+    const waitingByItem = useMemo(() => {
+        const out = {};
+        requests.forEach((r) => { if (!r.notifiedAt) out[r.itemId] = (out[r.itemId] || 0) + 1; });
+        return out;
+    }, [requests]);
 
     // A single shared item: once loaded, the levels above it are its own
     // service and section, so Back walks up from there.
@@ -157,7 +172,7 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
                     onBack={goUp}
                 />
                 <div className="mx-auto max-w-xl">
-                    <LibraryCard item={openItem} large canManage={canManage} onShare={() => share({ itemId: openItem.id }, openItem.name)} onEdit={() => setEditing(openItem)} onDelete={() => onDelete(openItem)} />
+                    <LibraryCard item={openItem} large canManage={canManage} waiting={waitingByItem[openItem.id] || 0} onNotify={() => setNotifyItem(openItem)} onShare={() => share({ itemId: openItem.id }, openItem.name)} onEdit={() => setEditing(openItem)} onDelete={() => onDelete(openItem)} />
                     <div className="mt-4 text-center">
                         <Button variant="secondary" onClick={() => setItemId(null)} className="mx-auto">
                             <Library size={16} /> {t('library.more_in_section', 'More in this section')}
@@ -237,7 +252,7 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
                 ) : (
                     <div className="grid gap-3 md:gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {shown.map((item) => (
-                            <LibraryCard key={item.id} item={item} canManage={canManage} onShare={() => share({ itemId: item.id }, item.name)} onEdit={() => setEditing(item)} onDelete={() => onDelete(item)} />
+                            <LibraryCard key={item.id} item={item} canManage={canManage} waiting={waitingByItem[item.id] || 0} onNotify={() => setNotifyItem(item)} onShare={() => share({ itemId: item.id }, item.name)} onEdit={() => setEditing(item)} onDelete={() => onDelete(item)} />
                         ))}
                     </div>
                 )}
@@ -254,6 +269,9 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
                 </div>
             )}
             {body}
+            {notifyItem && (
+                <LibraryNotifyForm item={notifyItem} onClose={() => setNotifyItem(null)} />
+            )}
             {editing && (
                 <LibraryItemForm
                     item={editing.id ? editing : null}
@@ -267,24 +285,43 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
     );
 }
 
-function LibraryCard({ item, canManage, onShare, onEdit, onDelete, large = false }) {
+function LibraryCard({ item, canManage, onShare, onEdit, onDelete, onNotify, waiting = 0, large = false }) {
     const { t } = useTranslation();
     const [imageFailed, setImageFailed] = useState(false);
-    const open = () => { if (item.linkUrl) window.open(item.linkUrl, '_blank', 'noopener,noreferrer'); };
+    const draft = isDraftItem(item);
+    const open = () => { if (!draft && item.linkUrl) window.open(item.linkUrl, '_blank', 'noopener,noreferrer'); };
+    // One fixed thumbnail size for every book, in every card, so the list
+    // lines up whatever shape the photo is. The single-item card's is bigger,
+    // but just as fixed.
+    const thumbSize = large ? 'h-40 w-[7.5rem]' : 'h-28 w-20';
+    const thumbInner = (
+        <>
+            {item.imageUrl && !imageFailed ? (
+                <img src={item.imageUrl} alt="" loading="lazy" className="h-full w-full object-cover" onError={() => setImageFailed(true)} />
+            ) : (
+                <span className="flex h-full w-full items-center justify-center text-sky-400"><FileText size={large ? 40 : 30} strokeWidth={1.5} /></span>
+            )}
+            {draft && <span className="absolute start-1 top-1 rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">{t('library.draft_badge', 'Draft')}</span>}
+        </>
+    );
     return (
-        <article className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <button type="button" onClick={open} disabled={!item.linkUrl} className="block aspect-[16/9] w-full bg-slate-100" aria-label={item.name}>
-                {item.imageUrl && !imageFailed ? (
-                    <img src={item.imageUrl} alt="" loading="lazy" className="h-full w-full object-cover" onError={() => setImageFailed(true)} />
-                ) : (
-                    <span className="flex h-full w-full items-center justify-center text-sky-400"><FileText size={48} strokeWidth={1.5} /></span>
-                )}
-            </button>
-            <div className="flex flex-1 flex-col gap-2 p-3 md:p-4">
+        <article className="flex gap-3 overflow-hidden rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:gap-4 md:p-4">
+            {draft ? (
+                <div className={`relative shrink-0 overflow-hidden rounded-lg bg-slate-100 ${thumbSize}`}>{thumbInner}</div>
+            ) : (
+                <button type="button" onClick={open} disabled={!item.linkUrl} className={`relative shrink-0 overflow-hidden rounded-lg bg-slate-100 ${thumbSize}`} aria-label={item.name}>{thumbInner}</button>
+            )}
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
                 <h3 className="text-base font-bold leading-snug text-slate-800">{item.name}</h3>
                 {item.description && <p className={`text-sm leading-relaxed text-slate-600 whitespace-pre-line ${large ? '' : 'line-clamp-5'}`}>{item.description}</p>}
-                <div className="mt-auto flex flex-wrap items-center gap-2 pt-2">
-                    <Button onClick={open} disabled={!item.linkUrl}><ExternalLink size={16} /> {t('library.open', 'Open')}</Button>
+                {draft && <p className="text-sm leading-relaxed text-amber-700">{t('library.draft_note', 'This book is still being prepared, so it cannot be opened yet. Leave your email address and we will send it to you as soon as it is final.')}</p>}
+                {canManage && waiting > 0 && <p className="text-xs font-semibold text-slate-500">{t('library.waiting', '{{count}} people waiting for this book', { count: waiting })}</p>}
+                <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
+                    {draft ? (
+                        <Button onClick={onNotify}><Bell size={16} /> {t('library.notify_me', 'Notify me')}</Button>
+                    ) : (
+                        <Button onClick={open} disabled={!item.linkUrl}><ExternalLink size={16} /> {t('library.open', 'Open')}</Button>
+                    )}
                     {onShare && <ShareButton onClick={onShare} compact={!large} />}
                     {canManage && (
                         <>
@@ -295,6 +332,74 @@ function LibraryCard({ item, canManage, onShare, onEdit, onDelete, large = false
                 </div>
             </div>
         </article>
+    );
+}
+
+// "Notify me" for a draft item: a visitor leaves their name and email
+// address, and the server emails them the book when it becomes final
+// (functions/libraryNotify.js). No account is needed, like the library
+// itself; firestore.rules checks the fields of the registration.
+function LibraryNotifyForm({ item, onClose }) {
+    const { t, i18n } = useTranslation();
+    const [form, setForm] = useState({ name: '', email: '', phone: '' });
+    const [error, setError] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [done, setDone] = useState(false);
+    const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
+
+    const submit = async () => {
+        const name = form.name.trim();
+        const email = form.email.trim();
+        if (!name) { setError(t('library.notify.name_required', 'Enter your name.')); return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError(t('library.notify.email_invalid', 'Enter a valid email address.')); return; }
+        setSaving(true);
+        setError('');
+        try {
+            await addLibraryRequest(item.id, { name, email, phone: form.phone, lang: i18n.language?.startsWith('ar') ? 'ar' : 'en' });
+            setDone(true);
+        } catch (err) {
+            console.error('Library notify registration failed:', err);
+            setError(t('library.notify.failed', 'Could not save your request. Please try again.'));
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const field = 'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500';
+    const label = 'block text-sm font-semibold text-slate-700 mb-1';
+
+    return (
+        <Modal isOpen onClose={saving ? () => {} : onClose} title={t('library.notify.title', 'Get this book by email')}>
+            {done ? (
+                <div className="space-y-4 p-4 md:p-6">
+                    <p className="text-sm leading-relaxed text-slate-700">{t('library.notify.done', 'You are on the list. We will email "{{name}}" to {{email}} as soon as it is final.', { name: item.name, email: form.email.trim() })}</p>
+                    <div className="flex justify-end">
+                        <Button onClick={onClose}>{t('library.close', 'Close')}</Button>
+                    </div>
+                </div>
+            ) : (
+                <div className="space-y-4 p-4 md:p-6">
+                    <p className="text-sm leading-relaxed text-slate-600">{t('library.notify.text', '"{{name}}" is still being prepared. Leave your details and we will email you the book as soon as it is final.', { name: item.name })}</p>
+                    <div>
+                        <label className={label} htmlFor="lib-notify-name">{t('library.notify.name', 'Your name')}</label>
+                        <input id="lib-notify-name" className={field} value={form.name} onChange={set('name')} maxLength={200} autoComplete="name" />
+                    </div>
+                    <div>
+                        <label className={label} htmlFor="lib-notify-email">{t('library.notify.email', 'Email address')}</label>
+                        <input id="lib-notify-email" type="email" dir="ltr" className={field} value={form.email} onChange={set('email')} maxLength={200} autoComplete="email" />
+                    </div>
+                    <div>
+                        <label className={label} htmlFor="lib-notify-phone">{t('library.notify.phone', 'Phone (optional)')}</label>
+                        <input id="lib-notify-phone" type="tel" dir="ltr" className={field} value={form.phone} onChange={set('phone')} maxLength={40} autoComplete="tel" />
+                    </div>
+                    {error && <p className="text-xs font-semibold text-red-600" role="alert">⚠ {error}</p>}
+                    <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+                        <Button variant="secondary" onClick={onClose} disabled={saving}>{t('library.cancel', 'Cancel')}</Button>
+                        <Button onClick={submit} disabled={saving}>{saving ? <Spinner size="sm" /> : <Bell size={16} />} {t('library.notify.submit', 'Notify me')}</Button>
+                    </div>
+                </div>
+            )}
+        </Modal>
     );
 }
 
@@ -324,6 +429,7 @@ function LibraryItemForm({ item, defaults, user, onClose, onSaved }) {
         category: item?.category || defaults.category,
         name: item?.name || '',
         description: item?.description || '',
+        status: item?.status === 'draft' ? 'draft' : 'final',
         imageMode: item?.imageUrl && !item?.imagePath ? 'link' : 'upload',
         imageLink: item?.imagePath ? '' : (item?.imageUrl || ''),
         imageFile: null,
@@ -368,7 +474,7 @@ function LibraryItemForm({ item, defaults, user, onClose, onSaved }) {
                     uploaded.push(up.path);
                     Object.assign(record, { linkUrl: up.url, filePath: up.path, fileName: form.contentFile.name });
                 } else {
-                    Object.assign(record, { linkUrl: item.linkUrl, filePath: item.filePath, fileName: item.fileName || '' });
+                    Object.assign(record, { linkUrl: item?.linkUrl || '', filePath: item?.filePath || '', fileName: item?.fileName || '' });
                 }
             }
 
@@ -426,6 +532,17 @@ function LibraryItemForm({ item, defaults, user, onClose, onSaved }) {
                     <label className={label} htmlFor="lib-description">{t('library.form.description', 'Description')}</label>
                     <textarea id="lib-description" className={field} rows={4} value={form.description} onChange={set('description')} maxLength={3000} />
                     {err('description')}
+                </div>
+
+                <div>
+                    <label className={label} htmlFor="lib-status">{t('library.form.status', 'Status')}</label>
+                    <select id="lib-status" className={field} value={form.status} onChange={set('status')}>
+                        <option value="final">{t('library.form.status_final', 'Final — everyone can open it')}</option>
+                        <option value="draft">{t('library.form.status_draft', 'Draft — shown, but cannot be opened yet')}</option>
+                    </select>
+                    <p className="mt-1 text-xs text-slate-500">{form.status === 'draft'
+                        ? t('library.form.status_draft_hint', 'A draft appears in the library with its photo and description, but nobody can open it. Visitors can leave their email address, and the book is emailed to them automatically when you save it as final. Its content file can be added later.')
+                        : t('library.form.status_final_hint', 'A final item can be opened by everyone.')}</p>
                 </div>
 
                 <div className="space-y-2">

@@ -204,6 +204,28 @@ service cloud.firestore {
       allow write: if request.auth != null && isSubCourseEditor();
     }
 
+    // "Notify me" registrations for draft library items. The library is
+    // public, so anyone may register a name and email address for one item;
+    // the fields are checked here because there is no sign-in to lean on.
+    // Only library managers may read the list, and a registration cannot be
+    // changed or removed from the app: the notify function stamps it
+    // `notifiedAt` with the admin SDK when the item becomes final.
+    match /libraryRequests/{requestId} {
+      allow create: if request.resource.data.keys().hasOnly(['itemId', 'name', 'email', 'phone', 'lang', 'createdAt'])
+        && request.resource.data.itemId is string && request.resource.data.itemId.size() > 0
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 200
+        && request.resource.data.email is string && request.resource.data.email.size() <= 200
+        && request.resource.data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
+        && (!('phone' in request.resource.data)
+            || (request.resource.data.phone is string && request.resource.data.phone.size() <= 40))
+        && (!('lang' in request.resource.data)
+            || request.resource.data.lang in ['en', 'ar'])
+        && request.resource.data.createdAt == request.time;
+      allow read: if request.auth != null && isSubCourseEditor();
+      allow update, delete: if false;
+    }
+
     match /onlineCourses/{courseId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && isSubCourseEditor();

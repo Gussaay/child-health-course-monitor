@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     LIBRARY_SERVICES, LIBRARY_CATEGORIES, canManageLibrary, normaliseLink, validateLibraryFile,
-    validateLibraryItem, itemsFor, countBy, libraryPath, parseLibraryPath,
+    validateLibraryItem, itemsFor, countBy, libraryPath, parseLibraryPath, isDraftItem,
 } from '../src/components/library/libraryModel';
 import { parseScannedCode, isPublicAppPath } from '../src/utils/appLinks';
 
@@ -36,6 +36,17 @@ describe('child health library', () => {
         expect(validateLibraryItem({ ...base, contentMode: 'upload', contentLink: '', contentFile: {} }).errors).toEqual({});
         expect(validateLibraryItem({ ...base, imageMode: 'link', imageLink: 'javascript:x' }).errors.image).toBe('image');
         expect(validateLibraryItem({ ...base, category: 'other' }).errors.category).toBe('category');
+        // Drafts announce a book still being prepared: no content needed yet,
+        // and anyone who asks is emailed when it turns final.
+        expect(validateLibraryItem(base).item.status).toBe('final');
+        expect(validateLibraryItem({ ...base, status: 'draft' }).item.status).toBe('draft');
+        expect(validateLibraryItem({ ...base, status: 'other' }).item.status).toBe('final');
+        expect(validateLibraryItem({ ...base, status: 'draft', contentLink: '' }).errors).toEqual({});
+        expect(validateLibraryItem({ ...base, status: 'final', contentLink: '' }).errors.content).toBe('content');
+        expect(isDraftItem({ status: 'draft' })).toBe(true);
+        expect(isDraftItem({ status: 'final' })).toBe(false);
+        expect(isDraftItem({})).toBe(false);
+        expect(isDraftItem(null)).toBe(false);
     });
 
     it('checks file type and size', () => {
