@@ -99,13 +99,20 @@ export const MANAGED_SITES = [
 // Every module a site can show, with the pages that belong to it. A page not
 // listed here (the home page, public links) is always shown. Admin is not
 // listed: it is only on the main site, where sites are managed.
+// This list must cover every module tile in App.jsx (allModules): a module
+// missing here shows on every site and cannot be managed in Admin > Sites.
+// tests/siteMode.test.js checks the tiles against this list, so a new
+// module fails CI until it is classified here — and then appears in
+// Admin > Sites automatically, because SitesTab renders this list.
 export const SITE_MODULES = [
     { id: 'dashboard', label: 'Dashboard', views: ['dashboard'] },
+    { id: 'mentorshipDashboard', label: 'Mentorship Dashboard', views: ['mentorshipDashboard'] },
     { id: 'courses', label: 'Courses', views: ['courses', 'courseDetails', 'courseForm', 'courseReport', 'participants', 'participantForm', 'participantReport', 'participantMigration', 'observe', 'monitoring', 'reports', 'finalReport', 'attendanceManager', 'test-dashboard', 'enter-test-scores'] },
     { id: 'humanResources', label: 'Human Resources', views: ['humanResources', 'facilitators', 'programTeams', 'partnersPage', 'facilitatorForm', 'facilitatorReport'] },
     { id: 'childHealthServices', label: 'Child Health Services', views: ['childHealthServices'] },
     { id: 'skillsMentorship', label: 'Skills Mentorship', views: ['skillsMentorship'] },
     { id: 'imciForm', label: 'IMNCI Protocol', views: ['imciForm'] },
+    { id: 'library', label: 'Child Health Library', views: ['library'] },
     { id: 'onlineCourses', label: 'Online Courses (online training)', views: ['onlineCourses'] },
     { id: 'supervision', label: 'Supervision', views: ['supervision'] },
     { id: 'survey', label: 'Surveys', views: ['survey'] },
@@ -120,7 +127,7 @@ export const SITE_MODULES = [
 
 // Pages that only the main site has, whatever is chosen (Course Manager and
 // Protocol Manager are for federal managers and super users on the main site).
-const MAIN_SITE_ONLY_VIEWS = ['admin', 'onlineCoursesManage', 'protocolManager'];
+export const MAIN_SITE_ONLY_VIEWS = ['admin', 'onlineCoursesManage', 'protocolManager'];
 
 // What each site shows until a super user saves a choice in Admin > Sites.
 export const DEFAULT_SITE_MODULES = {
