@@ -29,10 +29,23 @@ function slimHistorySnapshot(id, data) {
   return out;
 }
 
+/** A facility reduced to what the update dashboard reads (updateRecord). */
+function slimUpdateFacility(id, data) {
+  const d = data || {};
+  return {
+    id,
+    isDeleted: d.isDeleted,
+    lastSnapshotAt: toMillis(d.lastSnapshotAt) || 0,
+    ...dashboards.facilityUpdate.updateRecord(d),
+  };
+}
+
 function makeDashboardKpis({ db, Timestamp, now = () => Date.now(), log = () => {}, tally = () => {} }) {
   const shared = { db, Timestamp, now, log, tally, minRefreshMs: 5 * 60 * 1000, countEveryMs: 30 * 60 * 1000, persistEveryMs: 30 * 60 * 1000 };
   const facilities = makeCore({ ...shared, collection: "healthFacilities", slim: slimFacility, markField: "lastSnapshotAt", storeId: FACILITY_STORE_ID });
   const snapshots = makeCore({ ...shared, collection: "facilitySnapshots", slim: slimHistorySnapshot, markField: "snapshotCreatedAt", storeId: "kpi_facility_snapshots" });
+
+  const updateFacilities = makeCore({ ...shared, collection: "healthFacilities", slim: slimUpdateFacility, markField: "lastSnapshotAt", storeId: "kpi_update_facilities" });
 
   // Results are kept per (question, data versions): past dates are worked out
   // once and reused until a change reaches them.
@@ -66,7 +79,31 @@ function makeDashboardKpis({ db, Timestamp, now = () => Date.now(), log = () => 
     return { dashboard: "facilityHistory", versions, asOf: now(), results };
   }
 
-  const handlers = { facilityHistory };
+  /**
+   * Facility update: counts per (month, state, locality, person) for the
+   * viewer's scope ({ level: 'state'|'locality'|other, states, localities },
+   * as ChildHealthServicesView narrows its list), months in `timeZone`.
+   */
+  async function facilityUpdate({ scope = {}, timeZone = "Africa/Khartoum" } = {}) {
+    await updateFacilities.refresh();
+    const st = updateFacilities._state();
+    const level = scope && scope.level;
+    const states = new Set(Array.isArray(scope && scope.states) ? scope.states : []);
+    const localities = new Set(Array.isArray(scope && scope.localities) ? scope.localities : []);
+    const tz = typeof timeZone === "string" && timeZone.length < 64 ? timeZone : "Africa/Khartoum";
+    const cells = remember(`upd|${st.version}|${level}|${[...states].join(",")}|${[...localities].join(",")}|${tz}`, () => {
+      const records = Array.from(st.items.values()).filter((r) => {
+        if (r.isDeleted === true || r.isDeleted === "true") return false;
+        if (level === "locality") return localities.size > 0 && localities.has(r.locality);
+        if (level === "state") return states.size > 0 && states.has(r.state);
+        return true;
+      });
+      return dashboards.facilityUpdate.updateCounts(records, { timeZone: tz });
+    });
+    return { dashboard: "facilityUpdate", versions: { facilities: st.version }, asOf: now(), timeZone: tz, cells };
+  }
+
+  const handlers = { facilityHistory, facilityUpdate };
 
   async function answer(request = {}) {
     const fn = handlers[request.dashboard];
@@ -77,4 +114,4 @@ function makeDashboardKpis({ db, Timestamp, now = () => Date.now(), log = () => 
   return { answer, handlers };
 }
 
-module.exports = { makeDashboardKpis, slimHistorySnapshot };
+module.exports = { makeDashboardKpis, slimHistorySnapshot, slimUpdateFacility };

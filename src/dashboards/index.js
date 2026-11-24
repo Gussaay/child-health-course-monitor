@@ -5,3 +5,4 @@
 // by scripts/build-dashboards-bundle.mjs (tests/dashboardsBundle.test.js fails
 // when the built copy is out of date).
 export * as facilityHistory from './facilityHistory.js';
+export * as facilityUpdate from './facilityUpdate.js';

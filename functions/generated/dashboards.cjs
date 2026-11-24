@@ -20,7 +20,8 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/dashboards/index.js
 var index_exports = {};
 __export(index_exports, {
-  facilityHistory: () => facilityHistory_exports
+  facilityHistory: () => facilityHistory_exports,
+  facilityUpdate: () => facilityUpdate_exports
 });
 module.exports = __toCommonJS(index_exports);
 
@@ -178,7 +179,167 @@ function historyMetrics(counts, { states = null, locality = "" } = {}) {
   });
   return out;
 }
+
+// src/dashboards/facilityUpdate.js
+var facilityUpdate_exports = {};
+__export(facilityUpdate_exports, {
+  UPDATE_SERVICES: () => UPDATE_SERVICES,
+  updateCounts: () => updateCounts,
+  updateDashboardData: () => updateDashboardData,
+  updateRecord: () => updateRecord,
+  yearMonthOf: () => yearMonthOf
+});
+var getValidDate = (val) => {
+  if (!val) return null;
+  if (val.toDate && typeof val.toDate === "function") return val.toDate();
+  if (typeof val === "object" && val !== null) {
+    if ("seconds" in val) return new Date(val.seconds * 1e3);
+    if ("_seconds" in val) return new Date(val._seconds * 1e3);
+  }
+  const d = new Date(val);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+var getUpdateDate = (f) => getValidDate(f.lastSnapshotAt) || getValidDate(f["\u0627\u062E\u0631 \u062A\u062D\u062F\u064A\u062B"]) || getValidDate(f.updatedAt);
+var getCreationDate = (f) => getValidDate(f.createdAt) || getValidDate(f.created_at);
+var isUpdatedAfterCreation = (f) => {
+  if (f.revision && f.revision > 1) return true;
+  if (Array.isArray(f.history) && f.history.length > 0) return true;
+  if (typeof f.updated_by === "string" && f.updated_by.toLowerCase().includes("cleaned by")) return true;
+  const uDate = getUpdateDate(f);
+  const cDate = getCreationDate(f);
+  const updatedMs = uDate ? uDate.getTime() : 0;
+  const createdMs = cDate ? cDate.getTime() : 0;
+  if (createdMs > 0 && updatedMs > 0) return updatedMs - createdMs > 1e4;
+  if (createdMs === 0 && updatedMs > 0) return true;
+  return false;
+};
+var UPDATE_SERVICES = ["IMNCI", "EENC", "Neonatal", "ETAT"];
+var hasServiceData = (f, service) => {
+  switch (service) {
+    case "IMNCI":
+      return f["\u0648\u062C\u0648\u062F_\u0627\u0644\u0639\u0644\u0627\u062C_\u0627\u0644\u0645\u062A\u0643\u0627\u0645\u0644_\u0644\u0627\u0645\u0631\u0627\u0636_\u0627\u0644\u0637\u0641\u0648\u0644\u0629"] != null && f["\u0648\u062C\u0648\u062F_\u0627\u0644\u0639\u0644\u0627\u062C_\u0627\u0644\u0645\u062A\u0643\u0627\u0645\u0644_\u0644\u0627\u0645\u0631\u0627\u0636_\u0627\u0644\u0637\u0641\u0648\u0644\u0629"] !== "";
+    case "EENC":
+      return f.eenc_provides_essential_care != null && f.eenc_provides_essential_care !== "";
+    case "Neonatal":
+      return f.neonatal_level_of_care && Object.keys(f.neonatal_level_of_care).length > 0 || f.neonatal_level_primary != null || f.neonatal_level_secondary != null || f.neonatal_level_tertiary != null;
+    case "ETAT":
+      return f.etat_has_service != null && f.etat_has_service !== "";
+    default:
+      return false;
+  }
+};
+function updateRecord(f) {
+  const updated = getUpdateDate(f);
+  return {
+    state: f["\u0627\u0644\u0648\u0644\u0627\u064A\u0629"],
+    locality: f["\u0627\u0644\u0645\u062D\u0644\u064A\u0629"],
+    updatedMs: updated ? updated.getTime() : null,
+    isUpdate: isUpdatedAfterCreation(f),
+    updatedBy: typeof f.updated_by === "string" ? f.updated_by : f.updated_by || null,
+    services: UPDATE_SERVICES.filter((s) => hasServiceData(f, s))
+  };
+}
+var buildEmailToNameMap = (records) => {
+  const map = {};
+  records.forEach((r) => {
+    const raw = r.updatedBy;
+    if (!raw || typeof raw !== "string") return;
+    const cleaned = raw.replace(/^Cleaned by\s+/i, "").trim();
+    const match = cleaned.match(/^(.*?)\s*\((.*?@.*?)\)$/);
+    if (match) {
+      const name = match[1].trim();
+      const email = match[2].trim().toLowerCase();
+      if (name && email) map[email] = name;
+    }
+  });
+  return map;
+};
+var normalizeUpdater = (raw, emailMap) => {
+  if (!raw) return "System / Unknown";
+  const s = String(raw).replace(/^Cleaned by\s+/i, "").trim();
+  const lower = s.toLowerCase();
+  if (lower === "system" || lower === "unknown uploader" || lower === "unknown / system" || lower === "unknown") return "System / Unknown";
+  const match = s.match(/^(.*?)\s*\((.*?@.*?)\)$/);
+  if (match) return match[1].trim();
+  if (s.includes("@")) {
+    const email = s.trim().toLowerCase();
+    if (emailMap[email]) return emailMap[email];
+    return email.split("@")[0];
+  }
+  return s;
+};
+function yearMonthOf(ms, timeZone) {
+  if (!timeZone) {
+    const d = new Date(ms);
+    return { year: d.getFullYear(), month: d.getMonth() };
+  }
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "numeric" }).formatToParts(new Date(ms));
+  const get = (t) => Number(parts.find((p) => p.type === t)?.value);
+  return { year: get("year"), month: get("month") - 1 };
+}
+function updateCounts(records, { timeZone } = {}) {
+  const emailMap = buildEmailToNameMap(records);
+  const cells = [];
+  const index = /* @__PURE__ */ new Map();
+  records.forEach((r) => {
+    if (!r.isUpdate || r.updatedMs == null) return;
+    const { year, month } = yearMonthOf(r.updatedMs, timeZone);
+    const updater = normalizeUpdater(r.updatedBy, emailMap);
+    const key = `${year}|${month}|${r.state}|${r.locality}|${updater}`;
+    let c = index.get(key);
+    if (!c) {
+      c = { year, month, state: r.state, locality: r.locality, updater, total: 0, IMNCI: 0, EENC: 0, Neonatal: 0, ETAT: 0 };
+      index.set(key, c);
+      cells.push(c);
+    }
+    c.total += 1;
+    r.services.forEach((s) => {
+      c[s] += 1;
+    });
+  });
+  return cells;
+}
+function updateDashboardData(cells, { stateFilter = "", localityFilter = "", timeFilter = "THIS_MONTH", now }) {
+  if (!cells) return null;
+  const { year: currentYear, month: currentMonth } = now;
+  const inPeriod = (c) => {
+    if (timeFilter === "THIS_MONTH") return c.month === currentMonth && c.year === currentYear;
+    if (timeFilter === "LAST_MONTH") {
+      const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+      const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+      return c.month === lastMonth && c.year === lastMonthYear;
+    }
+    if (timeFilter === "THIS_YEAR") return c.year === currentYear;
+    if (timeFilter === "LAST_YEAR") return c.year === currentYear - 1;
+    return true;
+  };
+  let updatedThisMonth = 0;
+  const stateStats = {};
+  const localityStats = {};
+  const updaterStats = {};
+  cells.forEach((c) => {
+    if (stateFilter && c.state !== stateFilter) return;
+    if (localityFilter && c.locality !== localityFilter) return;
+    if (!inPeriod(c)) return;
+    if (c.month === currentMonth && c.year === currentYear) updatedThisMonth += c.total;
+    const stateKey = c.state || "Unknown";
+    if (!stateStats[stateKey]) stateStats[stateKey] = { total: 0, IMNCI: 0, EENC: 0, Neonatal: 0, ETAT: 0 };
+    const locKey = c.locality || "Unknown";
+    if (!localityStats[locKey]) localityStats[locKey] = { total: 0 };
+    if (!updaterStats[c.updater]) updaterStats[c.updater] = { total: 0, IMNCI: 0, EENC: 0, Neonatal: 0, ETAT: 0 };
+    stateStats[stateKey].total += c.total;
+    localityStats[locKey].total += c.total;
+    updaterStats[c.updater].total += c.total;
+    UPDATE_SERVICES.forEach((s) => {
+      stateStats[stateKey][s] += c[s];
+      updaterStats[c.updater][s] += c[s];
+    });
+  });
+  const top = (o) => Object.entries(o).sort((a, b) => b[1].total - a[1].total)[0];
+  return { updatedThisMonth, stateStats, updaterStats, topState: top(stateStats), topLocality: top(localityStats), topUpdater: top(updaterStats) };
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  facilityHistory
+  facilityHistory,
+  facilityUpdate
 });
