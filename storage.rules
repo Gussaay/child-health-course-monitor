@@ -67,6 +67,23 @@ service firebase.storage {
       allow delete: if request.auth != null;
     }
 
+    // Child Health Library: photos and content files. Public to read, like
+    // the library itself. As with online-courses/ above, Storage rules cannot
+    // see the Firestore role, so WRITE is any signed-in user while the UI and
+    // the libraryItems rule limit who can publish an item; type and size keep
+    // in step with validateLibraryFile() in src/components/library/libraryModel.js.
+    match /library/{allPaths=**} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+        && request.resource.size < 50 * 1024 * 1024
+        && (request.resource.contentType.matches('image/(png|jpe?g|webp|gif)')
+            || request.resource.contentType == 'application/pdf'
+            || request.resource.contentType == 'video/mp4'
+            || request.resource.contentType.matches('application/(msword|vnd[.]ms-excel|vnd[.]ms-powerpoint)')
+            || request.resource.contentType.matches('application/vnd[.]openxmlformats-officedocument[.].*'));
+      allow delete: if request.auth != null;
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

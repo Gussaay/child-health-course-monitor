@@ -1487,7 +1487,8 @@
       "survey": "Field surveys and mapping",
       "online_courses_manage": "Courses, enrolment, groups and progress",
       "protocol_manager": "Protocols, facilitator guides and online courses by service",
-      "mentorship_dashboard": "Mentorship results at a glance"
+      "mentorship_dashboard": "Mentorship results at a glance",
+      "library": "Training, guidelines, protocols and SOPs"
     },
     "welcome": "Welcome",
     "subtitle": "Select a module to get started",
@@ -1520,7 +1521,8 @@
       "survey": "Surveys",
       "online_courses_manage": "Course Manager",
       "protocol_manager": "Protocol & Course Management",
-      "mentorship_dashboard": "Mentorship Dashboard"
+      "mentorship_dashboard": "Mentorship Dashboard",
+      "library": "Child Health Library"
     }
   },
   "auth": {
@@ -9347,6 +9349,85 @@
       "funding_logistics": "Funding & transport",
       "community": "Community & caregivers",
       "other": "Other"
+    }
+  },
+  "library": {
+    "title": "Child Health Library",
+    "subtitle": "Training materials, guidelines, protocols, operational guides and SOPs for each child health service.",
+    "entry_hint": "Training, guidelines, protocols and SOPs. No sign-in needed.",
+    "choose_category": "Choose a section.",
+    "n_items": "{{count}} items",
+    "search": "Search this section",
+    "no_match": "Nothing matches your search.",
+    "empty": "No content has been added to this section yet.",
+    "add": "Add content",
+    "edit": "Edit",
+    "delete": "Remove",
+    "open": "Open",
+    "save": "Save",
+    "cancel": "Cancel",
+    "retry": "Try again",
+    "delete_confirm": "Remove \"{{name}}\" from the library?",
+    "deleted": "Removed from the library.",
+    "saved": "Saved to the library.",
+    "save_failed": "Could not save: {{message}}",
+    "load_failed": "Could not load the library.",
+    "add_title": "Add library content",
+    "edit_title": "Edit library content",
+    "services": {
+      "imnci": "Integrated Management of Newborn and Childhood Illnesses (IMNCI)",
+      "iccm": "Integrated Community Case Management for under 5 children (iCCM)",
+      "etat": "Emergency Triage, Assessment & Treatment (ETAT)",
+      "eenc": "Early Essential Newborn Care (EENC)",
+      "emonc": "Emergency Obstetric and Newborn Care (EmONC)",
+      "ssnc": "Small & Sick Newborn Care",
+      "ipc": "Infection Prevention & Control (Neonatal Unit)",
+      "midwives": "Comprehensive Package For Community Midwives",
+      "program_management": "Program Management",
+      "short": {
+        "imnci": "IMNCI",
+        "iccm": "iCCM",
+        "etat": "ETAT",
+        "eenc": "EENC",
+        "emonc": "EmONC",
+        "ssnc": "Small & Sick Newborn",
+        "ipc": "IPC",
+        "midwives": "Community Midwives",
+        "program_management": "Program Management"
+      }
+    },
+    "categories": {
+      "training": "Training",
+      "training_hint": "Training packages, modules and materials",
+      "guidelines": "Guidelines & Protocols",
+      "guidelines_hint": "National guidelines and clinical protocols",
+      "operational": "Operational Guides & SOP",
+      "operational_hint": "Operational guides and standard operating procedures"
+    },
+    "form": {
+      "service": "Service",
+      "category": "Section",
+      "name": "Name",
+      "description": "Description",
+      "photo": "Photo",
+      "upload": "Upload",
+      "upload_file": "Upload file",
+      "direct_link": "Direct link",
+      "remove_photo": "Remove photo",
+      "photo_hint": "Optional. PNG, JPEG, WebP or GIF, up to 5 MB.",
+      "content": "Content",
+      "current_file": "Current file: {{name}}",
+      "file_hint": "PDF, Word, PowerPoint, Excel, MP4 video or image, up to 50 MB."
+    },
+    "errors": {
+      "name": "Enter a name.",
+      "description": "The description is too long (3000 characters at most).",
+      "service": "Choose a service.",
+      "category": "Choose a section.",
+      "image": "Enter a valid web address for the photo (https://...).",
+      "content": "Upload a file or add a direct link to the content.",
+      "name_long": "The name is too long (200 characters at most).",
+      "link": "Enter a valid web address (https://...)."
     }
   }
 }

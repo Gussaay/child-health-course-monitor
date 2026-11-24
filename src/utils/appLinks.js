@@ -39,6 +39,7 @@ const PUBLIC_ROUTES = [
     [/^\/public\/report\/(course|facilitator)\/[\w-]+\/?$/, 'report'],
     [/^\/public\/profile\/team\//, 'profile'],
     [/^\/public\/projects\/?$/, 'projects'],
+    [/^\/public\/library\/?$/, 'library'],
     [/^\/public\/(facilitator|team-member)-application\/?$/, 'application'],
 ];
 

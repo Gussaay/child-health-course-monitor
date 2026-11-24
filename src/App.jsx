@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 
 import {
-    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages, Sun, Moon, Monitor, MapPin, Settings2, Share2
+    Home, Book, Users, User, Hospital, Database, ClipboardCheck, FolderKanban, TrendingUp, X, RefreshCw, Activity, Layers, LogOut, Info, HardDrive, Bell, Trash2, Cloud, CloudOff, Package, BookOpen, Sparkles, ArrowLeft, CalendarDays, Menu, Languages, Sun, Moon, Monitor, MapPin, Settings2, Share2, Library
 } from 'lucide-react';
 
 import { Capacitor } from '@capacitor/core';
@@ -98,6 +98,7 @@ const NewFacilityEntryForm = lazy(() => import('./components/FacilityForms.jsx')
 const SkillsMentorshipView = lazy(() => import('./components/mentorship/SkillsMentorshipView.jsx'));
 
 const ProjectTrackerView = lazy(() => import('./components/ProjectTrackerView'));
+const ChildHealthLibraryView = lazy(() => import('./components/library/ChildHealthLibraryView.jsx'));
 const SupplyManagementView = lazy(() => import('./components/SupplyManagementView'));
 const SupervisionView = lazy(() => import('./components/SupervisionView'));
 const SurveyView = lazy(() => import('./components/SurveyView'));
@@ -197,6 +198,7 @@ import ErrorBoundary, { QuietBoundary } from './components/ErrorBoundary.jsx';
 import { publicBaseUrl } from './utils/publicLink';
 import { DataAssistantCard, PageAddButton } from './components/DataAssistantLauncher';
 import { ScanQrCard } from './components/QrScanLauncher';
+import { LibraryEntryCard } from './components/library/LibraryEntryCard.jsx';
 import { isPublicAppPath, parseScannedCode } from './utils/appLinks';
 import { courseLocationText } from './components/constants';
 import GetAppBanner from './components/GetAppBanner';
@@ -431,6 +433,7 @@ function pageTitles(t) {
     supplyManagement: t('landing.modules.supply', 'Supply Management'), supervision: t('landing.modules.supervision', 'Supervision'), survey: t('landing.modules.survey', 'Surveys'),
     onlineCourses: t('landing.modules.online_courses', 'Online Courses'), onlineCoursesManage: t('landing.modules.online_courses_manage', 'Course Manager'), protocolManager: t('landing.modules.protocol_manager', 'Protocol & Course Management'), downloads: t('landing.modules.downloads', 'App Files & Downloads'),
     admin: t('landing.modules.admin', 'Admin'), about: t('landing.modules.about', 'About Team'),
+    library: t('landing.modules.library', 'Child Health Library'),
     courseReport: t('landing.modules.course_report', 'Course Report'), participantReport: t('landing.modules.participant_report', 'Participant Report'),
     facilitatorReport: t('landing.modules.facilitator_report', 'Facilitator Report'), facilitatorForm: t('landing.modules.facilitator_form', 'Facilitator'),
     finalReport: t('landing.modules.final_report', 'Final Report'), attendanceManager: t('landing.modules.attendance', 'Attendance'),
@@ -454,6 +457,7 @@ function allModules(t, permissions) {
         { label: t('landing.modules.facilities', 'Child Health Services'), tagline: tile('facilities', 'Facilities and service coverage'), view: 'childHealthServices', group: 'services', icon: Hospital, permission: permissions.canViewFacilities },
         { label: t('landing.modules.mentorship', 'Skills Mentorship'), tagline: tile('mentorship', 'Mentorship visits and skills'), view: 'skillsMentorship', group: 'services', icon: ClipboardCheck, permission: permissions.canViewSkillsMentorship },
         { label: t('landing.modules.imci', 'IMNCI Protocol'), tagline: tile('imci', 'Assess and classify a sick child'), view: 'imciForm', group: 'training', icon: Activity, permission: permissions.canViewCourse },
+        { label: t('landing.modules.library', 'Child Health Library'), tagline: tile('library', 'Training, guidelines, protocols and SOPs'), view: 'library', group: 'training', icon: Library, permission: true },
         { label: t('landing.modules.online_courses', 'Online Courses'), tagline: tile('online_courses', 'Learn and practise online'), view: 'onlineCourses', group: 'training', icon: BookOpen, permission: permissions.canViewOnlineCourses },
         { label: t('landing.modules.online_courses_manage', 'Course Manager'), tagline: tile('online_courses_manage', 'Courses, enrolment, groups and progress'), view: 'onlineCoursesManage', group: 'training', icon: Settings2, permission: permissions.canManageOnlineLearners },
         { label: t('landing.modules.protocol_manager', 'Protocol & Course Management'), tagline: tile('protocol_manager', 'Protocols, facilitator guides and online courses by service'), view: 'protocolManager', group: 'training', icon: ClipboardCheck, permission: permissions.canManageOnlineLearners },
@@ -1213,6 +1217,8 @@ export default function App() {
     
     // --- ADDED FOR PUBLIC PROJECT DASHBOARD SHARED LINKS ---
     const [isPublicProjectsView, setIsPublicProjectsView] = useState(false);
+    // /public/library: the Child Health Library, open to everyone.
+    const [isPublicLibraryView, setIsPublicLibraryView] = useState(false);
 
     const [operationCounts, setOperationCounts] = useState({ reads: 0, writes: 0 });
     const [isMonitorVisible, setIsMonitorVisible] = useState(true);
@@ -1370,6 +1376,7 @@ export default function App() {
             setIsPublicMeetingView(false); setPublicMeetingId(null); setPublicMeetingData(null); setPublicMeetingTargetDate(null);
 
             setIsPublicProjectsView(false);
+            setIsPublicLibraryView(false);
 
             setPublicSupervisionFormId(null);
             setPublicSurveyId(null);
@@ -1382,6 +1389,11 @@ export default function App() {
             // link that does not.
             const connectRequest = searchParamsPath.get('connect_claude');
             if (connectRequest) { setConnectClaudeId(connectRequest); return; }
+
+            if (/^\/public\/library\/?$/.test(path)) {
+                setIsPublicLibraryView(true);
+                return;
+            }
 
             const publicProjectsMatch = path.match(/^\/public\/projects\/?$/);
             const isSharedProjectQuery = searchParamsPath.get('view') === 'dashboard' || searchParamsPath.get('tab') === 'active' || searchParamsPath.get('tab') === 'completed' || searchParamsPath.has('project');
@@ -2747,6 +2759,9 @@ export default function App() {
                     />
                 ) : null;
 
+            case 'library':
+                return <ChildHealthLibraryView permissions={permissions} user={user} onBack={goBack} />;
+
             case 'mentorshipDashboard':
                 // Straight to the mentorship dashboard: pick a service, see its
                 // dashboard. Everyone may open it: people with mentorship access
@@ -2865,7 +2880,7 @@ case 'meetings':
     // window. Drawn with the full app chrome — header, navigation, bottom bar —
     // the consent card is pushed below the fold of a 600px popup and the window
     // looks empty, which is exactly how it was reported.
-    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || publicViewType === 'certificateNames' || isBulkUpdateView || publicViewType === 'attendance' || publicViewType === 'dailyEvaluation' || publicViewType === 'onlineExercises' || isPublicRegistrationView || isPublicMeetingView || isPublicProjectsView || !!publicSupervisionFormId || !!publicSurveyId || !!connectClaudeId;
+    const isMinimalUILayout = isApplicationPublicView || isMentorshipPublicView || isPublicMonitoringView || isPublicReportView || isPublicTestView || isVerificationPath || isCertDownloadPath || isCourseCertPagePath || publicViewType === 'certificateDownload' || publicViewType === 'courseCertificatesPage' || publicViewType === 'certificateNames' || isBulkUpdateView || publicViewType === 'attendance' || publicViewType === 'dailyEvaluation' || publicViewType === 'onlineExercises' || isPublicRegistrationView || isPublicMeetingView || isPublicProjectsView || isPublicLibraryView || !!publicSupervisionFormId || !!publicSurveyId || !!connectClaudeId;
 
     let mainContent;
 
@@ -2901,6 +2916,17 @@ case 'meetings':
                     authLoading={authLoading}
                     onDone={() => { setConnectClaudeId(null); window.history.replaceState({}, '', '/'); }}
                 />
+            </Suspense>
+        );
+    }
+    else if (isPublicLibraryView) {
+        // A signed-in federal manager or super user opening the shared link
+        // gets the same page with the add / edit tools.
+        mainContent = (
+            <Suspense fallback={<PageSkeleton />}>
+                <div className="max-w-6xl mx-auto w-full p-3 md:p-6">
+                    <ChildHealthLibraryView permissions={user ? permissions : {}} user={user} isPublic={!user} onBack={scannedPublicOpen ? leaveScannedPage : undefined} />
+                </div>
             </Suspense>
         );
     }
@@ -3143,7 +3169,14 @@ case 'meetings':
     else if (!user && !authLoading) {
         // The phone app offers the QR scanner before sign-in too: a
         // participant opening their pre-test needs no account.
-        mainContent = <SignInBox above={QR_SCAN_ENABLED ? <ScanQrCard onOpen={openQrScanner} /> : null} />;
+        // The library needs no account, so it is offered above the sign-in box.
+        const openLibrary = () => openScannedLink({ path: '/public/library', public: true });
+        mainContent = <SignInBox above={(
+            <div className="space-y-2">
+                {QR_SCAN_ENABLED && <ScanQrCard onOpen={openQrScanner} />}
+                <LibraryEntryCard onOpen={openLibrary} />
+            </div>
+        )} />;
     }
     else if (user && isProfileIncomplete) {
         mainContent = <SignInBox />;

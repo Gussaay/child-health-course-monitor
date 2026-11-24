@@ -193,6 +193,17 @@ service cloud.firestore {
     // Any signed-in user may read the catalogue and take a course; authoring is
     // federal, because published material carries the programme's name.
     // =========================================================================
+    // =========================================================================
+    // --- CHILD HEALTH LIBRARY ---
+    // Training material, guidelines, protocols, operational guides and SOPs.
+    // Public: anyone may read, signed in or not (/public/library). Federal
+    // managers and super users add, edit and remove content, as in the UI.
+    // =========================================================================
+    match /libraryItems/{itemId} {
+      allow read: if true;
+      allow write: if request.auth != null && isSubCourseEditor();
+    }
+
     match /onlineCourses/{courseId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && isSubCourseEditor();
