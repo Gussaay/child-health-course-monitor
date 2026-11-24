@@ -2395,7 +2395,7 @@ const ChildHealthServicesView = ({
             ) : view === 'kpi_history' ? (
                 <AggregateHistoryDashboard userStates={userStates} onBack={() => setView('action_menu')} />
             ) : view === 'update_dashboard' ? (
-                <UpdateDashboard facilities={scopedFacilities || []} onBack={() => setView('action_menu')} />
+                <UpdateDashboard facilities={scopedFacilities || []} onBack={() => setView('action_menu')} scope={{ level: permissions?.manageScope || '', states: userStates || [], localities: userLocalities || [] }} />
             ) : null}
 
             <Modal isOpen={!!updateSelectionService && view === 'action_menu'} onClose={() => setUpdateSelectionService(null)} title={`تحديث بيانات - ${updateSelectionService}`} size="lg">

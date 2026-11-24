@@ -6,6 +6,9 @@ import { listSnapshotsForFacility, fetchFacilitiesHistoryMultiDate } from "../da
 import { Modal, Spinner, EmptyState, Select, Table, Button, Card, PageHeader, FormGroup, Input, SkeletonTable } from './CommonComponents';
 import { STATE_LOCALITIES } from './constants';
 import { ArrowLeft } from 'lucide-react';
+import { historyCounts, historyMetrics } from '../dashboards/facilityHistory';
+import { SERVER_KPIS } from '../dashboards/serverKpiSwitch';
+import { askServerKpis } from '../dashboards/serverKpis';
 import { useTranslation } from 'react-i18next';
 
 // ============================================================================
@@ -343,8 +346,6 @@ const MultiLineChart = ({ dates, lines, title }) => {
     );
 };
 
-// Safe string normalizer to prevent failing string matching (like "مستشفى " !== "مستشفى")
-const normalizeStr = (str) => typeof str === 'string' ? str.trim() : str;
 
 export const AggregateHistoryDashboard = ({ userStates, onBack }) => {
     const { t } = useTranslation();
@@ -388,58 +389,28 @@ export const AggregateHistoryDashboard = ({ userStates, onBack }) => {
         try {
             const statesToQuery = selectedState ? [selectedState] : availableStates;
             
-            // Using the robust local data fetcher directly inside this file
-            const facilitiesByDate = await fetchFacilitiesHistoryMultiDate(statesToQuery, targetDates.map(d => d.toISOString()));
-            
             const dateLabels = targetDates.map(d => d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric', day: dateMode !== 'last6months' ? 'numeric' : undefined }));
-            
-            const processService = (facilities, serviceCheckFn, toolKeys) => {
-                let filtered = facilities;
-                if (selectedLocality) filtered = filtered.filter(f => f['المحلية'] === selectedLocality);
-                
-                const baseDenominator = filtered.length;
-                if (baseDenominator === 0) return { total: { num: 0, perc: 0, base: 0 }, tools: toolKeys.reduce((acc, k) => ({...acc, [k.key]: { num: 0, perc: 0 }}), {}) };
 
-                const serviceProviders = filtered.filter(serviceCheckFn);
-                const toolsAgg = toolKeys.reduce((acc, k) => {
-                    const count = serviceProviders.filter(f => f[k.key] === 'Yes').length;
-                    acc[k.key] = { num: count, perc: Math.round((count / Math.max(serviceProviders.length, 1)) * 100) };
-                    return acc;
-                }, {});
+            // The numbers come from src/dashboards/facilityHistory.js: from the
+            // server when it is switched on (only counts are downloaded), else,
+            // or when the server cannot answer, from the snapshots read here.
+            let servicesData = null;
+            let source = 'device';
+            if (SERVER_KPIS.facilityHistory) {
+                try {
+                    const res = await askServerKpis('facilityHistory', { states: statesToQuery, dates: targetDates.map(d => d.toISOString()) });
+                    servicesData = res.results.map(r => historyMetrics(r.counts, { states: statesToQuery, locality: selectedLocality }));
+                    source = 'server';
+                } catch (err) {
+                    console.warn('[facility history] server numbers not available, reading the snapshots:', err?.code || err?.message || err);
+                }
+            }
+            if (!servicesData) {
+                const facilitiesByDate = await fetchFacilitiesHistoryMultiDate(statesToQuery, targetDates.map(d => d.toISOString()));
+                servicesData = targetDates.map((date, idx) => historyMetrics(historyCounts(facilitiesByDate[idx] || []), { locality: selectedLocality }));
+            }
 
-                return {
-                    total: { num: serviceProviders.length, perc: Math.round((serviceProviders.length / baseDenominator) * 100), base: baseDenominator },
-                    tools: toolsAgg
-                };
-            };
-
-            const servicesData = targetDates.map((date, idx) => {
-                const dayFacilities = facilitiesByDate[idx] || [];
-                return {
-                    imnci: processService(
-                        dayFacilities.filter(f => ['وحدة صحة الاسرة', 'مركز صحة الاسرة'].includes(normalizeStr(f['نوع_المؤسسةالصحية'])) && f['هل_المؤسسة_تعمل'] === 'Yes'),
-                        f => f['وجود_العلاج_المتكامل_لامراض_الطفولة'] === 'Yes',
-                        [ { key: 'وجود_سجل_علاج_متكامل', label: 'IMNCI Register' }, { key: 'وجود_كتيب_لوحات', label: 'Chart Booklet' }, { key: 'ميزان_وزن', label: 'Weight Scale' }, { key: 'ساعة_مؤقت', label: 'Timer' } ]
-                    ),
-                    eenc: processService(
-                        dayFacilities.filter(f => ['BEmONC', 'CEmONC'].includes(normalizeStr(f.eenc_service_type)) && f['هل_المؤسسة_تعمل'] === 'Yes'),
-                        f => f.eenc_provides_essential_care === 'Yes',
-                        [ { key: 'eenc_steam_sterilizer', label: 'Steam Sterilizer' }, { key: 'eenc_wall_clock', label: 'Wall Clock' } ]
-                    ),
-                    neonatal: processService(
-                        dayFacilities.filter(f => ['CEmONC', 'pediatric'].includes(normalizeStr(f.eenc_service_type)) || f.neonatal_level_secondary === 'Yes' || f.neonatal_level_tertiary === 'Yes' || f.neonatal_level_of_care?.secondary || f.neonatal_level_of_care?.tertiary),
-                        f => f.neonatal_level_secondary === 'Yes' || f.neonatal_level_of_care?.secondary === true || f.neonatal_level_tertiary === 'Yes' || f.neonatal_level_of_care?.tertiary === true,
-                        [ { key: 'neonatal_kmc_unit', label: 'KMC Unit' }, { key: 'neonatal_breastfeeding_unit', label: 'Breastfeeding Unit' } ]
-                    ),
-                    critical: processService(
-                        dayFacilities.filter(f => ['مستشفى', 'مستشفى ريفي'].includes(normalizeStr(f['نوع_المؤسسةالصحية'])) || normalizeStr(f.eenc_service_type) === 'pediatric'),
-                        f => f.etat_has_service === 'Yes',
-                        [ { key: 'hdu_has_service', label: 'HDU Service' }, { key: 'picu_has_service', label: 'PICU Service' } ]
-                    )
-                };
-            });
-
-            setHistoryData({ labels: dateLabels, metrics: servicesData });
+            setHistoryData({ labels: dateLabels, metrics: servicesData, source });
         } catch (error) {
             console.error("Failed to load aggregate history:", error);
         } finally {

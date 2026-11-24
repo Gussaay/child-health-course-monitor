@@ -387,3 +387,10 @@ exports.homeCopy = require("./homeCopy").homeCopy;
 // The public mentorship dashboard link (opened without signing in): an
 // anonymous copy of the visits and visit reports (publicMentorshipCopy.js).
 exports.publicMentorshipCopy = require("./publicMentorshipCopy").publicMentorshipCopy;
+// Dashboards' numbers worked out on the server, so pages need not download
+// every record (dashboardKpis.js, docs/server-dashboard-kpis.md). Each page
+// keeps reading the lists itself as a fallback.
+exports.dashboardKpis = require("./dashboardKpis").dashboardKpis;
+// The mentorship lists for a device's first download, from a server copy
+// instead of the database (mentorshipCopy.js); later syncs read changes only.
+exports.mentorshipCopy = require("./mentorshipCopy").mentorshipCopy;

@@ -1,6 +1,19 @@
 // DataContext.jsx
 import React, { useState, createContext, useContext, useCallback, useEffect, useMemo, useRef } from 'react';
 import { withoutPractice } from './utils/practiceParticipants.js';
+import { SERVER_COPIES } from './dashboards/serverKpiSwitch.js';
+import { fetchMentorshipCopyList } from './dashboards/serverCopy.js';
+
+// A device's FIRST download of a mentorship list (lastSync 0) comes from the
+// server copy when switched on (docs/server-dashboard-kpis.md, tier "a");
+// later syncs, and any failure, read the database as before.
+const firstFromServerCopy = (list, lastSync, direct) => {
+    if (!SERVER_COPIES.mentorship || lastSync > 0) return direct();
+    return fetchMentorshipCopyList(list).catch((e) => {
+        console.warn(`[server copy] ${list} not available, reading the database:`, e?.code || e?.message || e);
+        return direct();
+    });
+};
 import { 
     listAllCourses,
     listAllParticipants,
@@ -1005,9 +1018,9 @@ export const DataProvider = ({ children }) => {
         
         fetchHealthFacilities: createFetcher('healthFacilities', listHealthFacilities), 
         
-        fetchSkillMentorshipSubmissions: createFetcher('skillMentorshipSubmissions', (opts, lastSync) => listMentorshipSessions(opts, lastSync)),
-        fetchIMNCIVisitReports: createFetcher('imnciVisitReports', (opts, lastSync) => listIMNCIVisitReports(opts, lastSync)),
-        fetchEENCVisitReports: createFetcher('eencVisitReports', (opts, lastSync) => listEENCVisitReports(opts, lastSync)), 
+        fetchSkillMentorshipSubmissions: createFetcher('skillMentorshipSubmissions', (opts, lastSync) => firstFromServerCopy('skillMentorshipSubmissions', lastSync, () => listMentorshipSessions(opts, lastSync))),
+        fetchIMNCIVisitReports: createFetcher('imnciVisitReports', (opts, lastSync) => firstFromServerCopy('imnciVisitReports', lastSync, () => listIMNCIVisitReports(opts, lastSync))),
+        fetchEENCVisitReports: createFetcher('eencVisitReports', (opts, lastSync) => firstFromServerCopy('eencVisitReports', lastSync, () => listEENCVisitReports(opts, lastSync))), 
         
         fetchIMNCIPatientRecords: createFetcher('imnciPatientRecords', (opts, lastSync) => listIMNCIPatientRecords(opts, lastSync)), 
 
