@@ -236,6 +236,20 @@
           }
         },
         {
+          "source": "/public/library",
+          "function": {
+            "functionId": "libraryLinkPage",
+            "region": "us-central1"
+          }
+        },
+        {
+          "source": "/public/library/**",
+          "function": {
+            "functionId": "libraryLinkPage",
+            "region": "us-central1"
+          }
+        },
+        {
           "regex": "^/($|[^a].*|a($|[^s].*)|as($|[^s].*)|ass($|[^e].*)|asse($|[^t].*)|asset($|[^s].*)|assets($|[^/].*))$",
           "destination": "/index.html"
         }
@@ -426,6 +440,20 @@
           }
         },
         {
+          "source": "/public/library",
+          "function": {
+            "functionId": "libraryLinkPage",
+            "region": "us-central1"
+          }
+        },
+        {
+          "source": "/public/library/**",
+          "function": {
+            "functionId": "libraryLinkPage",
+            "region": "us-central1"
+          }
+        },
+        {
           "regex": "^/($|[^a].*|a($|[^s].*)|as($|[^s].*)|ass($|[^e].*)|asse($|[^t].*)|asset($|[^s].*)|assets($|[^/].*))$",
           "destination": "/ch.html"
         }
@@ -603,6 +631,20 @@
           "source": "/learn/**",
           "function": {
             "functionId": "courseLinkPage",
+            "region": "us-central1"
+          }
+        },
+        {
+          "source": "/public/library",
+          "function": {
+            "functionId": "libraryLinkPage",
+            "region": "us-central1"
+          }
+        },
+        {
+          "source": "/public/library/**",
+          "function": {
+            "functionId": "libraryLinkPage",
             "region": "us-central1"
           }
         },

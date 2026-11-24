@@ -76,4 +76,32 @@ describe('child health library', () => {
             expect(parseScannedCode(`https://ch-sudan.web.app${path}`)).toMatchObject({ type: 'app', kind: 'library', public: true });
         });
     });
+
+    it('server preview names match the app (functions/libraryLinkMeta.js)', () => {
+        const meta = require('../functions/libraryLinkMeta.js');
+        LIBRARY_SERVICES.forEach((sv) => {
+            expect(meta.LIBRARY_SERVICES[sv.titleKey]).toBe(sv.title);
+            expect(meta.SERVICE_KEYS[sv.key]).toBe(sv.titleKey);
+        });
+        LIBRARY_CATEGORIES.forEach((c) => expect(meta.LIBRARY_CATEGORIES[c.key]).toBe(c.label));
+    });
+
+    it('link preview shows the item name, full description and its photo', () => {
+        const { parseLibraryLink, libraryPreview } = require('../functions/libraryLinkMeta.js');
+        const site = { name: 'NCHP', image: 'https://x.web.app/og.png' };
+        const long = 'A '.repeat(400).trim();
+        const item = { name: 'IMNCI Chart Booklet', description: long, imageUrl: 'https://firebasestorage.googleapis.com/v0/b/x/o/a.jpg?alt=media&token=1', service: 'IMNCI', category: 'training' };
+        const p = libraryPreview(parseLibraryLink('/public/library/item/abc123'), item, site);
+        expect(p).toMatchObject({ title: 'IMNCI Chart Booklet', description: long, image: item.imageUrl, imageSize: null });
+        expect(libraryPreview({ itemId: 'x' }, { ...item, imageUrl: '' }, site).image).toBe(site.image);
+        expect(libraryPreview({ itemId: 'x' }, null, site).title).toBe('Child Health Library');
+        expect(libraryPreview(parseLibraryLink('/public/library/ssnc/training'), null, site).title).toBe('Training - Small & Sick Newborn Care');
+        expect(parseLibraryLink('/public/projects')).toBeNull();
+
+        const { withCourseTags } = require('../functions/courseLinkTags.js');
+        const html = withCourseTags('<html><head><title>x</title><meta name="description" content="d"></head></html>', { ...p, siteName: 'NCHP', url: 'https://x/public/library/item/abc123' });
+        expect(html).toContain('property="og:image" content="https://firebasestorage.googleapis.com/v0/b/x/o/a.jpg?alt=media&amp;token=1"');
+        expect(html).not.toContain('og:image:width');
+        expect(html).toContain(`property="og:description" content="${long}"`);
+    });
 });

@@ -368,6 +368,9 @@ exports.onlineEnrolment = require("./onlineEnrolment").onlineEnrolment;
 
 // A shared course link (/learn/<id>): the start page with the course title in its link-preview tags.
 exports.courseLinkPage = require("./courseLinkPage").courseLinkPage;
+// A shared Child Health Library link (/public/library/...): the start page with
+// the item's name, full description and photo in its link-preview tags.
+exports.libraryLinkPage = require("./libraryLinkPage").libraryLinkPage;
 
 // Google's own Firestore read/write/delete counts for a month, for the super
 // users' Usage tab (googleUsage.js). Runs as the function's service account,
