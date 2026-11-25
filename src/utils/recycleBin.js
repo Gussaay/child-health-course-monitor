@@ -15,7 +15,7 @@
 // deletes it for good, together with the pictures in Storage, and knows which
 // pictures other sections still share.
 
-import { courseStateText, courseLocalityText } from '../components/constants';
+import { courseStateText, courseLocalityText } from './coursePlaceText.js';
 
 export const RECYCLE_BIN_TYPES = [
     {

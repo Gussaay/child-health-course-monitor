@@ -1,5 +1,10 @@
 // constants.js
 // ----------------------------- CONSTANTS ------------------------------
+import { CERT_APPROVAL_FIELD, certificateSubCourseOf, certificateApprovalSnapshot, participantNameIn, participantNameOnly } from '../utils/certificateApproval.js';
+
+export { CERT_APPROVAL_FIELD, certificateSubCourseOf, certificateApprovalSnapshot, hasArabicScript, participantNameIn, participantNameOnly } from '../utils/certificateApproval.js';
+export { courseLocalityText, courseLocationText, courseStateText } from '../utils/coursePlaceText.js';
+
 export const STATE_LOCALITIES = {
   "Federal": {
     "en": "Federal",
@@ -741,27 +746,6 @@ export const isFederalCourse = (course) => {
     return states.some(isFederalValue);
 };
 
-// A course held in more than one state or locality is shown as "Multiple
-// states" / "Multiple localities" (not the list of names) in every page,
-// table, form, report and shared-link text. `lang` 'ar' or 'en'; by default
-// the page's language.
-const placeList = (list, joined) => (Array.isArray(list) && list.filter(Boolean).length
-    ? list.filter(Boolean).map((x) => String(x).trim())
-    : String(joined || '').split(',').map((x) => x.trim()).filter(Boolean));
-const placeLang = (lang) => (lang || (typeof document !== 'undefined' ? document.documentElement.lang : '') || 'en');
-export const courseStateText = (course, lang) => {
-    const list = placeList(course?.states, course?.state);
-    if (list.length > 1) return placeLang(lang).startsWith('ar') ? 'ولايات متعددة' : 'Multiple states';
-    return list[0] || '';
-};
-export const courseLocalityText = (course, lang) => {
-    const list = placeList(course?.localities, course?.locality);
-    if (list.length > 1) return placeLang(lang).startsWith('ar') ? 'محليات متعددة' : 'Multiple localities';
-    return list[0] || '';
-};
-// "State - Locality", leaving out what is empty.
-export const courseLocationText = (course, sep = ' - ', lang) =>
-    [courseStateText(course, lang), courseLocalityText(course, lang)].filter(Boolean).join(sep);
 
 export const getAllStateOptions = () =>
     Object.keys(STATE_LOCALITIES)
@@ -1840,22 +1824,6 @@ export const isWithinCoursePeriod = (course, now = new Date()) => {
     return today >= start && today < end;
 };
 
-/**
- * The sub-course a certificate prints for a participant.
- *
- * Their own record first, then their group's assignment, then the course
- * director's. Note this is deliberately NOT the order used by
- * participantsForModule: that decides which skills checklist applies and the
- * group is authoritative there, whereas this is the line of text printed on a
- * certificate, where what the participant's own record says has always won.
- * Changing it would silently reissue certificates with different wording.
- */
-export const certificateSubCourseOf = (course, participant) => {
-    if (participant?.imci_sub_type) return participant.imci_sub_type;
-    const byGroup = (course?.facilitatorAssignments || [])
-        .find((a) => a?.group === participant?.group)?.imci_sub_type;
-    return byGroup || course?.director_imci_sub_type || null;
-};
 
 // Two values that would print identically. Spacing and case are not changes
 // worth withdrawing a signature over; blank, missing and null are all "nothing".
@@ -1951,25 +1919,6 @@ export const mergeCertificateApprovalScopes = (course, subCourses, languages) =>
 // Arabic name, anything else the English one. Nothing is migrated.
 
 /** True when the text has Arabic letters. */
-export const hasArabicScript = (text) => /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(String(text || ''));
-
-/** The participant's name in one language ('en' | 'ar'), or '' when it is only known in the other. */
-export const participantNameOnly = (participant, language) => {
-    const own = String(participant?.[language === 'ar' ? 'nameAr' : 'nameEn'] || '').trim();
-    if (own) return own;
-    const main = String(participant?.name || '').trim();
-    if (!main) return '';
-    return (language === 'ar') === hasArabicScript(main) ? main : '';
-};
-
-/**
- * The name printed on a certificate in `language`: the name in that language,
- * else the one in the other language, else the record's name.
- */
-export const participantNameIn = (participant, language) =>
-    participantNameOnly(participant, language)
-    || participantNameOnly(participant, language === 'ar' ? 'en' : 'ar')
-    || String(participant?.name || '').trim();
 
 /** Both names, filled from `name` where a language has none ({ nameEn, nameAr }). */
 export const participantNames = (participant) => ({
@@ -1977,8 +1926,6 @@ export const participantNames = (participant) => ({
     nameAr: participantNameOnly(participant, 'ar'),
 });
 
-/** What a participant's certificate approval snapshot is called on their record. */
-export const CERT_APPROVAL_FIELD = 'certificateApproval';
 
 /**
  * Whether this participant's certificate may be issued.
@@ -2055,21 +2002,6 @@ export const staleCertificateParticipants = (participants, course) =>
         (p) => !p.isDeleted && certificateApprovalState(p, course).state === 'stale'
     );
 
-/**
- * What to write on a participant's record when their certificate is approved.
- *
- * Built here rather than at each call site so the snapshot and the comparison
- * can never read different fields — the fault that would make a certificate
- * look stale forever, or never.
- */
-export const certificateApprovalSnapshot = (participant, course, approvedBy = '') => ({
-    name: participant?.name || '',
-    nameEn: participantNameIn(participant, 'en'),
-    nameAr: participantNameIn(participant, 'ar'),
-    subCourse: certificateSubCourseOf(course, participant) || '',
-    at: new Date().toISOString(),
-    by: approvedBy || '',
-});
 
 // --- Certificate course director -------------------------------------------
 

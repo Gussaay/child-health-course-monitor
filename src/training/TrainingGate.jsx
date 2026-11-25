@@ -25,7 +25,7 @@ import {
 } from './trainingProgress.js';
 import { suggestParticipant, autoLinkParticipant, norm, digits } from './trainingRows.js';
 import { seedSandbox, refreshDeviceCache, SEED_VERSION } from './trainingSeed.js';
-import { courseStateText } from '../components/constants';
+import { courseStateText } from '../utils/coursePlaceText.js';
 
 const SEEDED_KEY = 'chm_training_seeded';
 
