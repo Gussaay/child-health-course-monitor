@@ -9,7 +9,7 @@
 // Open to everyone, signed in or not (/public/library). Federal managers and
 // super users add, edit and remove content: name, description, a photo
 // (uploaded or a direct link) and the content (an uploaded file or a link).
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Activity, Baby, Bell, BookOpen, CheckCircle2, ClipboardList, Download, ExternalLink, FileText, GraduationCap, HeartPulse,
@@ -24,6 +24,10 @@ import {
     LIBRARY_ERROR_TEXT, canManageLibrary, countBy, isDownloadableBook, isDraftItem, itemsFor, libraryPath, validateLibraryFile, validateLibraryItem,
 } from './libraryModel';
 import { downloadBook, downloadedBook, openDownloadedBook, removeDownloadedBook, shareDownloadedBook } from './libraryDownload';
+
+// The in-app PDF reader, loaded only when a book is actually read, so its
+// pdf.js engine never weighs on the library's pages.
+const LibraryPdfReader = lazy(() => import('./LibraryPdfReader'));
 import { shareLibraryLink } from './libraryShare';
 import {
     addLibraryItem, addLibraryRequest, deleteLibraryItem, listLibraryItems, listLibraryRequests, removeLibraryFile, startLibraryUpload, updateLibraryItem,
@@ -337,6 +341,7 @@ function LibraryCard({ item, canManage, onShare, onEdit, onDelete, onNotify, wai
     const [dlState, setDlState] = useState('checking'); // checking | no | busy | yes
     const [dlProgress, setDlProgress] = useState(0);
     const [actionsOpen, setActionsOpen] = useState(false);
+    const [reading, setReading] = useState(false);
     useEffect(() => {
         let alive = true;
         if (!downloadable) { setDlState('no'); return undefined; }
@@ -418,7 +423,12 @@ function LibraryCard({ item, canManage, onShare, onEdit, onDelete, onNotify, wai
             </div>
         </article>
         {actionsOpen && (
-            <LibraryBookActions item={item} onClose={() => setActionsOpen(false)} onRemoved={() => { setActionsOpen(false); setDlState('no'); }} />
+            <LibraryBookActions item={item} onClose={() => setActionsOpen(false)} onRemoved={() => { setActionsOpen(false); setDlState('no'); }} onRead={() => { setActionsOpen(false); setReading(true); }} />
+        )}
+        {reading && (
+            <Suspense fallback={null}>
+                <LibraryPdfReader item={item} onClose={() => setReading(false)} />
+            </Suspense>
         )}
         </>
     );
@@ -426,7 +436,7 @@ function LibraryCard({ item, canManage, onShare, onEdit, onDelete, onNotify, wai
 
 // What a downloaded book can be used for: read it here, send the file to
 // someone, open it in another app, or remove the copy.
-function LibraryBookActions({ item, onClose, onRemoved }) {
+function LibraryBookActions({ item, onClose, onRemoved, onRead }) {
     const { t } = useTranslation();
     const [busy, setBusy] = useState(false);
     const run = async (fn, failText) => {
@@ -439,7 +449,7 @@ function LibraryBookActions({ item, onClose, onRemoved }) {
         <Modal isOpen onClose={busy ? () => {} : onClose} title={item.name}>
             <div className="space-y-2 p-4 md:p-6">
                 <p className="text-sm leading-relaxed text-slate-600">{t('library.download.on_device', 'This book is saved on this device, so it opens without a connection.')}</p>
-                <Button className="w-full justify-center" disabled={busy} onClick={() => run(async () => { await openDownloadedBook(item); onClose(); }, t('library.download.open_failed', 'Could not open the book.'))}>
+                <Button className="w-full justify-center" disabled={busy} onClick={onRead}>
                     <BookOpen size={16} /> {t('library.download.read', 'Read the book')}
                 </Button>
                 <Button variant="secondary" className="w-full justify-center" disabled={busy} onClick={() => run(() => shareDownloadedBook(item), t('library.download.share_failed', 'Could not send the book.'))}>

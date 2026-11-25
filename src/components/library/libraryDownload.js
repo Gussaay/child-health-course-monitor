@@ -84,6 +84,27 @@ export async function downloadBook(item, onProgress) {
     return entry;
 }
 
+const base64ToBytes = (b64) => {
+    const bin = atob(String(b64 || ''));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+};
+
+/** The book's bytes, for the in-app reader: from the downloaded copy on a
+ * phone, fetched on the web. */
+export async function downloadedBookBytes(item) {
+    if (isNative()) {
+        const entry = readIndex()[item?.id];
+        if (!entry?.path) throw new Error('The downloaded copy is missing.');
+        const file = await Filesystem.readFile({ path: entry.path, directory: Directory.Documents });
+        return base64ToBytes(file.data);
+    }
+    const res = await fetch(item.linkUrl);
+    if (!res.ok) throw new Error('Could not fetch the book.');
+    return new Uint8Array(await res.arrayBuffer());
+}
+
 async function localUri(item) {
     const entry = readIndex()[item?.id];
     if (!entry?.path) return null;
