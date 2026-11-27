@@ -34,7 +34,7 @@ import { storage } from './firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { validateUpload, safeFileName, MAX_UPLOAD_BYTES } from './utils/uploadValidation';
 import { problemSignature } from './utils/problemGroups';
-import { CERT_APPROVAL_FIELD, certificateApprovalSnapshot } from './components/constants.js';
+import { CERT_APPROVAL_FIELD, certificateApprovalSnapshot } from './utils/certificateApproval.js';
 import { projectAtTime, projectOfFacility, visitTimeOf, hasRecordedProject } from './utils/visitProject.js';
 import { recycleBinType, recordTitle } from './utils/recycleBin.js';
 import { withoutPractice, wantsPractice, missingPracticeParticipants } from './utils/practiceParticipants.js';
@@ -43,7 +43,7 @@ import { DuplicatePhoneError, findPhoneConflict, duplicatePhoneMessage, normaliz
 import {
     recordOperation, takePending, restorePending, hasPending, monthlyPayload, monthKey,
 } from './utils/usageLedger';
-import { courseStateText, courseLocalityText } from './components/constants';
+import { courseStateText, courseLocalityText } from './utils/coursePlaceText.js';
 
 // The collection a reference or query touches, for the usage ledger.
 const collectionOf = (ref) => {

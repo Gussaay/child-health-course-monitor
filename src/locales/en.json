@@ -7909,6 +7909,9 @@
         "n_found": "Sections found: {{n}}"
       },
       "course_modal": {
+      "testers": "Testers (invited by email)",
+      "testers_placeholder": "One email address per line",
+      "testers_hint": "While this course is a draft, only managers and these people can see and open it, so it can be tested before publishing. They sign in with this email address. Publishing the course opens it to everyone as usual.",
         "add": "Add course",
         "edit": "Edit course",
         "enter_title": "Enter a course title.",
@@ -8016,7 +8019,12 @@
         "any_order": "Reference module: its lessons open in any order",
         "any_order_help": "For procedures or equipment that other lessons link to."
       },
+      "soon": {
+        "text": "This course is still being prepared. It will open here as soon as it is published."
+      },
       "main": {
+      "available_soon": "Will be available soon",
+      "draft_testing": "Draft — for testing",
         "tab_courses": "Courses",
         "page_title": "Online Courses",
         "page_subtitle": "Self-paced training",
@@ -9364,6 +9372,65 @@
     "edit": "Edit",
     "delete": "Remove",
     "open": "Open",
+    "close": "Close",
+    "draft_badge": "Draft",
+    "open_interactive": "Open interactive version",
+    "interactive_soon": "The interactive version of this book is coming soon.",
+    "reader": {
+      "page_of": "Page {{current}} of {{count}}",
+      "opening": "Opening the book…",
+      "failed": "This book could not be opened in the app. You can still open it in another app."
+    },
+    "download": {
+      "button": "Download",
+      "downloaded": "Downloaded",
+      "done": "Downloaded. You can read it any time, even without a connection.",
+      "already": "This book is already downloaded on this device.",
+      "failed": "The download could not finish. Check your connection and try again.",
+      "on_device": "This book is saved on this device, so it opens without a connection.",
+      "read": "Read the book",
+      "send": "Send to others",
+      "open_other": "Open in another app",
+      "open_failed": "Could not open the book.",
+      "share_failed": "Could not send the book.",
+      "remove": "Remove download",
+      "removed": "The downloaded copy was removed.",
+      "remove_failed": "Could not remove the download."
+    },
+    "draft_note": "This book is still being prepared, so it cannot be opened yet. Leave your email address and we will send it to you as soon as it is final.",
+    "notify_me": "Notify me",
+    "waiting": "{{count}} people waiting for this book",
+    "upload": {
+      "uploaded": "Uploaded",
+      "uploading": "Uploading… {{percent}}%",
+      "paused": "Paused",
+      "pause": "Pause",
+      "resume": "Resume",
+      "cancel": "Cancel upload",
+      "canceled": "Upload cancelled",
+      "failed": "Upload failed: {{message}}",
+      "interrupted": "Still uploading when the form closed — pick the file again.",
+      "remove": "Remove"
+    },
+    "wip": {
+      "restored": "Restored your unfinished draft from {{time}}.",
+      "progress_saved": "Your progress is saved on this device as you go. You can close this form and continue later — nothing is published until you press Save.",
+      "discard": "Discard draft"
+    },
+    "notify": {
+      "already": "You are already on the list for this book.",
+      "auto_done": "Done — we will email \"{{name}}\" to {{email}} as soon as it is final.",
+      "title": "Get this book by email",
+      "text": "\"{{name}}\" is still being prepared. Leave your details and we will email you the book as soon as it is final.",
+      "name": "Your name",
+      "email": "Email address",
+      "phone": "Phone (optional)",
+      "submit": "Notify me",
+      "done": "You are on the list. We will email \"{{name}}\" to {{email}} as soon as it is final.",
+      "name_required": "Enter your name.",
+      "email_invalid": "Enter a valid email address.",
+      "failed": "Could not save your request. Please try again."
+    },
     "save": "Save",
     "cancel": "Cancel",
     "retry": "Try again",
@@ -9417,7 +9484,12 @@
       "photo_hint": "Optional. PNG, JPEG, WebP or GIF, up to 5 MB.",
       "content": "Content",
       "current_file": "Current file: {{name}}",
-      "file_hint": "PDF, Word, PowerPoint, Excel, MP4 video or image, up to 50 MB."
+      "file_hint": "PDF, Word, PowerPoint, Excel, MP4 video or image, up to 50 MB.",
+      "status": "Status",
+      "status_final": "Final — everyone can open it",
+      "status_draft": "Draft — shown, but cannot be opened yet",
+      "status_final_hint": "A final item can be opened by everyone.",
+      "status_draft_hint": "A draft appears in the library with its photo and description, but nobody can open it. Visitors can leave their email address, and the book is emailed to them automatically when you save it as final. Its content file can be added later."
     },
     "errors": {
       "name": "Enter a name.",

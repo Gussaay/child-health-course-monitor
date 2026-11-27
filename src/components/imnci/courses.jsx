@@ -45,10 +45,10 @@ import { ModulePage } from './onlineCourses/ModulePage';
 import { CoursePage } from './onlineCourses/CoursePage';
 import { CourseList } from './onlineCourses/CourseList';
 import { BuilderPane } from './onlineCourses/BuilderPane';
-import { canSeeCourse, followsAnyLesson, isFacilitatorRole } from './onlineCourses/audience';
+import { canAccessDraft, canSeeCourse, followsAnyLesson, isFacilitatorRole } from './onlineCourses/audience';
 import { categoryOf } from './onlineCourses/categories';
 import { useMyEnrolments, courseAccess, canStudy } from './onlineCourses/enrolment';
-import { EnrolGate } from './onlineCourses/EnrolGate';
+import { EnrolGate, DraftSoonGate } from './onlineCourses/EnrolGate';
 import { ManageHome } from './onlineCourses/ManageHome';
 
 // Kept importable from here, where they used to live.
@@ -197,15 +197,18 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
 
     const courses = useMemo(() => (onlineCourses || [])
         .filter((c) => c.isDeleted !== true)
-        // An unpublished course is a draft; only the people who can publish it see it.
-        .filter((c) => (inManageArea && canManage) || c.isPublished)
+        // An unpublished course is a draft. It stays in the list for
+        // everyone, shown as "will be available soon"; only the people who
+        // manage courses and the testers it names by email can open it
+        // (accessOf gives everyone else 'soon').
+        .filter((c) => (inManageArea && canManage) || c.isPublished || c.isPublished === false)
         // A course for facilitators (the facilitator guide, with answer keys
         // and the examination) is not shown to learners.
         .filter((c) => canSeeCourse(c, { canManage, canSeeProgress, isFacilitator }))
         .filter((c) => !focusId || c.id === focusId)
         .filter((c) => !category || categoryOf(c) === category)
         .sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.title).localeCompare(String(b.title))),
-    [onlineCourses, canManage, canSeeProgress, isFacilitator, inManageArea, focusId, category]);
+    [onlineCourses, canManage, canSeeProgress, isFacilitator, inManageArea, focusId, category, user?.email]);
 
     // Old copies left on this device by an upload's replace are dropped here.
     const currentItems = useMemo(() => dropReplacedLeftovers(onlineCourseItems || []), [onlineCourseItems]);
@@ -232,8 +235,12 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
         return out;
     }, [progress, sectionCourse]);
     const accessOf = useCallback((c) => (inManageArea ? 'enrolled'
-        : courseAccess(c, enrolments.byCourse[c?.id], { canManage: false, started: startedCourses.has(c?.id) })),
-    [inManageArea, enrolments.byCourse, startedCourses]);
+        : courseAccess(c, enrolments.byCourse[c?.id], {
+            canManage: false,
+            started: startedCourses.has(c?.id),
+            draftAccess: canAccessDraft(c, { canManage, email: user?.email }),
+        })),
+    [inManageArea, enrolments.byCourse, startedCourses, canManage, user?.email]);
 
     const modules = useMemo(() => items
         .filter((i) => i.kind === 'module' && i.courseId === openCourseId)
@@ -440,8 +447,9 @@ export default function OnlineCoursesView({ permissions = {}, userRoles = [], ar
         accessOf, area, enrolments, inManageArea, openOtherArea, userRoles, focusId,
     };
     const Home = inManageArea ? ManageHome : CourseList;
-    const gated = openCourse && !inManageArea && !canStudy(accessOf(openCourse));
-    const Screen = gated ? EnrolGate : openSection ? SectionPage : openModule ? ModulePage : openCourse ? CoursePage : Home;
+    const openAccess = openCourse ? accessOf(openCourse) : null;
+    const gated = openCourse && !inManageArea && !canStudy(openAccess);
+    const Screen = gated ? (openAccess === 'soon' ? DraftSoonGate : EnrolGate) : openSection ? SectionPage : openModule ? ModulePage : openCourse ? CoursePage : Home;
     return (
         <CourseScreen.Provider value={screen}>
             <Screen />

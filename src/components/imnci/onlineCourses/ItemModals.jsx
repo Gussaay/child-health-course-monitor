@@ -74,6 +74,19 @@ export function CourseModal({ isOpen, onClose, course, onSaved }) {
                     <input type="checkbox" checked={!!form.isPublished} onChange={(e) => setForm({ ...form, isPublished: e.target.checked })} />
                     {t('imnci_ui.courses.course_modal.published', 'Published (visible to learners)')}
                 </label>
+                {/* While the course is a draft, only managers and the testers
+                    named here can see and open it. One email per line. */}
+                {!form.isPublished && (
+                    <div>
+                        <Textarea label={t('imnci_ui.courses.course_modal.testers', 'Testers (invited by email)')} rows={3}
+                            value={Array.isArray(form.testers) ? form.testers.join('\n') : (form.testers || '')}
+                            placeholder={t('imnci_ui.courses.course_modal.testers_placeholder', 'One email address per line')}
+                            onChange={(e) => setForm({ ...form, testers: e.target.value })} />
+                        <p className="mt-1 text-xs text-slate-500">
+                            {t('imnci_ui.courses.course_modal.testers_hint', 'While this course is a draft, only managers and these people can see and open it, so it can be tested before publishing. They sign in with this email address. Publishing the course opens it to everyone as usual.')}
+                        </p>
+                    </div>
+                )}
                 {/* Strict order suits a first pass through IMNCI, which is
                     taught in order; a refresher course or one used in a
                     classroom is better left open. */}

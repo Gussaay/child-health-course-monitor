@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
     LIBRARY_SERVICES, LIBRARY_CATEGORIES, canManageLibrary, normaliseLink, validateLibraryFile,
-    validateLibraryItem, itemsFor, countBy, libraryPath, parseLibraryPath,
+    validateLibraryItem, itemsFor, countBy, libraryPath, parseLibraryPath, isDraftItem,
+    isDownloadableBook, downloadedFileName, bookExtension, bookMimeType,
 } from '../src/components/library/libraryModel';
 import { parseScannedCode, isPublicAppPath } from '../src/utils/appLinks';
 
@@ -36,6 +37,17 @@ describe('child health library', () => {
         expect(validateLibraryItem({ ...base, contentMode: 'upload', contentLink: '', contentFile: {} }).errors).toEqual({});
         expect(validateLibraryItem({ ...base, imageMode: 'link', imageLink: 'javascript:x' }).errors.image).toBe('image');
         expect(validateLibraryItem({ ...base, category: 'other' }).errors.category).toBe('category');
+        // Drafts announce a book still being prepared: no content needed yet,
+        // and anyone who asks is emailed when it turns final.
+        expect(validateLibraryItem(base).item.status).toBe('final');
+        expect(validateLibraryItem({ ...base, status: 'draft' }).item.status).toBe('draft');
+        expect(validateLibraryItem({ ...base, status: 'other' }).item.status).toBe('final');
+        expect(validateLibraryItem({ ...base, status: 'draft', contentLink: '' }).errors).toEqual({});
+        expect(validateLibraryItem({ ...base, status: 'final', contentLink: '' }).errors.content).toBe('content');
+        expect(isDraftItem({ status: 'draft' })).toBe(true);
+        expect(isDraftItem({ status: 'final' })).toBe(false);
+        expect(isDraftItem({})).toBe(false);
+        expect(isDraftItem(null)).toBe(false);
     });
 
     it('checks file type and size', () => {
@@ -103,5 +115,27 @@ describe('child health library', () => {
         expect(html).toContain('property="og:image" content="https://firebasestorage.googleapis.com/v0/b/x/o/a.jpg?alt=media&amp;token=1"');
         expect(html).not.toContain('og:image:width');
         expect(html).toContain(`property="og:description" content="${long}"`);
+    });
+});
+
+describe('library downloads', () => {
+    const uploaded = { id: 'abcdef123456', name: 'Chart booklet', status: 'final', filePath: 'library/files/1_Chart.pdf', fileName: 'IMNCI Chartbooklet (English).pdf', linkUrl: 'https://example.org/files/Chart.pdf?token=1' };
+
+    it('downloads uploaded files and document links, not pages or drafts', () => {
+        expect(isDownloadableBook(uploaded)).toBe(true);
+        expect(isDownloadableBook({ ...uploaded, status: 'draft' })).toBe(false);
+        expect(isDownloadableBook({ id: 'x', name: 'Guide', linkUrl: 'https://example.org/guide.pdf' })).toBe(true);
+        expect(isDownloadableBook({ id: 'x', name: 'Video page', linkUrl: 'https://youtube.com/watch?v=1' })).toBe(false);
+        expect(isDownloadableBook({ id: 'x', name: 'Nothing' })).toBe(false);
+    });
+
+    it('names the on-device copy stably, from the file name, made safe', () => {
+        expect(downloadedFileName(uploaded)).toBe('lib_abcdef12_IMNCI Chartbooklet (English).pdf');
+        expect(downloadedFileName(uploaded)).toBe(downloadedFileName(uploaded));
+        expect(downloadedFileName({ ...uploaded, id: 'zzzzzzzz9' })).not.toBe(downloadedFileName(uploaded));
+        expect(downloadedFileName({ id: 'q1', name: 'A/B: C?', linkUrl: 'https://example.org/x.pdf' })).toBe('lib_q1_x.pdf');
+        expect(bookExtension(uploaded)).toBe('pdf');
+        expect(bookMimeType(uploaded)).toBe('application/pdf');
+        expect(bookMimeType({ id: 'q2', linkUrl: 'https://example.org/page' })).toBe('*/*');
     });
 });

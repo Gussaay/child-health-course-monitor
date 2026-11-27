@@ -26,6 +26,21 @@ export function facilitatorMatches(list, queryText, limit = FACILITATOR_LIMIT) {
     return found.slice(0, Math.max(0, limit));
 }
 
+/** Tester emails as the form holds them (one field of text, or a saved list) -> the saved list. */
+export function normaliseTesterEmails(value) {
+    const parts = Array.isArray(value) ? value : String(value || '').split(/[\s,;]+/);
+    const seen = new Set();
+    const out = [];
+    for (const part of parts) {
+        const email = String(part || '').trim().toLowerCase();
+        if (email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) && !seen.has(email)) {
+            seen.add(email);
+            out.push(email);
+        }
+    }
+    return out.slice(0, 100);
+}
+
 export function courseSavePayload(form, { draft = false, untitled = 'Untitled course (draft)' } = {}) {
     const f = form || {};
     const title = String(f.title || '').trim();
@@ -34,6 +49,7 @@ export function courseSavePayload(form, { draft = false, untitled = 'Untitled co
         title: draft && !title ? untitled : title,
         category: String(f.category || '').trim(),
         subcategory: String(f.subcategory || '').trim(),
+        testers: normaliseTesterEmails(f.testers),
     };
     if (draft) payload.isPublished = false;
     return payload;

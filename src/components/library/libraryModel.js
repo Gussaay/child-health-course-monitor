@@ -3,7 +3,12 @@
 //
 // An item is one document in `libraryItems`:
 //   { service, category, name, description, imageUrl, imagePath,
-//     linkUrl, filePath, fileName, createdAt, createdBy, updatedAt }
+//     linkUrl, filePath, fileName, status, createdAt, createdBy, updatedAt }
+// `status` is 'final' (the default, and what items saved before it existed
+// are) or 'draft': a draft is listed like any other item but cannot be
+// opened — instead a visitor leaves their name and email address
+// (a document in `libraryRequests`), and when the item is later saved as
+// final the server emails them the link (functions/libraryNotify.js).
 // `imageUrl` is the photo (uploaded, then `imagePath` is its storage path, or a
 // direct link). `linkUrl` is the content itself (an uploaded file, then
 // `filePath` is set, or a direct link to a page, video or document).
@@ -30,6 +35,11 @@ export const LIBRARY_CATEGORIES = [
 ];
 
 export const LIBRARY_COLLECTION = 'libraryItems';
+export const LIBRARY_REQUESTS_COLLECTION = 'libraryRequests';
+
+// An item with no status (saved before drafts existed) counts as final.
+export const itemStatus = (item) => (item?.status === 'draft' ? 'draft' : 'final');
+export const isDraftItem = (item) => itemStatus(item) === 'draft';
 
 // Photos stay small; content files (books, guides) may be larger.
 export const LIBRARY_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
@@ -46,6 +56,63 @@ export const LIBRARY_FILE_TYPES = [
     'video/mp4',
     ...LIBRARY_IMAGE_TYPES,
 ];
+
+// ---- Downloads -------------------------------------------------------------
+// A book can be kept on the device when its content is a file (an uploaded
+// file, or a direct link to a document). The on-device copy's name is stable
+// per item, so the app can tell a book is already downloaded and never
+// fetches it twice (libraryDownload.js does the keeping).
+export const LIBRARY_DOWNLOAD_EXTENSIONS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'epub', 'zip', 'mp4', 'mp3', 'txt', 'odt', 'ods', 'odp'];
+
+const extensionOf = (nameOrUrl) => {
+    const clean = String(nameOrUrl || '').split(/[?#]/)[0];
+    const base = clean.substring(clean.lastIndexOf('/') + 1);
+    const dot = base.lastIndexOf('.');
+    return dot > 0 ? base.substring(dot + 1).toLowerCase() : '';
+};
+
+export const bookExtension = (item) => extensionOf(item?.fileName) || extensionOf(item?.linkUrl);
+
+/** A final item whose content is a file the app can download and keep. */
+export const isDownloadableBook = (item) => {
+    if (!item || isDraftItem(item) || !item.linkUrl) return false;
+    if (item.filePath) return true;
+    return LIBRARY_DOWNLOAD_EXTENSIONS.includes(bookExtension(item));
+};
+
+const safeDownloadName = (name) => String(name || 'book').replace(/[\\/:*?"<>|#]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'book';
+
+/** The on-device file name of a book's downloaded copy: stable per item. */
+export function downloadedFileName(item) {
+    const ext = bookExtension(item);
+    let base = '';
+    if (item?.fileName) base = String(item.fileName).replace(/\.[^.]+$/, '');
+    if (!base && item?.linkUrl) {
+        const seg = String(item.linkUrl).split(/[?#]/)[0].split('/').pop() || '';
+        try { base = decodeURIComponent(seg).replace(/\.[^.]+$/, ''); } catch { base = seg.replace(/\.[^.]+$/, ''); }
+    }
+    if (!base) base = item?.name || 'book';
+    return `lib_${String(item?.id || 'book').slice(0, 8)}_${safeDownloadName(base)}${ext ? `.${ext}` : ''}`;
+}
+
+const MIME_BY_EXTENSION = {
+    pdf: 'application/pdf',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls: 'application/vnd.ms-excel',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ppt: 'application/vnd.ms-powerpoint',
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    epub: 'application/epub+zip',
+    zip: 'application/zip',
+    mp4: 'video/mp4',
+    mp3: 'audio/mpeg',
+    txt: 'text/plain',
+    odt: 'application/vnd.oasis.opendocument.text',
+    ods: 'application/vnd.oasis.opendocument.spreadsheet',
+    odp: 'application/vnd.oasis.opendocument.presentation',
+};
+export const bookMimeType = (item) => MIME_BY_EXTENSION[bookExtension(item)] || '*/*';
 
 export const isLibraryService = (key) => LIBRARY_SERVICES.some((s) => s.key === key);
 export const isLibraryCategory = (key) => LIBRARY_CATEGORIES.some((c) => c.key === key);
@@ -126,13 +193,16 @@ export function validateLibraryItem(form) {
         if (linkUrl === null) errors.content = 'link';
     }
     const hasUploadedContent = form?.contentMode === 'upload' && (form.contentFile || form.existingLinkUrl);
-    if (!linkUrl && !hasUploadedContent && !errors.content) {
+    // A draft announces a book that is still being prepared, so it does not
+    // need its content yet; a final item must have something to open.
+    const status = form?.status === 'draft' ? 'draft' : 'final';
+    if (status === 'final' && !linkUrl && !hasUploadedContent && !errors.content) {
         errors.content = 'content';
     }
 
     return {
         errors,
-        item: { service: form?.service, category: form?.category, name, description, imageUrl: imageUrl || '', linkUrl: linkUrl || '' },
+        item: { service: form?.service, category: form?.category, name, description, imageUrl: imageUrl || '', linkUrl: linkUrl || '', status },
     };
 }
 

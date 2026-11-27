@@ -2,7 +2,7 @@
 // form's facilitator picker must work from the whole facilitator list, and a
 // course must be saveable as a draft with incomplete information.
 import { describe, it, expect } from 'vitest';
-import { facilitatorMatches, courseSavePayload } from '../src/components/imnci/onlineCourses/courseForm';
+import { facilitatorMatches, courseSavePayload, normaliseTesterEmails } from '../src/components/imnci/onlineCourses/courseForm';
 
 const FACILITATORS = [
     { id: 'f2', name: 'Zeinab Ahmed', phone: '0902', currentState: 'Khartoum', courses: ['IMNCI'] },
@@ -56,5 +56,21 @@ describe('courseSavePayload', () => {
         const out = courseSavePayload({ title: ' IMNCI ', category: 'IMNCI', subcategory: '', isPublished: true });
         expect(out.title).toBe('IMNCI');
         expect(out.isPublished).toBe(true);
+    });
+});
+
+describe('course testers', () => {
+    it('normalises the testers field: split, trimmed, lowercased, deduped, valid emails only', () => {
+        expect(normaliseTesterEmails(' Ahmed@Example.org\n sara@example.org, ahmed@example.org; not-an-email '))
+            .toEqual(['ahmed@example.org', 'sara@example.org']);
+        expect(normaliseTesterEmails(['A@B.ORG', ' a@b.org '])).toEqual(['a@b.org']);
+        expect(normaliseTesterEmails('')).toEqual([]);
+        expect(normaliseTesterEmails(undefined)).toEqual([]);
+    });
+
+    it('saves the normalised testers with the course, draft or not', () => {
+        expect(courseSavePayload({ title: 'X', testers: 'A@b.org\nc@d.org' }).testers).toEqual(['a@b.org', 'c@d.org']);
+        expect(courseSavePayload({ title: 'X' }).testers).toEqual([]);
+        expect(courseSavePayload({ title: '', testers: 'a@b.org' }, { draft: true }).testers).toEqual(['a@b.org']);
     });
 });

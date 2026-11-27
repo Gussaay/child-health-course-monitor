@@ -40,6 +40,20 @@ describe('course access', () => {
     it('keeps the place of someone who started before enrolment existed', () => {
         expect(courseAccess(course, null, { started: true })).toBe('enrolled');
     });
+    it('opens a draft to a manager or an invited tester, and to nobody else', () => {
+        expect(courseAccess(course, null, { draftAccess: true })).toBe('enrolled');
+        expect(courseAccess(course, null, { draftAccess: false })).toBe('none');
+        expect(courseAccess(course, { status: 'requested' }, { draftAccess: true })).toBe('enrolled');
+    });
+    it('shows a draft as "will be available soon" to everyone else', () => {
+        const draft = { ...course, isPublished: false };
+        expect(courseAccess(draft, null)).toBe('soon');
+        expect(courseAccess(draft, { status: 'approved' })).toBe('soon');
+        expect(courseAccess({ ...draft, enrolment: 'open' }, null)).toBe('soon');
+        expect(courseAccess(draft, null, { draftAccess: true })).toBe('enrolled');
+        expect(canStudy(courseAccess(draft, null))).toBe(false);
+        expect(courseAccess({ ...course, isPublished: true }, null)).toBe('none');
+    });
 });
 
 describe('onlineEnrolment function helpers', () => {

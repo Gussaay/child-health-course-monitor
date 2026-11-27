@@ -180,7 +180,6 @@ import {
     recordHandledError,
 } from './data.js';
 import { setUsageView } from './utils/usageLedger';
-import { STATE_LOCALITIES } from './components/constants.js';
 import SudanMiniMap from './components/SudanMiniMap';
 import { Card, Button, Spinner, Toast, Modal, Input, PageSkeleton, Skeleton, MenuTile, MenuGrid } from './components/CommonComponents';
 import { auth, db, isOnline, getConnectivity } from './firebase';
@@ -201,7 +200,7 @@ import { ScanQrCard } from './components/QrScanLauncher';
 import { LibraryEntryCard } from './components/library/LibraryEntryCard.jsx';
 import { parseLibraryPath } from './components/library/libraryModel';
 import { isPublicAppPath, parseScannedCode } from './utils/appLinks';
-import { courseLocationText } from './components/constants';
+import { courseLocationText } from './utils/coursePlaceText.js';
 import GetAppBanner from './components/GetAppBanner';
 import { shareApp } from './utils/shareApp';
 import { findLinkedParticipant, rememberLinkedParticipant } from './utils/linkedParticipant';
@@ -2852,7 +2851,7 @@ case 'meetings':
 
             case 'facilitatorReport': return permissions.canViewHumanResource ? (selectedFacilitator && <FacilitatorReportView facilitator={selectedFacilitator} allCourses={allCourses || []} onBack={goBack} />) : null;
 
-            case 'dashboard': return <DashboardView onOpenCourseReport={handleOpenCourseReport} onOpenParticipantReport={(pId, cId) => navigate('participantReport', { openParticipantReport: pId, openCourseReport: cId })} onOpenFacilitatorReport={(id) => { setSelectedFacilitatorId(id); navigate('facilitatorReport'); }} permissions={permissions} userStates={userStates} userLocalities={userLocalities} STATE_LOCALITIES={STATE_LOCALITIES} />;
+            case 'dashboard': return <DashboardView onOpenCourseReport={handleOpenCourseReport} onOpenParticipantReport={(pId, cId) => navigate('participantReport', { openParticipantReport: pId, openCourseReport: cId })} onOpenFacilitatorReport={(id) => { setSelectedFacilitatorId(id); navigate('facilitatorReport'); }} permissions={permissions} userStates={userStates} userLocalities={userLocalities} />;
 
             case 'finalReport':
                 return (
