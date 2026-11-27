@@ -3283,7 +3283,11 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                 setIsLoadingFacilities(true);
                 try {
                     const approvedFacilities = healthFacilities ? healthFacilities.filter(f => f['الولاية'] === state && f['المحلية'] === locality) : [];
-                    const pendingSubs = await listPendingFacilitySubmissions();
+                    // Pending submissions are manager-only in the rules; for other users (or when
+                    // offline) the read fails. That must not hide the approved facility list.
+                    let pendingSubs = [];
+                    try { pendingSubs = await listPendingFacilitySubmissions(); }
+                    catch (pendErr) { console.warn("Pending facility submissions unavailable:", pendErr?.code || pendErr); }
                     const relevantPending = pendingSubs.filter(s => s['الولاية'] === state && s['المحلية'] === locality);
                     relevantPending.sort((a,b) => (a.submittedAt?.toMillis?.() || 0) - (b.submittedAt?.toMillis?.() || 0));
 
@@ -3365,6 +3369,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
                 }
             } else {
                 setFacilitiesInLocality([]);
+                setError('');
                  isInitialLoad.current = false; 
             }
         };
@@ -3372,6 +3377,7 @@ export function ParticipantForm({ course, initialData, onCancel, onSave, carryOv
              fetchFacilities();
         } else {
              setFacilitiesInLocality([]); 
+             setError('');
              setIsLoadingFacilities(false);
              isInitialLoad.current = false;
         }
