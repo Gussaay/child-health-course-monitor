@@ -2713,6 +2713,13 @@ export default function App() {
     const handleResetMonitor = useCallback(() => { setOperationCounts({ reads: 0, writes: 0 }); }, []);
     const handleDismissMonitor = useCallback(() => { setIsMonitorVisible(false); }, []);
 
+    // Who is using the library, for its usage dashboard (libraryTracking.js).
+    const libraryViewer = useMemo(() => (user ? {
+        role: userRole || (userRoles || [])[0] || '',
+        state: (userStates || []).filter(Boolean).join(', '),
+        locality: (userLocalities || []).filter(Boolean).join(', '),
+    } : null), [user, userRole, userRoles, userStates, userLocalities]);
+
     const renderView = () => {
         const currentParticipant = (courseDetails.participants || []).find(p => p.id === selectedParticipantId);
         const viewToRender = view;
@@ -2766,7 +2773,7 @@ export default function App() {
                 ) : null;
 
             case 'library':
-                return <ChildHealthLibraryView permissions={permissions} user={user} onBack={goBack} />;
+                return <ChildHealthLibraryView permissions={permissions} user={user} viewer={libraryViewer} onBack={goBack} />;
 
             case 'mentorshipDashboard':
                 // Straight to the mentorship dashboard: pick a service, see its
@@ -2931,7 +2938,7 @@ case 'meetings':
         mainContent = (
             <Suspense fallback={<PageSkeleton />}>
                 <div className="max-w-6xl mx-auto w-full p-3 md:p-6">
-                    <ChildHealthLibraryView key={JSON.stringify(publicLibraryTarget)} permissions={user ? permissions : {}} user={user} isPublic={!user} initial={publicLibraryTarget} syncAddress onBack={scannedPublicOpen ? leaveScannedPage : undefined} />
+                    <ChildHealthLibraryView key={JSON.stringify(publicLibraryTarget)} permissions={user ? permissions : {}} user={user} viewer={user ? libraryViewer : null} entry="link" isPublic={!user} initial={publicLibraryTarget} syncAddress onBack={scannedPublicOpen ? leaveScannedPage : undefined} />
                 </div>
             </Suspense>
         );

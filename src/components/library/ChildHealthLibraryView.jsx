@@ -9,11 +9,11 @@
 // Open to everyone, signed in or not (/public/library). Federal managers and
 // super users add, edit and remove content: name, description, a photo
 // (uploaded or a direct link) and the content (an uploaded file or a link).
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Activity, Baby, BookOpen, ClipboardList, ExternalLink, FileText, GraduationCap, HeartPulse,
-    Home, Library, Link2, Pencil, Plus, ScrollText, Search, Share2, Shield, Siren, Trash2, Upload, Users,
+    BarChart3, Home, Library, Link2, Pencil, Plus, ScrollText, Search, Share2, Shield, Siren, Trash2, Upload, Users,
 } from 'lucide-react';
 import {
     Button, Card, EmptyState, MenuGrid, MenuTile, Modal, PageHeader, SkeletonCard, Spinner, useInPageBack,
@@ -24,6 +24,11 @@ import {
     LIBRARY_ERROR_TEXT, canManageLibrary, countBy, itemsFor, libraryPath, validateLibraryItem,
 } from './libraryModel';
 import { shareLibraryLink } from './libraryShare';
+import { recordLibraryEvent } from './libraryTracking';
+import { lazyWithRetry } from '../../utils/lazyWithRetry';
+
+// The usage dashboard: only federal managers and super users open it.
+const LibraryDashboard = lazyWithRetry(() => import('./LibraryDashboard.jsx'));
 import {
     addLibraryItem, deleteLibraryItem, listLibraryItems, removeLibraryFile, updateLibraryItem, uploadLibraryFile,
 } from './libraryData';
@@ -44,10 +49,11 @@ function useLibraryText() {
 }
 
 // The Share button on every level and every card: the link opens without sign-in.
-function useShare() {
+function useShare(onShared) {
     const { t } = useTranslation();
     return async (target, title) => {
         const result = await shareLibraryLink(target, { title });
+        if (result === 'shared' || result === 'copied') onShared?.(target);
         if (result === 'copied') notify(t('library.link_copied', 'Link copied. Anyone can open it without signing in.'), 'success');
         else if (result === 'failed') notify(t('library.share_failed', 'Could not share the link.'), 'error');
     };
@@ -66,7 +72,10 @@ function ShareButton({ onClick, compact = false }) {
 // `initial`: where a shared link opens ({ service, category, itemId }).
 // `syncAddress`: keep the browser address on the level shown, so the address
 // bar itself is always a link to share (the public page only).
-export default function ChildHealthLibraryView({ permissions, user, onBack, isPublic = false, initial = null, syncAddress = false }) {
+// `viewer`: the signed-in user's name, role, state and locality, for the usage
+// dashboard (null when nobody is signed in). `entry`: 'link' on the public page
+// opened from a shared address, 'app' inside the app.
+export default function ChildHealthLibraryView({ permissions, user, viewer = null, entry = 'app', onBack, isPublic = false, initial = null, syncAddress = false }) {
     const { t, serviceShort, serviceTitle, categoryLabel, categoryHint } = useLibraryText();
     const canManage = !isPublic && canManageLibrary(permissions);
 
@@ -75,7 +84,23 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
     const [service, setService] = useState(initial?.service || null);
     const [category, setCategory] = useState(initial?.category || null);
     const [itemId, setItemId] = useState(initial?.itemId || null);
-    const share = useShare();
+    const [showDashboard, setShowDashboard] = useState(false);
+
+    // Usage tracking (libraryTracking.js): one visit per browser session, one
+    // view per shared item opened, every download and every share.
+    const who = useMemo(() => (user ? { uid: user.uid, email: user.email || '', name: user.displayName || '', ...(viewer || {}) } : null), [user, viewer]);
+    const track = useCallback((type, item = null) => recordLibraryEvent(type, { item, viewer: who, entry }), [who, entry]);
+    useEffect(() => {
+        try {
+            if (sessionStorage.getItem('chLibraryVisit')) return;
+            sessionStorage.setItem('chLibraryVisit', '1');
+        } catch { /* private mode: count it */ }
+        track('visit');
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const share = useShare((target) => {
+        const it = target?.itemId ? (items || []).find((x) => x.id === target.itemId) : null;
+        track('share', it || { id: '', name: '', service: target?.service || '', category: target?.category || '' });
+    });
     const [search, setSearch] = useState('');
     const [editing, setEditing] = useState(null); // null | {} (new) | item
 
@@ -94,9 +119,12 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
     // A single shared item: once loaded, the levels above it are its own
     // service and section, so Back walks up from there.
     const openItem = useMemo(() => (itemId && items ? items.find((it) => it.id === itemId) || null : null), [itemId, items]);
+    const viewedRef = useRef(new Set());
     useEffect(() => {
-        if (openItem) { setService(openItem.service); setCategory(openItem.category); }
-    }, [openItem]);
+        if (!openItem) return;
+        setService(openItem.service); setCategory(openItem.category);
+        if (!viewedRef.current.has(openItem.id)) { viewedRef.current.add(openItem.id); track('view', openItem); }
+    }, [openItem]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         if (!syncAddress) return;
@@ -106,13 +134,14 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
 
     const goUp = useCallback(() => {
         setSearch('');
-        if (itemId) setItemId(null);
+        if (showDashboard) setShowDashboard(false);
+        else if (itemId) setItemId(null);
         else if (category) setCategory(null);
         else if (service) setService(null);
         else onBack?.();
-    }, [itemId, category, service, onBack]);
+    }, [showDashboard, itemId, category, service, onBack]);
     // The Android top-bar arrow and the phone's back button step back inside the library first.
-    useInPageBack(goUp, !!(service || itemId));
+    useInPageBack(goUp, !!(service || itemId || showDashboard));
 
     const serviceObj = LIBRARY_SERVICES.find((s) => s.key === service);
     const categoryObj = LIBRARY_CATEGORIES.find((c) => c.key === category);
@@ -157,7 +186,7 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
                     onBack={goUp}
                 />
                 <div className="mx-auto max-w-xl">
-                    <LibraryCard item={openItem} large canManage={canManage} onShare={() => share({ itemId: openItem.id }, openItem.name)} onEdit={() => setEditing(openItem)} onDelete={() => onDelete(openItem)} />
+                    <LibraryCard item={openItem} large canManage={canManage} onOpened={() => track('open', openItem)} onShare={() => share({ itemId: openItem.id }, openItem.name)} onEdit={() => setEditing(openItem)} onDelete={() => onDelete(openItem)} />
                     <div className="mt-4 text-center">
                         <Button variant="secondary" onClick={() => setItemId(null)} className="mx-auto">
                             <Library size={16} /> {t('library.more_in_section', 'More in this section')}
@@ -179,7 +208,11 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
                     title={t('library.title', 'Child Health Library')}
                     subtitle={t('library.subtitle', 'Training materials, guidelines, protocols, operational guides and SOPs for each child health service.')}
                     onBack={onBack}
-                    actions={<>{addButton}<ShareButton onClick={() => share({}, t('library.title', 'Child Health Library'))} /></>}
+                    actions={<>
+                        {canManage && <Button variant="ghost" onClick={() => setShowDashboard(true)}><BarChart3 size={16} /> {t('library.dash.open', 'Dashboard')}</Button>}
+                        {addButton}
+                        <ShareButton onClick={() => share({}, t('library.title', 'Child Health Library'))} />
+                    </>}
                 />
                 <MenuGrid columns="sm:grid-cols-3 lg:grid-cols-4">
                     {LIBRARY_SERVICES.map((s) => (
@@ -237,11 +270,19 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
                 ) : (
                     <div className="grid gap-3 md:gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {shown.map((item) => (
-                            <LibraryCard key={item.id} item={item} canManage={canManage} onShare={() => share({ itemId: item.id }, item.name)} onEdit={() => setEditing(item)} onDelete={() => onDelete(item)} />
+                            <LibraryCard key={item.id} item={item} canManage={canManage} onOpened={() => track('open', item)} onShare={() => share({ itemId: item.id }, item.name)} onEdit={() => setEditing(item)} onDelete={() => onDelete(item)} />
                         ))}
                     </div>
                 )}
             </>
+        );
+    }
+
+    if (showDashboard && canManage) {
+        return (
+            <Suspense fallback={<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></div>}>
+                <LibraryDashboard items={items || []} onBack={() => setShowDashboard(false)} />
+            </Suspense>
         );
     }
 
@@ -267,10 +308,10 @@ export default function ChildHealthLibraryView({ permissions, user, onBack, isPu
     );
 }
 
-function LibraryCard({ item, canManage, onShare, onEdit, onDelete, large = false }) {
+function LibraryCard({ item, canManage, onOpened, onShare, onEdit, onDelete, large = false }) {
     const { t } = useTranslation();
     const [imageFailed, setImageFailed] = useState(false);
-    const open = () => { if (item.linkUrl) window.open(item.linkUrl, '_blank', 'noopener,noreferrer'); };
+    const open = () => { if (!item.linkUrl) return; onOpened?.(); window.open(item.linkUrl, '_blank', 'noopener,noreferrer'); };
     return (
         <article className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <button type="button" onClick={open} disabled={!item.linkUrl} className="block aspect-[16/9] w-full bg-slate-100" aria-label={item.name}>

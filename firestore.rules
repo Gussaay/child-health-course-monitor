@@ -204,6 +204,48 @@ service cloud.firestore {
       allow write: if request.auth != null && isSubCourseEditor();
     }
 
+    // Library usage (downloads, views, visits, shares) for the library
+    // dashboard. The library is public, so anyone may ADD an event, in the
+    // exact shape src/components/library/libraryTracking.js writes, stamped
+    // with the server's time; a signed-in event must carry the caller's own
+    // uid and e-mail, and an anonymous one none. Only federal managers and
+    // super users READ them (they name signed-in users). Events are never
+    // changed; super users may delete them.
+    function isLibraryEvent(d) {
+      return d.keys().hasOnly(['type', 'itemId', 'itemName', 'service', 'category', 'at', 'deviceId',
+                               'signedIn', 'uid', 'email', 'name', 'role', 'state', 'locality',
+                               'entry', 'platform', 'tz', 'lang', 'ref'])
+        && d.type in ['visit', 'view', 'open', 'share']
+        && d.at == request.time
+        && d.signedIn is bool
+        && d.entry in ['app', 'link']
+        && d.deviceId is string && d.deviceId.size() > 0 && d.deviceId.size() <= 64
+        && d.itemId is string && d.itemId.size() <= 128
+        && d.itemName is string && d.itemName.size() <= 200
+        && d['service'] is string && d['service'].size() <= 100
+        && d.category is string && d.category.size() <= 40
+        && d.name is string && d.name.size() <= 200
+        && d.role is string && d.role.size() <= 60
+        && d.state is string && d.state.size() <= 300
+        && d.locality is string && d.locality.size() <= 300
+        && d.platform is string && d.platform.size() <= 40
+        && d.tz is string && d.tz.size() <= 60
+        && d.lang is string && d.lang.size() <= 20
+        && d.ref is string && d.ref.size() <= 100
+        && (request.auth == null
+              ? (d.signedIn == false && d.uid == '' && d.email == '')
+              : (d.uid == '' && d.email == '' && d.signedIn == false)
+                || (d.signedIn == true && d.uid == request.auth.uid
+                    && (d.email == '' || d.email == request.auth.token.get('email', ''))));
+    }
+
+    match /libraryEvents/{eventId} {
+      allow create: if isLibraryEvent(request.resource.data);
+      allow read: if request.auth != null && isSubCourseEditor();
+      allow update: if false;
+      allow delete: if request.auth != null && isSuperUser();
+    }
+
     match /onlineCourses/{courseId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && isSubCourseEditor();

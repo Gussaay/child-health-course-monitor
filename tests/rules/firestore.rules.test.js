@@ -4,7 +4,7 @@ import {
     assertFails,
     assertSucceeds,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, writeBatch, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, writeBatch, Timestamp, addDoc, serverTimestamp } from 'firebase/firestore';
 import fs from 'node:fs';
 
 // Run with:  npm run test:rules   (starts the Firestore emulator around them)
@@ -1171,5 +1171,45 @@ describe('libraryItems — public library, federal authors', () => {
         await assertFails(setDoc(doc(as('plainUser'), 'libraryItems', 'l3'), item));
         await assertFails(setDoc(doc(as('statesManager'), 'libraryItems', 'l3'), item));
         await assertFails(deleteDoc(doc(as('facilitator'), 'libraryItems', 'l1')));
+    });
+});
+
+describe('libraryEvents — anyone records library use, federal reads it', () => {
+    const anon = () => ({
+        type: 'open', itemId: 'l1', itemName: 'Chart booklet', service: 'IMNCI', category: 'training',
+        at: serverTimestamp(), deviceId: 'dev-1', signedIn: false, uid: '', email: '', name: '', role: '',
+        state: '', locality: '', entry: 'link', platform: 'Android browser', tz: 'Africa/Khartoum', lang: 'ar', ref: '',
+    });
+    // Real sign-ins carry the account's e-mail in the token.
+    const asUser = (uid) => testEnv.authenticatedContext(uid, { email: `${uid}@example.org` }).firestore();
+    const signed = (uid) => ({ ...anon(), signedIn: true, uid, email: `${uid}@example.org`, name: 'Dr X', role: 'facilitator', state: 'Khartoum', entry: 'app' });
+
+    it('lets an anonymous visitor and a signed-in user record an event', async () => {
+        await assertSucceeds(addDoc(collection(anonymous(), 'libraryEvents'), anon()));
+        await assertSucceeds(addDoc(collection(asUser('plainUser'), 'libraryEvents'), signed('plainUser')));
+        await assertSucceeds(addDoc(collection(asUser('plainUser'), 'libraryEvents'), anon()));
+    });
+
+    it('refuses events that pretend to be someone else or have the wrong shape', async () => {
+        await assertFails(addDoc(collection(anonymous(), 'libraryEvents'), signed('facilitator')));
+        await assertFails(addDoc(collection(asUser('plainUser'), 'libraryEvents'), signed('facilitator')));
+        await assertFails(addDoc(collection(asUser('plainUser'), 'libraryEvents'), { ...signed('plainUser'), email: 'someone@else.org' }));
+        await assertFails(addDoc(collection(anonymous(), 'libraryEvents'), { ...anon(), type: 'delete' }));
+        await assertFails(addDoc(collection(anonymous(), 'libraryEvents'), { ...anon(), at: Timestamp.fromMillis(0) }));
+        await assertFails(addDoc(collection(anonymous(), 'libraryEvents'), { ...anon(), extra: 'x' }));
+    });
+
+    it('only federal managers and super users read the events; nobody edits them', async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            await setDoc(doc(context.firestore(), 'libraryEvents', 'e1'), { ...anon(), at: Timestamp.now() });
+        });
+        await assertSucceeds(getDocs(collection(as('federalManager'), 'libraryEvents')));
+        await assertSucceeds(getDocs(collection(as('superUser'), 'libraryEvents')));
+        await assertFails(getDocs(collection(anonymous(), 'libraryEvents')));
+        await assertFails(getDocs(collection(as('plainUser'), 'libraryEvents')));
+        await assertFails(getDocs(collection(as('statesManager'), 'libraryEvents')));
+        await assertFails(updateDoc(doc(as('superUser'), 'libraryEvents', 'e1'), { type: 'share' }));
+        await assertFails(deleteDoc(doc(as('federalManager'), 'libraryEvents', 'e1')));
+        await assertSucceeds(deleteDoc(doc(as('superUser'), 'libraryEvents', 'e1')));
     });
 });

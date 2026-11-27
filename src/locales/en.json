@@ -9434,6 +9434,25 @@
     "share_failed": "Could not share the link.",
     "more_in_section": "More in this section",
     "item_missing": "This item is no longer in the library.",
-    "browse": "Browse the library"
+    "browse": "Browse the library",
+    "dash": {
+      "open": "Dashboard",
+      "title": "Library dashboard",
+      "subtitle": "Downloads, visitors and sharing of the Child Health Library.",
+      "refresh": "Refresh",
+      "export": "Export Excel",
+      "export_failed": "Could not export: {{message}}",
+      "period_7": "Last 7 days",
+      "period_30": "Last 30 days",
+      "period_90": "Last 90 days",
+      "period_365": "Last 12 months",
+      "period_all": "All time",
+      "all_services": "All services",
+      "everyone": "Everyone",
+      "signed_in": "Signed-in users",
+      "public": "Public (no sign-in)",
+      "load_failed": "Could not load the library activity.",
+      "empty": "No library activity in this period yet."
+    }
   }
 }
